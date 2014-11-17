@@ -1,0 +1,3298 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta content="text/html; charset=iso-8859-15" http-equiv="content-type">
+    <title>VC4ASM Small immediate table</title>
+    <meta content="Marcel M&uuml;ller" name="author">
+    <meta content="Raspberry Pi BCM2835 QPU macro assembler" name="keywords">
+    <link rel="stylesheet" href="infstyle.css" type="text/css">
+  </head>
+  <body>
+    <h1>VC4ASM - Appendix - Small immediate values</h1>
+    <p><a href="index.html">&uarr; Top</a></p>
+    <p>The following values can be expressed as small immediate values in <span
+        style="font-family: monospace;">mov</span> instructions.</p>
+    <table border="1" cellpadding="3" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Value</th>
+          <th colspan="5" rowspan="1">ADD ALU</th>
+          <th colspan="3" rowspan="1">MUL ALU</th>
+        </tr>
+      </thead>
+      <tbody style="font-family: monospace;">
+        <tr>
+          <td>0</td>
+          <td>xor r0,r0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8subs r0,r0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>or 1,1</td>
+          <td>not -2</td>
+          <td>ftoi 1.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 1,1</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>or 2,2</td>
+          <td>not -3</td>
+          <td>ftoi 2.0</td>
+          <td>add 1,1</td>
+          <td><br>
+          </td>
+          <td>v8min 2,2</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>or 3,3</td>
+          <td>not -4</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 3,3</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>or 4,4</td>
+          <td>not -5</td>
+          <td>ftoi 4.0</td>
+          <td>add 2,2</td>
+          <td><br>
+          </td>
+          <td>v8min 4,4</td>
+          <td>mul24 3,3</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>or 5,5</td>
+          <td>not -6</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 5,5</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>or 6,6</td>
+          <td>not -7</td>
+          <td><br>
+          </td>
+          <td>add 3,3</td>
+          <td><br>
+          </td>
+          <td>v8min 6,6</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>or 7,7</td>
+          <td>not -8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 7,7</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>or 8,8</td>
+          <td>not -9</td>
+          <td>ftoi 8.0</td>
+          <td>add 4,4</td>
+          <td>shl 2,2</td>
+          <td>v8min 8,8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>or 9,9</td>
+          <td>not -10</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 9,9</td>
+          <td>mul24 3,3</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td>or 10,10</td>
+          <td>not -11</td>
+          <td><br>
+          </td>
+          <td>add 5,5</td>
+          <td><br>
+          </td>
+          <td>v8min 10,10</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td>or 11,11</td>
+          <td>not -12</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 11,11</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td>or 12,12</td>
+          <td>not -13</td>
+          <td><br>
+          </td>
+          <td>add 6,6</td>
+          <td><br>
+          </td>
+          <td>v8min 12,12</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>13</td>
+          <td>or 13,13</td>
+          <td>not -14</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 13,13</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>14</td>
+          <td>or 14,14</td>
+          <td>not -15</td>
+          <td><br>
+          </td>
+          <td>add 7,7</td>
+          <td><br>
+          </td>
+          <td>v8min 14,14</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>15</td>
+          <td>or 15,15</td>
+          <td>not -16</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 15,15</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>16</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>ftoi 16.0</td>
+          <td>add 8,8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 4,4</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>18</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 9,9</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>20</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 10,10</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>22</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 11,11</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>24</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 12,12</td>
+          <td>shl 3,3</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>25</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 5,5</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>26</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 13,13</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>28</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 14,14</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>30</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 15,15</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>32</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>ftoi 32.0</td>
+          <td><br>
+          </td>
+          <td>shl 4,4</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>36</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 6,6</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>49</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 7,7</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>64</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>ftoi 64.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 8,8</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>81</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 9,9</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>100</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 10,10</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>121</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 11,11</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>128</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>ftoi 128.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>144</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 12,12</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>160</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>shl 5,5</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>169</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 13,13</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>196</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 14,14</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>225</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>mul24 15,15</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>384</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>shl 6,6</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>896</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>shl 7,7</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>2048</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>shl 8,8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>4608</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>shl 9,9</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>10240</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>shl 10,10</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>22528</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>shl 11,11</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>49152</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>shl 12,12</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x1a000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>shl 13,13</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x1e000</td>
+          <td>ror 15,15</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x38000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>shl 14,14</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x68000</td>
+          <td>ror 13,13</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x78000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>shl 15,15</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xc0000</td>
+          <td>ror 12,12</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x160000</td>
+          <td>ror 11,11</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x280000</td>
+          <td>ror 10,10</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x480000</td>
+          <td>ror 9,9</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x8000000</td>
+          <td>ror 8,8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xe000000</td>
+          <td>ror 7,7</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x18000000</td>
+          <td>ror 6,6</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x28000000</td>
+          <td>ror 5,5</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>1./65536</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>fmul 1/256,1/256</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>1./16384</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>fmul 1/128,1/128</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>1./4096</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>fmul 1/64,1/64</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>1./1024</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>fmul 1/32,1/32</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>1./256</td>
+          <td>or 1./256,1./256</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 1./256,1./256</td>
+          <td>fmul 1/16,1/16</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>1./128</td>
+          <td>or 1./128,1./128</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 1./128,1./128</td>
+          <td><br>
+          </td>
+          <td>fadd 1/256,1/256</td>
+        </tr>
+        <tr>
+          <td>1./64</td>
+          <td>or 1./64,1./64</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 1./64,1./64</td>
+          <td>fmul 1/8,1/8</td>
+          <td>fadd 1/128,1/128</td>
+        </tr>
+        <tr>
+          <td>1./32</td>
+          <td>or 1./32,1./32</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 1./32,1./32</td>
+          <td><br>
+          </td>
+          <td>fadd 1/64,1/64</td>
+        </tr>
+        <tr>
+          <td>1./16</td>
+          <td>or 1./16,1./16</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 1./16,1./16</td>
+          <td>fmul 1/4,1/4</td>
+          <td>fadd 1/32,1/32</td>
+        </tr>
+        <tr>
+          <td>1./8</td>
+          <td>or 1./8,1./8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 1./8,1./8</td>
+          <td><br>
+          </td>
+          <td>fadd 1/16,1/16</td>
+        </tr>
+        <tr>
+          <td>1./4</td>
+          <td>or 1./4,1./4</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 1./4,1./4</td>
+          <td>fmul 1/2,1/2</td>
+          <td>fadd 1/8,1/8</td>
+        </tr>
+        <tr>
+          <td>1./2</td>
+          <td>or 1./2,1./2</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 1./2,1./2</td>
+          <td><br>
+          </td>
+          <td>fadd 1/4,1/4</td>
+        </tr>
+        <tr>
+          <td>1.0</td>
+          <td>or 1.0,1.0</td>
+          <td><br>
+          </td>
+          <td>itof 1</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 1.0,1.0</td>
+          <td><br>
+          </td>
+          <td>fadd 1/2,1/2</td>
+        </tr>
+        <tr>
+          <td>2.0</td>
+          <td>or 2.0,2.0</td>
+          <td><br>
+          </td>
+          <td>itof 2</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 2.0,2.0</td>
+          <td><br>
+          </td>
+          <td>fadd 1.,1.</td>
+        </tr>
+        <tr>
+          <td>3.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 3</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>4.0</td>
+          <td>or 4.0,4.0</td>
+          <td><br>
+          </td>
+          <td>itof 4</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 4.0,4.0</td>
+          <td><br>
+          </td>
+          <td>fadd 2.,2.</td>
+        </tr>
+        <tr>
+          <td>5.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 5</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>6.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 6</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>7.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 7</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>8.0</td>
+          <td>or 8.0,8.0</td>
+          <td><br>
+          </td>
+          <td>itof 8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 8.0,8.0</td>
+          <td><br>
+          </td>
+          <td>fadd 4.,4.</td>
+        </tr>
+        <tr>
+          <td>9.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 9</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>10.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 10</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>11.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 11</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>12.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 12</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>13.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 13</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>14.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 14</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>15.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 15</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>16.0</td>
+          <td>or 16.0,16.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 16.0,16.0</td>
+          <td>fmul 4.,4.</td>
+          <td>fadd 8.,8.</td>
+        </tr>
+        <tr>
+          <td>32.0</td>
+          <td>or 32.0,32.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 32.0,32.0</td>
+          <td><br>
+          </td>
+          <td>fadd 16.,16.</td>
+        </tr>
+        <tr>
+          <td>64.0</td>
+          <td>or 64.0,64.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 64.0,64.0</td>
+          <td>fmul 8.,8.</td>
+          <td>fadd 32.,32.</td>
+        </tr>
+        <tr>
+          <td>128.0</td>
+          <td>or 128.0,128.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min 128.0,128.0</td>
+          <td><br>
+          </td>
+          <td>fadd 64.,64.</td>
+        </tr>
+        <tr>
+          <td>256.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>fmul 16.,16.</td>
+          <td>fadd 128.,128.</td>
+        </tr>
+        <tr>
+          <td>1024.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>fmul 32.,32.</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>4096.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>fmul 64.,64.</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>16384.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>fmul 128.,128.</td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e6e0000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 1./256</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e700000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 1./128</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e720000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 1./64</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e740000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 1./32</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e760000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 1./16</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e780000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 1./8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e7a0000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 1./4</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e7c0000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 1./2</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e7e0000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 1.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e800000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 2.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e810000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 4.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e820000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 8.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e830000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 16.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e840000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 32.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e850000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 64.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x4e860000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof 128.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x60000000</td>
+          <td>ror 3,3</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x76ff0000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8adds 1./256,1./256</td>
+          <td><br>
+          </td>
+          <td>v8adds 1./256,1./256</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x77000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 1./256,1./256</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x78000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 1./128,1./128</td>
+          <td><br>
+          </td>
+          <td>v8adds 1./128,1./128</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x78ff0000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8adds 1./64,1./64</td>
+          <td><br>
+          </td>
+          <td>v8adds 1./64,1./64</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x79000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 1./64,1./64</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x7a000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 1./32,1./32</td>
+          <td><br>
+          </td>
+          <td>v8adds 1./32,1./32</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x7aff0000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8adds 1./16,1./16</td>
+          <td><br>
+          </td>
+          <td>v8adds 1./16,1./16</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x7b000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 1./16,1./16</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x7c000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 1./8,1./8</td>
+          <td><br>
+          </td>
+          <td>v8adds 1./8,1./8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x7cff0000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8adds 1./4,1./4</td>
+          <td><br>
+          </td>
+          <td>v8adds 1./4,1./4</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x7d000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 1./4,1./4</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x7e000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 1./2,1./2</td>
+          <td><br>
+          </td>
+          <td>v8adds 1./2,1./2</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x7eff0000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8adds 1.0,1.0</td>
+          <td><br>
+          </td>
+          <td>v8adds 1.0,1.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x7f000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 1.0,1.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x80000000</td>
+          <td>ror 1,1</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 2.0,2.0</td>
+          <td><br>
+          </td>
+          <td>v8adds 2.0,2.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x80ff0000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8adds 4.0,4.0</td>
+          <td><br>
+          </td>
+          <td>v8adds 4.0,4.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x81000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 4.0,4.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x82000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 8.0,8.0</td>
+          <td><br>
+          </td>
+          <td>v8adds 8.0,8.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x82ff00000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8adds 16.0,16.0</td>
+          <td><br>
+          </td>
+          <td>v8adds 16.0,16.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x83000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 16.0,16.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x84000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 32.0,32.0</td>
+          <td><br>
+          </td>
+          <td>v8adds 32.0,32.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x84ff0000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8adds 64.0,64.0</td>
+          <td><br>
+          </td>
+          <td>v8adds 64.0,64.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x85000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 64.0,64.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0x86000000</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add 128.0,128.0</td>
+          <td><br>
+          </td>
+          <td>v8adds 128.0,128.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xbcffffff</td>
+          <td><br>
+          </td>
+          <td>not 128.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xbd7fffff</td>
+          <td><br>
+          </td>
+          <td>not 64.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xbdffffff</td>
+          <td><br>
+          </td>
+          <td>not 32.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xbe7fffff</td>
+          <td><br>
+          </td>
+          <td>not 16.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xbeffffff</td>
+          <td><br>
+          </td>
+          <td>not 8.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xbf7fffff</td>
+          <td><br>
+          </td>
+          <td>not 4.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-1.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -1</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xbfffffff</td>
+          <td><br>
+          </td>
+          <td>not 2.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-2.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -2</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-3.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -3</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xc07fffff</td>
+          <td><br>
+          </td>
+          <td>not 1.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-4.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -4</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-5.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -5</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-6.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -6</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-7.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -7</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xc0ffffff</td>
+          <td><br>
+          </td>
+          <td>not 1./2</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-8.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-9.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -9</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-10.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -10</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-11.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -11</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-12.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -12</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-13.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -13</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-14.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -14</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-15.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -15</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xc17fffff</td>
+          <td><br>
+          </td>
+          <td>not 1./4</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-16.0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>itof -16</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xc1ffffff</td>
+          <td><br>
+          </td>
+          <td>not 1./8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xc27fffff</td>
+          <td><br>
+          </td>
+          <td>not 1./16</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xc2ffffff</td>
+          <td><br>
+          </td>
+          <td>not 1./32</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xc37fffff</td>
+          <td><br>
+          </td>
+          <td>not 1./64</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xc3ffffff</td>
+          <td><br>
+          </td>
+          <td>not 1./128</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>0xc47fffff</td>
+          <td><br>
+          </td>
+          <td>not 1./256</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-32</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add -16,-16</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-30</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add -15,-15</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-28</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add -14,-14</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-26</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add -13,-13</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-24</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add -12,-12</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-22</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add -11,-11</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-20</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add -10,-10</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-18</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>add -9,-9</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-16</td>
+          <td>or -16,-16</td>
+          <td>not 15</td>
+          <td><br>
+          </td>
+          <td>add -8,-8</td>
+          <td><br>
+          </td>
+          <td>v8min -16,-16</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-15</td>
+          <td>or -15,-15</td>
+          <td>not 14</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min -15,-15</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-14</td>
+          <td>or -14,-14</td>
+          <td>not 13</td>
+          <td><br>
+          </td>
+          <td>add -7,-7</td>
+          <td><br>
+          </td>
+          <td>v8min -14,-14</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-13</td>
+          <td>or -13,-13</td>
+          <td>not 12</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min -13,-13</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-12</td>
+          <td>or -12,-12</td>
+          <td>not 11</td>
+          <td><br>
+          </td>
+          <td>add -6,-6</td>
+          <td><br>
+          </td>
+          <td>v8min -12,-12</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-11</td>
+          <td>or -11,-11</td>
+          <td>not 10</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min -11,-11</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-10</td>
+          <td>or -10,-10</td>
+          <td>not 9</td>
+          <td><br>
+          </td>
+          <td>add -5,-5</td>
+          <td><br>
+          </td>
+          <td>v8min -10,-10</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-9</td>
+          <td>or -9,-9</td>
+          <td>not 8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min -9,-9</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-8</td>
+          <td>or -8,-8</td>
+          <td>not 7</td>
+          <td><br>
+          </td>
+          <td>add -4,-4</td>
+          <td><br>
+          </td>
+          <td>v8min -8,-8</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-7</td>
+          <td>or -7,-7</td>
+          <td>not 6</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min -7,-7</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-6</td>
+          <td>or -6,-6</td>
+          <td>not 5</td>
+          <td><br>
+          </td>
+          <td>add -3,-3</td>
+          <td><br>
+          </td>
+          <td>v8min -6,-6</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-5</td>
+          <td>or -5,-5</td>
+          <td>not 4</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min -5,-5</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-4</td>
+          <td>or -4,-4</td>
+          <td>not 3</td>
+          <td><br>
+          </td>
+          <td>add -2,-2</td>
+          <td><br>
+          </td>
+          <td>v8min -4,-4</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-3</td>
+          <td>or -3,-3</td>
+          <td>not 2</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min -3,-3</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-2</td>
+          <td>or -2,-2</td>
+          <td>not 1</td>
+          <td><br>
+          </td>
+          <td>add -1,-1</td>
+          <td><br>
+          </td>
+          <td>v8min -2,-2</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td>-1</td>
+          <td>or -1,-1</td>
+          <td>not 0</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+          <td>v8min -1,-1</td>
+          <td><br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

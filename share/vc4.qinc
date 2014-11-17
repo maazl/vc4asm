@@ -1,0 +1,12 @@
+# general definitions
+
+# VPM setup helpers
+.func vdw_setup_0(units, depth, dma) 0x80000000 | (units & 0x7f) << 23 | (depth & 0x7f) << 16 | (dma & 0xffff)
+.func vdw_setup_1(stride) 0xc0000000 | stride
+.func vpm_setup(num, stride, dma) (num & 0xf) << 20 | (stride & 0x3f) << 12 | (dma & 0xfff)
+.func dma_h32(y, x) 0x4000 | (y & 0x7f) << 7 | (x & 0xf) << 3
+.func v32(y, x) 0x200 | (y & 0x30) | (x & 0xf)
+
+# functional semaphore style
+.func sacq(i) sacq0 + i
+.func srel(i) srel0 + i

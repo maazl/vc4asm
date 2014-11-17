@@ -1,0 +1,1 @@
+../bin/vc4asm -E gpu_fft_1k.E -o gpu_fft_1k.bin -c gpu_fft_1k.c ../share/vc4.qinc gpu_fft_1k.qasm

@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta content="text/html; charset=iso-8859-15" http-equiv="content-type">
+    <title>VC4ASM Expression syntax</title>
+    <meta content="Marcel M&uuml;ller" name="author">
+    <meta content="Raspberry Pi BCM2835 QPU macro assembler" name="keywords">
+    <link rel="stylesheet" href="infstyle.css" type="text/css">
+  </head>
+  <body>
+    <h1>VC4ASM - Expression syntax</h1>
+    <p><a href="index.html">&uarr; Top</a>, <a href="#constant">&rarr;
+        Constants</a>, <a href="#operator">&rarr; Operators</a></p>
+    <h2><a name="constant"></a>Constants</h2>
+    <table border="1" cellpadding="3" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Example</th>
+          <th><nobr>Data type</nobr></th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>decimal</td>
+          <td><tt>-42 </tt></td>
+          <td>int<br>
+          </td>
+          <td>Integer constant, 32 bit signed or unsigned<br>
+          </td>
+        </tr>
+        <tr>
+          <td>hexadecimal</td>
+          <td><tt>-0xa4</tt></td>
+          <td>int<br>
+          </td>
+          <td>Hexadecimal constant, 32 bit signed or unsigned<br>
+          </td>
+        </tr>
+        <tr>
+          <td>octal</td>
+          <td><tt>-0377</tt></td>
+          <td>int<br>
+          </td>
+          <td>Octal constant, indicated by leading zero</td>
+        </tr>
+        <tr>
+          <td>binary</td>
+          <td><tt>0b10010</tt></td>
+          <td>int<br>
+          </td>
+          <td>Binary constant</td>
+        </tr>
+        <tr>
+          <td>floating point</td>
+          <td><tt>1.0<br>
+              1.4e6</tt></td>
+          <td>float</td>
+          <td>Floating point value<br>
+            Note that this <i>must</i> include a decimal dot.</td>
+        </tr>
+        <tr>
+          <td>accumulator<br>
+          </td>
+          <td><tt>r1</tt></td>
+          <td>register</td>
+          <td><tt>r0</tt> ... <tt>r5</tt><br>
+            On write <tt>r5</tt> need to be named <tt>r5quad</tt> or <tt>r5rep</tt>.<br>
+          </td>
+        </tr>
+        <tr>
+          <td>memory register</td>
+          <td><tt> ra25</tt></td>
+          <td>register</td>
+          <td><tt>ra0</tt> ... <tt>ra31</tt>, <tt>rb0</tt> ... <tt>rb31</tt>
+          </td>
+        </tr>
+        <tr>
+          <td>I/O register</td>
+          <td><tt>vary<br>
+              irq</tt></td>
+          <td>register</td>
+          <td>Access to peripheral hardware, see table below.</td>
+        </tr>
+        <tr>
+          <td>semaphore</td>
+          <td><tt>sacq15<br>
+              srel2</tt></td>
+          <td>register</td>
+          <td>Semaphore access, read only. Depending on the name an <u>acq</u>uire
+            or <u>rel</u>ease instruction is issued.<br>
+            <i>This syntax is only provided for compatibility with Broadcom
+              source codes. Normally you should prefer the <tt>sacq</tt> and <tt>srel</tt>
+              instructions.</i></td>
+        </tr>
+        <tr>
+          <td>label</td>
+          <td><tt>:loop<br>
+            </tt></td>
+          <td>label</td>
+          <td>label receiving the absolute number of bytes from the start of the
+            assembly.</td>
+        </tr>
+      </tbody>
+    </table>
+    <h3> <a id="register" name="register"></a>Hardware register</h3>
+    <table border="1" cellpadding="3" cellspacing="0">
+      <thead>
+        <tr>
+          <th colspan="1" rowspan="2">Number</th>
+          <th style="text-align: center;" colspan="2" rowspan="1">read<nobr></nobr></th>
+          <th style="text-align: center;" colspan="2" rowspan="1">write</th>
+        </tr>
+        <tr>
+          <th style="text-align: center;">file A</th>
+          <th style="text-align: center;">file B</th>
+          <th style="text-align: center;">file A</th>
+          <th style="text-align: center;">file B</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>32</td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>unif</tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>r0</tt> </td>
+        </tr>
+        <tr>
+          <td>33</td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>r1</tt> </td>
+        </tr>
+        <tr>
+          <td>34<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>r2</tt> </td>
+        </tr>
+        <tr>
+          <td>35<br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>vary</tt>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>r3</tt> </td>
+        </tr>
+        <tr>
+          <td>36<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>tmurs</tt>
+          </td>
+        </tr>
+        <tr>
+          <td>37<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"><tt>r5quad</tt> </td>
+          <td style="text-align: center;"><tt>r5rep</tt> </td>
+        </tr>
+        <tr>
+          <td>38<br>
+          </td>
+          <td style="text-align: center;"><tt>elem_num</tt> </td>
+          <td style="text-align: center;"><tt>qpu_num</tt> </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>irq<br>
+              interrupt</tt> </td>
+        </tr>
+        <tr>
+          <td>39<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+        </tr>
+        <tr>
+          <td>40<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"><tt>unif_addr</tt> </td>
+          <td style="text-align: center;"><tt>unif_addr_rel</tt> </td>
+        </tr>
+        <tr>
+          <td>41<br>
+          </td>
+          <td style="text-align: center;"><tt>x_coord</tt> </td>
+          <td style="text-align: center;"><tt>y_coord</tt> </td>
+          <td style="text-align: center;"><tt>x_coord</tt> </td>
+          <td style="text-align: center;"><tt>y_coord</tt> </td>
+        </tr>
+        <tr>
+          <td>42<br>
+          </td>
+          <td style="text-align: center;"><tt>ms_mask</tt> </td>
+          <td style="text-align: center;"><tt>rev_flag</tt> </td>
+          <td style="text-align: center;"><tt>ms_mask</tt> </td>
+          <td style="text-align: center;"><tt>rev_flag</tt> </td>
+        </tr>
+        <tr>
+          <td>43<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>stencil</tt></td>
+        </tr>
+        <tr>
+          <td>44<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>tlbz</tt></td>
+        </tr>
+        <tr>
+          <td>45<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>tlbm</tt></td>
+        </tr>
+        <tr>
+          <td>46<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>tlbc</tt></td>
+        </tr>
+        <tr>
+          <td>47<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>tlbam</tt></td>
+        </tr>
+        <tr>
+          <td>48<br>
+          </td>
+          <td style="text-align: center;" colspan="4" rowspan="1"><tt>vpm</tt></td>
+        </tr>
+        <tr>
+          <td>49<br>
+          </td>
+          <td style="text-align: center;"><tt>vr_busy</tt> </td>
+          <td style="text-align: center;"><tt>vw_busy</tt> </td>
+          <td style="text-align: center;"><tt>vr_setup</tt> </td>
+          <td style="text-align: center;"><tt>vw_setup</tt> </td>
+        </tr>
+        <tr>
+          <td>50<br>
+          </td>
+          <td style="text-align: center;"><tt>vr_wait</tt> </td>
+          <td style="text-align: center;"><tt>vw_busy</tt> </td>
+          <td style="text-align: center;"><tt>vr_addr</tt> </td>
+          <td style="text-align: center;"><tt>vw_addr</tt> </td>
+        </tr>
+        <tr>
+          <td>51<br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>mutex<br>
+              mutex_acq</tt></td>
+          <td style="text-align: center;" rowspan="1" colspan="2"><tt>mutex<br>
+              mutex_rel</tt></td>
+        </tr>
+        <tr>
+          <td>52<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>recip</tt></td>
+        </tr>
+        <tr>
+          <td>53<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>recipsqrt</tt></td>
+        </tr>
+        <tr>
+          <td>54<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>exp</tt></td>
+        </tr>
+        <tr>
+          <td>55<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>log</tt></td>
+        </tr>
+        <tr>
+          <td>56<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>t0s</tt></td>
+        </tr>
+        <tr>
+          <td>57<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>t0t</tt></td>
+        </tr>
+        <tr>
+          <td>58<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>t0r</tt></td>
+        </tr>
+        <tr>
+          <td>59<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>t0b</tt></td>
+        </tr>
+        <tr>
+          <td>60<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>t1s</tt></td>
+        </tr>
+        <tr>
+          <td>61<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>t1t</tt></td>
+        </tr>
+        <tr>
+          <td>62<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>t1r</tt></td>
+        </tr>
+        <tr>
+          <td>63<br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;"> <br>
+          </td>
+          <td style="text-align: center;" colspan="2"><tt>t1b</tt></td>
+        </tr>
+      </tbody>
+    </table>
+    <h2><a name="operator"></a>Operators and precedence</h2>
+    <table border="1" cellpadding="3" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Precedence</th>
+          <th>Type</th>
+          <th>Operator</th>
+          <th><nobr>Operand types</nobr></th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>brace</td>
+          <td><tt>( )</tt></td>
+          <td>all<br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="1" rowspan="4">2<br>
+            <br>
+            <br>
+          </td>
+          <td colspan="1" rowspan="4">unary</td>
+          <td><tt>+</tt> </td>
+          <td>all<br>
+          </td>
+          <td>identity operation<br>
+          </td>
+        </tr>
+        <tr>
+          <td><tt>-</tt></td>
+          <td>int &rarr; int<br>
+            float &rarr; float<br>
+          </td>
+          <td>negative value</td>
+        </tr>
+        <tr>
+          <td><tt>~</tt></td>
+          <td>int &rarr; int<br>
+          </td>
+          <td>binary not</td>
+        </tr>
+        <tr>
+          <td><tt>!</tt></td>
+          <td>int &rarr; int<br>
+            float &rarr; int</td>
+          <td>logical not, <tt>1</tt> if operand is zero, otherwise <tt>0</tt></td>
+        </tr>
+        <tr>
+          <td>3<br>
+          </td>
+          <td>binary<br>
+          </td>
+          <td><tt>**</tt></td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; float <br>
+            int, float &rarr; float<br>
+            float, int &rarr; float</td>
+          <td>power, x<small><sup>y</sup></small><br>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="1" rowspan="3">4<br>
+            <br>
+            <br>
+          </td>
+          <td colspan="1" rowspan="3">binary</td>
+          <td><tt>*</tt></td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; float <br>
+            int, float &rarr; float<br>
+            float, int &rarr; float </td>
+          <td>multiplication<br>
+          </td>
+        </tr>
+        <tr>
+          <td><tt>/</tt></td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; float<br>
+            int, float &rarr; float<br>
+            float, int &rarr; float</td>
+          <td>division</td>
+        </tr>
+        <tr>
+          <td><tt>%</tt></td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; float<br>
+            int, float &rarr; float<br>
+            float, int &rarr; float</td>
+          <td>modulus</td>
+        </tr>
+        <tr>
+          <td colspan="1" rowspan="2">5<br>
+          </td>
+          <td colspan="1" rowspan="2">binary</td>
+          <td><tt>+</tt></td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; float<br>
+            int, float &rarr; float<br>
+            float, int &rarr; float<br>
+            reg, int &rarr; reg</td>
+          <td>addition<br>
+            In case the left operand is a register the register number changes.
+            The resulting number must not exceed the range for the given
+            register type. The operation never changes the type of a register.</td>
+        </tr>
+        <tr>
+          <td><tt>-</tt></td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; float<br>
+            int, float &rarr; float<br>
+            float, int &rarr; float<br>
+            reg, int &rarr; reg </td>
+          <td>subtraction<br>
+            In case the left operand is a register the register number changes.
+            The resulting number must not exceed the range for the given
+            register type. The operation never changes the type of a register.</td>
+        </tr>
+        <tr>
+          <td colspan="1" rowspan="4">6<br>
+          </td>
+          <td colspan="1" rowspan="4">binary</td>
+          <td><tt>&lt;&lt; </tt></td>
+          <td>int, int &rarr; int<br>
+            float, int &rarr; float<br>
+            reg, int &rarr; reg<br>
+            reg, reg &rarr; reg</td>
+          <td>arithmetic shift left (signed)<br>
+            Arithmetic shift left is basically the same than logical shift left
+            unless the right operand is negative where the shift direction turns
+            to right.<br>
+            If the left operand is float, only the exponent is shifted, i.e. the
+            number is multiplied by the power of two indicated by the right
+            operand.<br>
+            If the left operand is a register, the rotate unit of the MUL ALU is
+            activated by small immediate values &ge; 48. The right operand need
+            to be a constant in the range [-8,7] or register <tt>r5</tt>.</td>
+        </tr>
+        <tr>
+          <td><tt>&gt;&gt; </tt></td>
+          <td>int, int &rarr; int<br>
+            float, int &rarr; float<br>
+            reg, int &rarr; reg<br>
+            reg, reg &rarr; reg </td>
+          <td>arithmetic shift right (signed)<br>
+            If the left operand is float, only the exponent is shifted, i.e. the
+            number is multiplied by the power of two indicated by the right
+            operand.<br>
+            If the left operand is a register, the rotate unit of the MUL ALU is
+            activated by small immediate values &ge; 48. The right operand need
+            to be a constant in the range [-8,7] or register <tt>r5</tt>.</td>
+        </tr>
+        <tr>
+          <td><tt>&lt;&lt;&lt;</tt></td>
+          <td>int, int &rarr; int</td>
+          <td>logical shift left (unsigned shifted by signed)<br>
+            Logical shift left is basically the same than arithmetic shift left
+            unless the right operand is negative where the shift direction turns
+            to right.</td>
+        </tr>
+        <tr>
+          <td><tt>&gt;&gt;&gt;</tt></td>
+          <td>int, int &rarr; int</td>
+          <td>logical shift right (unsigned shifted by signed)</td>
+        </tr>
+        <tr>
+          <td rowspan="4">7 </td>
+          <td rowspan="4">binary</td>
+          <td><tt>&gt;</tt></td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; int<br>
+            int, float &rarr; int<br>
+            float, int &rarr; int<br>
+            reg, reg &rarr; int</td>
+          <td>greater than<br>
+            If registers are compared then both operands must be of the same
+            register type, i.e. from the same register file.</td>
+        </tr>
+        <tr>
+          <td><tt>&gt;=</tt></td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; int<br>
+            int, float &rarr; int<br>
+            float, int &rarr; int<br>
+            reg, reg &rarr; int</td>
+          <td>greater than or equal<br>
+            If registers are compared then both operands must be of the same
+            register type, i.e. from the same register file.</td>
+        </tr>
+        <tr>
+          <td><tt>&lt;</tt> </td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; int<br>
+            int, float &rarr; int<br>
+            float, int &rarr; int<br>
+            reg, reg &rarr; int</td>
+          <td>less than<br>
+            If registers are compared then both operands must be of the same
+            register type, i.e. from the same register file.</td>
+        </tr>
+        <tr>
+          <td><tt>&lt;=</tt> </td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; int<br>
+            int, float &rarr; int<br>
+            float, int &rarr; int<br>
+            reg, reg &rarr; int</td>
+          <td>less than or equal<br>
+            If registers are compared then both operands must be of the same
+            register type, i.e. from the same register file.</td>
+        </tr>
+        <tr>
+          <td colspan="1" rowspan="2">8<br>
+          </td>
+          <td colspan="1" rowspan="2">binary</td>
+          <td><tt>==</tt> </td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; int<br>
+            int, float &rarr; int<br>
+            float, int &rarr; int<br>
+            reg, reg &rarr; int </td>
+          <td>equal<br>
+            If registers are compared then both operands must be of the same
+            register type, i.e. from the same register file. </td>
+        </tr>
+        <tr>
+          <td><tt>!=</tt> </td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; int<br>
+            int, float &rarr; int<br>
+            float, int &rarr; int<br>
+            reg, reg &rarr; int </td>
+          <td>not equal<br>
+            If registers are compared then both operands must be of the same
+            register type, i.e. from the same register file. </td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td colspan="1" rowspan="3">binary</td>
+          <td><tt>&amp;</tt></td>
+          <td>int, int &rarr; int</td>
+          <td>binary and</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><tt>^</tt></td>
+          <td>int, int &rarr; int</td>
+          <td>binary exclusive or</td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td><tt>|</tt></td>
+          <td>int, int &rarr; int</td>
+          <td>binary inclusive or</td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td colspan="1" rowspan="3">binary</td>
+          <td><tt>&amp;&amp;</tt></td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; int<br>
+            int, float &rarr; int<br>
+            float, int &rarr; int</td>
+          <td>logical and</td>
+        </tr>
+        <tr>
+          <td>13</td>
+          <td><tt>^^</tt></td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; int<br>
+            int, float &rarr; int<br>
+            float, int &rarr; int</td>
+          <td>logical exclusive or</td>
+        </tr>
+        <tr>
+          <td>14</td>
+          <td><tt>||</tt></td>
+          <td>int, int &rarr; int<br>
+            float, float &rarr; int<br>
+            int, float &rarr; int<br>
+            float, int &rarr; int</td>
+          <td>logical inclusive or</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

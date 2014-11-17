@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta content="text/html; charset=iso-8859-15" http-equiv="content-type">
+    <title>VC4ASM Assembler directives</title>
+    <meta content="Marcel M&uuml;ller" name="author">
+    <meta content="vc4asm instruction set" name="keywords">
+    <link rel="stylesheet" href="infstyle.css" type="text/css">
+  </head>
+  <body>
+    <h1>VC4ASM - Assembler directives</h1>
+    <p><a href="index.html">&uarr; Top</a>, <tt><a href="#.const">.const</a> <a
+          href="#.constlc">.constlc</a> <a href="#.else">.else</a> <a href="#.endif">.endif</a>
+        <a href="#.endm">.endm</a> <a href="#.endr">.endr</a> <a href="#.equ">.equ</a>
+        <a href="#.func">.func</a> <a href="#.if">.if</a> <a href="#.include">.include</a>
+        <a href="#.macro">.macro</a> <a href="#.rep">.rep</a> <a href="#.set">.set</a>
+        <a href="#.setlc">.setlc</a> <a href="#.unset">.unset</a></tt><tt><tt>
+        </tt> <a href="#.unsetlc">.unsetlc</a><a href="#operator"></a></tt></p>
+    <h2><a id=".const" name=".const"></a><a id=".set" name=".set"></a><tt>.const
+        .set .lconst .lset</tt> - define a constant</h2>
+    <pre>.const <i>identifier</i>, <i>expression</i>
+.set <i>identifier</i>, <i>expression</i>
+.lconst <i>identifier</i>, <i>expression</i>
+.lset <i>identifier</i>, <i>expression</i></pre>
+    <dl>
+      <dt><var><tt>identifier</tt></var></dt>
+      <dd>This identifier is assigned, i.e. from this line on. In case of <tt>.lset</tt>
+        and <tt>.lconst</tt> the assignment is only preserved in the current
+        context, e.g. the current include or macro.</dd>
+      <dt><tt><var>expression</var></tt></dt>
+      <dd>This expression is assigned to <var><tt>identifier</tt></var>. The
+        expression can be of any type including registers but it must evaluate
+        at the time <tt>.set</tt> is parsed. You cannot assign incomplete
+        expressions like bare operators.</dd>
+    </dl>
+    <p>Constants can be used wherever an expression is allowed.</p>
+    <p>The assignment of <tt>.const</tt> and <tt>.lconst</tt> is final, i.e. a
+      second assignment to the same identifier is an error. But final
+      assignments neither prevent from shadowing in nested contexts nor from <tt>.unset</tt>.<br>
+      <tt>.equ</tt> may be used as synonym for <tt>.set</tt>.</p>
+    <h3> Example</h3>
+    <pre>.set ra_link_0, ra0<var></var></pre>
+    <h2><a id=".unset" name=".unset"></a><tt>.unset .lunset</tt> - revoke a
+      constant definition</h2>
+    <pre>.unset <i>identifier<br></i>.lunset <i>identifier</i></pre>
+    <dl>
+      <dt><var><tt>identifier</tt></var></dt>
+      <dd>The assignment of this identifier is undone. This normally reverts the
+        identifier to undefined state. However, if a local version of the
+        identifier currently shadows another value of the same identifier the
+        previous state before the shadowing is restored.</dd>
+    </dl>
+    <p><tt>.lunset</tt> only removes the identifier from the current local
+      context.</p>
+    <h2><a id=".func" name=".func"></a><tt>.func</tt> - define a user function</h2>
+    <pre>.func <var>identifier</var>(<var>argument1, argument2</var> ...) <var>body</var></pre>
+    <dl>
+      <dt><var><tt>identifier</tt></var></dt>
+      <dd>Name of the function.</dd>
+      <dt><tt><var>argument1, argument2</var> ...</tt></dt>
+      <dd><var></var>Function arguments. These are identifiers that can be used
+        in the function body like constants wherever an expression is allowed.</dd>
+    </dl>
+    <p>Functions are similar to constants but their value depends on arguments.
+      Function arguments must be expressions of any type including registers,
+      but they cannot be incomplete expressions like operators or identifier
+      fragments.</p>
+    <h3>Example</h3>
+    <pre>.func vpm_setup(num, stride, dma) (num &amp; 0xf) &lt;&lt; 20 | (stride &amp; 0x3f) &lt;&lt; 12 | (dma &amp; 0xfff)
+.func v32(y, x) 0x200 | (y &amp; 0x30) | (x &amp; 0xf)<br><br>mov vw_setup, vpm_setup(1, 1, v32(0,0))</pre>
+    <h2><a id=".macro" name=".macro"></a><a id=".endm" name=".endm"></a><tt>.macro</tt>
+      - define a macro</h2>
+    <pre>.macro <var>identifier, argument1, argument2</var> ...<br>    <var>your code</var><br>    ...<br>.endm</pre>
+    <dl>
+      <dt><var><tt>identifier</tt></var></dt>
+      <dd>Name of the macro.</dd>
+      <dt><tt><var>argument1, argument2</var> ...</tt></dt>
+      <dd>Macro arguments. These are identifiers that can be used in the macro
+        body like constants wherever an expression is allowed.</dd>
+    </dl>
+    <p>A macro insert a block of code at the point where it is invoked in the
+      code. The code might depend on arguments. In contrast to function macros
+      may emit code. But they also might contain other directives.</p>
+    <p>The macro arguments must be expressions of any type including registers,
+      but they cannot be incomplete expressions like operators or unresolved
+      identifiers. The arguments are evaluated at the time of macro invocation
+      rather than the time where they are used in the macro body. So they cannot
+      depend on code in the macro body.</p>
+    <h3>Example</h3>
+    <p>Header of a subroutine. The entry point address is assigned to a
+      register,</p>
+    <pre>.macro proc, rx_ptr, label
+    brr rx_ptr, label
+    nop
+    nop
+    nop
+.endm<br><br>proc ra23, r:1f<br>    <var>subroutine body</var><br>    ...<br>:1</pre>
+    <h2><a id=".rrep" name="constant"></a><a id=".endr" name=".endr"></a><tt>.rep</tt>
+      - repeat a code block multiple times</h2>
+    <pre>.rep <var>identifier</var>, <var>count<br>    your_code</var><br>    ...<br>.endr<var></var></pre>
+    <dl>
+      <dt><var><tt>identifier</tt></var></dt>
+      <dd>This identifier receives the loop count starting at <tt>0</tt> and up
+        to <tt><var>count</var>-1</tt> for the last loop cycle.<br>
+        At the end of <tt>.endr</tt> the identifier returns to undefined state.</dd>
+      <dt><tt><var>count</var></tt></dt>
+      <dd>Number of loop cycles. <tt><var>count</var></tt> must be <tt>&ge; 0</tt>
+        and evaluate at the time <tt>.rep</tt> is parsed.</dd>
+    </dl>
+    <h3> Example</h3>
+    <p>Acquire all 15 QPU semaphores.</p>
+    <pre>.rep i 15<br>    sacq i<br>.endr</pre>
+    <h2><a id=".if" name=".if"></a><a id=".else" name=".else"></a><a id=".endif"
+        name=".endif"></a><tt>.if</tt> - conditional compile</h2>
+    <pre>.if <var>condition<br>    your code</var><br><var>    </var>...<br>.else<br>    <var>alternate code</var><br><var>    </var>...<br>.endif    </pre>
+    <dl>
+      <dt><tt><var>condition</var></tt></dt>
+      <dd>Expression to check. The expression must be of type integer or float
+        and is checked to be non-zero.</dd>
+    </dl>
+    <h2><a id=".include" name=".include"></a><tt>.include</tt> - include another
+      file</h2>
+    <pre>.include "<var>filename</var>"</pre>
+    <dl>
+      <dt><tt><var>filename</var></tt></dt>
+      <dd>Name of another assembler file to include. The path may be relative or
+        absolute.</dd>
+    </dl>
+    <p>An included file denotes a local context. Definitions that are local like
+      <tt>.setlc</tt> are only valid within the included file and sub includes.</p>
+    <pre><var></var></pre>
+  </body>
+</html>
