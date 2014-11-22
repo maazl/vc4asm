@@ -19,27 +19,17 @@ string Parser::location::toString() const
 }
 
 
-Parser::saveContext::saveContext(Parser& parent, contextType type, const string& file, unsigned line)
+Parser::saveContext::saveContext(Parser& parent, fileContext* ctx)
 :	Parent(parent)
-{	if (parent.AtFile.size())
-		parent.AtFile.front().Type = type;
-	parent.AtFile.emplace_front(CTX_CURRENT, file, line);
+{	parent.Context.emplace_back(ctx);
 }
 
 Parser::saveContext::~saveContext()
-{	Parent.AtFile.pop_front();
-	Parent.AtFile.front().Type = CTX_CURRENT;
-	// clean up context dependent constants, i.e. macro arguments.
-	size_t level = Parent.AtFile.size();
-	for (auto i = Parent.Consts.begin(); i != Parent.Consts.end(); )
-		if (i->second.Level > level)
-			Parent.Consts.erase(i++);
-		else
-			++i;
+{	Parent.Context.pop_back();
 }
 
-Parser::saveLineContext::saveLineContext(Parser& parent, contextType type, const string& file, unsigned line)
-:	saveContext(parent, type, file, line)
+Parser::saveLineContext::saveLineContext(Parser& parent, fileContext* ctx)
+:	saveContext(parent, ctx)
 , LineBak(parent.Line)
 , AtBak(parent.At)
 {}
@@ -50,80 +40,58 @@ Parser::saveLineContext::~saveLineContext()
 }
 
 
+Parser::Parser()
+{	Context.emplace_back(new fileContext(CTX_ROOT, string(), 0));
+}
+
+string Parser::enrichMsg(string msg)
+{	// Show context
+	contextType type = CTX_CURRENT;
+	for (auto i = Context.rbegin(); i != Context.rend(); ++i)
+	{	const fileContext& ctx = **i;
+		if (ctx.Line)
+			switch (type)
+			{case CTX_CURRENT:
+				msg = stringf("%s (%u,%u): ", ctx.File.c_str(), ctx.Line, At - Line - Token.size() + 1) + msg;
+				break;
+			 case CTX_INCLUDE:
+				msg += stringf("\n  Included from %s (%u)", ctx.File.c_str(), ctx.Line);
+				break;
+			 case CTX_MACRO:
+				msg += stringf("\n  At invocation of macro from %s (%u)", ctx.File.c_str(), ctx.Line);
+				break;
+			 case CTX_FUNCTION:
+				msg += stringf("\n  At function invocation from %s (%u)", ctx.File.c_str(), ctx.Line);
+				break;
+			 case CTX_ROOT:;
+			}
+		type = ctx.Type;
+	}
+	return msg;
+}
+
 void Parser::Fail(const char* fmt, ...)
 {	Success = false;
 	va_list va;
 	va_start(va, fmt);
-	string ret = vstringf(fmt, va);
+	throw enrichMsg(vstringf(fmt, va));
 	va_end(va);
-	// Show context
-	for (const fileContext& i : AtFile)
-		if (i.Line)
-			switch (i.Type)
-			{case CTX_CURRENT:
-				ret = stringf("%s (%u,%u): ", i.File.c_str(), i.Line, At - Line - Token.size() + 1) + ret;
-				break;
-			 case CTX_INCLUDE:
-				ret += stringf("\n  Included from %s (%u)", i.File.c_str(), i.Line);
-				break;
-			 case CTX_MACRO:
-				ret += stringf("\n  At invocation of macro from %s (%u)", i.File.c_str(), i.Line);
-				break;
-			 case CTX_FUNCTION:
-				ret += stringf("\n  At function invocation from %s (%u)", i.File.c_str(), i.Line);
-				break;
-			}
-	throw ret;
 }
 
 void Parser::Error(const char* fmt, ...)
 {	Success = false;
-	// Show context
-	for (const fileContext& i : AtFile)
-		if (i.Line)
-			switch (i.Type)
-			{case CTX_CURRENT:
-				fprintf(stderr, "%s (%u,%u): ", AtFile.front().File.c_str(), AtFile.front().Line, At - Line - Token.size() + 1);
-				va_list va;
-				va_start(va, fmt);
-				vfprintf(stderr, fmt, va);
-				va_end(va);
-				break;
-			 case CTX_INCLUDE:
-				fprintf(stderr, "\n  Included from %s (%u)", i.File.c_str(), i.Line);
-				break;
-			 case CTX_MACRO:
-				fprintf(stderr, "\n  At invocation of macro from %s (%u)", i.File.c_str(), i.Line);
-				break;
-			 case CTX_FUNCTION:
-				fprintf(stderr, "\n  At function defined here: %s (%u)", i.File.c_str(), i.Line);
-				break;
-			}
+	va_list va;
+	va_start(va, fmt);
+	fputs(enrichMsg(vstringf(fmt, va)).c_str(), stderr);
+	va_end(va);
 	fputc('\n', stderr);
 }
 
 void Parser::Warn(const char* fmt, ...)
-{	// Show context
-	for (const fileContext& i : AtFile)
-		if (i.Line)
-			switch (i.Type)
-			{case CTX_CURRENT:
-				fprintf(stderr, "%s (%u,%u): ", AtFile.front().File.c_str(), AtFile.front().Line, At - Line - Token.size() + 1);
-				va_list va;
-				va_start(va, fmt);
-				vfprintf(stderr, fmt, va);
-				va_end(va);
-				break;
-			 case CTX_INCLUDE:
-				fprintf(stderr, "\n  Included from %s (%u)", i.File.c_str(), i.Line);
-				break;
-			 case CTX_MACRO:
-				fprintf(stderr, "\n  At invocation of macro from %s (%u)", i.File.c_str(), i.Line);
-				break;
-			 case CTX_FUNCTION:
-				fprintf(stderr, "\n  At function defined here: %s (%u)", i.File.c_str(), i.Line);
-				break;
-			}
+{	va_list va;
+	va_start(va, fmt);
+	fputs(enrichMsg(vstringf(fmt, va)).c_str(), stderr);
+	va_end(va);
 	fputc('\n', stderr);
 }
 
@@ -188,7 +156,7 @@ size_t Parser::parseUInt(const char* src, uint32_t& dst)
 {	dst = 0;
 	const char* cp = src;
 	uint32_t basis = 10;
-	uint32_t limit = 0xffffffff/10;
+	uint32_t limit = UINT32_MAX / 10;
 	for (char c; (c = *cp) != 0; ++cp)
 	{	uint32_t digit = c - '0';
 		if (digit >= 10)
@@ -198,11 +166,10 @@ size_t Parser::parseUInt(const char* src, uint32_t& dst)
 			else
 			{	if (dst == 0 && cp - src == 1)
 					switch (c)
-					{	case 'b': basis = 2; limit = 0xffffffffU/2; continue;
-						case 'o': basis = 8; limit = 0xffffffffU/8; continue;
-						case 'x': basis = 16; limit = 0xffffffffU/16; continue;
+					{	case 'b': basis = 2; limit = UINT32_MAX/2; continue;
+						case 'o': basis = 8; limit = UINT32_MAX/8; continue;
+						case 'x': basis = 16; limit = UINT32_MAX/16; continue;
 						case 'd': continue;
-						default: basis = 8; limit = 0xffffffffU/8; break;
 					}
 				break;
 			}
@@ -210,7 +177,7 @@ size_t Parser::parseUInt(const char* src, uint32_t& dst)
 		if (dst > limit)
 			break;
 		dst *= basis;
-		if (dst > 0xffffffff - digit)
+		if (dst > UINT32_MAX - digit)
 			break;
 		dst += digit;
 	}
@@ -220,14 +187,17 @@ size_t Parser::parseUInt(const char* src, uint32_t& dst)
 exprValue Parser::ParseExpression()
 {
 	Eval eval;
- 	while (true)
-	{	switch (NextToken())
+ 	try
+	{next:
+		switch (NextToken())
 		{case WORD:
 			{	// Expand constants
-				auto c = Consts.find(Token);
-				if (c != Consts.end())
-				{	eval.PushValue(c->second.Value);
-					break;
+				for (auto i = Context.end(); i != Context.begin(); )
+				{	auto c = (*--i)->Consts.find(Token);
+					if (c != (*i)->Consts.end())
+					{	eval.PushValue(c->second.Value);
+						goto next;
+					}
 				}
 			}
 			{	// try function
@@ -259,22 +229,27 @@ exprValue Parser::ParseExpression()
 				 case WORD:
 					break;
 				 case NUM:
-					char* at_bak = At;
-					if (NextToken() == WORD)
-					{	if (Token == "f")
-							// forward reference
-							forward = true;
-						else
-							Fail("Invalid label postfix '%s'.", Token.c_str());
-					} else
-						At = at_bak; // Undo
+					// NextToken accepts some letters in numeric constants
+//					char* at_bak = At;
+//					if (NextToken() == WORD)
+//					{	if (Token == "f")
+//							// forward reference
+//							forward = true;
+//						else
+//							Fail("Invalid label postfix '%s'.", Token.c_str());
+//					} else
+//						At = at_bak; // Undo
+					if (Token.back() == 'f') // forward reference
+					{	forward = true;
+						Token.erase(Token.size()-1);
+					}
 				}
-				const auto& l = LabelsByName.emplace();
+				const auto& l = LabelsByName.emplace(Token, Labels.size());
 				if (forward || l.second)
 				{	// new label
 					l.first->second = Labels.size();
 					Labels.emplace_back(Token);
-					Labels.back().Reference = AtFile.front();
+					Labels.back().Reference = *Context.back();
 				}
 				eval.PushValue(exprValue(l.first->second, V_LABEL));
 				return eval.Evaluate();
@@ -316,6 +291,9 @@ exprValue Parser::ParseExpression()
 			}
 			break;
 		}
+		goto next;
+	} catch (const string& msg)
+	{	throw enrichMsg(msg);
 	}
 }
 
@@ -323,9 +301,11 @@ Inst::mux Parser::muxReg(reg_t reg)
 {	if (reg.Type & R_SEMA)
 		Fail("Cannot use semaphore source in ALU instruction.");
 	if (!(reg.Type & R_READ))
+	{	// direct read access for r0..r5.
+		if ((reg.Num ^ 32U) <= 5U)
+			return (Inst::mux)(reg.Num ^ 32);
 		Fail("The register is not readable.");
-	if ((reg.Num ^ 32) <= 5U)
-		return (Inst::mux)(reg.Num ^ 32);
+	}
 	// try RA
 	if (reg.Type & R_A)
 	{	if ( Instruct.RAddrA == reg.Num
@@ -373,14 +353,14 @@ const Parser::smiEntry* Parser::getSmallImmediateALU(uint32_t i)
 void Parser::doSMI(uint8_t si)
 {	switch (Instruct.Sig)
 	{default:
-		Fail("Small immediate value cannot be used together with signals.");
+		Fail("Small immediate value or vector rotation cannot be used together with signals.");
 	 case Inst::S_SMI:
 		if (Instruct.SImmd != si)
 			Fail("Only one distinct small immediate value supported per instruction. Requested value: %u, current Value: %u.", si, Instruct.SImmd);
 		return; // value hit
 	 case Inst::S_NONE:
 		if (Instruct.RAddrB != Inst::R_NOP )
-			Fail("Small immediate cannot be used together with register file B access.");
+			Fail("Small immediate cannot be used together with register file B read access.");
 	}
 	Instruct.Sig   = Inst::S_SMI;
 	Instruct.SImmd = si;
@@ -493,19 +473,29 @@ void Parser::doALUTarget(bool mul)
 		Fail("The first argument to a ALU or branch instruction must be a register or '-', found %s.", Token.c_str());
 	if (!(param.rValue.Type & R_WRITE))
 		Fail("The register is not writable.");
-	bool wsfreeze = mul
-		? Instruct.OpA != Inst::A_NOP && !(regAB & (1ULL << Instruct.WAddrA))
-		: Instruct.OpM != Inst::M_NOP && !(regAB & (1ULL << Instruct.WAddrM));
-	if ((param.rValue.Type & R_A) && (!wsfreeze || Instruct.WS == mul))
-		Instruct.WS = mul;
-	else if ((param.rValue.Type & R_B) && (!wsfreeze || Instruct.WS != mul))
-		Instruct.WS = !mul;
-	else
-		Fail("ADD ALU and MUL ALU cannot write to the same register file.");
+	if ((param.rValue.Type & R_AB) != R_AB)
+	{	bool wsfreeze = Instruct.Pack != Inst::P_32 || mul
+			? Instruct.OpA != Inst::A_NOP && !(regAB & (1ULL << Instruct.WAddrA))
+			: Instruct.OpM != Inst::M_NOP && !(regAB & (1ULL << Instruct.WAddrM));
+		if ((param.rValue.Type & R_A) && (!wsfreeze || Instruct.WS == mul))
+			Instruct.WS = mul;
+		else if ((param.rValue.Type & R_B) && (!wsfreeze || Instruct.WS != mul))
+			Instruct.WS = !mul;
+		else
+			Fail("ADD ALU and MUL ALU cannot write to the same register file.");
+	}
 	(mul ? Instruct.WAddrM : Instruct.WAddrA) = param.rValue.Num;
+	// vector rotation
+	if (param.rValue.Rotate)
+	{	if (!mul)
+			Fail("Vector rotation is only available to the MUL ALU.");
+		if (param.rValue.Rotate == 16)
+			Fail("Can only rotate ALU target left by r5.");
+		doSMI(48 + (param.rValue.Rotate & 0xf));
+	}
 }
 
-Inst::mux Parser::doALUExpr()
+Inst::mux Parser::doALUExpr(bool mul)
 {	if (NextToken() != COMMA)
 		Fail("Expected ',' before next argument to ALU instruction, found %s.", Token.c_str());
 	exprValue param = ParseExpression();
@@ -513,14 +503,25 @@ Inst::mux Parser::doALUExpr()
 	{default:
 		Fail("The second argument of a binary ALU instruction must be a register or a small immediate value.");
 	 case V_REG:
-		return muxReg(param.rValue);
-		break;
+		{	auto ret = muxReg(param.rValue);
+			if (param.rValue.Rotate)
+			{	if (!mul)
+					Fail("Vector rotation is only available to the MUL ALU.");
+				if (param.rValue.Rotate == -16)
+					Fail("Can only rotate ALU source right by r5.");
+				if (Instruct.Sig == Inst::S_SMI && Instruct.SImmd >= 48)
+					Fail("Vector rotation is already applied to the instruction.");
+				doSMI(48 + (-param.rValue.Rotate & 0xf));
+			}
+			return ret;
+		}
 	 case V_INT:
-		uint8_t si = getSmallImmediate(param.uValue);
-		if (si == 0xff)
-			Fail("Value 0x%x does not fit into the small immediate field.", param.uValue);
-		doSMI(si);
-		return Inst::X_RB;
+		{	uint8_t si = getSmallImmediate(param.uValue);
+			if (si == 0xff)
+				Fail("Value 0x%x does not fit into the small immediate field.", param.uValue);
+			doSMI(si);
+			return Inst::X_RB;
+		}
 	}
 }
 
@@ -552,9 +553,9 @@ void Parser::assembleADD(int add_op)
 	doALUTarget(false);
 
 	if (!Instruct.isUnary())
-		Instruct.MuxAA = doALUExpr();
+		Instruct.MuxAA = doALUExpr(false);
 
-	Instruct.MuxAB = doALUExpr();
+	Instruct.MuxAB = doALUExpr(false);
 }
 
 void Parser::assembleMUL(int mul_op)
@@ -572,8 +573,8 @@ void Parser::assembleMUL(int mul_op)
 
 	doALUTarget(true);
 
-	Instruct.MuxMA = doALUExpr();
-	Instruct.MuxMB = doALUExpr();
+	Instruct.MuxMA = doALUExpr(true);
+	Instruct.MuxMB = doALUExpr(true);
 }
 
 void Parser::assembleMOV(int mode)
@@ -591,35 +592,44 @@ void Parser::assembleMOV(int mode)
 
 	if (NextToken() != COMMA)
 		Fail("Expected ', <source1>' after first argument to ALU instruction, found %s.", Token.c_str());
-	exprValue param3 = ParseExpression();
-	switch (param3.Type)
+	exprValue param = ParseExpression();
+	switch (param.Type)
 	{default:
 		Fail("The last parameter of a MOV instruction must be a register or a immediate value.");
 	 case V_REG:
-		if (param3.rValue.Type & R_SEMA)
+		if (param.rValue.Type & R_SEMA)
 		{	// semaphore access by LDI like instruction
 			mode = Inst::L_SEMA;
-			param3.uValue = param3.rValue.Num | (param3.rValue.Type & R_SREL);
+			param.uValue = param.rValue.Num | (param.rValue.Type & R_SACQ);
 			goto sema;
 		}
 		if (isLDI)
 			Fail("MOV instruction with register source cannot be combined with load immediate.");
 		if (useMUL)
-		{	Instruct.MuxMA = Instruct.MuxMB = muxReg(param3.rValue);
+		{	Instruct.MuxMA = Instruct.MuxMB = muxReg(param.rValue);
 			Instruct.OpM = Inst::M_V8MIN;
 		} else
-		{	Instruct.MuxAA = Instruct.MuxAB = muxReg(param3.rValue);
+		{	Instruct.MuxAA = Instruct.MuxAB = muxReg(param.rValue);
 			Instruct.OpA = Inst::A_OR;
+		}
+		if (param.rValue.Rotate)
+		{	if (!useMUL)
+				Fail("Vector rotation is only available to the MUL ALU.");
+			if (param.rValue.Rotate == 16)
+				Fail("Can only rotate ALU source left by r5.");
+			if (Instruct.Sig == Inst::S_SMI && Instruct.SImmd >= 48)
+				Fail("Vector rotation is already applied to the instruction.");
+			doSMI(48 + (-param.rValue.Rotate & 0xf));
 		}
 		break;
 	 case V_INT:
 		// try small immediate first
 		if (!isLDI && mode < 0)
-		{	for (const smiEntry* si = getSmallImmediateALU(param3.uValue); si->Value == param3.uValue; ++si)
+		{	for (const smiEntry* si = getSmallImmediateALU(param.uValue); si->Value == param.uValue; ++si)
 			{	if ( !si->OpCode.isMul() ^ useMUL
-					&& ( param3.uValue == 0 || Instruct.Sig == Inst::S_NONE
+					&& ( param.uValue == 0 || Instruct.Sig == Inst::S_NONE
 						|| (Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd) ))
-				{	if (param3.uValue != 0) // zero value does not require SMI
+				{	if (param.uValue != 0) // zero value does not require SMI
 					{	Instruct.Sig   = Inst::S_SMI;
 						Instruct.SImmd = si->SImmd;
 					}
@@ -639,7 +649,7 @@ void Parser::assembleMOV(int mode)
 			mode = Inst::L_LDI;
 	 sema:
 		if ( Instruct.Sig != Inst::S_NONE
-			&& (Instruct.Sig != Inst::S_LDI || Instruct.Immd.uValue != param3.uValue || Instruct.LdMode != mode) )
+			&& (Instruct.Sig != Inst::S_LDI || Instruct.Immd.uValue != param.uValue || Instruct.LdMode != mode) )
 		{	if (Instruct.Sig != Inst::S_NONE)
 				Fail("Load immediate cannot be used with signals.");
 			else
@@ -649,7 +659,7 @@ void Parser::assembleMOV(int mode)
 			Fail("Cannot combine load immediate with ALU instructions.");
 		Instruct.Sig = Inst::S_LDI;
 		Instruct.LdMode = (Inst::ldmode)mode;
-		Instruct.Immd = param3;
+		Instruct.Immd = param;
 	}
 }
 
@@ -661,6 +671,7 @@ void Parser::assembleBRANCH(int relative)
 	Instruct.Sig = Inst::S_BRANCH;
 	Instruct.CondBr = Inst::B_AL;
 	Instruct.Rel = !!relative;
+	Instruct.RAddrA = 0;
 
 	doInstrExt(false);
 
@@ -677,12 +688,13 @@ void Parser::assembleBRANCH(int relative)
 		Instruct.Immd = param2;
 		break;
 	 case V_REG:
-		if (!(param2.rValue.Type & R_A))
-			Fail("Branch target must be from register file A.");
-		if (!(param2.rValue.Type & R_READ))
-			Fail("Can't read register by register file.");
+		if (!(param2.rValue.Type & R_A) || param2.rValue.Num >= 32)
+			Fail("Branch target must be from register file A and no hardware register.");
+		if (param2.rValue.Rotate)
+			Fail("Cannot use vector rotation with branch instruction.");
 		Instruct.Reg = true;
 		Instruct.RAddrA = param2.rValue.Num;
+		Instruct.Immd.uValue = 0;
 		break;
 	 case V_LABEL:
 		Instruct.Reg = false;
@@ -783,8 +795,8 @@ void Parser::defineLabel()
 			goto new_label;
 		}
 	}
-	lp->Value = Instructions.size();
-	lp->Definition = AtFile.front();
+	lp->Value = Instructions.size() * sizeof(uint64_t);
+	lp->Definition = *Context.back();
 
 	if (Preprocessed)
 	{	fputs(Token.c_str(), Preprocessed);
@@ -842,16 +854,17 @@ void Parser::endREP(int)
 		return; // no loop count => 0
 
 	// Setup invocation context
-	saveContext ctx(*this, CTX_MACRO, m.Definition.File, m.Definition.Line);
+	saveContext ctx(*this, new fileContext(CTX_MACRO, m.Definition.File, m.Definition.Line));
 
 	// loop
 	uint32_t count;
 	sscanf(m.Args[1].c_str(), "%i", &count);
-	for (uint32_t& i = Consts.emplace(make_pair(m.Args.front(), constDef(exprValue(0), AtFile.size()))).first->second.Value.uValue;
+	auto& current = *Context.back();
+	for (uint32_t& i = current.Consts.emplace(m.Args.front(), constDef(exprValue(0), current)).first->second.Value.uValue;
 		i < count; ++i)
 	{	// Invoke rep
 		for (const string& line : m.Content)
-		{	++AtFile.front().Line;
+		{	++Context.back()->Line;
 			strncpy(Line, line.c_str(), sizeof(Line));
 			ParseLine();
 		}
@@ -873,7 +886,8 @@ void Parser::parseSET(int flags)
 	if (NextToken() != END)
 		return Error("Syntax error: unexpected %s.", Token.c_str());
 
-	auto r = Consts.emplace(make_pair(Name, constDef(expr, (flags & 1) * AtFile.size())));
+	auto& current = flags & 1 ? *Context.back() : *Context.front();
+	auto r = current.Consts.emplace(Name, constDef(expr, current));
 	if (!r.second)
 	{	if (flags & 2)
 			// redefinition not allowed
@@ -881,7 +895,6 @@ void Parser::parseSET(int flags)
 				Name.c_str(), r.first->second.Definition.toString().c_str());
 		r.first->second.Value = expr;
 	}
-	r.first->second.Definition = AtFile.front();
 }
 
 void Parser::parseUNSET(int flags)
@@ -895,13 +908,11 @@ void Parser::parseUNSET(int flags)
 	if (NextToken() != END)
 		return Error("Syntax error: unexpected %s.", Token.c_str());
 
-	auto r = Consts.find(Name);
-	if (r == Consts.end())
-		return Warn("Cannot unset %s because it has not yet been definied.", Name.c_str());
-	if ((flags & 1) && r->second.Level < AtFile.size())
-	{	// TODO: overwrite inherited definition with local exception to undefine it.
-	}
-	Consts.erase(r);
+	auto& consts = (flags & 1 ? Context.back() : Context.front())->Consts;
+	auto r = consts.find(Name);
+	if (r == consts.end())
+		return Warn("Cannot unset %s because it has not yet been definied in the required context.", Name.c_str());
+	consts.erase(r);
 }
 
 void Parser::parseIF(int)
@@ -909,12 +920,12 @@ void Parser::parseIF(int)
 	if (doPreprocessor())
 		return;
 
-	AtIf.emplace_front(AtFile.front().Line, isDisabled() || ParseExpression().uValue == 0);
+	AtIf.emplace_back(Context.back()->Line, isDisabled() || ParseExpression().uValue == 0);
 }
 
 void Parser::parseELSE(int)
 {
-	if (doPreprocessor())
+	if (doPreprocessor(PP_MACRO))
 		return;
 
 	if (!AtIf.size())
@@ -922,13 +933,13 @@ void Parser::parseELSE(int)
 	if (NextToken() != END)
 		Error("Expected end of line. .%s has no arguments.", Token.c_str());
 
-	if (AtIf.size() < 2 || !AtIf[1].Disabled)
-		AtIf[0].Disabled = !AtIf[0].Disabled;
+	if (AtIf.size() < 2 || !AtIf[AtIf.size()-2].Disabled)
+		AtIf.back().Disabled = !AtIf.back().Disabled;
 }
 
 void Parser::parseENDIF(int)
 {
-	if (doPreprocessor())
+	if (doPreprocessor(PP_MACRO))
 		return;
 
 	if (!AtIf.size())
@@ -936,16 +947,17 @@ void Parser::parseENDIF(int)
 	if (NextToken() != END)
 		Error("Expected end of line. .%s has no arguments.", Token.c_str());
 
-	AtIf.pop_front();
+	AtIf.pop_back();
 }
 
 bool Parser::isDisabled()
 {
-	return AtIf.size() != 0 && AtIf[0].Disabled;
+	return AtIf.size() != 0 && AtIf.back().Disabled;
 }
 
 void Parser::beginMACRO(int)
 {
+	doPreprocessor(PP_IF);
 	if (AtMacro)
 		return Error("Cannot nest macro definitions.\n"
 		     "  In definition of macro starting at %s.",
@@ -961,7 +973,7 @@ void Parser::beginMACRO(int)
 		AtMacro->Args.clear();
 		AtMacro->Content.clear();
 	}
-	AtMacro->Definition = AtFile.front();
+	AtMacro->Definition = *Context.back();
 
 	while (true)
 		switch (NextToken())
@@ -982,6 +994,7 @@ void Parser::beginMACRO(int)
 
 void Parser::endMACRO(int)
 {
+	doPreprocessor(PP_IF);
 	if (!AtMacro)
 		return Error(".endm outside a macro definition.");
 	AtMacro = NULL;
@@ -992,31 +1005,40 @@ void Parser::endMACRO(int)
 void Parser::doMACRO(macros_t::const_iterator m)
 {
 	// Fetch macro arguments
-	if (m->second.Args.size())
-	{	unsigned arg_at = 0;
-	 next_arg:
-		const auto& val = ParseExpression();
-		Consts.emplace(make_pair(m->second.Args[arg_at], constDef(val, AtFile.size()+1)));
-		++arg_at;
-		switch (NextToken())
-		{default:
-			Fail("internal error");
-		 case COMMA:
-			if (arg_at == m->second.Args.size())
-				return Error("Too much arguments for macro %s.", m->first.c_str());
-			goto next_arg;
-		 case END:
-			if (arg_at != m->second.Args.size())
-				return Error("Too few arguments for macro %s.", m->first.c_str());
+	const auto& argnames = m->second.Args;
+	vector<exprValue> args;
+	if (argnames.size())
+	{	args.reserve(argnames.size());
+		while (true)
+		{	args.emplace_back(ParseExpression());
+			switch (NextToken())
+			{default:
+				Fail("internal error");
+			 case COMMA:
+				if (args.size() == argnames.size())
+					return Error("Too much arguments for macro %s.", m->first.c_str());
+				continue;
+			 case END:
+				if (args.size() != argnames.size())
+					return Error("Too few arguments for macro %s.", m->first.c_str());
+			}
+			break;
 		}
 	}
 
 	// Setup invocation context
-	saveContext ctx(*this, CTX_MACRO, m->second.Definition.File, m->second.Definition.Line);
+	saveContext ctx(*this, new fileContext(CTX_MACRO, m->second.Definition.File, m->second.Definition.Line));
+
+	// setup args inside new context to avoid interaction with argument values that are also functions.
+	auto& current = *Context.back();
+	current.Consts.reserve(current.Consts.size() + argnames.size());
+	size_t n = 0;
+	for (auto arg : argnames)
+		current.Consts.emplace(arg, constDef(args[n++], current));
 
 	// Invoke macro
 	for (const string& line : m->second.Content)
-	{	++AtFile.front().Line;
+	{	++Context.back()->Line;
 		strncpy(Line, line.c_str(), sizeof(Line));
 		ParseLine();
 	}
@@ -1031,7 +1053,7 @@ void Parser::defineFUNC(int)
 		return Error("Expected function name");
 	string name = Token;
 
-	function func(AtFile.front());
+	function func(*Context.back());
 
 	if (NextToken() != BRACE1)
 		return Error("Expected '(' after function name.");
@@ -1071,47 +1093,42 @@ exprValue Parser::doFUNC(funcs_t::const_iterator f)
 		Fail("Expected '(' after function name.");
 
 	// Fetch macro arguments
+	const auto& argnames = f->second.Args;
 	vector<exprValue> args;
-	args.reserve(f->second.Args.size());
-	unsigned n;
-	if (f->second.Args.size() == 0)
+	args.reserve(argnames.size());
+	if (argnames.size() == 0)
 	{	// no arguments
 		if (NextToken() != BRACE2)
 			Fail("Expected ')' because function %s has no arguments.", f->first.c_str());
 	} else
-	{	n = 0;
-	 next:
-		const string& arg = f->second.Args[n++];
-		try
-		{	const exprValue& val = ParseExpression();
-			args.push_back(val);
-		} catch (const string& msg)
-		{	throw msg + stringf("\n  At invocation of function %s, argument %s.", f->first.c_str(), arg.c_str());
-		}
+	{next:
+		args.push_back(ParseExpression());
 		switch (NextToken())
 		{case BRACE2:
 			// End of argument list. Are we complete?
-			if (n != f->second.Args.size())
-				Fail("Too few arguments for function %s. Expected %u, found %u.", f->first.c_str(), f->second.Args.size(), n);
+			if (args.size() != argnames.size())
+				Fail("Too few arguments for function %s. Expected %u, found %u.", f->first.c_str(), argnames.size(), args.size());
 			break;
 		 default:
 			Fail("Unexpected '%s' in argument list of function %s.", Token.c_str(), f->first.c_str());
 		 case COMMA:
 			// next argument
-			if (n == f->second.Args.size())
-				Fail("Too much arguments for function %s. Expected %u.", f->first.c_str(), f->second.Args.size());
+			if (args.size() == argnames.size())
+				Fail("Too much arguments for function %s. Expected %u.", f->first.c_str(), argnames.size());
 			goto next;
 		}
 	}
 
 	// Setup invocation context
-	saveLineContext ctx(*this, CTX_FUNCTION, f->second.Definition.File, f->second.Definition.Line);
+	saveLineContext ctx(*this, new fileContext(CTX_FUNCTION, f->second.Definition.File, f->second.Definition.Line));
 	strncpy(Line, f->second.DefLine.c_str(), sizeof Line);
 	At = f->second.Start;
 	// setup args inside new context to avoid interaction with argument values that are also functions.
-	n = 0;
-	for (auto arg : f->second.Args)
-		Consts.emplace(make_pair(arg, constDef(args[n++], AtFile.size())));
+	auto& current = *Context.back();
+	current.Consts.reserve(current.Consts.size() + argnames.size());
+	unsigned n = 0;
+	for (auto arg : argnames)
+		current.Consts.emplace(arg, constDef(args[n++], current));
 
 	const exprValue&& val = ParseExpression();
 	if (NextToken() != END)
@@ -1135,7 +1152,7 @@ void Parser::doINCLUDE(int)
 		return Error("Syntax error. Expected \"<file-name>\" after .include, found '%s'.", At);
 	Token.assign(At+1, len-2);
 
-	saveContext ctx(*this, CTX_INCLUDE, Token, 0);
+	saveContext ctx(*this, new fileContext(CTX_INCLUDE, Token, 0));
 
 	ParseFile();
 }
@@ -1152,13 +1169,13 @@ void Parser::ParseDirective()
 	(this->*op->Func)(op->Arg);
 }
 
-bool Parser::doPreprocessor()
+bool Parser::doPreprocessor(preprocType type)
 {
-	if (AtMacro)
+	if (AtMacro && (type & PP_MACRO))
 	{	AtMacro->Content.push_back(Line);
 		return true;
 	}
-	return false;
+	return (type & PP_IF) && isDisabled();
 }
 
 void Parser::ParseLine()
@@ -1212,12 +1229,12 @@ void Parser::ParseLine()
 
 void Parser::ParseFile()
 {
-	FILE* f = fopen(AtFile.front().File.c_str(), "r");
+	FILE* f = fopen(Context.back()->File.c_str(), "r");
 	if (!f)
-		return Error("Failed to open file %s.", AtFile.front().File.c_str());
+		return Error("Failed to open file %s.", Context.back()->File.c_str());
 	try
 	{	while (fgets(Line, sizeof(Line), f))
-		{	++AtFile.front().Line;
+		{	++Context.back()->Line;
 			try
 			{	ParseLine();
 			} catch (const string& msg)
@@ -1236,7 +1253,7 @@ void Parser::ParseFile()
 	}
 }
 void Parser::ParseFile(const string& file)
-{	saveContext ctx(*this, CTX_CURRENT, file, 0);
+{	saveContext ctx(*this, new fileContext(CTX_INCLUDE, file, 0));
 	ParseFile();
 }
 
@@ -1245,10 +1262,11 @@ const vector<uint64_t>& Parser::GetInstructions()
 	for (fixup fix : Fixups)
 	{	const label& l = Labels[fix.Label];
 		if (!l.Definition)
-			Error("Label '%s' is undefined. Referenced from %s.",
+		{	Success = false;
+			fprintf(stderr, "Label '%s' is undefined. Referenced from %s.\n",
 				l.Name.c_str(), l.Reference.toString().c_str());
-		else
-		Instructions[fix.Instr] += l.Value - (Instructions[fix.Instr] & 0x80000000) * 2;
+		} else
+			Instructions[fix.Instr] += l.Value - (uint64_t)(Instructions[fix.Instr] & 0x80000000) * 2;
 	}
 	Fixups.clear();
 

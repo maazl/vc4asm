@@ -27,8 +27,8 @@ class Eval
 	,	MOD  = 0xbca ///< modulus
 	,	ADD  = 0xa88 ///< add
 	,	SUB  = 0xa89 ///< subtract
-	,	ASL  = 0x9b0 ///< arithmetic shift left
-	,	ASR  = 0x9b1 ///< arithmetic shift right
+	,	ASL  = 0x930 ///< arithmetic shift left
+	,	ASR  = 0x931 ///< arithmetic shift right
 	,	SHL  = 0x9f2 ///< logical shift left
 	,	SHR  = 0x9f3 ///< logical shift right
 	,	GT   = 0x808 ///< greater than

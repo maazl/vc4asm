@@ -1,101 +1,26 @@
-#include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
-#include <map>
-#include <vector>
 #include <assert.h>
 #include <errno.h>
 #include <sstream>
 #include <algorithm>
 #include <getopt.h>
+#include <sys/param.h>
 
 #include "Parser.h"
 
 using namespace std;
 
-enum token_t {
-    END=-1,
-    WORD,
-    DOT,
-    COMMA,
-    SEMI,
-    COLON,
-};
 
-struct QPUreg {
-    enum { A, B, ACCUM, SMALL } file;
-    int num;
-};
-
-struct relocation {
-    string label;
-    int pc;
-};
-
-struct context {
-    const char *stream;
-    map<string, int> labels;
-    int pc;
-    vector<relocation> relocations;
-};
-
-
-string printRegister(const QPUreg& reg)
-{
-    char buffer[32];
-    if (reg.file == QPUreg::A || reg.file == QPUreg::B) {
-        snprintf(buffer, 32, "r%c%d", (reg.file == QPUreg::A) ? 'a' : 'b',
-                                      reg.num);
-    }
-    else if (reg.file == QPUreg::ACCUM) {
-        snprintf(buffer, 32, "r%d", reg.num);
-    }
-    else {
-        snprintf(buffer, 32, ".0x%x.", reg.num);
-    }
-
-    return buffer;
+/// Byte swap
+static inline uint64_t swap_uint64(uint64_t x)
+{	x = x << 32 | x >> 32;
+	x = (x & 0x0000FFFF0000FFFFULL) << 16 | (x & 0xFFFF0000FFFF0000ULL) >> 16;
+	return (x & 0x00FF00FF00FF00FFULL) << 8  | (x & 0xFF00FF00FF00FF00ULL) >> 8;
 }
-
-uint64_t assembleSEMA(context& ctx, string word)
-{
-
-    uint64_t ins = (uint64_t)0x74 << 57;
-
-    /*string token_str;
-    token_t tok = nextToken(ctx.stream, token_str, &ctx.stream);
-    if (tok != WORD) {
-        cerr << "semaphore instruction expecting down/up or acquire/release" << endl;
-        return -1;
-    }
-
-    uint8_t sa = 0;             // up
-    if (token_str == "down" || token_str == "acquire")
-        sa = 1;
-
-    tok = nextToken(ctx.stream, token_str, &ctx.stream);
-    if (tok != COMMA)   return -1;
-    tok = nextToken(ctx.stream, token_str, &ctx.stream);
-    uint32_t imm = parseSmallImmediate(token_str);
-    if (imm < 0) {
-        cerr << "semaphore out of range" << endl;
-        return -1;
-    }
-    // cond_add, cond_mul = NEVER, ws, sf = false
-    ins |= (uint64_t)39 << 38;          // waddr_add
-    ins |= (uint64_t)39 << 32;          // waddr_mul
-    ins |= sa << 4;
-    ins |= (uint8_t)imm;
-
-    cout << "Assembling SEMAPHORE instruction (" << imm << "), " << (int)sa << endl;*/
-
-    return ins;
-}
-
 
 static const char CPPTemplate[] = ",\n0x%08lx, 0x%08lx";
-
 
 int main(int argc, char **argv)
 {
@@ -119,8 +44,8 @@ int main(int argc, char **argv)
 	}
 
 	if (!outfname && !writeCPP && !writePRE) {
-		cerr << "Usage: " << argv[0] << " [-o <bin-output>] [-c <c-output>] [-E <preprocessed>] <qasm-file>" << endl;
-		return -1;
+		fputs("Usage: vc4asm [-o <bin-output>] [-c <c-output>] [-E <preprocessed>] <qasm-file>\n", stderr);
+		return 1;
 	}
 
 	Parser parser;
@@ -140,18 +65,9 @@ int main(int argc, char **argv)
 			++optind;
 		}
 	} catch (const string& msg)
-	{	cerr << msg << endl;
+	{	fputs(msg.c_str(), stderr);
+	  fputc('\n', stderr);
 		return 1;
-	}
-
-	if (outfname)
-	{	FILE* of = fopen(outfname, "wb");
-		if (of == NULL)
-		{	fprintf(stderr, "Failed to open %s for writing.", outfname);
-			return -1;
-		}
-		fwrite(&*parser.GetInstructions().begin(), sizeof(uint64_t), parser.GetInstructions().size(), of);
-		fclose(of);
 	}
 
 	if (writeCPP)
@@ -170,27 +86,20 @@ int main(int argc, char **argv)
 		fclose(of);
 	}
 
-/*
-    // Process relocations
-    ctx.labels["ZERO"] = 0x0;
-    for (int i=0; i < ctx.relocations.size(); i++)
-    {
-        relocation& r = ctx.relocations[i];
-        if (ctx.labels.count(r.label) < 1)
-        {
-            cerr << "undefined label: " << r.label << endl;
-            return -1;
-        }
-        int offset = ctx.labels[r.label] - (r.pc + 4*8);
-        if (r.label == "ZERO")
-            offset = 0x0;
-        cout << "Processing relocation at " << r.pc << " : " << r.label
-                                            << " : " << offset << endl;
-        uint64_t ins = instructions[r.pc / 8];
-        ins &= (uint64_t)0xFFFFFFFF << 32;   // zero bottom 32-bits for new value
-        ins |= (uint32_t)offset;
-        instructions[r.pc / 8] = ins;
-    }
-*/
+	if (outfname)
+	{
+		#if (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__) || (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN)
+		for (auto& i : memory)
+			i = swap_uint64(i);
+		#endif
+		FILE* of = fopen(outfname, "wb");
+		if (of == NULL)
+		{	fprintf(stderr, "Failed to open %s for writing.", outfname);
+			return -1;
+		}
+		fwrite(&*parser.GetInstructions().begin(), sizeof(uint64_t), parser.GetInstructions().size(), of);
+		fclose(of);
+	}
+
 	return 0;
 }

@@ -145,7 +145,15 @@ bool Eval::partialEvaluate(bool unary)
 	 case ASL:
 		if (lhs.Type == V_REG)
 		{	// curious syntax ...
-			lhs.rValue.Rotate = (lhs.rValue.Rotate + rhs.iValue) & 0xf;
+			if (rhs.Type == V_INT)
+			{	if (lhs.rValue.Rotate & ~0xf)
+					Fail("Cannot apply additional offset to r5 vector rotation");
+				lhs.rValue.Rotate = (lhs.rValue.Rotate + rhs.iValue) & 0xf;
+			} else
+			{	if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate)
+					Fail("Vector rotation are only allowed by constant or by r5");
+				lhs.rValue.Rotate = 16;
+			}
 			break;
 		} else if (rhs.iValue < 0)
 		{	lhs.iValue >>= -rhs.iValue;
@@ -156,9 +164,17 @@ bool Eval::partialEvaluate(bool unary)
 		break;
 	 case ASR:
 		if (lhs.Type == V_REG)
-			// curious syntax ...
-			lhs.rValue.Rotate = (lhs.rValue.Rotate - rhs.iValue) & 0xf;
-		else if (rhs.iValue < 0)
+		{	// curious syntax ...
+			if (rhs.Type == V_INT)
+			{	if (lhs.rValue.Rotate & ~0xf)
+					Fail("Cannot apply additional offset to r5 vector rotation");
+				lhs.rValue.Rotate = (lhs.rValue.Rotate - rhs.iValue) & 0xf;
+			} else
+			{	if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate)
+					Fail("Vector rotation are only allowed by constant or by r5");
+				lhs.rValue.Rotate = (uint8_t)-16;
+			}
+		} else if (rhs.iValue < 0)
 			lhs.iValue <<= -rhs.iValue;
 		else
 			lhs.iValue >>= rhs.iValue;

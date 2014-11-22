@@ -208,7 +208,7 @@ void Disassembler::DoLDI()
 
 	append(cOpL[Instruct.LdMode]);
 	if (Instruct.LdMode >= Inst::L_SEMA)
-		append(Instruct.SA() ? "rel" : "acq");
+		append(Instruct.SA() ? "acq" : "rel");
 	if (Instruct.SF)
 		append(".setf");
 	append(" ");

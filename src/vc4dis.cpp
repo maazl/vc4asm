@@ -5,14 +5,23 @@
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
+#include <getopt.h>
 #include <vector>
+#include <sys/param.h>
 
 using namespace std;
 
 int hexinput = 0;
 
 
-static void file_load(const char *filename, vector<uint64_t>& memory)
+/// Byte swap
+static inline uint64_t swap_uint64(uint64_t x)
+{	x = x << 32 | x >> 32;
+	x = (x & 0x0000FFFF0000FFFFULL) << 16 | (x & 0xFFFF0000FFFF0000ULL) >> 16;
+	return (x & 0x00FF00FF00FF00FFULL) << 8  | (x & 0xFF00FF00FF00FF00ULL) >> 8;
+}
+
+static void file_load_bin(const char *filename, vector<uint64_t>& memory)
 {	FILE *f = fopen(filename, "rb");
 	if (!f)
 	{	fprintf(stderr, "Failed to read %s: %s\n", filename, strerror(errno));
@@ -23,19 +32,28 @@ static void file_load(const char *filename, vector<uint64_t>& memory)
 		if (size % sizeof(uint64_t))
 			fprintf(stderr, "File size %li of source %s is not a multiple of 64 bit.\n", size, filename);
 		size /= sizeof(uint64_t);
+		size_t oldsize = memory.size();
 		if (size > 0)
-			memory.resize(memory.size() + size);
+			memory.resize(oldsize + size);
 		fseek(f, 0, SEEK_SET);
-		memory.resize(memory.size() - size + fread(&memory[memory.size()], size, sizeof(uint64_t), f));
+		memory.resize(oldsize + fread(&memory[oldsize], size, sizeof(uint64_t), f));
 	} else
 	{	size_t count = 8192;
-		do
-		{	memory.resize(memory.size() + count);
-			count = fread(&memory[memory.size()], 8192, sizeof(uint64_t), f);
-		} while (count == 8192);
-		memory.resize(memory.size() - 8192 + count);
+		for (;;)
+		{	size_t oldsize = memory.size();
+			memory.resize(oldsize + count);
+			count = fread(&memory[oldsize], 8192, sizeof(uint64_t), f);
+			if (count < 8192)
+			{	memory.resize(oldsize + count);
+				break;
+			}
+		}
 	}
 	fclose(f);
+	#if (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__) || (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN)
+	for (auto& i : memory)
+		i = swap_uint64(i);
+	#endif
 }
 
 static void file_load_x32(const char *filename, vector<uint64_t>& memory)
@@ -85,39 +103,67 @@ static void file_load_x64(const char *filename, vector<uint64_t>& memory)
 	fclose(f);
 }
 
-void qpu_dis_file(const char *filename) {
-	fprintf(stderr, "Disassembling %s\n", filename);
-	vector<uint64_t> fragment;
-	switch (hexinput)
-	{case 32:
-		file_load_x32(filename, fragment);
-		break;
-	 case 64:
-		file_load_x64(filename, fragment);
-		break;
-	 default:
-		file_load(filename, fragment);
-	}
-	if (fragment.size() == 0)
-	{	fprintf(stderr, "Couldn't read any data from file %s, aborting.\n", filename);
-		return;
-	}
-	Disassembler dis(stdout);
-	dis.Disassemble(fragment);
-}
-
 int main(int argc, char * argv[]) {
 	if (argc < 2) {
     fprintf(stderr, "vc4dis: Pass in a file name to disassemble as the first argument\n");
-    exit(1);
+    return 1;
   }
-	++argv;
-	if (strncmp(*argv, "-x", 2) == 0)
-	{	hexinput = atoi(*argv + 2);
-		if (!hexinput)
-			hexinput = 32;
-		++argv;
+
+	Disassembler dis;
+	dis.Out = stdout;
+
+	int c;
+	while ((c = getopt(argc, argv, "x::MFvb:o:")) != -1)
+	{	switch (c)
+		{case 'x':
+			if (!optarg || (hexinput = atoi(optarg + 2) == 0))
+				hexinput = 32;
+			break;
+		 case 'M':
+			dis.UseMOV = false;
+			break;
+		 case 'F':
+			dis.UseFloat = false;
+			break;
+		 case 'v':
+			dis.PrintFields = true;
+			break;
+		 case 'b':
+			dis.BaseAddr = atol(optarg);
+			break;
+		 case 'o':
+			dis.Out = fopen(optarg, "w");
+			if (!dis.Out)
+			{	fprintf(stderr, "Failed to write %s: %s\n", optarg, strerror(errno));
+				return 1;
+			}
+			break;
+		}
 	}
+	argv += optind;
+
   while (*argv)
-  	qpu_dis_file(*argv++);
+  {	fprintf(stderr, "Disassembling %s...\n", *argv);
+  	vector<uint64_t> fragment;
+  	switch (hexinput)
+  	{default:
+  		fprintf(stderr, "Invalid agrument %i to option -x.", hexinput);
+  		return 2;
+  	 case 32:
+  		file_load_x32(*argv, fragment);
+  		break;
+  	 case 64:
+  		file_load_x64(*argv, fragment);
+  		break;
+  	 case 0:
+  		file_load_bin(*argv, fragment);
+  		break;
+  	}
+  	if (fragment.size() == 0)
+  	{	fprintf(stderr, "Couldn't read any data from file %s, aborting.\n", *argv);
+  		continue;
+  	}
+  	dis.Disassemble(fragment);
+  	++argv;
+  }
 }

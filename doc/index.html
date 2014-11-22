@@ -10,12 +10,11 @@
   <body>
     <h1>VC4ASM - macro assembler for Broadcom VideoCore IV<br>
       aka Raspberry PI GPU</h1>
-    <p> </p>
     <p class="abstract">This program is based on <a href="https://github.com/jetpacapp/qpu-asm">qpu-asm
         from Pete Warden</a> which itself is based on <a href="https://github.com/elorimer/rpi-playground/tree/master/QPU/assembler">Eman's
         work</a> and some ideas also taken from <a href="https://github.com/hermanhermitage/videocoreiv-qpu"><span
           class="vcard-fullname" itemprop="name">Herman H Hermitage</span></a>.
-      But it goes further by far. First of all it supports macros.<br>
+      But it goes further by far. First of all it supports macros and functions.<br>
       Unfortunately this area is highly undocumented in the public domain. And
       so the work uses only the code from <a href="https://github.com/raspberrypi/userland/tree/master/host_applications/linux/apps/hello_pi/hello_fft">hello_fft</a>
       which is available as source and binary as Rosetta Stone.</p>
@@ -28,9 +27,10 @@
     <pre>vc4asm [-o &lt;bin-output&gt;] [-c &lt;c-output&gt;] [-E &lt;preprocessed&gt;] &lt;qasm-file&gt; [&lt;qasm-file2&gt; ...]</pre>
     <h3>Options</h3>
     <dl>
-      <dt><tt>-o &lt;bin-output&gt;<br>
-        </tt></dt>
-      <dd>File name for binary output. If omitted no binary output is generated.</dd>
+      <dt><tt>-o &lt;bin-output&gt; </tt></dt>
+      <dd>File name for binary output. If omitted no binary output is generated.<br>
+        Note that <tt>vc4asm</tt> always writes <em>little endian</em>
+        binaries.</dd>
       <dt><tt>-c &lt;C-output&gt;</tt></dt>
       <dd>File name for C/C++ output. The result does not include surrounding
         braces. So write it to a separate file and include it from C as follows:<br>
@@ -57,11 +57,44 @@
         VideoCore IV Reference Guide</a> for the semantics of the instructions
       and registers.</p>
     <h2><a id="vc4dis" name="vc4dis"></a>Disassembler <tt>vc4dis</tt></h2>
-    <p><br>
-    </p>
+    <pre>vc4dis [-o &lt;qasm-output&gt;] [-x[&lt;input-format&gt;]] [-M] [-F] [-v] [-b &lt;base-addr&gt;] &lt;input-file&gt; [&lt;input-file2&gt; ...]</pre>
+    <h3>Options</h3>
+    <dl>
+      <dt><tt>-o &lt;qasm-output&gt; </tt></dt>
+      <dd>Assembler output file, <tt>stdout</tt> by default.<br>
+        Note that <tt>vc4asm</tt> always writes <em>little endian</em>
+        binaries.</dd>
+      <dt><tt>-x&lt;input-format&gt;</tt></dt>
+      <dd><tt>32</tt> - 32 bit hexadecimal input, .e. 2 qwords per instruction,
+        default if <tt>&lt;input-format&gt;</tt> is missing.<br>
+        <tt>64</tt> - 64 bit hexadecimal input.<br>
+        <tt>0&nbsp;</tt> - binary input, <em>little endian</em>, default
+        without <tt>-x</tt>.</dd>
+      <dt><tt>-M</tt></dt>
+      <dd>Do not generate <tt>mov</tt> instructions. <tt>mov</tt> is no native
+        QPU instruction, it is emulated by trivial operators like <tt>or r1, r0,
+          r0</tt>. Without this option <tt>vc4dis</tt> generated <tt>mov</tt>
+        instead of the real instruction if such a situation is detected.</dd>
+      <dt><tt>-F</tt></dt>
+      <dd>Do not write floating point constants. Without this option <tt>vc4dis</tt>
+        writes immediate values that are likely to be a floating point number as
+        float. This may not always hit the nail on the head.</dd>
+      <dt><tt>-v</tt></dt>
+      <dd>Write QPU instruction set bit fields as comment right to each
+        instruction. This is mainly for debugging purposes.</dd>
+      <dt><tt>-b &lt;base-addr&gt;</tt></dt>
+      <dd>Base address. This is the physical memory address of the first
+        instruction code passed to <tt>vc4dis</tt>. This is only significant
+        for absolute branch instructions.</dd>
+    </dl>
+    <h3>File arguments</h3>
+    <p>If you pass multiple input files they are disassembled all together into
+      a single result as if they were concatenated.<br>
+      The format of the input is controlled by the <tt>-x</tt> option. All
+      input files must use the same format.</p>
     <h2><a id="build" name="build"></a>Build instructions</h2>
-    <p>The source code has no major platform dependencies, i.e. you don't need
-      to build it on the Raspberry. But it requires a <a href="https://en.wikipedia.org/wiki/C++11">C++11</a>
+    <p>The source code has hopefully no major platform dependencies, i.e. you
+      don't need to build it on the Raspberry. But it requires a <a href="https://en.wikipedia.org/wiki/C++11">C++11</a>
       compliant compiler to build. In fact it is only tested with gcc 4.8.</p>
     <ul>
       <li>Download and extract the source.</li>

@@ -18,10 +18,10 @@ using namespace std;
 
 class Disassembler
 {public:
-	FILE* const Out;
+	FILE*       Out = NULL;
 	bool        UseMOV = true;
 	bool        UseFloat = true;
-	bool        PrintFields = true;
+	bool        PrintFields = false;
 	uint32_t    BaseAddr = 0;
  private:
 	/// Mux accumulator names
@@ -74,7 +74,6 @@ class Disassembler
 	void DoBranch();
 	void DoInstruction();
  public:
-	Disassembler(FILE* output) : Out(output) {}
 	void Disassemble(const vector<uint64_t>& instructions);
 };
 

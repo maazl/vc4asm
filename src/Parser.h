@@ -12,9 +12,9 @@
 #include "Inst.h"
 #include <inttypes.h>
 #include <vector>
-#include <deque>
 #include <string>
 #include <unordered_map>
+#include <memory>
 #include <string.h>
 #include <stdarg.h>
 
@@ -70,10 +70,16 @@ class Parser
 	}             smiMap[];
 
 	enum contextType
-	{	CTX_CURRENT
+	{	CTX_ROOT
 	,	CTX_INCLUDE
 	,	CTX_MACRO
 	,	CTX_FUNCTION
+	, CTX_CURRENT
+	};
+	enum preprocType
+	{	PP_MACRO = 1
+	,	PP_IF    = 2
+	,	PP_ALL   = 3
 	};
 	/*template <typename... P>
 	class dispatchHelper
@@ -132,8 +138,7 @@ class Parser
 	struct constDef
 	{	exprValue      Value;
 		location       Definition;
-		size_t         Level;
-		constDef(const exprValue& value, size_t level) : Value(value), Level(level) {}
+		constDef(const exprValue& value, const location& loc) : Value(value), Definition(loc) {}
 	};
 	typedef unordered_map<string,constDef> consts_t;
 	struct macro
@@ -155,107 +160,109 @@ class Parser
 		bool           Disabled;
 		ifContext(unsigned line, bool disabled) : Line(line), Disabled(disabled) {}
 	};
-	typedef deque<ifContext> ifs_t;
+	typedef vector<ifContext> ifs_t;
 	struct fileContext : public location
-	{	contextType    Type;
+	{	const contextType Type;
+		consts_t       Consts;      ///< Constants (.set)
 		fileContext(contextType type, const string& file, unsigned line) : Type(type) { File = file; Line = line; }
 	};
-	typedef deque<fileContext> contexts_t;
+	typedef vector<unique_ptr<fileContext>> contexts_t;
 	class saveContext
 	{protected:
 		Parser&        Parent;
 	 public:
-		saveContext(Parser& parent, contextType type, const string& file, unsigned line);
+		saveContext(Parser& parent, fileContext* ctx);
 		~saveContext();
 	};
 	class saveLineContext : public saveContext
 	{	const string   LineBak;
 		char* const    AtBak;
 	 public:
-		saveLineContext(Parser& parent, contextType type, const string& file, unsigned line);
+		saveLineContext(Parser& parent, fileContext* ctx);
 		~saveLineContext();
 	};
 
 	// parser working set
-	char       Line[1024];  ///< Buffer for line input. Well, static size...
-	char*      At = NULL;   ///< Current location within Line
-	string     Token;       ///< Current token
+	char             Line[1024];  ///< Buffer for line input. Well, static size...
+	char*            At = NULL;   ///< Current location within Line
+	string           Token;       ///< Current token
 	// context
-	macro*     AtMacro = NULL;///< Currently at a macro definition
-	ifs_t      AtIf;        ///< List of (nested) if statements.
-	contexts_t AtFile;      ///< Include and macro call stack
+	macro*           AtMacro = NULL;///< Currently at a macro definition
+	ifs_t            AtIf;        ///< List of (nested) if statements.
+	contexts_t       Context;     ///< Include and macro call stack
 	// definitions
-	labels_t   Labels;      ///< Label values
-	lnames_t   LabelsByName;///< Label names
-	fixups_t   Fixups;      ///< delayed label fixups
-	consts_t   Consts;      ///< Constants (.set)
-	funcs_t    Functions;   ///< Function definitions
-	macros_t   Macros;      ///< Macros
+	labels_t         Labels;      ///< Label values
+	lnames_t         LabelsByName;///< Label names
+	fixups_t         Fixups;      ///< delayed label fixups
+	funcs_t          Functions;   ///< Function definitions
+	macros_t         Macros;      ///< Macros
 	// instruction
 	vector<uint64_t> Instructions;
-	Inst       Instruct;    ///< current instruction
+	Inst             Instruct;    ///< current instruction
  private:
-	void Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR;
-	void Error(const char* fmt, ...) PRINTFATTR(2);
-	void Warn(const char* fmt, ...) PRINTFATTR(2);
+	string           enrichMsg(string msg);
+	void             Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR;
+	void             Error(const char* fmt, ...) PRINTFATTR(2);
+	void             Warn(const char* fmt, ...) PRINTFATTR(2);
 
-	token_t NextToken();
+	token_t          NextToken();
 	/// Work around for gcc on 32 bit Linux that can't read "0x80000000" with sscanf anymore.
 	/// @return Number of characters parsed.
-	static size_t parseUInt(const char* src, uint32_t& dst);
-	exprValue ParseExpression();
+	static size_t    parseUInt(const char* src, uint32_t& dst);
+	exprValue        ParseExpression();
 
-	static uint8_t getSmallImmediate(uint32_t i);
+	static uint8_t   getSmallImmediate(uint32_t i);
 	static const smiEntry* getSmallImmediateALU(uint32_t i);
-	Inst::mux muxReg(reg_t reg);
-	void doSMI(uint8_t si);
+	Inst::mux        muxReg(reg_t reg);
+	void             doSMI(uint8_t si);
 
 	// OP code extensions
-	void addIf(int cond, bool mul);
-	void addUnpack(int mode, bool mul);
-	void addPack(int mode, bool mul);
-	void addSetF(int, bool mul);
-	void addCond(int cond, bool mul);
-	void addRot(int, bool mul);
-	void doInstrExt(bool mul);
+	void             addIf(int cond, bool mul);
+	void             addUnpack(int mode, bool mul);
+	void             addPack(int mode, bool mul);
+	void             addSetF(int, bool mul);
+	void             addCond(int cond, bool mul);
+	void             addRot(int, bool mul);
+	void             doInstrExt(bool mul);
 
-	void doALUTarget(bool mul);
-	Inst::mux doALUExpr();
+	void             doALUTarget(bool mul);
+	Inst::mux        doALUExpr(bool mul);
 
 	// OP codes
-	void assembleADD(int op);
-	void assembleMUL(int op);
-	void assembleMOV(int mode);
-	void assembleBRANCH(int relative);
-	void assembleSEMA(int type);
-	void assembleSIG(int bits);
+	void             assembleADD(int op);
+	void             assembleMUL(int op);
+	void             assembleMOV(int mode);
+	void             assembleBRANCH(int relative);
+	void             assembleSEMA(int type);
+	void             assembleSIG(int bits);
 
-	void ParseInstruction();
+	void             ParseInstruction();
 
-	void defineLabel();
-	void ParseLabel();
+	void             defineLabel();
+	void             ParseLabel();
 
-	void beginREP(int);
-	void endREP(int);
-	void parseSET(int flags);
-	void parseUNSET(int flags);
-	void parseIF(int);
-	void parseELSE(int);
-	void parseENDIF(int);
-	bool isDisabled();
-	void beginMACRO(int);
-	void endMACRO(int);
-	void doMACRO(macros_t::const_iterator m);
-	void defineFUNC(int);
-	exprValue doFUNC(funcs_t::const_iterator f);
-	void doINCLUDE(int);
-	bool doPreprocessor();
-	void ParseDirective();
+	void             beginREP(int);
+	void             endREP(int);
+	void             parseSET(int flags);
+	void             parseUNSET(int flags);
+	void             parseIF(int);
+	void             parseELSE(int);
+	void             parseENDIF(int);
+	bool             isDisabled();
+	void             beginMACRO(int);
+	void             endMACRO(int);
+	void             doMACRO(macros_t::const_iterator m);
+	void             defineFUNC(int);
+	exprValue        doFUNC(funcs_t::const_iterator f);
+	void             doINCLUDE(int);
+	bool             doPreprocessor(preprocType type = PP_ALL);
+	void             ParseDirective();
 
-	void ParseLine();
-	void ParseFile();
+	void             ParseLine();
+	void             ParseFile();
  public:
-	void ParseFile(const string& file);
+	                 Parser();
+	void             ParseFile(const string& file);
 	const vector<uint64_t>& GetInstructions();
 };
 

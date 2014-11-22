@@ -13,7 +13,8 @@
         ALU</a>, <a href="#mov">mov</a>, <a href="#ldi">ldi</a>, <a href="#sema">Semaphore</a>,
       <a href="#bra">Branch</a>, <a href="#sig">Signal </a></p>
     <h2><a id="ADD" name="ADD"></a>ADD ALU instruction</h2>
-    <pre><var>binaryopcode destination, source1, source2</var><br><var>unaryopcode destination, source1</var></pre>
+    <pre><var>binaryopcode destination, source1, source2</var><br><var>unaryopcode destination, source1</var><var>opcode</var>.if<var>cc</var> ...<var>
+opcode</var>.setf ...</pre>
     <dl>
       <dt><var><tt>binaryopcode</tt></var></dt>
       <dd>
@@ -125,11 +126,16 @@
       <dt><var><tt>source1, source2</tt></var></dt>
       <dd>Source <a href="expressions.html#register">register</a> or <a href="expressions.html#SMI">small
           immediate value</a>.</dd>
+      <dt><tt>.if</tt><var><tt>cc</tt></var></dt>
+      <dd>Assignment condition. Note that <tt>vc4asm</tt> accepts the
+        assignment condition also as extension to the destination register.</dd>
     </dl>
     <h3> Example</h3>
     <pre>add r3, ra0, unif<var></var></pre>
     <h2><a id="MUL" name="MUL"></a>MUL ALU instruction</h2>
-    <pre><var>opcode destination, source1, source2</var></pre>
+    <pre><var>opcode destination, source1, source2
+opcode</var>.if<var>cc destination, source1, source2
+opcode</var>.setf <var>destination, source1, source2</var><br><var>opcode</var>.rot <var>count, destination, source1, source2</var> </pre>
     <dl>
       <dt><var><tt>opcode</tt></var></dt>
       <dd>
@@ -181,9 +187,17 @@
       <dt><var><tt>source1, source2</tt></var></dt>
       <dd>Source <a href="expressions.html#register">register</a> or <a href="expressions.html#SMI">small
           immediate value</a>.</dd>
+      <dt><tt>.if</tt><var><tt>cc</tt></var></dt>
+      <dd>Assignment condition. Note that <tt>vc4asm</tt> accepts the
+        assignment condition also as extension to the destination register.</dd>
+      <dt><var><tt>count</tt></var></dt>
+      <dd>Number of QPU elements the result should be rotated before assignment
+        [0 to 15] or register <tt>r5</tt>.</dd>
+    </dl>
+    <dl>
     </dl>
     <h2><a id="mov" name="mov"></a>Move instruction</h2>
-    <pre>mov <var>destination, source</var><var></var><br>mov <var><var>destination,</var> register</var> &lt;&lt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; r5</pre>
+    <pre>mov <var>destination, source</var><var></var><br>mov <var><var>destination,</var> register</var> &lt;&lt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; r5<br>mov.setf ...</pre>
     <dl>
       <dt><var><tt>destination</tt></var></dt>
       <dd>Target <a href="expressions.html#register">register</a>.</dd>
@@ -237,6 +251,180 @@
     ALU output.<br>
     <h3>Example</h3>
     <pre>ldi ra7, 0xffff0000</pre>
+    <h2><a id="pack" name="pack"></a>Pack/unpack</h2>
+    <p>All ALU instructions including <tt>mov</tt> and <tt>ldi</tt> can be
+      extended by pack/unpack operations. Be aware of the restriction that apply
+      especially to the MUL ALU.</p>
+    <pre>opcode.pack<var>xx</var> <var>destination, ...</var><br>opcode<var></var> <var>destination</var>.<var><var>xx</var>, ...</var>
+opcode.unpack<var>yy</var> <var>destination, ...</var><br>opcode<var></var> <var>destination, source.xx</var><var>, ...</var><var></var>opcode<var></var> <var>destination, ..., source.xx</var><var></var></pre>
+    <dl>
+      <dt><var><tt>xx</tt></var></dt>
+      <dd>Destination pack mode
+        <table border="1" cellpadding="2" cellspacing="0">
+          <tbody>
+            <tr>
+              <th colspan="1" rowspan="1"><var><tt>xx</tt></var></th>
+              <th colspan="1" rowspan="1">Source Pattern</th>
+              <th colspan="1" rowspan="1">Target Pattern</th>
+              <th>Comment</th>
+            </tr>
+            <tr>
+              <td><tt>32 </tt></td>
+              <td><tt>BA DC FE HG</tt></td>
+              <td><tt><tt>BA DC FE HG</tt> </tt></td>
+              <td>no pack<tt> </tt></td>
+            </tr>
+            <tr>
+              <td><tt>16a </tt></td>
+              <td><tt>BA DC __ __ </tt></td>
+              <td><tt><tt>BA DC __ __</tt> </tt></td>
+              <td>ADD ALU only</td>
+            </tr>
+            <tr>
+              <td><tt>16b </tt></td>
+              <td><tt>BA DC __ __</tt></td>
+              <td><tt>__ __ BA DC</tt></td>
+              <td>ADD ALU only</td>
+            </tr>
+            <tr>
+              <td><tt>8abcd </tt></td>
+              <td><tt>BA __ __ __ </tt></td>
+              <td><tt>BA BA BA BA </tt></td>
+              <td>replicate to all bytes</td>
+            </tr>
+            <tr>
+              <td><tt>8a </tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td><br>
+              </td>
+            </tr>
+            <tr>
+              <td><tt>8b </tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td><tt>__ BA __ __</tt></td>
+              <td><br>
+              </td>
+            </tr>
+            <tr>
+              <td><tt>8c </tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td><tt>__ __ BA __</tt></td>
+              <td><br>
+              </td>
+            </tr>
+            <tr>
+              <td><tt>8d </tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td><tt>__ __ __ BA</tt></td>
+              <td><br>
+              </td>
+            </tr>
+            <tr>
+              <td><tt>32s </tt></td>
+              <td><tt>BA DC FE HG</tt></td>
+              <td><tt>BA DC FE HG</tt></td>
+              <td>saturate, ADD ALU only </td>
+            </tr>
+            <tr>
+              <td><tt>16as </tt></td>
+              <td><tt><tt>BA DC __ __</tt></tt></td>
+              <td><tt><tt>BA DC __ __</tt></tt></td>
+              <td>saturate, ADD ALU only</td>
+            </tr>
+            <tr>
+              <td><tt>16bs </tt></td>
+              <td><tt><tt>BA DC __ __</tt></tt></td>
+              <td><tt>__ __ BA DC</tt></td>
+              <td>saturate, ADD ALU only</td>
+            </tr>
+            <tr>
+              <td><tt>8abcds </tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td><tt>BA BA BA BA</tt></td>
+              <td>replicate to all bytes, saturate, ADD ALU only</td>
+            </tr>
+            <tr>
+              <td><tt>8as </tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td>saturate, ADD ALU only </td>
+            </tr>
+            <tr>
+              <td><tt>8bs </tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td><tt>__ BA __ __ </tt></td>
+              <td>saturate, ADD ALU only </td>
+            </tr>
+            <tr>
+              <td><tt>8cs </tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td><tt>__ __ BA __ </tt></td>
+              <td>saturate, ADD ALU only </td>
+            </tr>
+            <tr>
+              <td><tt>8ds </tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td><tt>__ __ __ AB </tt></td>
+              <td>saturate, ADD ALU only </td>
+            </tr>
+          </tbody>
+        </table>
+      </dd>
+      <dt><var><tt>yy</tt></var></dt>
+      <dd>Source unpack mode, register file A or <tt>r4</tt>.<br>
+        <table border="1" cellpadding="2" cellspacing="0">
+          <tbody>
+            <tr>
+              <th colspan="1" rowspan="1"><var><tt>yy</tt></var></th>
+              <th colspan="1" rowspan="1">Source Pattern</th>
+              <th colspan="1" rowspan="1">Target Pattern</th>
+            </tr>
+            <tr>
+              <td><tt>32 </tt></td>
+              <td><tt>BA DC FE HG</tt></td>
+              <td><tt>BA DC FE HG</tt></td>
+            </tr>
+            <tr>
+              <td><tt>16a </tt></td>
+              <td><tt>BA DC __ __</tt></td>
+              <td><tt>BA DC __ __</tt></td>
+            </tr>
+            <tr>
+              <td><tt>16b </tt></td>
+              <td><tt><tt>__ __ BA DC</tt></tt></td>
+              <td><tt>BA DC __ __</tt></td>
+            </tr>
+            <tr>
+              <td><tt>8ddup </tt></td>
+              <td><tt>__ __ __ BA</tt></td>
+              <td><tt>BA BA BA BA</tt></td>
+            </tr>
+            <tr>
+              <td><tt>8a </tt></td>
+              <td><tt>BA __ __ __</tt></td>
+              <td><tt>BA __ __ __</tt></td>
+            </tr>
+            <tr>
+              <td><tt>8b </tt></td>
+              <td><tt><tt>__ BA __ __</tt></tt></td>
+              <td><tt>BA __ __ __</tt></td>
+            </tr>
+            <tr>
+              <td><tt>8c </tt></td>
+              <td><tt><tt>__ __ BA __</tt></tt></td>
+              <td><tt>BA __ __ __</tt></td>
+            </tr>
+            <tr>
+              <td><tt>8d </tt></td>
+              <td><tt>__ __ __ BA</tt></td>
+              <td><tt>BA __ __ __</tt></td>
+            </tr>
+          </tbody>
+        </table>
+      </dd>
+    </dl>
+    <p>All patterns are nibbles in little endian memory order.</p>
     <h2><a id="sema" name="sema"></a>Semaphore instruction</h2>
     <pre>sacq <var>destination, number</var><br>srel <var>destination, number</var><br>mov <var>destination</var>, sacq<var>number</var><br>mov <var>destination</var>, srel<var>number</var></pre>
     <dl>

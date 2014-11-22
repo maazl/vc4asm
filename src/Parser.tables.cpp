@@ -49,12 +49,12 @@ const Parser::regEntry Parser::regMap[] =
 ,	{ "mutex_acq",    { 51, R_RDAB } }
 ,	{ "mutex_rel",    { 51, R_WRAB } }
 ,	{ "qpu_num",      { 38, R_RDB  } }
-,	{ "r0",           { 32, R_RWAB } }
-,	{ "r1",           { 33, R_RWAB } }
-,	{ "r2",           { 34, R_RWAB } }
-,	{ "r3",           { 35, R_RWAB } }
-,	{ "r4",           { 36, R_RDAB } }
-,	{ "r5",           { 37, R_RDAB } }
+,	{ "r0",           { 32, R_WRAB } }
+,	{ "r1",           { 33, R_WRAB } }
+,	{ "r2",           { 34, R_WRAB } }
+,	{ "r3",           { 35, R_WRAB } }
+,	{ "r4",           { 36, R_WRAB } }
+,	{ "r5",           { 37, R_AB   } }
 ,	{ "r5quad",       { 37, R_WRA  } }
 ,	{ "r5rep",        { 37, R_WRB  } }
 ,	{ "ra0",          { 0,  R_RWA  } }
@@ -652,8 +652,10 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "anynn",          &Parser::addCond,   Inst::B_ANYNN,  E_OP }
 ,	{ "anynz",          &Parser::addCond,   Inst::B_ANYNZ,  E_OP }
 ,	{ "anyz",           &Parser::addCond,   Inst::B_ANYZ,   E_OP }
+,	{ "ifc",            &Parser::addIf,     Inst::C_CS,     E_DSTOP }
 ,	{ "ifcc",           &Parser::addIf,     Inst::C_CC,     E_DSTOP }
 ,	{ "ifcs",           &Parser::addIf,     Inst::C_CS,     E_DSTOP }
+,	{ "ifn",            &Parser::addIf,     Inst::C_NS,     E_DSTOP }
 ,	{ "ifnc",           &Parser::addIf,     Inst::C_NC,     E_DSTOP }
 ,	{ "ifns",           &Parser::addIf,     Inst::C_NS,     E_DSTOP }
 ,	{ "ifnz",           &Parser::addIf,     Inst::C_ZC,     E_DSTOP }
@@ -687,7 +689,7 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "pack8dclamp",    &Parser::addPack,   Inst::P_8dS,    E_DSTOP }
 ,	{ "pack8ds",        &Parser::addPack,   Inst::P_8dS,    E_DSTOP }
 ,	{ "rot",            &Parser::addRot,    0,              E_DSTOP }
-,	{ "setf",           &Parser::addSetF,   0,              E_DSTOP }
+,	{ "setf",           &Parser::addSetF,   0,              E_OP }
 ,	{ "unpack16a",      &Parser::addUnpack, Inst::U_16a,    E_SRCOP }
 ,	{ "unpack16b",      &Parser::addUnpack, Inst::U_16b,    E_SRCOP }
 ,	{ "unpack32",       &Parser::addUnpack, Inst::U_32,     E_SRCOP } // NOP

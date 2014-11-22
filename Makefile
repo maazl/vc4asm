@@ -17,7 +17,7 @@ DISOBJECTS  = $(BASEOBJECTS) obj/Disassembler$(OBJ) obj/vc4dis$(OBJ)
 all: bin/vc4asm$(EXE) bin/vc4dis$(EXE)
 
 clean:
-	rm $(ASMOBJECTS) $(DISOBJECTS) bin/*
+	-rm $(ASMOBJECTS) $(DISOBJECTS) bin/*
 
 bin/vc4asm$(EXE) : $(ASMOBJECTS)
 	$(LD) $(FLAGS) $(LDFLAGS) -o $@ $(ASMOBJECTS) $(LIBS)

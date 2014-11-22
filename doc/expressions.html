@@ -96,8 +96,7 @@
         </tr>
         <tr>
           <td>label</td>
-          <td><tt>:loop<br>
-            </tt></td>
+          <td><tt>:loop </tt></td>
           <td>label</td>
           <td>label receiving the absolute number of bytes from the start of the
             assembly.</td>
@@ -688,5 +687,19 @@
         </tr>
       </tbody>
     </table>
+    <h3> Register operands</h3>
+    <p>Some operators can be applied to registers rather than constants. This
+      operators will not modify the value at runtime, instead they have a
+      special meaning at compile time.</p>
+    <dl>
+      <dt><tt>+ -</tt></dt>
+      <dd>Addition and subtraction to a register modifies the <em>register
+          number</em>. You must not exceed the domain of the specific register
+        type. </dd>
+      <dt><tt>&lt;&lt; &gt;&gt;</tt></dt>
+      <dd>Shift operators on registers activate the vector rotation of the MUL
+        ALU to pass the result to another SIMD slice. Note that the rotation
+        direction is inverted when applied to a source argument.</dd>
+    </dl>
   </body>
 </html>

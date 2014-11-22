@@ -164,7 +164,10 @@ void Inst::optimize()
 		}
 	 default:
 		switch (OpA)
-		{case A_NOP:
+		{default:
+			if (WAddrA != R_NOP || SF)
+				break;
+		 case A_NOP:
 			CondA = C_NEVER;
 			//MuxAA = X_R0;
 			//MuxAB = X_R0;
@@ -178,9 +181,8 @@ void Inst::optimize()
 				Immd.uValue = 0;
 			}
 			break;
-		 default:;
 		}
-		if (OpM == M_NOP)
+		if (OpM == M_NOP || WAddrM == R_NOP)
 		{	CondM = C_NEVER;
 			//MuxMA = X_R0;
 			//MuxMB = X_R0;
@@ -200,46 +202,50 @@ void Inst::optimize()
 uint64_t Inst::encode() const
 {	switch (Sig)
 	{default:
-		return (uint64_t)Sig << 60
-			| (uint64_t)Unpack << 57
-			| (uint64_t)PM     << 56
-			| (uint64_t)Pack   << 52
-			| (uint64_t)CondA  << 49
-			| (uint64_t)CondM  << 46
-			| (uint64_t)SF     << 45
-			| (uint64_t)WS     << 44
-			| (uint64_t)WAddrA << 38
-			| (uint64_t)WAddrM << 32
-			| (uint64_t)OpM    << 29
-			| (uint64_t)OpA    << 24
-			| (uint64_t)RAddrA << 18
-			| (uint64_t)RAddrB << 12
-			| (uint64_t)MuxAA  <<  9
-			| (uint64_t)MuxAB  <<  6
-			| (uint64_t)MuxMA  <<  3
-			| (uint64_t)MuxMB  <<  0;
+		return (uint64_t)
+				(	Sig    << 28
+				| Unpack << 25
+				| PM     << 24
+				| Pack   << 20
+				| CondA  << 17
+				| CondM  << 14
+				| SF     << 13
+				| WS     << 12
+				| WAddrA << 6
+				| WAddrM << 0 ) << 32
+			| (uint32_t)
+				( OpM    << 29
+				| OpA    << 24
+				| RAddrA << 18
+				| RAddrB << 12
+				| MuxAA  <<  9
+				| MuxAB  <<  6
+				| MuxMA  <<  3
+				| MuxMB  <<  0 );
 	 case S_LDI: // ldi, sema
-		return (uint64_t)S_LDI << 60
-			| (uint64_t)LdMode << 57
-			| (uint64_t)PM     << 56
-			| (uint64_t)Pack   << 52
-			| (uint64_t)CondA  << 49
-			| (uint64_t)CondM  << 46
-			| (uint64_t)SF     << 45
-			| (uint64_t)WS     << 44
-			| (uint64_t)WAddrA << 38
-			| (uint64_t)WAddrM << 32
-			| (uint64_t)Immd.uValue;
+		return (uint64_t)
+				( S_LDI  << 28
+				| LdMode << 25
+				| PM     << 24
+				| Pack   << 20
+				| CondA  << 17
+				| CondM  << 14
+				| SF     << 13
+				| WS     << 12
+				| WAddrA << 6
+				| WAddrM << 0 ) << 32
+			| Immd.uValue;
 	 case S_BRANCH: // Branch
-		return (uint64_t)S_BRANCH << 60
-			| (uint64_t)CondBr << 52
-			| (uint64_t)Rel    << 51
-			| (uint64_t)Reg    << 50
-			| (uint64_t)RAddrA << 45
-			| (uint64_t)WS     << 44
-			| (uint64_t)WAddrA << 38
-			| (uint64_t)WAddrM << 32
-			| (uint64_t)Immd.uValue;
+		return (uint64_t)
+				( S_BRANCH << 28
+				| CondBr << 20
+				| Rel    << 19
+				| Reg    << 18
+				| RAddrA << 13
+				| WS     << 12
+				| WAddrA << 6
+				| WAddrM << 0 ) << 32
+			| Immd.uValue;
 	}
 }
 
