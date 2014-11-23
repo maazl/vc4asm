@@ -221,7 +221,9 @@ exprValue Parser::ParseExpression()
 					Fail("Invalid expression. The identifier %s did not evaluate.", identifier.c_str());
 				if (identifier != "r")
 					Fail("'%s:' is no valid label prefix.", identifier.c_str());
-				// Is forward reference?
+			}
+		 case COLON: // Label
+			{	// Is forward reference?
 				bool forward = false;
 				switch (NextToken())
 				{default:

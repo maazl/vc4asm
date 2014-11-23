@@ -147,7 +147,7 @@ int main(int argc, char * argv[]) {
   	vector<uint64_t> fragment;
   	switch (hexinput)
   	{default:
-  		fprintf(stderr, "Invalid agrument %i to option -x.", hexinput);
+  		fprintf(stderr, "Invalid argument %i to option -x.", hexinput);
   		return 2;
   	 case 32:
   		file_load_x32(*argv, fragment);

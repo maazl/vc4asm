@@ -11,6 +11,7 @@
 #include "Inst.h"
 
 #include <vector>
+#include <map>
 #include <cstdio>
 #include <cinttypes>
 
@@ -52,7 +53,8 @@ class Disassembler
 	/// Signaling opcodes
 	static const char cOpS[14][9];
  private:
-	size_t      Base;
+	/// Ordered set of branch targets in units of BaseAddr
+	map<size_t,string> Labels;
 	Inst        Instruct;
 	char        Code[100];
 	char*       CodeAt;

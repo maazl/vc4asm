@@ -239,10 +239,16 @@ void Disassembler::DoBranch()
 		append("-, ");
 	if (Instruct.Reg)
 		append(cRreg[0][Instruct.RAddrA]);
+	else // no register => try label
+	{	uint32_t target = Instruct.Immd.uValue;
+		if (Instruct.Rel)
+			target += BaseAddr + 4*sizeof(uint64_t);
+		auto l = Labels.find(target);
+		if (l != Labels.end())
+			return appendf(":%s", l->second.c_str());
+	}
 	if (Instruct.Immd.iValue)
-		appendf("%+d", Instruct.Immd.iValue);
-	if (!Instruct.Reg)
-		appendf("  # -> %04x", BaseAddr + Instruct.Immd.iValue + 8*4);
+		appendf(Instruct.Rel ? "%+d" : "%d", Instruct.Immd.iValue);
 }
 
 void Disassembler::DoInstruction()
@@ -261,12 +267,36 @@ void Disassembler::DoInstruction()
 
 void Disassembler::Disassemble(const vector<uint64_t>& inst)
 {
-	Base = 0;
+	// Pass 1: scan for branch targets
+	uint32_t base = BaseAddr + 3*sizeof(uint64_t);
+	for (uint64_t i : inst)
+	{	base += sizeof(uint64_t); // base now points to branch point.
+		Instruct.decode(i);
+		if (Instruct.Sig != Inst::S_BRANCH) // only branch instructions
+			continue;
+		// link address
+		if (Instruct.WAddrA != Inst::R_NOP)
+			Labels.emplace(base, stringf("LL%zu_%s", Labels.size(), cRreg[Instruct.WS][Instruct.WAddrA]));
+		if (Instruct.WAddrM != Inst::R_NOP)
+			Labels.emplace(base, stringf("LL%zu_%s", Labels.size(), cRreg[!Instruct.WS][Instruct.WAddrM]));
+		if (Instruct.Reg)
+			continue;
+		if (Instruct.Rel)
+			Labels.emplace(base + Instruct.Immd.iValue, stringf("L%x_%x", base + Instruct.Immd.iValue, base - 4*sizeof(uint64_t)));
+		else
+			Labels.emplace(Instruct.Immd.uValue, stringf("L%x_%x", Instruct.Immd.uValue, base - 4*sizeof(uint64_t)));
+	}
+
 	for (uint64_t i : inst)
 	{	Instruct.decode(i);
+		// Label?
+		auto l = Labels.find(BaseAddr);
+		if (l != Labels.end())
+			fprintf(Out, ":%s\n", l->second.c_str());
+
 		DoInstruction();
 		*CodeAt = 0;
-		fprintf(Out, "%-50s # %04zx: %016llx %s\n", Code, BaseAddr, i, Comment);
-		BaseAddr += 8;
+		fprintf(Out, "  %-48s # %04zx: %016llx %s\n", Code, BaseAddr, i, Comment);
+		BaseAddr += sizeof(uint64_t);
 	}
 }
