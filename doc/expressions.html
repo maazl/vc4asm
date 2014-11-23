@@ -689,17 +689,20 @@
     </table>
     <h3> Register operands</h3>
     <p>Some operators can be applied to registers rather than constants. This
-      operators will not modify the value at runtime, instead they have a
-      special meaning at compile time.</p>
+      operators will <em>not modify the value at runtime</em>, instead they
+      have a special meaning at compile time.</p>
     <dl>
       <dt><tt>+ -</tt></dt>
       <dd>Addition and subtraction to a register modifies the <em>register
           number</em>. You must not exceed the domain of the specific register
-        type. </dd>
+        type, of course.</dd>
       <dt><tt>&lt;&lt; &gt;&gt;</tt></dt>
       <dd>Shift operators on registers activate the vector rotation of the MUL
-        ALU to pass the result to another SIMD slice. Note that the rotation
-        direction is inverted when applied to a source argument.</dd>
+        ALU to pass the result to another SIMD slice. <tt>&lt;&lt;</tt> rotates
+        to higher QPU element number, <tt>&gt;&gt;</tt> to lower elements. Note
+        that the rotation direction is inverted when applied to a source
+        argument, i.e. like if you <em>take</em> the value from a higher or
+        lower element number.</dd>
     </dl>
   </body>
 </html>

@@ -709,8 +709,12 @@ void Parser::assembleBRANCH(int relative)
 
 void Parser::assembleSEMA(int type)
 {
+	doALUTarget(false);
+	if (NextToken() != COMMA)
+		Fail("Expected ', <number>' after first argument to semaphore instruction, found %s.", Token.c_str());
+
 	auto param = ParseExpression();
-	if (param.Type != V_INT || param.uValue >= 16)
+	if (param.Type != V_INT || (param.uValue & ~(type << 4)) >= 16)
 		Fail("Semaphore instructions require a single integer argument less than 16 with the semaphore number.");
 	param.uValue |= type << 4;
 

@@ -574,13 +574,13 @@ const Parser::opEntry<8> Parser::opcodeMap[] =
 ,	{"not",    &Parser::assembleADD,  Inst::A_NOT }
 ,	{"or",     &Parser::assembleADD,  Inst::A_OR }
 ,	{"ror",    &Parser::assembleADD,  Inst::A_ROR }
-,	{"sacq",   &Parser::assembleSEMA, 0 }
+,	{"sacq",   &Parser::assembleSEMA, 1 }
 ,	{"sbdone", &Parser::assembleSIG,  Inst::S_SBDONE }
 ,	{"sbwait", &Parser::assembleSIG,  Inst::S_SBWAIT }
 //,	{"sema",   &Parser::assembleSEMA, -1 } // other syntax
 ,	{"shl",    &Parser::assembleADD,  Inst::A_SHL }
 ,	{"shr",    &Parser::assembleADD,  Inst::A_SHR }
-,	{"srel",   &Parser::assembleSEMA, 1 }
+,	{"srel",   &Parser::assembleSEMA, 0 }
 ,	{"sub",    &Parser::assembleADD,  Inst::A_SUB }
 ,	{"tend",   &Parser::assembleSIG,  Inst::S_THREND }
 ,	{"thrend", &Parser::assembleSIG,  Inst::S_THREND }
