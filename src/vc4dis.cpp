@@ -15,12 +15,14 @@ using namespace std;
 int hexinput = 0;
 
 
+#if (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__) || (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN)
 /// Byte swap
 static inline uint64_t swap_uint64(uint64_t x)
 {	x = x << 32 | x >> 32;
 	x = (x & 0x0000FFFF0000FFFFULL) << 16 | (x & 0xFFFF0000FFFF0000ULL) >> 16;
 	return (x & 0x00FF00FF00FF00FFULL) << 8  | (x & 0xFF00FF00FF00FF00ULL) >> 8;
 }
+#endif
 
 static void file_load_bin(const char *filename, vector<uint64_t>& memory)
 {	FILE *f = fopen(filename, "rb");

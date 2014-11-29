@@ -1158,6 +1158,8 @@ void Parser::doINCLUDE(int)
 		return Error("Syntax error. Expected \"<file-name>\" after .include, found '%s'.", At);
 	Token.assign(At+1, len-2);
 
+	Token = relpath(Context.back()->File, Token);
+
 	saveContext ctx(*this, new fileContext(CTX_INCLUDE, Token, 0));
 
 	ParseFile();

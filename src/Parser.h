@@ -10,6 +10,8 @@
 
 #include "Eval.h"
 #include "Inst.h"
+#include "utils.h"
+
 #include <inttypes.h>
 #include <vector>
 #include <string>

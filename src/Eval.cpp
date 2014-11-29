@@ -7,9 +7,10 @@
 
 #include "Eval.h"
 #include "Inst.h"
+#include "utils.h"
 
 #include <cmath>
-#include <stdarg.h>
+#include <cstdarg>
 
 
 Eval::Fail::Fail(const char* format, ...)
@@ -21,244 +22,244 @@ Eval::Fail::Fail(const char* format, ...)
 
 
 bool Eval::partialEvaluate(bool unary)
-{next_eval:
-	exprEntry& rhs = Stack.back();
-	if (Stack.size() <= 1)
-	{	if (rhs.Op == BRC) // closing brace w/o opening brace, might not belong to our expression
-		{	if (rhs.Type == V_NONE)
-				throw Fail("Incomplete expression: expected value.");
-			return false;
+{	while (true)
+	{	exprEntry& rhs = Stack.back();
+		if (Stack.size() <= 1)
+		{	if (rhs.Op == BRC) // closing brace w/o opening brace, might not belong to our expression
+			{	if (rhs.Type == V_NONE)
+					throw Fail("Incomplete expression: expected value.");
+				return false;
+			}
+			return true;
 		}
-		return true;
-	}
-	exprEntry& lhs = Stack[Stack.size()-2];
-	if ( (lhs.Op & PRECEDENCE) < (rhs.Op & PRECEDENCE)
-		|| (unary && !(lhs.Op & UNARY_OP)) )
-		return true;
-	// Can operator be applied to type?
-	if (lhs.Type == V_LABEL || rhs.Type == V_LABEL)
-		throw Fail("Operators on labels are currently unsupported.");
-	if ((lhs.Op & NO_LFLOAT) && lhs.Type == V_FLOAT)
-		throw Fail("Cannot apply operator %s to floating point value %g.", op2string(lhs.Op), lhs.fValue);
-	if ((lhs.Op & NO_RFLOAT) && rhs.Type == V_FLOAT)
-		throw Fail("Cannot apply operator %s to floating point value %g.", op2string(lhs.Op), rhs.fValue);
-	if ((lhs.Op & NO_LREG) && lhs.Type == V_REG)
-		throw Fail("Cannot apply operator %s to register.", op2string(lhs.Op));
-	if ((lhs.Op & NO_RREG) && rhs.Type == V_REG)
-		throw Fail("Cannot apply operator %s to register.", op2string(lhs.Op));
-	if ((lhs.Type == V_REG && rhs.Type == V_FLOAT) || (lhs.Type == V_FLOAT && rhs.Type == V_REG))
-		throw Fail("Cannot apply operator %s to register and float.", op2string(lhs.Op));
-	if ((lhs.Op & 0xe00) == 6 && ((lhs.Type == V_REG) ^ (rhs.Type == V_REG)))
-		throw Fail("Cannot apply operator %s to register and non register.", op2string(lhs.Op));
-	// Propagate one operand to float?
-	if ((lhs.Op & PROP_FLOAT) && (lhs.Type != rhs.Type))
-	{	if (rhs.Type == V_INT && lhs.Type == V_FLOAT)
-		{	rhs.fValue = rhs.iValue;
-			rhs.Type = V_FLOAT;
-		} else if (lhs.Type == V_INT && rhs.Type == V_FLOAT)
-		{	lhs.fValue = lhs.iValue;
-			lhs.Type = V_FLOAT;
+		exprEntry& lhs = Stack[Stack.size()-2];
+		if ( (lhs.Op & PRECEDENCE) < (rhs.Op & PRECEDENCE)
+			|| (unary && !(lhs.Op & UNARY_OP)) )
+			return true;
+		// Can operator be applied to type?
+		if (lhs.Type == V_LABEL || rhs.Type == V_LABEL)
+			throw Fail("Operators on labels are currently unsupported.");
+		if ((lhs.Op & NO_LFLOAT) && lhs.Type == V_FLOAT)
+			throw Fail("Cannot apply operator %s to floating point value %g.", op2string(lhs.Op), lhs.fValue);
+		if ((lhs.Op & NO_RFLOAT) && rhs.Type == V_FLOAT)
+			throw Fail("Cannot apply operator %s to floating point value %g.", op2string(lhs.Op), rhs.fValue);
+		if ((lhs.Op & NO_LREG) && lhs.Type == V_REG)
+			throw Fail("Cannot apply operator %s to register.", op2string(lhs.Op));
+		if ((lhs.Op & NO_RREG) && rhs.Type == V_REG)
+			throw Fail("Cannot apply operator %s to register.", op2string(lhs.Op));
+		if ((lhs.Type == V_REG && rhs.Type == V_FLOAT) || (lhs.Type == V_FLOAT && rhs.Type == V_REG))
+			throw Fail("Cannot apply operator %s to register and float.", op2string(lhs.Op));
+		if ((lhs.Op & 0xe00) == 6 && ((lhs.Type == V_REG) ^ (rhs.Type == V_REG)))
+			throw Fail("Cannot apply operator %s to register and non register.", op2string(lhs.Op));
+		// Propagate one operand to float?
+		if ((lhs.Op & PROP_FLOAT) && (lhs.Type != rhs.Type))
+		{	if (rhs.Type == V_INT && lhs.Type == V_FLOAT)
+			{	rhs.fValue = rhs.iValue;
+				rhs.Type = V_FLOAT;
+			} else if (lhs.Type == V_INT && rhs.Type == V_FLOAT)
+			{	lhs.fValue = lhs.iValue;
+				lhs.Type = V_FLOAT;
+			}
 		}
-	}
-	// apply operator
-	switch (lhs.Op)
-	{default:
-		throw Fail("internal parser error");
-	 case BRO:
-		switch (rhs.Op)
-		{case EVAL:
-			throw Fail("Incomplete expression: missing ')'.");
-		 case BRC:
-			lhs.Op = NOP; // closing brace cancels opening brace
-			lhs.iValue = rhs.iValue;
+		// apply operator
+		switch (lhs.Op)
+		{default:
+			throw Fail("internal parser error");
+		 case BRO:
+			switch (rhs.Op)
+			{case EVAL:
+				throw Fail("Incomplete expression: missing ')'.");
+			 case BRC:
+				lhs.Op = NOP; // closing brace cancels opening brace
+				lhs.iValue = rhs.iValue;
+				lhs.Type = rhs.Type;
+				Stack.pop_back();
+				continue;
+			 default:
+				return true; // can't evaluate over opening brace
+			}
+		 case NOP:
+			lhs.uValue = rhs.uValue; // works for float also
+			break;
+		 case NEG:
+			if (rhs.Type == V_FLOAT)
+				lhs.fValue = -rhs.fValue;
+			else
+				lhs.iValue = -rhs.iValue;
+			break;
+		 case NOT:
+			lhs.uValue = ~rhs.uValue;
+			break;
+		 case lNOT:
+			lhs.uValue = !rhs.uValue;
+			break;
+		 case POW:
+			if (rhs.Type == V_FLOAT)
+				lhs.fValue = pow(lhs.fValue, rhs.fValue);
+			else
+				lhs.iValue = (int32_t)floor(pow(lhs.iValue, rhs.iValue)+.5);
+			break;
+		 case MUL:
+			if (rhs.Type == V_FLOAT)
+				lhs.fValue *= rhs.fValue;
+			else
+				lhs.iValue *= rhs.iValue;
+			break;
+		 case DIV:
+			if (rhs.Type == V_FLOAT)
+				lhs.fValue /= rhs.fValue;
+			else
+				lhs.iValue /= rhs.iValue;
+			break;
+		 case MOD:
+			if (rhs.Type == V_FLOAT)
+				lhs.fValue = fmod(lhs.fValue, rhs.fValue);
+			else
+				lhs.iValue %= rhs.iValue;
+			break;
+		 case ADD:
+			if (lhs.Type == V_REG)
+			{	if (rhs.Type == V_FLOAT)
+					throw Fail("Cannot add float value %g to a register number.", rhs.fValue);
+				unsigned r = lhs.rValue.Num + rhs.iValue;
+				if (r > 63 || ((lhs.rValue.Type & R_SEMA) && r > 15))
+					throw Fail("Register number out of range.");
+				lhs.rValue.Num = r;
+			} else if (rhs.Type == V_FLOAT)
+				lhs.fValue += rhs.fValue;
+			else
+				lhs.iValue += rhs.iValue;
+			break;
+		 case SUB:
+			if (lhs.Type == V_REG)
+			{	if (rhs.Type == V_FLOAT)
+					throw Fail("Cannot add float value %g to a register number.", rhs.fValue);
+				unsigned r = lhs.rValue.Num - rhs.iValue;
+				if (r > 63 || ((lhs.rValue.Type & R_SEMA) && r > 15))
+					throw Fail("Register number out of range.");
+				lhs.rValue.Num = r;
+			} else if (rhs.Type == V_FLOAT)
+				lhs.fValue -= rhs.fValue;
+			else
+				lhs.iValue -= rhs.iValue;
+			break;
+		 case ASL:
+			if (lhs.Type == V_REG)
+			{	// curious syntax ...
+				if (rhs.Type == V_INT)
+				{	if (lhs.rValue.Rotate & ~0xf)
+						Fail("Cannot apply additional offset to r5 vector rotation");
+					lhs.rValue.Rotate = (lhs.rValue.Rotate + rhs.iValue) & 0xf;
+				} else
+				{	if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate)
+						Fail("Vector rotation are only allowed by constant or by r5");
+					lhs.rValue.Rotate = 16;
+				}
+				break;
+			} else if (rhs.iValue < 0)
+			{	lhs.iValue >>= -rhs.iValue;
+				break;
+			}
+		 case SHL:
+			lhs.uValue <<= rhs.uValue;
+			break;
+		 case ASR:
+			if (lhs.Type == V_REG)
+			{	// curious syntax ...
+				if (rhs.Type == V_INT)
+				{	if (lhs.rValue.Rotate & ~0xf)
+						Fail("Cannot apply additional offset to r5 vector rotation");
+					lhs.rValue.Rotate = (lhs.rValue.Rotate - rhs.iValue) & 0xf;
+				} else
+				{	if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate)
+						Fail("Vector rotation are only allowed by constant or by r5");
+					lhs.rValue.Rotate = (uint8_t)-16;
+				}
+			} else if (rhs.iValue < 0)
+				lhs.iValue <<= -rhs.iValue;
+			else
+				lhs.iValue >>= rhs.iValue;
+			break;
+		 case SHR:
+			lhs.uValue >>= rhs.uValue;
+			break;
+		 case GT:
+			if (lhs.Type == V_REG)
+				lhs.iValue = lhs.rValue.Num > rhs.rValue.Num;
+			else if (rhs.Type == V_FLOAT)
+				lhs.iValue = lhs.fValue > rhs.fValue;
+			else
+				lhs.iValue = lhs.iValue > rhs.iValue;
+			rhs.Type = V_INT;
+			break;
+		 case GE:
+			if (lhs.Type == V_REG)
+				lhs.iValue = lhs.rValue.Num >= rhs.rValue.Num;
+			else if (rhs.Type == V_FLOAT)
+				lhs.iValue = lhs.fValue >= rhs.fValue;
+			else
+				lhs.iValue = lhs.iValue >= rhs.iValue;
+			lhs.Type = V_INT;
+			break;
+		 case LT:
+			if (lhs.Type == V_REG)
+				lhs.iValue = lhs.rValue.Num < rhs.rValue.Num;
+			else if (rhs.Type == V_FLOAT)
+				lhs.iValue = lhs.fValue < rhs.fValue;
+			else
+				lhs.iValue = lhs.iValue < rhs.iValue;
+			lhs.Type = V_INT;
+			break;
+		 case LE:
+			if (lhs.Type == V_REG)
+				lhs.iValue = lhs.rValue.Num <= rhs.rValue.Num;
+			else if (rhs.Type == V_FLOAT)
+				lhs.iValue = lhs.fValue <= rhs.fValue;
+			else
+				lhs.iValue = lhs.iValue <= rhs.iValue;
+			rhs.Type = V_INT;
+			break;
+		 case EQ:
+			if (lhs.Type == V_REG)
+				lhs.iValue = lhs.rValue.Num == rhs.rValue.Num && lhs.rValue.Type == rhs.rValue.Type;
+			else if (rhs.Type == V_FLOAT)
+				lhs.iValue = lhs.fValue == rhs.fValue;
+			else
+				lhs.iValue = lhs.iValue == rhs.iValue;
+			lhs.Type = V_INT;
+			break;
+		 case NE:
+			if (lhs.Type == V_REG)
+				lhs.iValue = lhs.rValue.Num != rhs.rValue.Num || lhs.rValue.Type != rhs.rValue.Type;
+			else if (rhs.Type == V_FLOAT)
+				lhs.iValue = lhs.fValue != rhs.fValue;
+			else
+				lhs.iValue = lhs.iValue != rhs.iValue;
+			lhs.Type = V_INT;
+			break;
+		 case AND:
+			lhs.uValue &= rhs.uValue;
+			break;
+		 case XOR:
+			lhs.uValue ^= rhs.uValue;
+			break;
+		 case OR:
+			lhs.uValue |= rhs.uValue;
+			break;
+		 case lAND:
+			lhs.iValue = lhs.iValue && rhs.iValue;
+			break;
+		 case lXOR:
+			lhs.iValue = !lhs.iValue ^ !rhs.iValue;
+		 case lOR:
+			lhs.iValue = lhs.iValue || rhs.iValue;
+			break;
+		}
+		if (lhs.Op & UNARY_OP)
 			lhs.Type = rhs.Type;
-			Stack.pop_back();
-			goto next_eval;
-		 default:
-			return true; // can't evaluate over opening brace
-		}
-	 case NOP:
-		lhs.uValue = rhs.uValue; // works for float also
-		break;
-	 case NEG:
-		if (rhs.Type == V_FLOAT)
-			lhs.fValue = -rhs.fValue;
-		else
-			lhs.iValue = -rhs.iValue;
-		break;
-	 case NOT:
-		lhs.uValue = ~rhs.uValue;
-		break;
-	 case lNOT:
-		lhs.uValue = !rhs.uValue;
-		break;
-	 case POW:
-		if (rhs.Type == V_FLOAT)
-			lhs.fValue = pow(lhs.fValue, rhs.fValue);
-		else
-			lhs.iValue = (int32_t)floor(pow(lhs.iValue, rhs.iValue)+.5);
-		break;
-	 case MUL:
-		if (rhs.Type == V_FLOAT)
-			lhs.fValue *= rhs.fValue;
-		else
-			lhs.iValue *= rhs.iValue;
-		break;
-	 case DIV:
-		if (rhs.Type == V_FLOAT)
-			lhs.fValue /= rhs.fValue;
-		else
-			lhs.iValue /= rhs.iValue;
-		break;
-	 case MOD:
-		if (rhs.Type == V_FLOAT)
-			lhs.fValue = fmod(lhs.fValue, rhs.fValue);
-		else
-			lhs.iValue %= rhs.iValue;
-		break;
-	 case ADD:
-		if (lhs.Type == V_REG)
-		{	if (rhs.Type == V_FLOAT)
-				throw Fail("Cannot add float value %g to a register number.", rhs.fValue);
-			unsigned r = lhs.rValue.Num + rhs.iValue;
-			if (r > 63 || ((lhs.rValue.Type & R_SEMA) && r > 15))
-				throw Fail("Register number out of range.");
-			lhs.rValue.Num = r;
-		} else if (rhs.Type == V_FLOAT)
-			lhs.fValue += rhs.fValue;
-		else
-			lhs.iValue += rhs.iValue;
-		break;
-	 case SUB:
-		if (lhs.Type == V_REG)
-		{	if (rhs.Type == V_FLOAT)
-				throw Fail("Cannot add float value %g to a register number.", rhs.fValue);
-			unsigned r = lhs.rValue.Num - rhs.iValue;
-			if (r > 63 || ((lhs.rValue.Type & R_SEMA) && r > 15))
-				throw Fail("Register number out of range.");
-			lhs.rValue.Num = r;
-		} else if (rhs.Type == V_FLOAT)
-			lhs.fValue -= rhs.fValue;
-		else
-			lhs.iValue -= rhs.iValue;
-		break;
-	 case ASL:
-		if (lhs.Type == V_REG)
-		{	// curious syntax ...
-			if (rhs.Type == V_INT)
-			{	if (lhs.rValue.Rotate & ~0xf)
-					Fail("Cannot apply additional offset to r5 vector rotation");
-				lhs.rValue.Rotate = (lhs.rValue.Rotate + rhs.iValue) & 0xf;
-			} else
-			{	if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate)
-					Fail("Vector rotation are only allowed by constant or by r5");
-				lhs.rValue.Rotate = 16;
-			}
-			break;
-		} else if (rhs.iValue < 0)
-		{	lhs.iValue >>= -rhs.iValue;
-			break;
-		}
-	 case SHL:
-		lhs.uValue <<= rhs.uValue;
-		break;
-	 case ASR:
-		if (lhs.Type == V_REG)
-		{	// curious syntax ...
-			if (rhs.Type == V_INT)
-			{	if (lhs.rValue.Rotate & ~0xf)
-					Fail("Cannot apply additional offset to r5 vector rotation");
-				lhs.rValue.Rotate = (lhs.rValue.Rotate - rhs.iValue) & 0xf;
-			} else
-			{	if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate)
-					Fail("Vector rotation are only allowed by constant or by r5");
-				lhs.rValue.Rotate = (uint8_t)-16;
-			}
-		} else if (rhs.iValue < 0)
-			lhs.iValue <<= -rhs.iValue;
-		else
-			lhs.iValue >>= rhs.iValue;
-		break;
-	 case SHR:
-		lhs.uValue >>= rhs.uValue;
-		break;
-	 case GT:
-		if (lhs.Type == V_REG)
-			lhs.iValue = lhs.rValue.Num > rhs.rValue.Num;
-		else if (rhs.Type == V_FLOAT)
-			lhs.iValue = lhs.fValue > rhs.fValue;
-		else
-			lhs.iValue = lhs.iValue > rhs.iValue;
-		rhs.Type = V_INT;
-		break;
-	 case GE:
-		if (lhs.Type == V_REG)
-			lhs.iValue = lhs.rValue.Num >= rhs.rValue.Num;
-		else if (rhs.Type == V_FLOAT)
-			lhs.iValue = lhs.fValue >= rhs.fValue;
-		else
-			lhs.iValue = lhs.iValue >= rhs.iValue;
-		lhs.Type = V_INT;
-		break;
-	 case LT:
-		if (lhs.Type == V_REG)
-			lhs.iValue = lhs.rValue.Num < rhs.rValue.Num;
-		else if (rhs.Type == V_FLOAT)
-			lhs.iValue = lhs.fValue < rhs.fValue;
-		else
-			lhs.iValue = lhs.iValue < rhs.iValue;
-		lhs.Type = V_INT;
-		break;
-	 case LE:
-		if (lhs.Type == V_REG)
-			lhs.iValue = lhs.rValue.Num <= rhs.rValue.Num;
-		else if (rhs.Type == V_FLOAT)
-			lhs.iValue = lhs.fValue <= rhs.fValue;
-		else
-			lhs.iValue = lhs.iValue <= rhs.iValue;
-		rhs.Type = V_INT;
-		break;
-	 case EQ:
-		if (lhs.Type == V_REG)
-			lhs.iValue = lhs.rValue.Num == rhs.rValue.Num && lhs.rValue.Type == rhs.rValue.Type;
-		else if (rhs.Type == V_FLOAT)
-			lhs.iValue = lhs.fValue == rhs.fValue;
-		else
-			lhs.iValue = lhs.iValue == rhs.iValue;
-		lhs.Type = V_INT;
-		break;
-	 case NE:
-		if (lhs.Type == V_REG)
-			lhs.iValue = lhs.rValue.Num != rhs.rValue.Num || lhs.rValue.Type != rhs.rValue.Type;
-		else if (rhs.Type == V_FLOAT)
-			lhs.iValue = lhs.fValue != rhs.fValue;
-		else
-			lhs.iValue = lhs.iValue != rhs.iValue;
-		lhs.Type = V_INT;
-		break;
-	 case AND:
-		lhs.uValue &= rhs.uValue;
-		break;
-	 case XOR:
-		lhs.uValue ^= rhs.uValue;
-		break;
-	 case OR:
-		lhs.uValue |= rhs.uValue;
-		break;
-	 case lAND:
-		lhs.iValue = lhs.iValue && rhs.iValue;
-		break;
-	 case lXOR:
-		lhs.iValue = !lhs.iValue ^ !rhs.iValue;
-	 case lOR:
-		lhs.iValue = lhs.iValue || rhs.iValue;
-		break;
+		lhs.Op = rhs.Op;
+		Stack.pop_back();
 	}
-	if (lhs.Op & UNARY_OP)
-		lhs.Type = rhs.Type;
-	lhs.Op = rhs.Op;
-	Stack.pop_back();
-	goto next_eval;
 }
 
 bool Eval::PushOperator(mathOp op)

@@ -16,17 +16,6 @@ using namespace std;
 
 static_assert(numeric_limits<float>::is_iec559 && numeric_limits<float>::digits == 24, "error cannot cross complie on platform that does not support 32 bit IEEE float.");
 
-#ifdef __GNUC__
-#define PRINTFATTR(i) __attribute__((format(printf, i, i+1)))
-#define NORETURNATTR __attribute__ ((__noreturn__))
-#else
-#define PRINTFATTR(i)
-#define NORETURNATTR
-#endif
-
-string vstringf(const char* format, va_list va);
-string stringf(const char* format, ...) PRINTFATTR(1);
-
 enum regType : uint8_t
 {	R_A    =  1 ///< register file A
 ,	R_B    =  2 ///< register file B
