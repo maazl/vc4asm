@@ -972,10 +972,10 @@ void Parser::beginMACRO(int)
 		return Error("Expected macro name.");
 	AtMacro = &Macros[Token];
 	if (AtMacro->Definition.File.size())
-	{	Error("Redefinition of macro %s.\n"
+	{	Warn("Info: Redefinition of macro %s.\n"
 		      "  Previous definition at %s.",
 		  Token.c_str(), AtMacro->Definition.toString().c_str());
-		// ignore error to avoid entirely inconsistent parser
+		// redefine
 		AtMacro->Args.clear();
 		AtMacro->Content.clear();
 	}
@@ -1085,11 +1085,12 @@ void Parser::defineFUNC(int)
 	func.DefLine = Line;
 	func.Start = At;
 
-	const auto& ret = Functions.insert(funcs_t::value_type(name, func));
+	const auto& ret = Functions.emplace(name, func);
 	if (!ret.second)
-	{	Error("Redefinition of function %s.\n"
+	{	Warn("Info: Redefinition of function %s.\n"
 		      "Previous definition at %s.",
 		  Token.c_str(), ret.first->second.Definition.toString().c_str());
+		ret.first->second = func;
 	}
 }
 
