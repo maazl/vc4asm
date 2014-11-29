@@ -477,8 +477,8 @@ void Parser::doALUTarget(bool mul)
 		Fail("The register is not writable.");
 	if ((param.rValue.Type & R_AB) != R_AB)
 	{	bool wsfreeze = Instruct.Pack != Inst::P_32 || mul
-			? Instruct.OpA != Inst::A_NOP && !(regAB & (1ULL << Instruct.WAddrA))
-			: Instruct.OpM != Inst::M_NOP && !(regAB & (1ULL << Instruct.WAddrM));
+			? Instruct.OpA != Inst::A_NOP && !Inst::isWRegAB(Instruct.WAddrA)
+			: Instruct.OpM != Inst::M_NOP && !Inst::isWRegAB(Instruct.WAddrM);
 		if ((param.rValue.Type & R_A) && (!wsfreeze || Instruct.WS == mul))
 			Instruct.WS = mul;
 		else if ((param.rValue.Type & R_B) && (!wsfreeze || Instruct.WS != mul))

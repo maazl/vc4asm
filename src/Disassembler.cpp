@@ -265,38 +265,41 @@ void Disassembler::DoInstruction()
 	}
 }
 
-void Disassembler::Disassemble(const vector<uint64_t>& inst)
+void Disassembler::ScanLabels()
 {
-	// Pass 1: scan for branch targets
-	uint32_t base = BaseAddr + 3*sizeof(uint64_t);
-	for (uint64_t i : inst)
-	{	base += sizeof(uint64_t); // base now points to branch point.
+	Addr = BaseAddr + 3*sizeof(uint64_t);
+	for (uint64_t i : Instructions)
+	{	Addr += sizeof(uint64_t); // base now points to branch point.
 		Instruct.decode(i);
 		if (Instruct.Sig != Inst::S_BRANCH) // only branch instructions
 			continue;
 		// link address
 		if (Instruct.WAddrA != Inst::R_NOP)
-			Labels.emplace(base, stringf("LL%zu_%s", Labels.size(), cRreg[Instruct.WS][Instruct.WAddrA]));
+			Labels.emplace(Addr, stringf("LL%zu_%s", Labels.size(), cRreg[Instruct.WS][Instruct.WAddrA]));
 		if (Instruct.WAddrM != Inst::R_NOP)
-			Labels.emplace(base, stringf("LL%zu_%s", Labels.size(), cRreg[!Instruct.WS][Instruct.WAddrM]));
+			Labels.emplace(Addr, stringf("LL%zu_%s", Labels.size(), cRreg[!Instruct.WS][Instruct.WAddrM]));
 		if (Instruct.Reg)
 			continue;
 		if (Instruct.Rel)
-			Labels.emplace(base + Instruct.Immd.iValue, stringf("L%x_%x", base + Instruct.Immd.iValue, base - 4*sizeof(uint64_t)));
+			Labels.emplace(Addr + Instruct.Immd.iValue, stringf("L%x_%x", Addr + Instruct.Immd.iValue, Addr - 4*sizeof(uint64_t)));
 		else
-			Labels.emplace(Instruct.Immd.uValue, stringf("L%x_%x", Instruct.Immd.uValue, base - 4*sizeof(uint64_t)));
+			Labels.emplace(Instruct.Immd.uValue, stringf("L%x_%x", Instruct.Immd.uValue, Addr - 4*sizeof(uint64_t)));
 	}
+}
 
-	for (uint64_t i : inst)
+void Disassembler::Disassemble()
+{
+	Addr = BaseAddr;
+	for (uint64_t i : Instructions)
 	{	Instruct.decode(i);
 		// Label?
-		auto l = Labels.find(BaseAddr);
+		auto l = Labels.find(Addr);
 		if (l != Labels.end())
 			fprintf(Out, ":%s\n", l->second.c_str());
 
 		DoInstruction();
 		*CodeAt = 0;
-		fprintf(Out, "  %-48s # %04zx: %016llx %s\n", Code, BaseAddr, i, Comment);
-		BaseAddr += sizeof(uint64_t);
+		fprintf(Out, "  %-48s # %04zx: %016llx %s\n", Code, Addr, i, Comment);
+		Addr += sizeof(uint64_t);
 	}
 }

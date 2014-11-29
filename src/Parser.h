@@ -51,9 +51,6 @@ class Parser
 		reg_t       Value;
 	}             regMap[];
 	static const reg_t regNOP;
-	/// Bit vector with register numbers where register file A and B are interchangeable,
-	/// i.e. Instr.WS is not fixed.
-	static const uint64_t regAB = 0xfff9f9df00000000ULL;
 	class opAddMul
 	{	int8_t      Op;      ///< ADD or MUL ALU opcode, bit 7 set: MUL ALU
 	 public:

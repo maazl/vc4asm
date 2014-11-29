@@ -1,14 +1,8 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <inttypes.h>
-#include <assert.h>
-#include <errno.h>
-#include <sstream>
-#include <algorithm>
-#include <getopt.h>
-#include <sys/param.h>
-
 #include "Parser.h"
+#include "Validator.h"
+
+#include <cstdio>
+#include <getopt.h>
 
 using namespace std;
 
@@ -27,19 +21,19 @@ int main(int argc, char **argv)
 	const char* outfname = NULL;
 	const char* writeCPP = NULL;
 	const char* writePRE = NULL;
+	bool check = false;
 
 	int c;
-	while ((c = getopt(argc, argv, "o:c:E:")) != -1) {
-		switch (c) {
-			case 'o':
-				outfname = optarg;
-				break;
-			case 'c':
-				writeCPP = optarg;
-				break;
-			case 'E':
-				writePRE = optarg;
-				break;
+	while ((c = getopt(argc, argv, "o:c:E:C")) != -1)
+	{	switch (c)
+		{case 'o':
+			outfname = optarg; break;
+		 case 'c':
+			writeCPP = optarg; break;
+		 case 'C':
+			check = true; break;
+		 case 'E':
+			writePRE = optarg; break;
 		}
 	}
 
@@ -64,11 +58,16 @@ int main(int argc, char **argv)
 		{	parser.ParseFile(argv[optind]);
 			++optind;
 		}
+		if (!parser.Success)
+			throw string("Aborted because of earlier errors.");
 	} catch (const string& msg)
 	{	fputs(msg.c_str(), stderr);
 	  fputc('\n', stderr);
 		return 1;
 	}
+
+	if (check)
+		Validator().Validate(parser.GetInstructions());
 
 	if (writeCPP)
 	{	FILE* of = fopen(writeCPP, "wt");

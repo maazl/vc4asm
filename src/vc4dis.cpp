@@ -1,4 +1,5 @@
 #include "Disassembler.h"
+#include "Validator.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -111,26 +112,23 @@ int main(int argc, char * argv[]) {
 
 	Disassembler dis;
 	dis.Out = stdout;
+	bool check = false;
 
 	int c;
-	while ((c = getopt(argc, argv, "x::MFvb:o:")) != -1)
+	while ((c = getopt(argc, argv, "x::MFvb:o:C")) != -1)
 	{	switch (c)
 		{case 'x':
 			if (!optarg || (hexinput = atoi(optarg + 2) == 0))
 				hexinput = 32;
 			break;
 		 case 'M':
-			dis.UseMOV = false;
-			break;
+			dis.UseMOV = false; break;
 		 case 'F':
-			dis.UseFloat = false;
-			break;
+			dis.UseFloat = false; break;
 		 case 'v':
-			dis.PrintFields = true;
-			break;
+			dis.PrintFields = true; break;
 		 case 'b':
-			dis.BaseAddr = atol(optarg);
-			break;
+			dis.BaseAddr = atol(optarg); break;
 		 case 'o':
 			dis.Out = fopen(optarg, "w");
 			if (!dis.Out)
@@ -138,32 +136,38 @@ int main(int argc, char * argv[]) {
 				return 1;
 			}
 			break;
+		 case 'C':
+			check = true; break;
 		}
 	}
 	argv += optind;
 
-  while (*argv)
-  {	fprintf(stderr, "Disassembling %s...\n", *argv);
-  	vector<uint64_t> fragment;
-  	switch (hexinput)
-  	{default:
-  		fprintf(stderr, "Invalid argument %i to option -x.", hexinput);
-  		return 2;
-  	 case 32:
-  		file_load_x32(*argv, fragment);
-  		break;
-  	 case 64:
-  		file_load_x64(*argv, fragment);
-  		break;
-  	 case 0:
-  		file_load_bin(*argv, fragment);
-  		break;
-  	}
-  	if (fragment.size() == 0)
-  	{	fprintf(stderr, "Couldn't read any data from file %s, aborting.\n", *argv);
-  		continue;
-  	}
-  	dis.Disassemble(fragment);
-  	++argv;
-  }
+	while (*argv)
+	{	fprintf(stderr, "Disassembling %s...\n", *argv);
+		switch (hexinput)
+		{default:
+			fprintf(stderr, "Invalid argument %i to option -x.", hexinput);
+			return 2;
+		 case 32:
+			file_load_x32(*argv, dis.Instructions);
+			break;
+		 case 64:
+			file_load_x64(*argv, dis.Instructions);
+			break;
+		 case 0:
+			file_load_bin(*argv, dis.Instructions);
+			break;
+		}
+		if (dis.Instructions.size() == 0)
+		{	fprintf(stderr, "Couldn't read any data from file %s, aborting.\n", *argv);
+			continue;
+		}
+		dis.ScanLabels();
+		dis.Disassemble();
+
+		if (check)
+			Validator().Validate(dis.Instructions);
+
+		++argv;
+	}
 }

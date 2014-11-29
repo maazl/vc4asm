@@ -190,6 +190,13 @@ struct Inst
 		};
 	};
 
+	/// Check whether a register read of register file A and B is interchangeable,
+	/// i.e. X_RA/RAddrA and X_RB/RAddrB are both options.
+	static bool isRRegAB(uint8_t reg) { return ((1ULL<<reg) & 0x0009008900000000ULL) != 0; }
+	/// Check whether a register write to register file A and B is interchangeable,
+	/// i.e. Instr.WS is not fixed.
+	static bool isWRegAB(uint8_t reg) { return ((1ULL<<reg) & 0xfff9f9df00000000ULL) != 0; }
+
 	static bool eval(opadd op, value_t& l, value_t r);
 	static bool eval(opmul op, value_t& l, value_t r);
 

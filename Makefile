@@ -10,7 +10,7 @@ OBJ = .o
 obj/%$(OBJ) : src/%.cpp
 	$(CC) $(FLAGS) $(CPPFLAGS) -o $@ $<
 
-BASEOBJECTS = obj/expr$(OBJ) obj/Inst$(OBJ) obj/Eval$(OBJ)
+BASEOBJECTS = obj/expr$(OBJ) obj/Inst$(OBJ) obj/Eval$(OBJ) obj/Validator$(OBJ)
 ASMOBJECTS  = $(BASEOBJECTS) obj/Parser$(OBJ) obj/vc4asm$(OBJ)
 DISOBJECTS  = $(BASEOBJECTS) obj/Disassembler$(OBJ) obj/vc4dis$(OBJ)
 
@@ -28,8 +28,8 @@ bin/vc4dis$(EXE) : $(DISOBJECTS)
 src/%.cpp : src/%.h
 src/Parser.cpp : src/Parser.h src/Parser.tables.cpp
 src/Disassembler.cpp : src/Disassembler.h src/Eval.h src/Disassembler.tables.cpp
-src/vc4asm.cpp : src/Parser.h
-src/vc4dis.cpp : src/Disassembler.h
+src/vc4asm.cpp : src/Parser.h src/Validator.h
+src/vc4dis.cpp : src/Disassembler.h src/Validator.h
 
 src/Inst.h : src/expr.h
 src/Eval.h : src/expr.h

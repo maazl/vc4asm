@@ -24,6 +24,7 @@ class Disassembler
 	bool        UseFloat = true;
 	bool        PrintFields = false;
 	uint32_t    BaseAddr = 0;
+	vector<uint64_t> Instructions;
  private:
 	/// Mux accumulator names
 	static const char cAcc[6][4];
@@ -53,6 +54,7 @@ class Disassembler
 	/// Signaling opcodes
 	static const char cOpS[14][9];
  private:
+	uint32_t    Addr = 0;
 	/// Ordered set of branch targets in units of BaseAddr
 	map<size_t,string> Labels;
 	Inst        Instruct;
@@ -76,7 +78,8 @@ class Disassembler
 	void DoBranch();
 	void DoInstruction();
  public:
-	void Disassemble(const vector<uint64_t>& instructions);
+	void ScanLabels();
+	void Disassemble();
 };
 
 #endif // DISASSEMBLER_H_
