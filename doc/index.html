@@ -40,6 +40,11 @@
         <tt>static const uint32_t qpu_code[] = {<br>
           #include&lt;C-output&gt;<br>
           };</tt></dd>
+      <dt><tt>-C</tt><tt> &lt;C-output&gt;</tt></dt>
+      <dd>Same as <tt>-c</tt>, but suppress trailing '<tt>,</tt>'.</dd>
+      <dt><tt>-V</tt></dt>
+      <dd>Check for Videocore IV constraints, e.g. reading a register file
+        address immediately after writing it.</dd>
       <dt><tt>-E &lt;preprocessed-output&gt;</tt></dt>
       <dd>This is experimental and intended for debugging purposes only.</dd>
     </dl>
@@ -75,8 +80,8 @@
         without <tt>-x</tt>.</dd>
       <dt><tt>-M</tt></dt>
       <dd>Do not generate <tt>mov</tt> instructions. <tt>mov</tt> is no native
-        QPU instruction, it is emulated by trivial operators like <tt>or r1, r0,
-          r0</tt>. Without this option <tt>vc4dis</tt> generated <tt>mov</tt>
+        QPU instruction, it is emulated by trivial operators like <tt>or r1,
+          r0, r0</tt>. Without this option <tt>vc4dis</tt> generated <tt>mov</tt>
         instead of the real instruction if such a situation is detected.</dd>
       <dt><tt>-F</tt></dt>
       <dd>Do not write floating point constants. Without this option <tt>vc4dis</tt>
@@ -85,6 +90,9 @@
       <dt><tt>-v</tt></dt>
       <dd>Write QPU instruction set bit fields as comment right to each
         instruction. This is mainly for debugging purposes.</dd>
+      <dt><tt>-V</tt></dt>
+      <dd>Check for Videocore IV constraints, e.g. reading a register file
+        address immediately after writing it.</dd>
       <dt><tt>-b &lt;base-addr&gt;</tt></dt>
       <dd>Base address. This is the physical memory address of the first
         instruction code passed to <tt>vc4dis</tt>. This is only significant
@@ -98,9 +106,12 @@
     <h2><a id="build" name="build"></a>Build instructions</h2>
     <p>The source code has hopefully no major platform dependencies, i.e. you
       don't need to build it on the Raspberry. But it requires a <a href="https://en.wikipedia.org/wiki/C++11">C++11</a>
-      compliant compiler to build. In fact it is only tested with gcc 4.8.</p>
+      compliant compiler to build. So Raspbian Wheezy is not sufficient. In fact
+      I only tested with gcc 4.8/4.9.</p>
     <ul>
       <li>Download and extract the source.</li>
+      <li>Go to folder <tt>src</tt>.</li>
+      <li>If not Linux have a look at the first few lines of <tt>Makefile</tt>.</li>
       <li>Execute <tt>make</tt>.</li>
       <li>Now <tt>vc4asm</tt> and <tt>vc4dis</tt> executables should build.</li>
     </ul>
