@@ -1,0 +1,468 @@
+  ldi rb27, 16                                     # 0000: e00216e700000010  md0 pm0 pck0 Acc1 Aw27 Mcc0 Mw39 sf0 ws1
+  ldi rb28, 64                                     # 0008: e002172700000040  md0 pm0 pck0 Acc1 Aw28 Mcc0 Mw39 sf0 ws1
+  ldi rb29, 240                                    # 0010: e0021767000000f0  md0 pm0 pck0 Acc1 Aw29 Mcc0 Mw39 sf0 ws1
+  ldi ra30, 0x00005555                             # 0018: e00207a700005555  md0 pm0 pck0 Acc1 Aw30 Mcc0 Mw39 sf0 ws0
+  ldi rb30, 0x00003333                             # 0020: e00217a700003333  md0 pm0 pck0 Acc1 Aw30 Mcc0 Mw39 sf0 ws1
+  ldi ra31, 0x00000f0f                             # 0028: e00207e700000f0f  md0 pm0 pck0 Acc1 Aw31 Mcc0 Mw39 sf0 ws0
+  ldi rb31, 255                                    # 0030: e00217e7000000ff  md0 pm0 pck0 Acc1 Aw31 Mcc0 Mw39 sf0 ws1
+  ldi ra29, 0x90104000                             # 0038: e002076790104000  md0 pm0 pck0 Acc1 Aw29 Mcc0 Mw39 sf0 ws0
+  ldi rb1, 0x90105000                              # 0040: e002106790105000  md0 pm0 pck0 Acc1 Aw01 Mcc0 Mw39 sf0 ws1
+  ldi r3, 128                                      # 0048: e00208e700000080  md0 pm0 pck0 Acc1 Aw35 Mcc0 Mw39 sf0 ws0
+  mov r0, unif                                     # 0050: 1002082715827d80  sig1 ra32 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r0, 4                                    # 0058: d00208670c9c41c0  sigD ra39 rb04 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r2, elem_num, 3                              # 0060: d00208a711983dc0  sigD ra38 rb03 pm0 upk0 pck0 Aop17 Acc1 Aw34 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, r0, r2                                  # 0068: 10020e270c9e7080  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa0 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r0, r0, r3; ldtmu0                           # 0070: a00208270c9e70c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw32 Aa0 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov ra10, r4                                     # 0078: 100202a7159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw10 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, r0, r2                                  # 0080: 10020e270c9e7080  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa0 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r0, r0, r3; ldtmu0                           # 0088: a00208270c9e70c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw32 Aa0 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov ra11, r4                                     # 0090: 100202e7159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw11 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, r0, r2                                  # 0098: 10020e270c9e7080  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa0 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r0, r0, r3; ldtmu0                           # 00a0: a00208270c9e70c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw32 Aa0 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov ra12, r4                                     # 00a8: 10020327159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw12 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, r0, r2                                  # 00b0: 10020e270c9e7080  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa0 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r0, r0, r3; ldtmu0                           # 00b8: a00208270c9e70c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw32 Aa0 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov ra13, r4                                     # 00c0: 10020367159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw13 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, r1, r2                                  # 00c8: 10020e270c9e7280  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa1 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r1, r3; ldtmu0                           # 00d0: a00208670c9e72c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa1 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov rb10, r4                                     # 00d8: 100212a7159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw10 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  add t0s, r1, r2                                  # 00e0: 10020e270c9e7280  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa1 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r1, r3; ldtmu0                           # 00e8: a00208670c9e72c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa1 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov rb11, r4                                     # 00f0: 100212e7159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw11 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  add t0s, r1, r2                                  # 00f8: 10020e270c9e7280  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa1 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r1, r3; ldtmu0                           # 0100: a00208670c9e72c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa1 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov rb12, r4                                     # 0108: 10021327159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw12 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  add t0s, r1, r2                                  # 0110: 10020e270c9e7280  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa1 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r1, r3; ldtmu0                           # 0118: a00208670c9e72c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa1 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov rb13, r4                                     # 0120: 10021367159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw13 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  mov r0, unif                                     # 0128: 1002082715827d80  sig1 ra32 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r0, 4                                    # 0130: d00208670c9c41c0  sigD ra39 rb04 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r2, elem_num, 3                              # 0138: d00208a711983dc0  sigD ra38 rb03 pm0 upk0 pck0 Aop17 Acc1 Aw34 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, r0, r2                                  # 0140: 10020e270c9e7080  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa0 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r0, r0, r3; ldtmu0                           # 0148: a00208270c9e70c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw32 Aa0 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov ra14, r4                                     # 0150: 100203a7159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw14 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, r0, r2                                  # 0158: 10020e270c9e7080  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa0 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r0, r0, r3; ldtmu0                           # 0160: a00208270c9e70c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw32 Aa0 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov ra15, r4                                     # 0168: 100203e7159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw15 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, r1, r2                                  # 0170: 10020e270c9e7280  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa1 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r1, r3; ldtmu0                           # 0178: a00208670c9e72c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa1 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov rb14, r4                                     # 0180: 100213a7159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw14 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  add t0s, r1, r2                                  # 0188: 10020e270c9e7280  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa1 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r1, r3; ldtmu0                           # 0190: a00208670c9e72c0  sigA ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa1 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov rb15, r4                                     # 0198: 100213e7159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw15 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  mov rb5, unif                                    # 01a0: 1002116715827d80  sig1 ra32 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw05 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  ldi r0, 0x00101200                               # 01a8: e002082700101200  md0 pm0 pck0 Acc1 Aw32 Mcc0 Mw39 sf0 ws0
+  ldi r1, 16                                       # 01b0: e002086700000010  md0 pm0 pck0 Acc1 Aw33 Mcc0 Mw39 sf0 ws0
+  ldi r2, 2                                        # 01b8: e00208a700000002  md0 pm0 pck0 Acc1 Aw34 Mcc0 Mw39 sf0 ws0
+  nop; mul24 r2, r2, rb5                           # 01c0: 100049e2409c5017  sig1 ra39 rb05 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop2 Mcc1 Mw34 Ma2 Mb7 sf0 ws0
+  add ra27, r0, r2; v8adds r0, r0, r1              # 01c8: 100246e0cc9e7081  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw27 Aa0 Ab2 Mop6 Mcc1 Mw32 Ma0 Mb1 sf0 ws0
+  add ra28, r0, r2; v8adds r0, r0, r1              # 01d0: 10024720cc9e7081  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw28 Aa0 Ab2 Mop6 Mcc1 Mw32 Ma0 Mb1 sf0 ws0
+  add rb2, r0, r2; v8adds r0, r0, r1               # 01d8: 100250a0cc9e7081  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw02 Aa0 Ab2 Mop6 Mcc1 Mw32 Ma0 Mb1 sf0 ws1
+  add rb7, r0, r2                                  # 01e0: 100211e70c9e7080  sig1 ra39 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw07 Aa0 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  brr ra4, +200                                    # 01e8: f0f80127000000c8  rel1 reg0 ra00 pm15 upk0 BccF Aw04 Mw39 ws0
+  nop                                              # 01f0: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 01f8: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 0200: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:LL0_ra4
+  mov vw_setup, ra27                               # 0208: 10021c67156e7d80  sig1 ra27 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw49 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  fadd vpm, ra9, r0                                # 0210: 10020c2701267c00  sig1 ra09 rb39 pm0 upk0 pck0 Aop01 Acc1 Aw48 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  fadd vpm, rb9, r1                                # 0218: 10020c27019c9e40  sig1 ra39 rb09 pm0 upk0 pck0 Aop01 Acc1 Aw48 Aa7 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov vw_setup, ra28                               # 0220: 10021c6715727d80  sig1 ra28 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw49 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  fsub vpm, ra9, r0                                # 0228: 10020c2702267c00  sig1 ra09 rb39 pm0 upk0 pck0 Aop02 Acc1 Aw48 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  fsub vpm, rb9, r1                                # 0230: 10020c27029c9e40  sig1 ra39 rb09 pm0 upk0 pck0 Aop02 Acc1 Aw48 Aa7 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov.never -, vw_wait                             # 0238: 100009e7159f2fc0  sig1 ra39 rb50 pm0 upk0 pck0 Aop21 Acc0 Aw39 Aa7 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  sacq -, 25                                       # 0240: e80009e700000019  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 1                                        # 0248: e80009e700000001  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 26                                       # 0250: e80009e70000001a  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 2                                        # 0258: e80009e700000002  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 27                                       # 0260: e80009e70000001b  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 3                                        # 0268: e80009e700000003  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 28                                       # 0270: e80009e70000001c  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 4                                        # 0278: e80009e700000004  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 29                                       # 0280: e80009e70000001d  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 5                                        # 0288: e80009e700000005  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 30                                       # 0290: e80009e70000001e  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 6                                        # 0298: e80009e700000006  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 31                                       # 02a0: e80009e70000001f  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 7                                        # 02a8: e80009e700000007  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  bra -, ra8                                       # 02b0: f0f509e700000000  rel0 reg1 ra08 pm15 upk0 BccF Aw39 Mw39 ws0
+  mov vw_setup, ra29                               # 02b8: 10021c6715767d80  sig1 ra29 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw49 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  ldi vw_setup, 0xc00000c0                         # 02c0: e0021c67c00000c0  md0 pm0 pck0 Acc1 Aw49 Mcc0 Mw39 sf0 ws1
+  add ra1, ra1, rb28; mov vw_addr, ra1             # 02c8: 100240728c05cdf6  sig1 ra01 rb28 pm0 upk0 pck0 Aop12 Acc1 Aw01 Aa6 Ab7 Mop4 Mcc1 Mw50 Ma6 Mb6 sf0 ws0
+:L2d0_1e8
+  brr rb4, +80                                     # 02d0: f0f8112700000050  rel1 reg0 ra00 pm15 upk0 BccF Aw04 Mw39 ws1
+  nop                                              # 02d8: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 02e0: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 02e8: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:LL2_rb4
+  mov vw_setup, ra27                               # 02f0: 10021c67156e7d80  sig1 ra27 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw49 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  fadd vpm, ra9, r0                                # 02f8: 10020c2701267c00  sig1 ra09 rb39 pm0 upk0 pck0 Aop01 Acc1 Aw48 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  fadd vpm, rb9, r1                                # 0300: 10020c27019c9e40  sig1 ra39 rb09 pm0 upk0 pck0 Aop01 Acc1 Aw48 Aa7 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov vw_setup, ra28                               # 0308: 10021c6715727d80  sig1 ra28 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw49 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  fsub vpm, ra9, r0                                # 0310: 10020c2702267c00  sig1 ra09 rb39 pm0 upk0 pck0 Aop02 Acc1 Aw48 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  fsub vpm, rb9, r1                                # 0318: 10020c27029c9e40  sig1 ra39 rb09 pm0 upk0 pck0 Aop02 Acc1 Aw48 Aa7 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  bra -, ra6                                       # 0320: f0f4c9e700000000  rel0 reg1 ra06 pm15 upk0 BccF Aw39 Mw39 ws0
+  nop                                              # 0328: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov vr_setup, ra27                               # 0330: 10020c67156e7d80  sig1 ra27 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw49 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov.never -, vpm                                 # 0338: 100009e715c27d80  sig1 ra48 rb39 pm0 upk0 pck0 Aop21 Acc0 Aw39 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:L340_2d0
+  brr ra6, +128                                    # 0340: f0f801a700000080  rel1 reg0 ra00 pm15 upk0 BccF Aw06 Mw39 ws0
+  nop                                              # 0348: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 0350: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 0358: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:LL4_ra6
+  mov.never -, vw_wait                             # 0360: 100009e7159f2fc0  sig1 ra39 rb50 pm0 upk0 pck0 Aop21 Acc0 Aw39 Aa7 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  sacq -, 25                                       # 0368: e80009e700000019  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 1                                        # 0370: e80009e700000001  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 26                                       # 0378: e80009e70000001a  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 2                                        # 0380: e80009e700000002  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 27                                       # 0388: e80009e70000001b  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 3                                        # 0390: e80009e700000003  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 28                                       # 0398: e80009e70000001c  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 4                                        # 03a0: e80009e700000004  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 29                                       # 03a8: e80009e70000001d  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 5                                        # 03b0: e80009e700000005  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 30                                       # 03b8: e80009e70000001e  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  bra -, ra8                                       # 03c0: f0f509e700000000  rel0 reg1 ra08 pm15 upk0 BccF Aw39 Mw39 ws0
+  srel -, 6                                        # 03c8: e80009e700000006  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 31                                       # 03d0: e80009e70000001f  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  srel -, 7                                        # 03d8: e80009e700000007  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+:L3e0_340
+  brr rb6, +1416                                   # 03e0: f0f811a700000588  rel1 reg0 ra00 pm15 upk0 BccF Aw06 Mw39 ws1
+  nop                                              # 03e8: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 03f0: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 03f8: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:LL6_rb6
+  bra -, ra8                                       # 0400: f0f509e700000000  rel0 reg1 ra08 pm15 upk0 BccF Aw39 Mw39 ws0
+  srel -, 9                                        # 0408: e80009e700000009  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 17                                       # 0410: e80009e700000011  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  nop                                              # 0418: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  bra -, ra8                                       # 0420: f0f509e700000000  rel0 reg1 ra08 pm15 upk0 BccF Aw39 Mw39 ws0
+  srel -, 10                                       # 0428: e80009e70000000a  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 18                                       # 0430: e80009e700000012  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  nop                                              # 0438: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  bra -, ra8                                       # 0440: f0f509e700000000  rel0 reg1 ra08 pm15 upk0 BccF Aw39 Mw39 ws0
+  srel -, 11                                       # 0448: e80009e70000000b  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 19                                       # 0450: e80009e700000013  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  nop                                              # 0458: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  bra -, ra8                                       # 0460: f0f509e700000000  rel0 reg1 ra08 pm15 upk0 BccF Aw39 Mw39 ws0
+  srel -, 12                                       # 0468: e80009e70000000c  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 20                                       # 0470: e80009e700000014  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  nop                                              # 0478: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  bra -, ra8                                       # 0480: f0f509e700000000  rel0 reg1 ra08 pm15 upk0 BccF Aw39 Mw39 ws0
+  srel -, 13                                       # 0488: e80009e70000000d  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 21                                       # 0490: e80009e700000015  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  nop                                              # 0498: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  bra -, ra8                                       # 04a0: f0f509e700000000  rel0 reg1 ra08 pm15 upk0 BccF Aw39 Mw39 ws0
+  srel -, 14                                       # 04a8: e80009e70000000e  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 22                                       # 04b0: e80009e700000016  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  nop                                              # 04b8: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  bra -, ra8                                       # 04c0: f0f509e700000000  rel0 reg1 ra08 pm15 upk0 BccF Aw39 Mw39 ws0
+  srel -, 15                                       # 04c8: e80009e70000000f  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  sacq -, 23                                       # 04d0: e80009e700000017  md4 pm0 pck0 Acc0 Aw39 Mcc0 Mw39 sf0 ws0
+  nop                                              # 04d8: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:L4e0_720
+  and.setf -, elem_num, 1                          # 04e0: d00229e714981dc0  sigD ra38 rb01 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  nop; fmul.ifzc ra2, ra17, r0                     # 04e8: 1000d9c220467030  sig1 ra17 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw02 Ma6 Mb0 sf0 ws1
+  nop; fmul.ifzc r2, rb17, r1                      # 04f0: 1000c9e2209d1039  sig1 ra39 rb17 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw34 Ma7 Mb1 sf0 ws0
+  fsub.ifzc r0, ra2, r2; fmul.ifzc r3, rb17, r0    # 04f8: 1006c82322091cb8  sig1 ra02 rb17 pm0 upk0 pck0 Aop02 Acc3 Aw32 Aa6 Ab2 Mop1 Mcc3 Mw35 Ma7 Mb0 sf0 ws0
+  nop; fmul.ifzc r1, ra17, r1                      # 0500: 1000c9e120467031  sig1 ra17 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw33 Ma6 Mb1 sf0 ws0
+  fadd.ifzc r1, r1, r3; mov.rot 15, r2, r0         # 0508: d0064862819ff2c0  sigD ra39 rb63 pm0 upk0 pck0 Aop01 Acc3 Aw33 Aa1 Ab3 Mop4 Mcc1 Mw34 Ma0 Mb0 sf0 ws0
+  fadd.ifzs r0, r2, r0; mov.rot 1, r3, r0          # 0510: d0044823819f1400  sigD ra39 rb49 pm0 upk0 pck0 Aop01 Acc2 Aw32 Aa2 Ab0 Mop4 Mcc1 Mw35 Ma0 Mb0 sf0 ws0
+  fsub.ifzc r0, r3, r0; mov.rot 15, r2, r1         # 0518: d0064822829ff609  sigD ra39 rb63 pm0 upk0 pck0 Aop02 Acc3 Aw32 Aa3 Ab0 Mop4 Mcc1 Mw34 Ma1 Mb1 sf0 ws0
+  fadd.ifzs r1, r2, r1; mov.rot 1, r3, r1          # 0520: d0044863819f1449  sigD ra39 rb49 pm0 upk0 pck0 Aop01 Acc2 Aw33 Aa2 Ab1 Mop4 Mcc1 Mw35 Ma1 Mb1 sf0 ws0
+  fsub.ifzc r1, r3, r1                             # 0528: 10060867029e7640  sig1 ra39 rb39 pm0 upk0 pck0 Aop02 Acc3 Aw33 Aa3 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and.setf -, elem_num, 2                          # 0530: d00229e714982dc0  sigD ra38 rb02 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  nop; fmul.ifzc ra2, ra18, r0                     # 0538: 1000d9c2204a7030  sig1 ra18 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw02 Ma6 Mb0 sf0 ws1
+  nop; fmul.ifzc r2, rb18, r1                      # 0540: 1000c9e2209d2039  sig1 ra39 rb18 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw34 Ma7 Mb1 sf0 ws0
+  fsub.ifzc r0, ra2, r2; fmul.ifzc r3, rb18, r0    # 0548: 1006c82322092cb8  sig1 ra02 rb18 pm0 upk0 pck0 Aop02 Acc3 Aw32 Aa6 Ab2 Mop1 Mcc3 Mw35 Ma7 Mb0 sf0 ws0
+  nop; fmul.ifzc r1, ra18, r1                      # 0550: 1000c9e1204a7031  sig1 ra18 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw33 Ma6 Mb1 sf0 ws0
+  fadd.ifzc r1, r1, r3; mov.rot 14, r2, r0         # 0558: d0064862819fe2c0  sigD ra39 rb62 pm0 upk0 pck0 Aop01 Acc3 Aw33 Aa1 Ab3 Mop4 Mcc1 Mw34 Ma0 Mb0 sf0 ws0
+  fadd.ifzs r0, r2, r0; mov.rot 2, r3, r0          # 0560: d0044823819f2400  sigD ra39 rb50 pm0 upk0 pck0 Aop01 Acc2 Aw32 Aa2 Ab0 Mop4 Mcc1 Mw35 Ma0 Mb0 sf0 ws0
+  fsub.ifzc r0, r3, r0; mov.rot 14, r2, r1         # 0568: d0064822829fe609  sigD ra39 rb62 pm0 upk0 pck0 Aop02 Acc3 Aw32 Aa3 Ab0 Mop4 Mcc1 Mw34 Ma1 Mb1 sf0 ws0
+  fadd.ifzs r1, r2, r1; mov.rot 2, r3, r1          # 0570: d0044863819f2449  sigD ra39 rb50 pm0 upk0 pck0 Aop01 Acc2 Aw33 Aa2 Ab1 Mop4 Mcc1 Mw35 Ma1 Mb1 sf0 ws0
+  fsub.ifzc r1, r3, r1                             # 0578: 10060867029e7640  sig1 ra39 rb39 pm0 upk0 pck0 Aop02 Acc3 Aw33 Aa3 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and.setf -, elem_num, 4                          # 0580: d00229e714984dc0  sigD ra38 rb04 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  nop; fmul.ifzc ra2, ra19, r0                     # 0588: 1000d9c2204e7030  sig1 ra19 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw02 Ma6 Mb0 sf0 ws1
+  nop; fmul.ifzc r2, rb19, r1                      # 0590: 1000c9e2209d3039  sig1 ra39 rb19 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw34 Ma7 Mb1 sf0 ws0
+  fsub.ifzc r0, ra2, r2; fmul.ifzc r3, rb19, r0    # 0598: 1006c82322093cb8  sig1 ra02 rb19 pm0 upk0 pck0 Aop02 Acc3 Aw32 Aa6 Ab2 Mop1 Mcc3 Mw35 Ma7 Mb0 sf0 ws0
+  nop; fmul.ifzc r1, ra19, r1                      # 05a0: 1000c9e1204e7031  sig1 ra19 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw33 Ma6 Mb1 sf0 ws0
+  fadd.ifzc r1, r1, r3; mov.rot 12, r2, r0         # 05a8: d0064862819fc2c0  sigD ra39 rb60 pm0 upk0 pck0 Aop01 Acc3 Aw33 Aa1 Ab3 Mop4 Mcc1 Mw34 Ma0 Mb0 sf0 ws0
+  fadd.ifzs r0, r2, r0; mov.rot 4, r3, r0          # 05b0: d0044823819f4400  sigD ra39 rb52 pm0 upk0 pck0 Aop01 Acc2 Aw32 Aa2 Ab0 Mop4 Mcc1 Mw35 Ma0 Mb0 sf0 ws0
+  fsub.ifzc r0, r3, r0; mov.rot 12, r2, r1         # 05b8: d0064822829fc609  sigD ra39 rb60 pm0 upk0 pck0 Aop02 Acc3 Aw32 Aa3 Ab0 Mop4 Mcc1 Mw34 Ma1 Mb1 sf0 ws0
+  fadd.ifzs r1, r2, r1; mov.rot 4, r3, r1          # 05c0: d0044863819f4449  sigD ra39 rb52 pm0 upk0 pck0 Aop01 Acc2 Aw33 Aa2 Ab1 Mop4 Mcc1 Mw35 Ma1 Mb1 sf0 ws0
+  fsub.ifzc r1, r3, r1                             # 05c8: 10060867029e7640  sig1 ra39 rb39 pm0 upk0 pck0 Aop02 Acc3 Aw33 Aa3 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and.setf -, elem_num, 8                          # 05d0: d00229e714988dc0  sigD ra38 rb08 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  nop; fmul.ifzc ra2, ra20, r0                     # 05d8: 1000d9c220527030  sig1 ra20 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw02 Ma6 Mb0 sf0 ws1
+  nop; fmul.ifzc r2, rb20, r1                      # 05e0: 1000c9e2209d4039  sig1 ra39 rb20 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw34 Ma7 Mb1 sf0 ws0
+  fsub.ifzc r0, ra2, r2; fmul.ifzc r3, rb20, r0    # 05e8: 1006c82322094cb8  sig1 ra02 rb20 pm0 upk0 pck0 Aop02 Acc3 Aw32 Aa6 Ab2 Mop1 Mcc3 Mw35 Ma7 Mb0 sf0 ws0
+  nop; fmul.ifzc r1, ra20, r1                      # 05f0: 1000c9e120527031  sig1 ra20 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc3 Mw33 Ma6 Mb1 sf0 ws0
+  fadd.ifzc r1, r1, r3; mov.rot 8, r2, r0          # 05f8: d0064862819f82c0  sigD ra39 rb56 pm0 upk0 pck0 Aop01 Acc3 Aw33 Aa1 Ab3 Mop4 Mcc1 Mw34 Ma0 Mb0 sf0 ws0
+  fadd.ifzs r0, r2, r0; mov.rot 8, r3, r0          # 0600: d0044823819f8400  sigD ra39 rb56 pm0 upk0 pck0 Aop01 Acc2 Aw32 Aa2 Ab0 Mop4 Mcc1 Mw35 Ma0 Mb0 sf0 ws0
+  bra -, ra0                                       # 0608: f0f409e700000000  rel0 reg1 ra00 pm15 upk0 BccF Aw39 Mw39 ws0
+  fsub.ifzc r0, r3, r0; mov.rot 8, r2, r1          # 0610: d0064822829f8609  sigD ra39 rb56 pm0 upk0 pck0 Aop02 Acc3 Aw32 Aa3 Ab0 Mop4 Mcc1 Mw34 Ma1 Mb1 sf0 ws0
+  fadd.ifzs r1, r2, r1; mov.rot 8, r3, r1          # 0618: d0044863819f8449  sigD ra39 rb56 pm0 upk0 pck0 Aop01 Acc2 Aw33 Aa2 Ab1 Mop4 Mcc1 Mw35 Ma1 Mb1 sf0 ws0
+  fsub.ifzc r1, r3, r1                             # 0620: 10060867029e7640  sig1 ra39 rb39 pm0 upk0 pck0 Aop02 Acc3 Aw33 Aa3 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:L628_b40
+  add ra5, ra5, rb29; mov r0, ra5                  # 0628: 100241608c15ddf6  sig1 ra05 rb29 pm0 upk0 pck0 Aop12 Acc1 Aw05 Aa6 Ab7 Mop4 Mcc1 Mw32 Ma6 Mb6 sf0 ws0
+  and r1, r0, ra30                                 # 0630: 10020867147a7180  sig1 ra30 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 1                                    # 0638: d00208270e9c11c0  sigD ra39 rb01 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, ra30                                 # 0640: 10020827147a7180  sig1 ra30 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 1                                    # 0648: d0020867119c13c0  sigD ra39 rb01 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 0650: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r1, r0, rb30                                 # 0658: 10020867149de1c0  sig1 ra39 rb30 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 2                                    # 0660: d00208270e9c21c0  sigD ra39 rb02 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, rb30                                 # 0668: 10020827149de1c0  sig1 ra39 rb30 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 2                                    # 0670: d0020867119c23c0  sigD ra39 rb02 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 0678: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r1, r0, ra31                                 # 0680: 10020867147e7180  sig1 ra31 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 4                                    # 0688: d00208270e9c41c0  sigD ra39 rb04 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, ra31                                 # 0690: 10020827147e7180  sig1 ra31 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 4                                    # 0698: d0020867119c43c0  sigD ra39 rb04 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 06a0: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r1, r0, rb31                                 # 06a8: 10020867149df1c0  sig1 ra39 rb31 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 8                                    # 06b0: d00208270e9c81c0  sigD ra39 rb08 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, rb31                                 # 06b8: 10020827149df1c0  sig1 ra39 rb31 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 8                                    # 06c0: d0020867119c83c0  sigD ra39 rb08 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 06c8: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 3                                    # 06d0: d00208270e9c31c0  sigD ra39 rb03 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r0, 4                                    # 06d8: d00208670c9c41c0  sigD ra39 rb04 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and.setf -, elem_num, 1; mov r2, r0              # 06e0: d00269e294981dc0  sigD ra38 rb01 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop4 Mcc1 Mw34 Ma0 Mb0 sf1 ws0
+  mov.ifzs r0, r2; mov.ifzc.rot 1, r0, r1          # 06e8: d004c820959f1489  sigD ra39 rb49 pm0 upk0 pck0 Aop21 Acc2 Aw32 Aa2 Ab2 Mop4 Mcc3 Mw32 Ma1 Mb1 sf0 ws0
+  mov.ifzc r1, r1; mov.ifzs.rot 15, r1, r2         # 06f0: d0068861959ff252  sigD ra39 rb63 pm0 upk0 pck0 Aop21 Acc3 Aw33 Aa1 Ab1 Mop4 Mcc2 Mw33 Ma2 Mb2 sf0 ws0
+  add t0s, ra3, r0                                 # 06f8: 10020e270c0e7c00  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, ra3, r1                                 # 0700: 10020e270c0e7c40  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop; ldtmu0                                      # 0708: a00009e7009e7000  sigA ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov r0, r4; ldtmu0                               # 0710: a0020827159e7900  sigA ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov r1, r4                                       # 0718: 10020867159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw33 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  brr ra0, -608                                    # 0720: f0f80027fffffda0  rel1 reg0 ra00 pm15 upk0 BccF Aw00 Mw39 ws0
+  and.setf -, elem_num, 1; mov r2, r0              # 0728: d00269e294981dc0  sigD ra38 rb01 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop4 Mcc1 Mw34 Ma0 Mb0 sf1 ws0
+  mov.ifzs r0, r2; mov.ifzc.rot 1, r0, r1          # 0730: d004c820959f1489  sigD ra39 rb49 pm0 upk0 pck0 Aop21 Acc2 Aw32 Aa2 Ab2 Mop4 Mcc3 Mw32 Ma1 Mb1 sf0 ws0
+  mov.ifzc r1, r1; mov.ifzs.rot 15, r1, r2         # 0738: d0068861959ff252  sigD ra39 rb63 pm0 upk0 pck0 Aop21 Acc3 Aw33 Aa1 Ab1 Mop4 Mcc2 Mw33 Ma2 Mb2 sf0 ws0
+:LL8_ra0
+  mov ra9, r0; mov rb9, r1                         # 0740: 10024249959e7009  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw09 Aa0 Ab0 Mop4 Mcc1 Mw09 Ma1 Mb1 sf0 ws0
+  add ra5, ra5, rb27; mov r0, ra5                  # 0748: 100241608c15bdf6  sig1 ra05 rb27 pm0 upk0 pck0 Aop12 Acc1 Aw05 Aa6 Ab7 Mop4 Mcc1 Mw32 Ma6 Mb6 sf0 ws0
+  and r1, r0, ra30                                 # 0750: 10020867147a7180  sig1 ra30 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 1                                    # 0758: d00208270e9c11c0  sigD ra39 rb01 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, ra30                                 # 0760: 10020827147a7180  sig1 ra30 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 1                                    # 0768: d0020867119c13c0  sigD ra39 rb01 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 0770: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r1, r0, rb30                                 # 0778: 10020867149de1c0  sig1 ra39 rb30 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 2                                    # 0780: d00208270e9c21c0  sigD ra39 rb02 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, rb30                                 # 0788: 10020827149de1c0  sig1 ra39 rb30 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 2                                    # 0790: d0020867119c23c0  sigD ra39 rb02 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 0798: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r1, r0, ra31                                 # 07a0: 10020867147e7180  sig1 ra31 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 4                                    # 07a8: d00208270e9c41c0  sigD ra39 rb04 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, ra31                                 # 07b0: 10020827147e7180  sig1 ra31 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 4                                    # 07b8: d0020867119c43c0  sigD ra39 rb04 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 07c0: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r1, r0, rb31                                 # 07c8: 10020867149df1c0  sig1 ra39 rb31 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 8                                    # 07d0: d00208270e9c81c0  sigD ra39 rb08 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, rb31                                 # 07d8: 10020827149df1c0  sig1 ra39 rb31 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 8                                    # 07e0: d0020867119c83c0  sigD ra39 rb08 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 07e8: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 3                                    # 07f0: d00208270e9c31c0  sigD ra39 rb03 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r0, 4                                    # 07f8: d00208670c9c41c0  sigD ra39 rb04 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and.setf -, elem_num, 1; mov r2, r0              # 0800: d00269e294981dc0  sigD ra38 rb01 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop4 Mcc1 Mw34 Ma0 Mb0 sf1 ws0
+  mov.ifzs r0, r2; mov.ifzc.rot 1, r0, r1          # 0808: d004c820959f1489  sigD ra39 rb49 pm0 upk0 pck0 Aop21 Acc2 Aw32 Aa2 Ab2 Mop4 Mcc3 Mw32 Ma1 Mb1 sf0 ws0
+  mov.ifzc r1, r1; mov.ifzs.rot 15, r1, r2         # 0810: d0068861959ff252  sigD ra39 rb63 pm0 upk0 pck0 Aop21 Acc3 Aw33 Aa1 Ab1 Mop4 Mcc2 Mw33 Ma2 Mb2 sf0 ws0
+  add t0s, ra3, r0                                 # 0818: 10020e270c0e7c00  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, ra3, r1                                 # 0820: 10020e270c0e7c40  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop; ldtmu0                                      # 0828: a00009e7009e7000  sigA ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov r0, r4; ldtmu0                               # 0830: a0020827159e7900  sigA ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov r1, r4                                       # 0838: 10020867159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw33 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  brr ra0, -896                                    # 0840: f0f80027fffffc80  rel1 reg0 ra00 pm15 upk0 BccF Aw00 Mw39 ws0
+  and.setf -, elem_num, 1; mov r2, r0              # 0848: d00269e294981dc0  sigD ra38 rb01 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop4 Mcc1 Mw34 Ma0 Mb0 sf1 ws0
+  mov.ifzs r0, r2; mov.ifzc.rot 1, r0, r1          # 0850: d004c820959f1489  sigD ra39 rb49 pm0 upk0 pck0 Aop21 Acc2 Aw32 Aa2 Ab2 Mop4 Mcc3 Mw32 Ma1 Mb1 sf0 ws0
+  mov.ifzc r1, r1; mov.ifzs.rot 15, r1, r2         # 0858: d0068861959ff252  sigD ra39 rb63 pm0 upk0 pck0 Aop21 Acc3 Aw33 Aa1 Ab1 Mop4 Mcc2 Mw33 Ma2 Mb2 sf0 ws0
+:LL10_ra0
+  nop; fmul ra2, r0, ra16                          # 0860: 100059c220427006  sig1 ra16 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw02 Ma0 Mb6 sf0 ws1
+  nop; fmul r2, r1, rb16                           # 0868: 100049e2209d000f  sig1 ra39 rb16 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw34 Ma1 Mb7 sf0 ws0
+  nop; fmul r3, r1, ra16                           # 0870: 100049e32042700e  sig1 ra16 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw35 Ma1 Mb6 sf0 ws0
+  fsub r0, ra2, r2; fmul r1, r0, rb16              # 0878: 1002482122090c87  sig1 ra02 rb16 pm0 upk0 pck0 Aop02 Acc1 Aw32 Aa6 Ab2 Mop1 Mcc1 Mw33 Ma0 Mb7 sf0 ws0
+  fadd r1, r1, r3                                  # 0880: 10020867019e72c0  sig1 ra39 rb39 pm0 upk0 pck0 Aop01 Acc1 Aw33 Aa1 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  bra -, ra4                                       # 0888: f0f489e700000000  rel0 reg1 ra04 pm15 upk0 BccF Aw39 Mw39 ws0
+  mov ra27, rb2; mov rb2, ra27                     # 0890: 100246c2956c2ff6  sig1 ra27 rb02 pm0 upk0 pck0 Aop21 Acc1 Aw27 Aa7 Ab7 Mop4 Mcc1 Mw02 Ma6 Mb6 sf0 ws0
+  mov ra28, rb7; mov rb7, ra28                     # 0898: 1002470795707ff6  sig1 ra28 rb07 pm0 upk0 pck0 Aop21 Acc1 Aw28 Aa7 Ab7 Mop4 Mcc1 Mw07 Ma6 Mb6 sf0 ws0
+  mov ra29, rb1; mov rb1, ra29                     # 08a0: 1002474195741ff6  sig1 ra29 rb01 pm0 upk0 pck0 Aop21 Acc1 Aw29 Aa7 Ab7 Mop4 Mcc1 Mw01 Ma6 Mb6 sf0 ws0
+:L8a8_c70
+  add ra5, ra5, rb29; mov r0, ra5                  # 08a8: 100241608c15ddf6  sig1 ra05 rb29 pm0 upk0 pck0 Aop12 Acc1 Aw05 Aa6 Ab7 Mop4 Mcc1 Mw32 Ma6 Mb6 sf0 ws0
+  shl r0, r0, 3                                    # 08b0: d0020827119c31c0  sigD ra39 rb03 pm0 upk0 pck0 Aop17 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r0, 4                                    # 08b8: d00208670c9c41c0  sigD ra39 rb04 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, ra3, r0                                 # 08c0: 10020e270c0e7c00  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, ra3, r1                                 # 08c8: 10020e270c0e7c40  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  brr ra0, -1040                                   # 08d0: f0f80027fffffbf0  rel1 reg0 ra00 pm15 upk0 BccF Aw00 Mw39 ws0
+  nop; ldtmu0                                      # 08d8: a00009e7009e7000  sigA ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov r0, r4; ldtmu0                               # 08e0: a0020827159e7900  sigA ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov r1, r4                                       # 08e8: 10020867159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw33 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:LL11_ra0
+  mov ra9, r0; mov rb9, r1                         # 08f0: 10024249959e7009  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw09 Aa0 Ab0 Mop4 Mcc1 Mw09 Ma1 Mb1 sf0 ws0
+  add ra5, ra5, rb27; mov r0, ra5                  # 08f8: 100241608c15bdf6  sig1 ra05 rb27 pm0 upk0 pck0 Aop12 Acc1 Aw05 Aa6 Ab7 Mop4 Mcc1 Mw32 Ma6 Mb6 sf0 ws0
+  shl r0, r0, 3                                    # 0900: d0020827119c31c0  sigD ra39 rb03 pm0 upk0 pck0 Aop17 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r0, 4                                    # 0908: d00208670c9c41c0  sigD ra39 rb04 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, ra3, r0                                 # 0910: 10020e270c0e7c00  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, ra3, r1                                 # 0918: 10020e270c0e7c40  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  brr ra0, -1120                                   # 0920: f0f80027fffffba0  rel1 reg0 ra00 pm15 upk0 BccF Aw00 Mw39 ws0
+  nop; ldtmu0                                      # 0928: a00009e7009e7000  sigA ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov r0, r4; ldtmu0                               # 0930: a0020827159e7900  sigA ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov r1, r4                                       # 0938: 10020867159e7900  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw33 Aa4 Ab4 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:LL12_ra0
+  nop; fmul ra2, r0, ra16                          # 0940: 100059c220427006  sig1 ra16 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw02 Ma0 Mb6 sf0 ws1
+  nop; fmul r2, r1, rb16                           # 0948: 100049e2209d000f  sig1 ra39 rb16 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw34 Ma1 Mb7 sf0 ws0
+  nop; fmul r3, r1, ra16                           # 0950: 100049e32042700e  sig1 ra16 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw35 Ma1 Mb6 sf0 ws0
+  fsub r0, ra2, r2; fmul r1, r0, rb16              # 0958: 1002482122090c87  sig1 ra02 rb16 pm0 upk0 pck0 Aop02 Acc1 Aw32 Aa6 Ab2 Mop1 Mcc1 Mw33 Ma0 Mb7 sf0 ws0
+  fadd r1, r1, r3                                  # 0960: 10020867019e72c0  sig1 ra39 rb39 pm0 upk0 pck0 Aop01 Acc1 Aw33 Aa1 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  bra -, ra4                                       # 0968: f0f489e700000000  rel0 reg1 ra04 pm15 upk0 BccF Aw39 Mw39 ws0
+  mov ra27, rb2; mov rb2, ra27                     # 0970: 100246c2956c2ff6  sig1 ra27 rb02 pm0 upk0 pck0 Aop21 Acc1 Aw27 Aa7 Ab7 Mop4 Mcc1 Mw02 Ma6 Mb6 sf0 ws0
+  mov ra28, rb7; mov rb7, ra28                     # 0978: 1002470795707ff6  sig1 ra28 rb07 pm0 upk0 pck0 Aop21 Acc1 Aw28 Aa7 Ab7 Mop4 Mcc1 Mw07 Ma6 Mb6 sf0 ws0
+  mov ra29, rb1; mov rb1, ra29                     # 0980: 1002474195741ff6  sig1 ra29 rb01 pm0 upk0 pck0 Aop21 Acc1 Aw29 Aa7 Ab7 Mop4 Mcc1 Mw01 Ma6 Mb6 sf0 ws0
+:L988_3e0
+  mov.setf r0, rb5                                 # 0988: 10022827159c5fc0  sig1 ra39 rb05 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa7 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  sub r0, r0, 1                                    # 0990: d00208270d9c11c0  sigD ra39 rb01 pm0 upk0 pck0 Aop13 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r0, r0, 5                                    # 0998: d0020827119c51c0  sigD ra39 rb05 pm0 upk0 pck0 Aop17 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add.ifzc ra6, rb6, r0                            # 09a0: 100601a70c9c6e00  sig1 ra39 rb06 pm0 upk0 pck0 Aop12 Acc3 Aw06 Aa7 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  mov.ifzc ra4, rb4                                # 09a8: 10060127159c4fc0  sig1 ra39 rb04 pm0 upk0 pck0 Aop21 Acc3 Aw04 Aa7 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:L9b0_db8
+  mov.setf ra3, unif                               # 09b0: 100220e715827d80  sig1 ra32 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw03 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov rb3, unif                                    # 09b8: 100210e715827d80  sig1 ra32 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw03 Aa6 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  brr.allz -, +1016                                # 09c0: f00809e7000003f8  rel1 reg0 ra00 pm0 upk0 Bcc0 Aw39 Mw39 ws0
+  mov ra16, ra10; mov rb16, rb10                   # 09c8: 100244109528adbf  sig1 ra10 rb10 pm0 upk0 pck0 Aop21 Acc1 Aw16 Aa6 Ab6 Mop4 Mcc1 Mw16 Ma7 Mb7 sf0 ws0
+  mov r2, ra11; mov r3, rb11                       # 09d0: 100248a3952cbdbf  sig1 ra11 rb11 pm0 upk0 pck0 Aop21 Acc1 Aw34 Aa6 Ab6 Mop4 Mcc1 Mw35 Ma7 Mb7 sf0 ws0
+  and.setf -, elem_num, 8                          # 09d8: d00229e714988dc0  sigD ra38 rb08 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra20, r2; mov.ifzc.rot 8, r2, r2             # 09e0: d002c522959f8492  sigD ra39 rb56 pm0 upk0 pck0 Aop21 Acc1 Aw20 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb20, r3; mov.ifzc.rot 8, r3, r3             # 09e8: d002d523959f86db  sigD ra39 rb56 pm0 upk0 pck0 Aop21 Acc1 Aw20 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  and.setf -, elem_num, 4                          # 09f0: d00229e714984dc0  sigD ra38 rb04 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra19, r2; mov.ifzc.rot 4, r2, r2             # 09f8: d002c4e2959f4492  sigD ra39 rb52 pm0 upk0 pck0 Aop21 Acc1 Aw19 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb19, r3; mov.ifzc.rot 4, r3, r3             # 0a00: d002d4e3959f46db  sigD ra39 rb52 pm0 upk0 pck0 Aop21 Acc1 Aw19 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  and.setf -, elem_num, 2                          # 0a08: d00229e714982dc0  sigD ra38 rb02 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra18, r2; mov.ifzc.rot 2, r2, r2             # 0a10: d002c4a2959f2492  sigD ra39 rb50 pm0 upk0 pck0 Aop21 Acc1 Aw18 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb18, r3; mov.ifzc.rot 2, r3, r3             # 0a18: d002d4a3959f26db  sigD ra39 rb50 pm0 upk0 pck0 Aop21 Acc1 Aw18 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  and.setf -, elem_num, 1                          # 0a20: d00229e714981dc0  sigD ra38 rb01 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra17, r2; mov.ifzc.rot 1, r2, r2             # 0a28: d002c462959f1492  sigD ra39 rb49 pm0 upk0 pck0 Aop21 Acc1 Aw17 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb17, r3; mov.ifzc.rot 1, r3, r3             # 0a30: d002d463959f16db  sigD ra39 rb49 pm0 upk0 pck0 Aop21 Acc1 Aw17 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  mov r0, rb5                                      # 0a38: 10020827159c5fc0  sig1 ra39 rb05 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa7 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r0, r0, 5                                    # 0a40: d0020827119c51c0  sigD ra39 rb05 pm0 upk0 pck0 Aop17 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add ra5, r0, elem_num                            # 0a48: 100201670c9a7180  sig1 ra38 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw05 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  ldi ra7, 0                                       # 0a50: e00201e700000000  md0 pm0 pck0 Acc1 Aw07 Mcc0 Mw39 sf0 ws0
+  mov ra1, rb3                                     # 0a58: 10020067159c3fc0  sig1 ra39 rb03 pm0 upk0 pck0 Aop21 Acc1 Aw01 Aa7 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add ra5, ra5, rb27; mov r0, ra5                  # 0a60: 100241608c15bdf6  sig1 ra05 rb27 pm0 upk0 pck0 Aop12 Acc1 Aw05 Aa6 Ab7 Mop4 Mcc1 Mw32 Ma6 Mb6 sf0 ws0
+  and r1, r0, ra30                                 # 0a68: 10020867147a7180  sig1 ra30 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 1                                    # 0a70: d00208270e9c11c0  sigD ra39 rb01 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, ra30                                 # 0a78: 10020827147a7180  sig1 ra30 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 1                                    # 0a80: d0020867119c13c0  sigD ra39 rb01 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 0a88: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r1, r0, rb30                                 # 0a90: 10020867149de1c0  sig1 ra39 rb30 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 2                                    # 0a98: d00208270e9c21c0  sigD ra39 rb02 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, rb30                                 # 0aa0: 10020827149de1c0  sig1 ra39 rb30 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 2                                    # 0aa8: d0020867119c23c0  sigD ra39 rb02 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 0ab0: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r1, r0, ra31                                 # 0ab8: 10020867147e7180  sig1 ra31 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 4                                    # 0ac0: d00208270e9c41c0  sigD ra39 rb04 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, ra31                                 # 0ac8: 10020827147e7180  sig1 ra31 rb39 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 4                                    # 0ad0: d0020867119c43c0  sigD ra39 rb04 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 0ad8: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r1, r0, rb31                                 # 0ae0: 10020867149df1c0  sig1 ra39 rb31 pm0 upk0 pck0 Aop20 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 8                                    # 0ae8: d00208270e9c81c0  sigD ra39 rb08 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and r0, r0, rb31                                 # 0af0: 10020827149df1c0  sig1 ra39 rb31 pm0 upk0 pck0 Aop20 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r1, r1, 8                                    # 0af8: d0020867119c83c0  sigD ra39 rb08 pm0 upk0 pck0 Aop17 Acc1 Aw33 Aa1 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  or r0, r0, r1                                    # 0b00: 10020827159e7040  sig1 ra39 rb39 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa0 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shr r0, r0, 3                                    # 0b08: d00208270e9c31c0  sigD ra39 rb03 pm0 upk0 pck0 Aop14 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r0, 4                                    # 0b10: d00208670c9c41c0  sigD ra39 rb04 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and.setf -, elem_num, 1; mov r2, r0              # 0b18: d00269e294981dc0  sigD ra38 rb01 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop4 Mcc1 Mw34 Ma0 Mb0 sf1 ws0
+  mov.ifzs r0, r2; mov.ifzc.rot 1, r0, r1          # 0b20: d004c820959f1489  sigD ra39 rb49 pm0 upk0 pck0 Aop21 Acc2 Aw32 Aa2 Ab2 Mop4 Mcc3 Mw32 Ma1 Mb1 sf0 ws0
+  mov.ifzc r1, r1; mov.ifzs.rot 15, r1, r2         # 0b28: d0068861959ff252  sigD ra39 rb63 pm0 upk0 pck0 Aop21 Acc3 Aw33 Aa1 Ab1 Mop4 Mcc2 Mw33 Ma2 Mb2 sf0 ws0
+  add t0s, ra3, r0                                 # 0b30: 10020e270c0e7c00  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, ra3, r1                                 # 0b38: 10020e270c0e7c40  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  brr ra8, -1336                                   # 0b40: f0f80227fffffac8  rel1 reg0 ra00 pm15 upk0 BccF Aw08 Mw39 ws0
+  nop                                              # 0b48: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  ldi r0, 256                                      # 0b50: e002082700000100  md0 pm0 pck0 Acc1 Aw32 Mcc0 Mw39 sf0 ws0
+  add ra7, ra7, r0                                 # 0b58: 100201e70c1e7c00  sig1 ra07 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw07 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:LL14_ra8
+  shr.setf -, ra7, 10                              # 0b60: d00229e70e1cadc0  sigD ra07 rb10 pm0 upk0 pck0 Aop14 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  brr.allz -, -1376                                # 0b68: f00809e7fffffaa0  rel1 reg0 ra00 pm0 upk0 Bcc0 Aw39 Mw39 ws0
+  nop                                              # 0b70: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  ldi r0, 256                                      # 0b78: e002082700000100  md0 pm0 pck0 Acc1 Aw32 Mcc0 Mw39 sf0 ws0
+  add ra7, ra7, r0                                 # 0b80: 100201e70c1e7c00  sig1 ra07 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw07 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  bra ra8, ra6                                     # 0b88: f0f4c22700000000  rel0 reg1 ra06 pm15 upk0 BccF Aw08 Mw39 ws0
+  nop                                              # 0b90: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop; ldtmu0                                      # 0b98: a00009e7009e7000  sigA ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop; ldtmu0                                      # 0ba0: a00009e7009e7000  sigA ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:LL16_ra8
+  mov rb3, ra3; mov ra3, rb3                       # 0ba8: 100250c3950c3dbf  sig1 ra03 rb03 pm0 upk0 pck0 Aop21 Acc1 Aw03 Aa6 Ab6 Mop4 Mcc1 Mw03 Ma7 Mb7 sf0 ws1
+  mov ra16, ra14; mov rb16, rb14                   # 0bb0: 100244109538edbf  sig1 ra14 rb14 pm0 upk0 pck0 Aop21 Acc1 Aw16 Aa6 Ab6 Mop4 Mcc1 Mw16 Ma7 Mb7 sf0 ws0
+  mov r2, ra15; mov r3, rb15                       # 0bb8: 100248a3953cfdbf  sig1 ra15 rb15 pm0 upk0 pck0 Aop21 Acc1 Aw34 Aa6 Ab6 Mop4 Mcc1 Mw35 Ma7 Mb7 sf0 ws0
+  and.setf -, elem_num, 8                          # 0bc0: d00229e714988dc0  sigD ra38 rb08 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra20, r2; mov.ifzc.rot 8, r2, r2             # 0bc8: d002c522959f8492  sigD ra39 rb56 pm0 upk0 pck0 Aop21 Acc1 Aw20 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb20, r3; mov.ifzc.rot 8, r3, r3             # 0bd0: d002d523959f86db  sigD ra39 rb56 pm0 upk0 pck0 Aop21 Acc1 Aw20 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  and.setf -, elem_num, 4                          # 0bd8: d00229e714984dc0  sigD ra38 rb04 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra19, r2; mov.ifzc.rot 4, r2, r2             # 0be0: d002c4e2959f4492  sigD ra39 rb52 pm0 upk0 pck0 Aop21 Acc1 Aw19 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb19, r3; mov.ifzc.rot 4, r3, r3             # 0be8: d002d4e3959f46db  sigD ra39 rb52 pm0 upk0 pck0 Aop21 Acc1 Aw19 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  and.setf -, elem_num, 2                          # 0bf0: d00229e714982dc0  sigD ra38 rb02 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra18, r2; mov.ifzc.rot 2, r2, r2             # 0bf8: d002c4a2959f2492  sigD ra39 rb50 pm0 upk0 pck0 Aop21 Acc1 Aw18 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb18, r3; mov.ifzc.rot 2, r3, r3             # 0c00: d002d4a3959f26db  sigD ra39 rb50 pm0 upk0 pck0 Aop21 Acc1 Aw18 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  and.setf -, elem_num, 1                          # 0c08: d00229e714981dc0  sigD ra38 rb01 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra17, r2; mov.ifzc.rot 1, r2, r2             # 0c10: d002c462959f1492  sigD ra39 rb49 pm0 upk0 pck0 Aop21 Acc1 Aw17 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb17, r3; mov.ifzc.rot 1, r3, r3             # 0c18: d002d463959f16db  sigD ra39 rb49 pm0 upk0 pck0 Aop21 Acc1 Aw17 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  mov r0, rb5                                      # 0c20: 10020827159c5fc0  sig1 ra39 rb05 pm0 upk0 pck0 Aop21 Acc1 Aw32 Aa7 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  shl r0, r0, 5                                    # 0c28: d0020827119c51c0  sigD ra39 rb05 pm0 upk0 pck0 Aop17 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add ra5, r0, elem_num                            # 0c30: 100201670c9a7180  sig1 ra38 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw05 Aa0 Ab6 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  ldi ra7, 0                                       # 0c38: e00201e700000000  md0 pm0 pck0 Acc1 Aw07 Mcc0 Mw39 sf0 ws0
+  mov ra1, rb3                                     # 0c40: 10020067159c3fc0  sig1 ra39 rb03 pm0 upk0 pck0 Aop21 Acc1 Aw01 Aa7 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add ra5, ra5, rb27; mov r0, ra5                  # 0c48: 100241608c15bdf6  sig1 ra05 rb27 pm0 upk0 pck0 Aop12 Acc1 Aw05 Aa6 Ab7 Mop4 Mcc1 Mw32 Ma6 Mb6 sf0 ws0
+  shl r0, r0, 3                                    # 0c50: d0020827119c31c0  sigD ra39 rb03 pm0 upk0 pck0 Aop17 Acc1 Aw32 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add r1, r0, 4                                    # 0c58: d00208670c9c41c0  sigD ra39 rb04 pm0 upk0 pck0 Aop12 Acc1 Aw33 Aa0 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, ra3, r0                                 # 0c60: 10020e270c0e7c00  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  add t0s, ra3, r1                                 # 0c68: 10020e270c0e7c40  sig1 ra03 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw56 Aa6 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  brr ra8, -1000                                   # 0c70: f0f80227fffffc18  rel1 reg0 ra00 pm15 upk0 BccF Aw08 Mw39 ws0
+  nop                                              # 0c78: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  ldi r0, 256                                      # 0c80: e002082700000100  md0 pm0 pck0 Acc1 Aw32 Mcc0 Mw39 sf0 ws0
+  add ra7, ra7, r0                                 # 0c88: 100201e70c1e7c00  sig1 ra07 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw07 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:LL17_ra8
+  mov r2, ra16; mov r3, rb16                       # 0c90: 100248a395410dbf  sig1 ra16 rb16 pm0 upk0 pck0 Aop21 Acc1 Aw34 Aa6 Ab6 Mop4 Mcc1 Mw35 Ma7 Mb7 sf0 ws0
+  nop; fmul r0, r2, ra12                           # 0c98: 100049e020327016  sig1 ra12 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw32 Ma2 Mb6 sf0 ws0
+  nop; fmul r1, r2, rb12                           # 0ca0: 100049e1209cc017  sig1 ra39 rb12 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw33 Ma2 Mb7 sf0 ws0
+  nop; fmul r2, r3, rb12                           # 0ca8: 100049e2209cc01f  sig1 ra39 rb12 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw34 Ma3 Mb7 sf0 ws0
+  fadd r2, r0, r2; fmul r3, r3, ra12               # 0cb0: 100248a32132709e  sig1 ra12 rb39 pm0 upk0 pck0 Aop01 Acc1 Aw34 Aa0 Ab2 Mop1 Mcc1 Mw35 Ma3 Mb6 sf0 ws0
+  fsub r3, r3, r1                                  # 0cb8: 100208e7029e7640  sig1 ra39 rb39 pm0 upk0 pck0 Aop02 Acc1 Aw35 Aa3 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  fsub ra16, ra16, r2                              # 0cc0: 1002042702427c80  sig1 ra16 rb39 pm0 upk0 pck0 Aop02 Acc1 Aw16 Aa6 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  fsub rb16, rb16, r3                              # 0cc8: 10021427029d0ec0  sig1 ra39 rb16 pm0 upk0 pck0 Aop02 Acc1 Aw16 Aa7 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws1
+  mov r2, ra20; mov r3, rb20                       # 0cd0: 100248a395514dbf  sig1 ra20 rb20 pm0 upk0 pck0 Aop21 Acc1 Aw34 Aa6 Ab6 Mop4 Mcc1 Mw35 Ma7 Mb7 sf0 ws0
+  nop; fmul r0, r2, ra13                           # 0cd8: 100049e020367016  sig1 ra13 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw32 Ma2 Mb6 sf0 ws0
+  nop; fmul r1, r2, rb13                           # 0ce0: 100049e1209cd017  sig1 ra39 rb13 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw33 Ma2 Mb7 sf0 ws0
+  nop; fmul r2, r3, rb13                           # 0ce8: 100049e2209cd01f  sig1 ra39 rb13 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop1 Mcc1 Mw34 Ma3 Mb7 sf0 ws0
+  fadd r2, r0, r2; fmul r3, r3, ra13               # 0cf0: 100248a32136709e  sig1 ra13 rb39 pm0 upk0 pck0 Aop01 Acc1 Aw34 Aa0 Ab2 Mop1 Mcc1 Mw35 Ma3 Mb6 sf0 ws0
+  fsub r3, r3, r1                                  # 0cf8: 100208e7029e7640  sig1 ra39 rb39 pm0 upk0 pck0 Aop02 Acc1 Aw35 Aa3 Ab1 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  fsub r2, ra20, r2                                # 0d00: 100208a702527c80  sig1 ra20 rb39 pm0 upk0 pck0 Aop02 Acc1 Aw34 Aa6 Ab2 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  fsub r3, rb20, r3                                # 0d08: 100208e7029d4ec0  sig1 ra39 rb20 pm0 upk0 pck0 Aop02 Acc1 Aw35 Aa7 Ab3 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  and.setf -, elem_num, 8                          # 0d10: d00229e714988dc0  sigD ra38 rb08 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra20, r2; mov.ifzc.rot 8, r2, r2             # 0d18: d002c522959f8492  sigD ra39 rb56 pm0 upk0 pck0 Aop21 Acc1 Aw20 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb20, r3; mov.ifzc.rot 8, r3, r3             # 0d20: d002d523959f86db  sigD ra39 rb56 pm0 upk0 pck0 Aop21 Acc1 Aw20 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  and.setf -, elem_num, 4                          # 0d28: d00229e714984dc0  sigD ra38 rb04 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra19, r2; mov.ifzc.rot 4, r2, r2             # 0d30: d002c4e2959f4492  sigD ra39 rb52 pm0 upk0 pck0 Aop21 Acc1 Aw19 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb19, r3; mov.ifzc.rot 4, r3, r3             # 0d38: d002d4e3959f46db  sigD ra39 rb52 pm0 upk0 pck0 Aop21 Acc1 Aw19 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  and.setf -, elem_num, 2                          # 0d40: d00229e714982dc0  sigD ra38 rb02 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra18, r2; mov.ifzc.rot 2, r2, r2             # 0d48: d002c4a2959f2492  sigD ra39 rb50 pm0 upk0 pck0 Aop21 Acc1 Aw18 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb18, r3; mov.ifzc.rot 2, r3, r3             # 0d50: d002d4a3959f26db  sigD ra39 rb50 pm0 upk0 pck0 Aop21 Acc1 Aw18 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  and.setf -, elem_num, 1                          # 0d58: d00229e714981dc0  sigD ra38 rb01 pm0 upk0 pck0 Aop20 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  mov ra17, r2; mov.ifzc.rot 1, r2, r2             # 0d60: d002c462959f1492  sigD ra39 rb49 pm0 upk0 pck0 Aop21 Acc1 Aw17 Aa2 Ab2 Mop4 Mcc3 Mw34 Ma2 Mb2 sf0 ws0
+  mov rb17, r3; mov.ifzc.rot 1, r3, r3             # 0d68: d002d463959f16db  sigD ra39 rb49 pm0 upk0 pck0 Aop21 Acc1 Aw17 Aa3 Ab3 Mop4 Mcc3 Mw35 Ma3 Mb3 sf0 ws1
+  shr.setf -, ra7, 10                              # 0d70: d00229e70e1cadc0  sigD ra07 rb10 pm0 upk0 pck0 Aop14 Acc1 Aw39 Aa6 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf1 ws0
+  brr.allz -, -1264                                # 0d78: f00809e7fffffb10  rel1 reg0 ra00 pm0 upk0 Bcc0 Aw39 Mw39 ws0
+  nop                                              # 0d80: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  ldi r0, 256                                      # 0d88: e002082700000100  md0 pm0 pck0 Acc1 Aw32 Mcc0 Mw39 sf0 ws0
+  add ra7, ra7, r0                                 # 0d90: 100201e70c1e7c00  sig1 ra07 rb39 pm0 upk0 pck0 Aop12 Acc1 Aw07 Aa6 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  bra ra8, ra6                                     # 0d98: f0f4c22700000000  rel0 reg1 ra06 pm15 upk0 BccF Aw08 Mw39 ws0
+  nop                                              # 0da0: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop; ldtmu0                                      # 0da8: a00009e7009e7000  sigA ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop; ldtmu0                                      # 0db0: a00009e7009e7000  sigA ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:LL19_ra8
+  brr -, -1064                                     # 0db8: f0f809e7fffffbd8  rel1 reg0 ra00 pm15 upk0 BccF Aw39 Mw39 ws0
+  nop                                              # 0dc0: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 0dc8: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 0dd0: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+:Ldd8_9c0
+  mov irq, rb3                                     # 0dd8: 100209a7159c3fc0  sig1 ra39 rb03 pm0 upk0 pck0 Aop21 Acc1 Aw38 Aa7 Ab7 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop; thrend                                      # 0de0: 300009e7009e7000  sig3 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 0de8: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0
+  nop                                              # 0df0: 100009e7009e7000  sig1 ra39 rb39 pm0 upk0 pck0 Aop00 Acc0 Aw39 Aa0 Ab0 Mop0 Mcc0 Mw39 Ma0 Mb0 sf0 ws0

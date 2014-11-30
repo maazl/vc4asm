@@ -1,0 +1,1 @@
+../sample/hello_fft/qasm/gpu_fft_4k.qasm
