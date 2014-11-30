@@ -245,7 +245,7 @@ class Parser
 	void             ParseInstruction();
 
 	void             defineLabel();
-	void             ParseLabel();
+	void             parseLabel();
 
 	void             beginREP(int);
 	void             endREP(int);

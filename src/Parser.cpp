@@ -257,7 +257,7 @@ exprValue Parser::ParseExpression()
 					}
 				}
 				const auto& l = LabelsByName.emplace(Token, Labels.size());
-				if (forward || l.second)
+				if (l.second || (forward && Labels[l.first->second].Definition))
 				{	// new label
 					l.first->second = Labels.size();
 					Labels.emplace_back(Token);
@@ -820,7 +820,7 @@ void Parser::defineLabel()
 	}
 }
 
-void Parser::ParseLabel()
+void Parser::parseLabel()
 {
 	switch (NextToken())
 	{default:
@@ -1217,7 +1217,7 @@ void Parser::ParseLine()
 		if (doPreprocessor())
 			return;
 
-		ParseLabel();
+		parseLabel();
 		goto next;
 
 	 case WORD:
