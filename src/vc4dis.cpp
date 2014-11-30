@@ -117,7 +117,7 @@ int main(int argc, char * argv[]) {
 	bool check = false;
 
 	int c;
-	while ((c = getopt(argc, argv, "x::MFvb:o:C")) != -1)
+	while ((c = getopt(argc, argv, "x::MFvb:o:V")) != -1)
 	{	switch (c)
 		{case 'x':
 			if (!optarg || (hexinput = atoi(optarg + 2) == 0))
@@ -138,13 +138,13 @@ int main(int argc, char * argv[]) {
 				return 1;
 			}
 			break;
-		 case 'C':
+		 case 'V':
 			check = true; break;
 		}
 	}
 	argv += optind;
 
-	while (*argv)
+	for (; *argv; ++argv)
 	{	fprintf(stderr, "Disassembling %s...\n", *argv);
 		switch (hexinput)
 		{default:
@@ -169,7 +169,5 @@ int main(int argc, char * argv[]) {
 
 		if (check)
 			Validator().Validate(dis.Instructions);
-
-		++argv;
 	}
 }

@@ -22,25 +22,28 @@ int main(int argc, char **argv)
 {
 	const char* outfname = NULL;
 	const char* writeCPP = NULL;
+	const char* writeCPP2 = NULL;
 	const char* writePRE = NULL;
 	bool check = false;
 
 	int c;
-	while ((c = getopt(argc, argv, "o:c:E:C")) != -1)
+	while ((c = getopt(argc, argv, "o:c:C:E:V")) != -1)
 	{	switch (c)
 		{case 'o':
 			outfname = optarg; break;
 		 case 'c':
 			writeCPP = optarg; break;
 		 case 'C':
+			writeCPP2 = optarg; break;
+		 case 'V':
 			check = true; break;
 		 case 'E':
 			writePRE = optarg; break;
 		}
 	}
 
-	if (!outfname && !writeCPP && !writePRE) {
-		fputs("Usage: vc4asm [-o <bin-output>] [-c <c-output>] [-E <preprocessed>] <qasm-file>\n", stderr);
+	if (!outfname && !writeCPP && !writeCPP2 && !writePRE) {
+		fputs("Usage: vc4asm [-o <bin-output>] [-{c|C} <c-output>] [-E <preprocessed>] [-V] <qasm-file>\n", stderr);
 		return 1;
 	}
 
@@ -75,6 +78,21 @@ int main(int argc, char **argv)
 	{	FILE* of = fopen(writeCPP, "wt");
 		if (of == NULL)
 		{	fprintf(stderr, "Failed to open %s for writing.", writeCPP);
+			return -1;
+		}
+
+		const char* tpl = CPPTemplate + 2; // no ,\n in the first line
+		for (auto code : parser.GetInstructions())
+		{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
+			tpl = CPPTemplate;
+		}
+		fputs(",\n", of);
+		fclose(of);
+	}
+	if (writeCPP2)
+	{	FILE* of = fopen(writeCPP2, "wt");
+		if (of == NULL)
+		{	fprintf(stderr, "Failed to open %s for writing.", writeCPP2);
 			return -1;
 		}
 
