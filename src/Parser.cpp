@@ -78,18 +78,28 @@ void Parser::Fail(const char* fmt, ...)
 	va_end(va);
 }
 
+static const char msgpfx[][10]
+{	"ERROR: "
+,	"Warning: "
+,	"Info: "
+};
+
 void Parser::Error(const char* fmt, ...)
 {	Success = false;
 	va_list va;
 	va_start(va, fmt);
+	fputs(msgpfx[ERROR], stderr);
 	fputs(enrichMsg(vstringf(fmt, va)).c_str(), stderr);
 	va_end(va);
 	fputc('\n', stderr);
 }
 
-void Parser::Warn(const char* fmt, ...)
-{	va_list va;
+void Parser::Msg(severity level, const char* fmt, ...)
+{	if (Verbose < level)
+		return;
+	va_list va;
 	va_start(va, fmt);
+	fputs(msgpfx[level], stderr);
 	fputs(enrichMsg(vstringf(fmt, va)).c_str(), stderr);
 	va_end(va);
 	fputc('\n', stderr);
@@ -828,6 +838,7 @@ void Parser::beginREP(int)
 		return;
 
 	AtMacro = &Macros[".rep"];
+	AtMacro->Definition = *Context.back();
 
 	if (NextToken() != WORD)
 		return Error("Expected loop variable name after .rep.");
@@ -917,7 +928,7 @@ void Parser::parseUNSET(int flags)
 	auto& consts = (flags & 1 ? Context.back() : Context.front())->Consts;
 	auto r = consts.find(Name);
 	if (r == consts.end())
-		return Warn("Cannot unset %s because it has not yet been definied in the required context.", Name.c_str());
+		return Msg(WARNING, "Cannot unset %s because it has not yet been definied in the required context.", Name.c_str());
 	consts.erase(r);
 }
 
@@ -972,8 +983,8 @@ void Parser::beginMACRO(int)
 		return Error("Expected macro name.");
 	AtMacro = &Macros[Token];
 	if (AtMacro->Definition.File.size())
-	{	Warn("Info: Redefinition of macro %s.\n"
-		      "  Previous definition at %s.",
+	{	Msg(INFO, "Redefinition of macro %s.\n"
+		          "  Previous definition at %s.",
 		  Token.c_str(), AtMacro->Definition.toString().c_str());
 		// redefine
 		AtMacro->Args.clear();
@@ -1087,7 +1098,7 @@ void Parser::defineFUNC(int)
 
 	const auto& ret = Functions.emplace(name, func);
 	if (!ret.second)
-	{	Warn("Info: Redefinition of function %s.\n"
+	{	Msg(INFO, "Redefinition of function %s.\n"
 		      "Previous definition at %s.",
 		  Token.c_str(), ret.first->second.Definition.toString().c_str());
 		ret.first->second = func;
@@ -1248,6 +1259,7 @@ void Parser::ParseFile()
 			{	ParseLine();
 			} catch (const string& msg)
 			{	// recover from errors
+				fputs(msgpfx[ERROR], stderr);
 				fputs(msg.c_str(), stderr);
 				fputc('\n', stderr);
 			}

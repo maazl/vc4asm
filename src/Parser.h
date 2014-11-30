@@ -29,8 +29,15 @@ inline T* binary_search(T (&arr)[N], const char* key)
 
 class Parser
 {public:
+	enum severity
+	{	ERROR
+	,	WARNING
+	,	INFO
+	};
+ public:
 	bool Success = true;
 	FILE* Preprocessed = NULL;
+	severity Verbose = WARNING;
  private:
 	enum token_t : char
 	{	END    =  0 ///< End of line
@@ -202,7 +209,7 @@ class Parser
 	string           enrichMsg(string msg);
 	void             Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR;
 	void             Error(const char* fmt, ...) PRINTFATTR(2);
-	void             Warn(const char* fmt, ...) PRINTFATTR(2);
+	void             Msg(severity level, const char* fmt, ...) PRINTFATTR(3);
 
 	token_t          NextToken();
 	/// Work around for gcc on 32 bit Linux that can't read "0x80000000" with sscanf anymore.
