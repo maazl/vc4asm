@@ -190,7 +190,7 @@ void Inst::optimize()
 		break;
 	 case S_LDI: // ldi, sema
 	 ldi:
-		if (WAddrA == R_NOP)
+		if (WAddrA == R_NOP && !SF)
 			CondA = C_NEVER;
 		if (WAddrM == R_NOP)
 			CondM = C_NEVER;
