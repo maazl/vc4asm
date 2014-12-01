@@ -46,6 +46,8 @@ class Parser
 	,	OP     = '@'///< operator
 	,	BRACE1 = '('
 	,	BRACE2 = ')'
+	,	SQBRC1 = '['
+	,	SQBRC2 = ']'
 	,	DOT    = '.'
 	,	COMMA  = ','
 	,	SEMI   = ';'
@@ -205,6 +207,7 @@ class Parser
 	// instruction
 	vector<uint64_t> Instructions;
 	Inst             Instruct;    ///< current instruction
+	bool             HaveNOP;     ///< at least one NOP in the current line so far
  private:
 	string           enrichMsg(string msg);
 	void             Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR;
@@ -215,6 +218,7 @@ class Parser
 	/// Work around for gcc on 32 bit Linux that can't read "0x80000000" with sscanf anymore.
 	/// @return Number of characters parsed.
 	static size_t    parseUInt(const char* src, uint32_t& dst);
+	exprValue        parseElemInt();
 	exprValue        ParseExpression();
 
 	static uint8_t   getSmallImmediate(uint32_t i);

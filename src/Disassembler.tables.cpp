@@ -71,7 +71,7 @@ const char Disassembler::cOpS[14][9] =
 };
 
 const char Disassembler::cCC[8][7] =
-{	".never", "", ".ifzs", ".ifzc", ".ifns", ".ifnc", ".ifcs", ".ifcc"
+{	".never", "", ".ifz", ".ifnz", ".ifn", ".ifp", ".ifc", ".ifcc"
 };
 
 const char Disassembler::cPack[2][16][8] = {

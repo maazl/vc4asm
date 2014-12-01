@@ -14,6 +14,9 @@ string exprValue::toString() const
 	{default:
 		return string();
 	 case V_INT:
+	 case V_LDPES:
+	 case V_LDPE:
+	 case V_LDPEU:
 		return stringf("0x%x", uValue);
 	 case V_FLOAT:
 		return stringf("%g", fValue);

@@ -38,6 +38,20 @@ void Disassembler::appendImmd(value_t value)
 		appendf("0x%08x", value.uValue);
 }
 
+void Disassembler::appendPE(uint32_t val, bool sign)
+{	signed char values[16];
+	if (sign)
+		for (int pos = 16; pos--; val <<= 1)
+			values[pos] = (((int32_t)val >> 30) & 2) | ((val >> 15) & 1);
+	else
+		for (int pos = 16; pos--; val <<= 1)
+			values[pos] = ((val >> 30) & 2) | ((val >> 15) & 1);
+	*CodeAt++ = '[';
+	for (int val : values)
+		appendf("%i,", val);
+	CodeAt[-1] = ']';
+}
+
 const char* Disassembler::packCode(bool mul)
 {	return cPack[mul][Instruct.Pack * (Instruct.PM == mul)];
 }
@@ -219,7 +233,15 @@ void Disassembler::DoLDI()
 		appendf("%s%s%s, ", cWreg[!Instruct.WS][Instruct.WAddrM], packCode(true), cCC[Instruct.CondM]);
 	if (Instruct.WAddrA == Inst::R_NOP && Instruct.WAddrM == Inst::R_NOP)
 		append("-, ");
-	appendImmd(Instruct.Immd);
+
+	switch (Instruct.LdMode)
+	{default:
+		return appendImmd(Instruct.Immd);
+	 case Inst::L_PES:
+		return appendPE(Instruct.Immd.uValue, true);
+	 case Inst::L_PEU:
+		return appendPE(Instruct.Immd.uValue, false);
+	}
 }
 
 void Disassembler::DoBranch()

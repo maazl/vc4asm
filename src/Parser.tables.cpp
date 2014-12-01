@@ -659,6 +659,7 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "ifnc",           &Parser::addIf,     Inst::C_NC,     E_DSTOP }
 ,	{ "ifns",           &Parser::addIf,     Inst::C_NS,     E_DSTOP }
 ,	{ "ifnz",           &Parser::addIf,     Inst::C_ZC,     E_DSTOP }
+,	{ "ifp",            &Parser::addIf,     Inst::C_NC,     E_DSTOP }
 ,	{ "ifz",            &Parser::addIf,     Inst::C_ZS,     E_DSTOP }
 ,	{ "ifzc",           &Parser::addIf,     Inst::C_ZC,     E_DSTOP }
 ,	{ "ifzs",           &Parser::addIf,     Inst::C_ZS,     E_DSTOP }

@@ -60,12 +60,13 @@ class Disassembler
 	Inst        Instruct;
 	char        Code[100];
 	char*       CodeAt;
-	char        Comment[80];
+	char        Comment[100];
  private:
 	void append(const char* str);
 	void appendf(const char* fmt, ...);
 	/// Use pretty value for immediates.
 	void appendImmd(value_t val);
+	void appendPE(uint32_t val, bool sign);
 	/// Get pack extension for ALU instruction
 	/// @param mul true: MUL ALU, false: ADD ALU
 	/// @pre Instruct.Sig != Inst::S_BRA

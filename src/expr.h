@@ -44,6 +44,9 @@ struct reg_t
 enum valueType : char
 {	V_NONE      ///< no value
 ,	V_INT       ///< integer literal or the result of an integer expression
+,	V_LDPES     ///< load per element signed, otherwise like V_INT
+,	V_LDPE      ///< load per element signed or unsigned, otherwise like V_INT
+,	V_LDPEU     ///< load per element unsigned, otherwise like V_INT
 ,	V_FLOAT     ///< float literal or the result of an float expression
 ,	V_REG       ///< register
 ,	V_LABEL     ///< Label reference, iValue = index to Labels

@@ -145,6 +145,8 @@ Parser::token_t Parser::NextToken()
 		return OP;
 	 case '(':
 	 case ')':
+	 case '[':
+	 case ']':
 	 case '.':
 	 case ',':
 	 case ';':
@@ -192,6 +194,59 @@ size_t Parser::parseUInt(const char* src, uint32_t& dst)
 		dst += digit;
 	}
 	return cp - src;
+}
+
+exprValue Parser::parseElemInt()
+{	uint32_t value = 0;
+	int pos = 0;
+	signed char sign = 0;
+	switch (Instruct.Sig)
+	{case Inst::S_NONE:
+		if (Instruct.Unpack == Inst::U_32
+			&& Instruct.OpA == Inst::A_NOP && Instruct.OpM == Inst::M_NOP
+			&& Instruct.RAddrA == Inst::R_NOP && Instruct.RAddrB == Inst::R_NOP )
+			break;
+	 default:
+	 fail:
+		Fail("Cannot combine load per QPU element with any other instruction.");
+	 case Inst::S_LDI:
+		if (Instruct.LdMode & Inst::L_SEMA)
+			goto fail;
+		if (Instruct.LdMode)
+			sign = Instruct.LdMode == Inst::L_PEU ? 1 : -1;
+	}
+	while (true)
+	{	auto val = ParseExpression();
+		if (val.Type != V_INT)
+			Fail("Only integers are allowed between [...].");
+		if (val.iValue < -2 || val.iValue > 3)
+			Fail("Load per QPU element can only deal with integer constants in the range of [-2..3].");
+		if (val.iValue < 0)
+		{	if (sign > 0)
+				Fail("All integers in load per QPU element must be either in the range [-2..1] or in the range [0..3].");
+			sign = -1;
+		} else if (val.iValue > 1)
+		{	if (sign < 0)
+				Fail("All integers in load per QPU element must be either in the range [-2..1] or in the range [0..3].");
+			sign = 1;
+		}
+		value |= (val.uValue * 0x8001 & 0x10001) << pos;
+
+		switch (NextToken())
+		{case END:
+			Fail("Incomplete expression.");
+		 default:
+			Fail("Unexpected '%s' in per QPU element constant.", Token.c_str());
+		 case COMMA:
+			if (++pos >= 16)
+				Fail("Too many initializers for per QPU element constant.");
+			continue;
+		 case SQBRC2:;
+		}
+		break;
+	}
+	// Make LDIPEx
+	return exprValue(value, (valueType)(sign + V_LDPE));
 }
 
 exprValue Parser::ParseExpression()
@@ -282,6 +337,9 @@ exprValue Parser::ParseExpression()
 					goto discard;
 				break;
 			}
+		 case SQBRC1: // per QPU element constant
+			return parseElemInt();
+
 		 case NUM:
 			// parse number
 			if (Token.find('.') == string::npos)
@@ -342,7 +400,7 @@ Inst::mux Parser::muxReg(reg_t reg)
 }
 
 uint8_t Parser::getSmallImmediate(uint32_t i)
-{	if (i + 16 < 0x1f)
+{	if (i + 16 <= 0x1f)
 		return (uint8_t)(i & 0x1f);
 	if ((i & 0x807fffff) == 0 && i - 0x3b800000 <= 0x7800000)
 		return (uint8_t)(((i | 0x80000000) >> 23) - 0x57);
@@ -558,7 +616,9 @@ void Parser::assembleADD(int add_op)
 
 	Instruct.OpA = (Inst::opadd)add_op;
 	if (add_op == Inst::A_NOP)
+	{	HaveNOP = true;
 		return;
+	}
 
 	doInstrExt(false);
 
@@ -594,7 +654,7 @@ void Parser::assembleMOV(int mode)
 	if (Instruct.Sig == Inst::S_BRANCH)
 		Fail("Cannot use MOV together with branch instruction.");
 	bool isLDI = Instruct.Sig == Inst::S_LDI;
-	bool useMUL = Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP);
+	bool useMUL = HaveNOP || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP);
 	if (useMUL && (Instruct.WAddrM != Inst::R_NOP || (!isLDI && Instruct.OpM != Inst::M_NOP)))
 		Fail("Both ALUs are already used by the current instruction.");
 
@@ -613,17 +673,10 @@ void Parser::assembleMOV(int mode)
 		{	// semaphore access by LDI like instruction
 			mode = Inst::L_SEMA;
 			param.uValue = param.rValue.Num | (param.rValue.Type & R_SACQ);
-			goto sema;
+			break;
 		}
 		if (isLDI)
-			Fail("MOV instruction with register source cannot be combined with load immediate.");
-		if (useMUL)
-		{	Instruct.MuxMA = Instruct.MuxMB = muxReg(param.rValue);
-			Instruct.OpM = Inst::M_V8MIN;
-		} else
-		{	Instruct.MuxAA = Instruct.MuxAB = muxReg(param.rValue);
-			Instruct.OpA = Inst::A_OR;
-		}
+			Fail("mov instruction with register source cannot be combined with load immediate.");
 		if (param.rValue.Rotate)
 		{	if (!useMUL)
 				Fail("Vector rotation is only available to the MUL ALU.");
@@ -633,6 +686,29 @@ void Parser::assembleMOV(int mode)
 				Fail("Vector rotation is already applied to the instruction.");
 			doSMI(48 + (-param.rValue.Rotate & 0xf));
 		}
+		if (useMUL)
+		{	Instruct.MuxMA = Instruct.MuxMB = muxReg(param.rValue);
+			Instruct.OpM = Inst::M_V8MIN;
+		} else
+		{	Instruct.MuxAA = Instruct.MuxAB = muxReg(param.rValue);
+			Instruct.OpA = Inst::A_OR;
+		}
+		return;
+	 case V_LDPES:
+		if (mode != Inst::L_LDI && mode != Inst::L_PES)
+			Fail("Load immediate mode conflicts with per QPU element constant.");
+		mode = Inst::L_PES;
+		break;
+	 case V_LDPEU:
+		if (mode != Inst::L_LDI && mode != Inst::L_PEU)
+			Fail("Load immediate mode conflicts with per QPU element constant.");
+		mode = Inst::L_PEU;
+		break;
+	 case V_LDPE:
+		if (mode >= Inst::L_SEMA)
+			Fail("Load immediate mode conflicts with per QPU element constant.");
+		if (mode < Inst::L_PES)
+			mode = Inst::L_PES;
 		break;
 	 case V_INT:
 		// try small immediate first
@@ -659,20 +735,21 @@ void Parser::assembleMOV(int mode)
 		// LDI
 		if (mode < 0)
 			mode = Inst::L_LDI;
-	 sema:
-		if ( Instruct.Sig != Inst::S_NONE
-			&& (Instruct.Sig != Inst::S_LDI || Instruct.Immd.uValue != param.uValue || Instruct.LdMode != mode) )
-		{	if (Instruct.Sig != Inst::S_NONE)
-				Fail("Load immediate cannot be used with signals.");
-			else
-				Fail("Tried to load two different immediate values in one instruction.");
-		}
-		if (Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP)
-			Fail("Cannot combine load immediate with ALU instructions.");
-		Instruct.Sig = Inst::S_LDI;
-		Instruct.LdMode = (Inst::ldmode)mode;
-		Instruct.Immd = param;
 	}
+	switch (Instruct.Sig)
+	{default:
+		Fail("Load immediate cannot be used with signals.");
+	 case Inst::S_LDI:
+		if (Instruct.Immd.uValue != param.uValue || Instruct.LdMode != mode)
+			Fail("Tried to load two different immediate values in one instruction.");
+	 case Inst::S_NONE:;
+	}
+	// LDI or semaphore
+	if (Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP)
+		Fail("Cannot combine load immediate with ALU instructions.");
+	Instruct.Sig = Inst::S_LDI;
+	Instruct.LdMode = (Inst::ldmode)mode;
+	Instruct.Immd = param;
 }
 
 void Parser::assembleBRANCH(int relative)
@@ -1240,6 +1317,7 @@ void Parser::ParseLine()
 		}
 
 		Instruct.reset();
+		HaveNOP = false;
 		ParseInstruction();
 		Instruct.optimize();
 		Instructions.push_back(Instruct.encode());
