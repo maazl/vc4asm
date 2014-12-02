@@ -470,8 +470,9 @@ void Parser::addPack(int mode, bool mul)
 	if (Instruct.Sig != Inst::S_LDI && Instruct.Unpack != Inst::U_32 && Instruct.PM != mul)
 		return Error(".pack conflicts with .unpack instruction of ADD ALU.");
 	if (mul)
-	{	if (mode >= Inst::P_32S || mode == Inst::P_16a || mode == Inst::P_16b)
+	{	if (mode < Inst::P_8abcdS && mode != Inst::P_32)
 			return Error("MUL ALU does not support pack mode.");
+		mode &= 7;
 		Instruct.PM = true;
 	}
 	Instruct.Pack = (Inst::pack)mode;
