@@ -38,9 +38,7 @@
 # Load twiddle factors
 
 .macro load_tw, stride, off, num, addr
-    mov r0, addr
-    add r1, r0, 4
-
+    add r1, addr, 4; mov r0, addr
     shl r2, elem_num, 3
 
     .rep i, num
@@ -211,16 +209,28 @@
     .rep i, 8
         brr -, r:2f
         mov -, sacq(i) # Slave waits for master
-        nop
-        nop
+        mov vw_setup, rb_vpm
+        fadd vpm, ra_64+0, rb_64+0
     .endr
 :2
-    write_vpm_64
+    # write_vpm_64
+    # mov vw_setup, rb_vpm
+    # fadd vpm, ra_64+0, rb_64+0
+    fadd vpm, ra_64+1, rb_64+1
+
+    mov vw_setup, rb_vpm_16
+    fadd vpm, ra_64+2, rb_64+2
+    fadd vpm, ra_64+3, rb_64+3
+
+    mov vw_setup, rb_vpm_32
+    fsub vpm, ra_64+0, rb_64+0
+    fsub vpm, ra_64+1, rb_64+1
 
     brr -, ra_temp
-    nop
-    nop
-    nop
+
+    mov vw_setup, rb_vpm_48
+    fsub vpm, ra_64+2, rb_64+2
+    fsub vpm, ra_64+3, rb_64+3
 
     .rep i, 8
         bra -, ra_link_1
@@ -258,11 +268,11 @@
 ##############################################################################
 
 .macro fft_twiddles_32
-    nop;                  fmul ra_temp, r0, ra_tw_re+TW32_ACTIVE # rr
-    nop;                  fmul r2,      r1, rb_tw_im+TW32_ACTIVE # ii
-    nop;                  fmul r3,      r1, ra_tw_re+TW32_ACTIVE # ir
-    fsub r0, ra_temp, r2; fmul r1,      r0, rb_tw_im+TW32_ACTIVE # ri
-    fadd r1, r1,      r3
+    nop;             fmul r3, r0, ra_tw_re+TW32_ACTIVE # rr
+    nop;             fmul r2, r1, rb_tw_im+TW32_ACTIVE # ii
+    fsub r2, r3, r2; fmul r3, r1, ra_tw_re+TW32_ACTIVE # ir
+    mov  r0, r2;     fmul r1, r0, rb_tw_im+TW32_ACTIVE # ri
+    fadd r1, r1, r3
 .endm
 
 ##############################################################################
@@ -372,25 +382,21 @@
 # Rotate twiddles
 
 .macro next_twiddles_32, tw32
-    mov r2, ra_tw_re+TW32_ACTIVE; mov r3, rb_tw_im+TW32_ACTIVE
-    nop;             fmul r0, r2, ra_tw_re+tw32 # a.cos
-    nop;             fmul r1, r2, rb_tw_im+tw32 # b.cos
-    nop;             fmul r2, r3, rb_tw_im+tw32 # b.sin
-    fadd r2, r0, r2; fmul r3, r3, ra_tw_re+tw32 # a.sin
-    fsub r3, r3, r1
-    fsub ra_tw_re+TW32_ACTIVE, ra_tw_re+TW32_ACTIVE, r2
-    fsub rb_tw_im+TW32_ACTIVE, rb_tw_im+TW32_ACTIVE, r3
+    mov r2, ra_tw_re+TW32_ACTIVE; fmul r0, ra_tw_re+TW32_ACTIVE, rb_tw_im+tw32 # b.cos
+    mov r3, rb_tw_im+TW32_ACTIVE; fmul r1, rb_tw_im+TW32_ACTIVE, ra_tw_re+tw32 # a.sin
+    fsub r1, r1, r0;              fmul r0, r3, rb_tw_im+tw32                   # b.sin
+    fsub rb_tw_im+TW32_ACTIVE, rb_tw_im+TW32_ACTIVE, r1; fmul r1, r2, ra_tw_re+tw32 # a.cos
+    fadd r1, r1, r0; 
+    fsub ra_tw_re+TW32_ACTIVE, ra_tw_re+TW32_ACTIVE, r1
 .endm
 
 .macro next_twiddles_16, tw16
-    mov r2, ra_tw_re+TW16_ACTIVE+3; mov r3, rb_tw_im+TW16_ACTIVE+3
-    nop;             fmul r0, r2, ra_tw_re+tw16 # a.cos
-    nop;             fmul r1, r2, rb_tw_im+tw16 # b.cos
-    nop;             fmul r2, r3, rb_tw_im+tw16 # b.sin
-    fadd r2, r0, r2; fmul r3, r3, ra_tw_re+tw16 # a.sin
-    fsub r3, r3, r1
+    mov r2, ra_tw_re+TW16_ACTIVE+3; fmul r1, ra_tw_re+TW16_ACTIVE+3, rb_tw_im+tw16 # b.cos
+    mov r3, rb_tw_im+TW16_ACTIVE+3; fmul r0, rb_tw_im+TW16_ACTIVE+3, ra_tw_re+tw16 # a.sin
+    fsub r3, r0, r1;                fmul r1, r3, rb_tw_im+tw16                     # b.sin
+    fsub r3, rb_tw_im+TW16_ACTIVE+3, r3; fmul r0, r2, ra_tw_re+tw16                # a.cos
+    fadd r2, r0, r1;
     fsub r2, ra_tw_re+TW16_ACTIVE+3, r2
-    fsub r3, rb_tw_im+TW16_ACTIVE+3, r3
 
     unpack_twiddles
 .endm
@@ -470,10 +476,8 @@
     fsub r3, rb_32_im, r1
     fsub r2, ra_32_re, r0
     fadd r1, rb_32_im, r1
-    fadd r0, ra_32_re, r0
-
+    fadd r0, ra_32_re, r0;      fmul ra_32_re, r1, rb_tw_im+TW64_P1_BASE0 # ii
     nop;                        fmul rb_32_im, r1, ra_tw_re+TW64_P1_BASE0 # ir
-    nop;                        fmul ra_32_re, r1, rb_tw_im+TW64_P1_BASE0 # ii
     nop;                        fmul r1,       r0, rb_tw_im+TW64_P1_BASE0 # ri
     fadd rb_64+1, r1, rb_32_im; fmul r0,       r0, ra_tw_re+TW64_P1_BASE0 # rr
     fsub rb_64+0, r0, ra_32_re; fmul ra_32_re, r3, rb_tw_im+TW64_P1_BASE1 # ii
