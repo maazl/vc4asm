@@ -12,8 +12,8 @@
 
 
 Validator::state::state()
-{	memset(LastRreg, -1, sizeof LastRreg);
-	memset(LastWreg, -1, sizeof LastRreg);
+{	fill_n(LastRreg[0], 128, NEVER);
+	fill_n(LastWreg[0], 128, NEVER);
 }
 Validator::state::state(const state& r, int at, int target)
 :	From(at)
@@ -24,7 +24,7 @@ Validator::state::state(const state& r, int at, int target)
 	int* dp = LastRreg[0];
 	do
 	{	*dp++ = *sp <= NEVER ? NEVER : *sp + target;
-	} while (++sp != (int*)(this+1));
+	} while (++dp < (int*)(this+1));
 }
 
 
@@ -74,6 +74,8 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 		{case Inst::S_BRANCH:
 			if (Instruct.Reg)
 				regRA = Instruct.RAddrA;
+			if (Instruct.CondBr == Inst::B_AL)
+				TerminateRq(4);
 			if (At - st.LastBRANCH < 4)
 				Message(st.LastBRANCH, "Two branch instructions within less than 4 instructions.");
 			else if (!Instruct.Reg)
@@ -114,13 +116,16 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 		}
 
 		// check for RA/RB back to back read/write
-		if (regRA < 32 && st.LastRreg[0][regRA] == At-1)
+		if (regRA < 32 && st.LastWreg[0][regRA] == At-1)
 			Message(At-1, "Cannot read register ra%d because it just have been written by the previous instruction.", regRA);
-		if (regRB < 32 && st.LastRreg[1][regRB] == At-1)
+		if (regRB < 32 && st.LastWreg[1][regRB] == At-1)
 			Message(At-1, "Cannot read register rb%d because it just have been written by the previous instruction.", regRB);
 
 		if (At < 2 && Instruct.Sig == Inst::S_SBWAIT)
 			Message(At, "The first two fragment shader instructions must not wait for the scoreboard.");
+		// unif_addr
+		if (At - st.LastWreg[0][40] <= 2 && (regRA == 32 || regRB == 32))
+			Message(st.LastWreg[0][40], "Must not read uniforms two instructions after write to unif_addr.");
 		if (regWA == 36 || regWB == 36)
 		{	// TMU_NOSWAP
 			for (int i = 56; i <= 63; ++i)
@@ -144,6 +149,19 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 			Message(At-1, "Vector rotation must not follow a write to r5.");
 		if (st.LastRotReg >= 0 && (regWA == st.LastRotReg || regWB == st.LastRotReg))
 			Message(At-1, "Must not write to the target of a vector in the following instruction.");
+		// TLB Z -> MS_FLAGS
+		if ((regRA == 42 || regRB == 42) && At - st.LastWreg[0][44] <= 2)
+			Message(st.LastWreg[0][44], "Cannot read multisample mask (ms_flags) in the two instructions after TLB Z write.");
+		// Combined peripheral access
+		if (( ((0xfff09e0000000000ULL & (1ULL << regWA)) != 0)
+			+ ((0xfff09e0000000000ULL & (1ULL << regWB)) != 0)
+			+ ((0x0008060000000000ULL & (1ULL << regRA)) != 0)
+			+ ((0x0008060000000000ULL & (1ULL << regRB)) != 0)
+			+ ( Instruct.Sig == Inst::S_LDTMU0 || Instruct.Sig == Inst::S_LDTMU1
+				|| Instruct.Sig == Inst::S_LOADCV || Instruct.Sig == Inst::S_LOADAM
+				|| (Instruct.Sig == Inst::S_LDI && (Instruct.LdMode & Inst::L_SEMA)) )
+			+ (regWA == 45 || regWA == 46 || regWB == 45 || regWB == 46 || Instruct.Sig == Inst::S_LOADC || Instruct.Sig == Inst::S_LDCEND) ) > 1 )
+			Message(At, "More than one access to TMU, TLB or mutex/semaphore within one instruction.");
 
 		// Update last used fields
 		st.LastRreg[0][regRA] = At;
@@ -187,7 +205,7 @@ void Validator::Validate(const vector<uint64_t>& instructions)
 {
 	Done.clear();
 	Done.resize(instructions.size());
-	WorkItems.emplace_back();
+	WorkItems.emplace_back(new state);
 	while (!WorkItems.empty())
 	{	unique_ptr<state> item = move(WorkItems.back());
 		WorkItems.pop_back();
