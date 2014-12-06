@@ -61,7 +61,6 @@ class Parser
 	{	char        Name[16];
 		reg_t       Value;
 	}             regMap[];
-	static const reg_t regNOP;
 	class opAddMul
 	{	int8_t      Op;      ///< ADD or MUL ALU opcode, bit 7 set: MUL ALU
 	 public:

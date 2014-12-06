@@ -396,7 +396,7 @@ Inst::mux Parser::muxReg(reg_t reg)
 			return Inst::X_RB;
 		}
 	}
-	Fail("Access to register conflicts with another access to the same register file.");
+	Fail("Read access to register conflicts with another access to the same register file.");
 }
 
 uint8_t Parser::getSmallImmediate(uint32_t i)
