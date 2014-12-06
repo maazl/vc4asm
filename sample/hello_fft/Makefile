@@ -18,7 +18,7 @@ B = hello_fft.bin
 F = -lrt -lm -o $(B)
 
 hex/shader_%.hex : qasm/gpu_fft_%.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc
-	../../bin/vc4asm -c $@ ../../share/vc4.qinc $<
+	../../bin/vc4asm -V -c $@ ../../share/vc4.qinc $<
 
 $(B):	$(H) $(C)
 	$(CC) $(C) $(F)

@@ -117,8 +117,9 @@ mov rb_vdw_32, vdw_setup_0(32, 16, dma_h32(32,0))
 ##############################################################################
 # Load twiddle factors
 
-load_tw rb_0x80,         0, TW_SHARED, unif
-load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
+shl     r2, elem_num, 3
+load_tw r2, rb_0x80,         0, TW_SHARED, unif
+load_tw r2, rb_0x80, TW_SHARED, TW_UNIQUE, unif
 
 ##############################################################################
 # Instance

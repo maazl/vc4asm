@@ -118,9 +118,10 @@ mov rx_0x00FF,  0x00FF
 ##############################################################################
 # Load twiddle factors
 
-mov r3, 0x80
-load_tw r3,         0, TW_SHARED, unif
-load_tw r3, TW_SHARED, TW_UNIQUE, unif
+shl     r2, elem_num, 3
+mov     r3, 0x80
+load_tw r2, r3,         0, TW_SHARED, unif
+load_tw r2, r3, TW_SHARED, TW_UNIQUE, unif
 
 ##############################################################################
 # Instance

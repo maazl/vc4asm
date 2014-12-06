@@ -88,7 +88,6 @@
 .set rx_0x33333333,     ra30
 .set rx_0x0F0F0F0F,     ra31
 .set rx_0x00FF00FF,     rb24
-.set rx_0x0000FFFF,     rb25
 
 .set rb_0x10,           rb26
 .set rb_0x40,           rb27
@@ -113,7 +112,6 @@ mov rx_0x55555555, 0x55555555
 mov rx_0x33333333, 0x33333333
 mov rx_0x0F0F0F0F, 0x0F0F0F0F
 mov rx_0x00FF00FF, 0x00FF00FF
-mov rx_0x0000FFFF, 0x0000FFFF
 
 mov ra_vdw_16, vdw_setup_0(16, 16, dma_h32( 0,0))
 mov rb_vdw_16, vdw_setup_0(16, 16, dma_h32(32,0))
@@ -123,8 +121,9 @@ mov rb_vdw_32, vdw_setup_0(32, 16, dma_h32(32,0))
 ##############################################################################
 # Load twiddle factors
 
-load_tw rb_0x80,         0, TW_SHARED, unif
-load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
+shl     r2, elem_num, 3
+load_tw r2, rb_0x80,         0, TW_SHARED, unif
+load_tw r2, rb_0x80, TW_SHARED, TW_UNIQUE, unif
 
 ##############################################################################
 # Instance
@@ -179,7 +178,7 @@ body_rx_sync_slave
     bit_rev 2,       rx_0x33333333
     bit_rev 4,       rx_0x0F0F0F0F
     bit_rev 8,       rx_0x00FF00FF
-    bit_rev rb_0x10, rx_0x0000FFFF
+    ror r0, r0,      rb_0x10
 
     shr r0, r0, 12          # r0 = re = {idx[0:STAGES-1], 1'b0, 2'b0}
     add r1, r0, 4           # r1 = im = {idx[0:STAGES-1], 1'b1, 2'b0}
