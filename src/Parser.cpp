@@ -277,7 +277,7 @@ exprValue Parser::ParseExpression()
 				const regEntry* rp = binary_search(regMap, Token.c_str());
 				if (rp)
 				{	eval.PushValue(rp->Value);
-					break;;
+					break;
 				}
 			}
 			// Try label prefix
@@ -469,12 +469,13 @@ void Parser::addPack(int mode, bool mul)
 		return Error("Only on .pack per instruction, please.");
 	if (Instruct.Sig != Inst::S_LDI && Instruct.Unpack != Inst::U_32 && Instruct.PM != mul)
 		return Error(".pack conflicts with .unpack instruction of ADD ALU.");
+	/* TODO: MUL ALU pack modes, cannot activate until we know the target
 	if (mul)
 	{	if (mode < Inst::P_8abcdS && mode != Inst::P_32)
 			return Error("MUL ALU does not support pack mode.");
 		mode &= 7;
 		Instruct.PM = true;
-	}
+	}*/
 	Instruct.Pack = (Inst::pack)mode;
 }
 
@@ -527,7 +528,7 @@ void Parser::doInstrExt(bool mul)
 {
 	while (NextToken() == DOT)
 	{	if (NextToken() != WORD)
-		Fail("Expected instruction extension after dot.");
+			Fail("Expected instruction extension after dot.");
 
 		const opExtEntry* ep = binary_search(extMap, Token.c_str());
 		if (ep == NULL)

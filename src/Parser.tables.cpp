@@ -757,8 +757,6 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "32s",            &Parser::addPack,   Inst::P_32S,    E_DST }
 ,	{ "8abcd",          &Parser::addPack,   Inst::P_8abcd,  E_DST }
 ,	{ "8abcds",         &Parser::addPack,   Inst::P_8abcdS, E_DST }
-,	{ "8ddupe",         &Parser::addPack,   Inst::P_8abcd,  E_DST }
-,	{ "8ddupeclamp",    &Parser::addPack,   Inst::P_8abcdS, E_DST }
 ,	{ "8a",             &Parser::addPack,   Inst::P_8a,     E_DST }
 ,	{ "8a",             &Parser::addUnpack, Inst::U_8a,     E_SRC }
 ,	{ "8aclamp",        &Parser::addPack,   Inst::P_8aS,    E_DST }
@@ -774,15 +772,11 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "8d",             &Parser::addPack,   Inst::P_8d,     E_DST }
 ,	{ "8d",             &Parser::addUnpack, Inst::U_8d,     E_SRC }
 ,	{ "8dclamp",        &Parser::addPack,   Inst::P_8dS,    E_DST }
+,	{ "8ddupe",         &Parser::addPack,   Inst::P_8abcd,  E_DST }
 ,	{ "8ddupe",         &Parser::addUnpack, Inst::U_8dr,    E_SRC }
+,	{ "8ddupeclamp",    &Parser::addPack,   Inst::P_8abcdS, E_DST }
 ,	{ "8dr",            &Parser::addUnpack, Inst::U_8dr,    E_SRC }
 ,	{ "8ds",            &Parser::addPack,   Inst::P_8dS,    E_DST }
-,	{ "16a",            &Parser::addPack,   Inst::P_16a,    E_DST }
-,	{ "16aclamp",       &Parser::addPack,   Inst::P_16aS,   E_DST }
-,	{ "16as",           &Parser::addPack,   Inst::P_16aS,   E_DST }
-,	{ "16b",            &Parser::addPack,   Inst::P_16b,    E_DST }
-,	{ "16bclamp",       &Parser::addPack,   Inst::P_16bS,   E_DST }
-,	{ "16bs",           &Parser::addPack,   Inst::P_16bS,   E_DST }
 ,	{ "allc",           &Parser::addCond,   Inst::B_ALLC,   E_OP }
 ,	{ "allcc",          &Parser::addCond,   Inst::B_ALLNC,  E_OP }
 ,	{ "allcs",          &Parser::addCond,   Inst::B_ALLC,   E_OP }
@@ -820,11 +814,9 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "pack32",         &Parser::addPack,   Inst::P_32,     E_DSTOP } // NOP
 ,	{ "pack32clamp",    &Parser::addPack,   Inst::P_32S,    E_DSTOP }
 ,	{ "pack32s",        &Parser::addPack,   Inst::P_32S,    E_DSTOP }
+,	{ "pack8a",         &Parser::addPack,   Inst::P_8a,     E_DSTOP }
 ,	{ "pack8abcd",      &Parser::addPack,   Inst::P_8abcd,  E_DSTOP }
 ,	{ "pack8abcds",     &Parser::addPack,   Inst::P_8abcdS, E_DSTOP }
-,	{ "pack8ddupe",     &Parser::addPack,   Inst::P_8abcd,  E_DSTOP }
-,	{ "pack8ddupeclamp",&Parser::addPack,   Inst::P_8abcdS, E_DSTOP }
-,	{ "pack8a",         &Parser::addPack,   Inst::P_8a,     E_DSTOP }
 ,	{ "pack8aclamp",    &Parser::addPack,   Inst::P_8aS,    E_DSTOP }
 ,	{ "pack8as",        &Parser::addPack,   Inst::P_8aS,    E_DSTOP }
 ,	{ "pack8b",         &Parser::addPack,   Inst::P_8b,     E_DSTOP }
@@ -835,18 +827,20 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "pack8cs",        &Parser::addPack,   Inst::P_8cS,    E_DSTOP }
 ,	{ "pack8d",         &Parser::addPack,   Inst::P_8d,     E_DSTOP }
 ,	{ "pack8dclamp",    &Parser::addPack,   Inst::P_8dS,    E_DSTOP }
+,	{ "pack8ddupe",     &Parser::addPack,   Inst::P_8abcd,  E_DSTOP }
+,	{ "pack8ddupeclamp",&Parser::addPack,   Inst::P_8abcdS, E_DSTOP }
 ,	{ "pack8ds",        &Parser::addPack,   Inst::P_8dS,    E_DSTOP }
 ,	{ "rot",            &Parser::addRot,    0,              E_DSTOP }
 ,	{ "setf",           &Parser::addSetF,   0,              E_OP }
 ,	{ "unpack16a",      &Parser::addUnpack, Inst::U_16a,    E_SRCOP }
 ,	{ "unpack16b",      &Parser::addUnpack, Inst::U_16b,    E_SRCOP }
 ,	{ "unpack32",       &Parser::addUnpack, Inst::U_32,     E_SRCOP } // NOP
-,	{ "unpack8ddupe",   &Parser::addUnpack, Inst::U_8dr,    E_SRCOP }
-,	{ "unpack8dr",      &Parser::addUnpack, Inst::U_8dr,    E_SRCOP }
 ,	{ "unpack8a",       &Parser::addUnpack, Inst::U_8a,     E_SRCOP }
 ,	{ "unpack8b",       &Parser::addUnpack, Inst::U_8b,     E_SRCOP }
 ,	{ "unpack8c",       &Parser::addUnpack, Inst::U_8c,     E_SRCOP }
 ,	{ "unpack8d",       &Parser::addUnpack, Inst::U_8d,     E_SRCOP }
+,	{ "unpack8ddupe",   &Parser::addUnpack, Inst::U_8dr,    E_SRCOP }
+,	{ "unpack8dr",      &Parser::addUnpack, Inst::U_8dr,    E_SRCOP }
 };
 
 const Parser::opEntry<8> Parser::directiveMap[] =
