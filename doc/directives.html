@@ -9,13 +9,14 @@
   </head>
   <body>
     <h1>VC4ASM - Assembler directives</h1>
-    <p><a href="index.html">&uarr; Top</a>, <tt><a href="#.const">.const</a> <a
-          href="#.constlc">.constlc</a> <a href="#.else">.else</a> <a href="#.endif">.endif</a>
+    <p><a href="index.html">&uarr; Top</a>, <a href="#.assert"><tt>.assert</tt></a>
+      <tt><a href="#.const">.const</a> <a href="#.constlc">.constlc</a></tt><tt><tt>
+          <a href="#.else">.else</a></tt> <a href="#.elseif">.elseif</a> <a href="#.endif">.endif</a>
         <a href="#.endm">.endm</a> <a href="#.endr">.endr</a> <a href="#.equ">.equ</a>
         <a href="#.func">.func</a> <a href="#.if">.if</a> <a href="#.include">.include</a>
         <a href="#.macro">.macro</a> <a href="#.rep">.rep</a> <a href="#.set">.set</a>
         <a href="#.setlc">.setlc</a> <a href="#.unset">.unset</a></tt><tt><tt>
-        </tt> <a href="#.unsetlc">.unsetlc</a><a href="#operator"></a></tt></p>
+        </tt> <a href="#.unsetlc">.unsetlc</a></tt></p>
     <h2><a id=".const" name=".const"></a><a id=".set" name=".set"></a><tt>.const
         .set .lconst .lset</tt> - define a constant</h2>
     <pre>.const <i>identifier</i>, <i>expression</i>
@@ -42,7 +43,7 @@
     <pre>.set ra_link_0, ra0<var></var></pre>
     <h2><a id=".unset" name=".unset"></a><tt>.unset .lunset</tt> - revoke a
       constant definition</h2>
-    <pre>.unset <i>identifier<br></i>.lunset <i>identifier</i></pre>
+    <pre>.unset <i>identifier</i>.lunset <i>identifier</i></pre>
     <dl>
       <dt><var><tt>identifier</tt></var></dt>
       <dd>The assignment of this identifier is undone. This normally reverts the
@@ -110,13 +111,21 @@
     <h3> Example</h3>
     <p>Acquire all 15 QPU semaphores.</p>
     <pre>.rep i 15<br>    sacq i<br>.endr</pre>
-    <h2><a id=".if" name=".if"></a><a id=".else" name=".else"></a><a id=".endif"
-        name=".endif"></a><tt>.if</tt> - conditional compile</h2>
-    <pre>.if <var>condition<br>    your code</var><br><var>    </var>...<br>.else<br>    <var>alternate code</var><br><var>    </var>...<br>.endif    </pre>
+    <h2><a name=".if"></a><a name=".else"></a><a name=".elseif"></a><a name=".endif"></a><tt>.if</tt>
+      - conditional compile</h2>
+    <pre>.if <var>condition<br>    your code</var><br><var>    </var>...<br>.elseif <var>condition<br>    another code</var><br><var>    </var>...<br>.else<br>    <var>alternate code</var><br><var>    </var>...<br>.endif    </pre>
     <dl>
       <dt><tt><var>condition</var></tt></dt>
-      <dd>Expression to check. The expression must be of type integer or float
-        and is checked to be non-zero.</dd>
+      <dd>Expression to check. The expression must be constant and of type
+        integer or float and is checked to be non-zero.</dd>
+    </dl>
+    <h2><a id=".assert" name=".assert"></a><tt>.assert</tt> - check for static
+      condition</h2>
+    <pre>.assert <var>condition</var></pre>
+    <dl>
+      <dt><tt><var>condition</var></tt></dt>
+      <dd>Expression to check. The expression must be constant and of type
+        integer or float and is checked to be non-zero.</dd>
     </dl>
     <h2><a id=".include" name=".include"></a><tt>.include</tt> - include another
       file</h2>
