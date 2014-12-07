@@ -22,7 +22,7 @@ H2D = gpu_fft.h gpu_fft_trans.h hello_fft_2d_bitmap.h
 
 F = -lrt -lm
 
-hex/shader_%.hex : qasm/gpu_fft_%.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc
+hex/shader_%.hex : qasm/gpu_fft_%.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc
 	../../bin/vc4asm -V -c $@ ../../share/vc4.qinc $<
 
 hello_fft.bin:	$(S) $(C1D) $(H1D)

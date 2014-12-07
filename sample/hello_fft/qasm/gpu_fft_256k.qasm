@@ -88,7 +88,6 @@
 .set rx_0x33333333,     ra30
 .set rx_0x0F0F0F0F,     ra31
 .set rx_0x00FF00FF,     rb24
-.set rx_0x0000FFFF,     rb25
 
 .set rb_0x10,           rb26
 .set rb_0x40,           rb27
@@ -113,7 +112,6 @@ mov rx_0x55555555, 0x55555555
 mov rx_0x33333333, 0x33333333
 mov rx_0x0F0F0F0F, 0x0F0F0F0F
 mov rx_0x00FF00FF, 0x00FF00FF
-mov rx_0x0000FFFF, 0x0000FFFF
 
 mov ra_vdw_16, vdw_setup_0( 1, 16, dma_h32( 0,0))
 mov rb_vdw_16, vdw_setup_0( 1, 16, dma_h32(32,0))

@@ -37,11 +37,11 @@
 .macro read_rev, stride
     add ra_load_idx, ra_load_idx, stride; mov r0, ra_load_idx
 
-    bit_rev 1,       rx_0x55555555  # 16 SIMD
-    bit_rev 2,       rx_0x33333333
-    bit_rev 4,       rx_0x0F0F0F0F
-    bit_rev 8,       rx_0x00FF00FF
-    bit_rev rb_0x10, rx_0x0000FFFF
+    bit_rev 1,  rx_0x55555555  # 16 SIMD
+    bit_rev 2,  rx_0x33333333
+    bit_rev 4,  rx_0x0F0F0F0F
+    bit_rev 8,  rx_0x00FF00FF
+    ror r0, r0, rb_0x10
 
     shr r0, r0, 32-STAGES-3 # r0 = re = {idx[0:STAGES-1], 1'b0, 2'b0}
     add r1, r0, 4           # r1 = im = {idx[0:STAGES-1], 1'b1, 2'b0}
@@ -64,11 +64,10 @@
         mov -, srel(i+1) # Master releases slave
     .endr
 
-    mov r0, arg_vdw
+    mov r0, arg_vdw; mov r3, PASS16_STRIDE;
     add ra_save_ptr, ra_save_ptr, rb_0x40; mov r1, ra_save_ptr
 
     mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0))
-    mov r3, PASS16_STRIDE
 
     .rep i, 16
         add r0, r0, r2; mov vw_setup, r0
