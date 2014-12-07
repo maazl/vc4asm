@@ -66,7 +66,7 @@ static void file_load_x32(const char *filename, vector<uint64_t>& memory)
 		return;
 	}
 	uint32_t value1, value2;
-	while (fscanf(f, "%x,", &value1) == 1)
+	while ((fscanf(f, "%*[ \t]"), fscanf(f, "//%*[^\n]"), fscanf(f, "%x,", &value1)) == 1)
 	{	if (fscanf(f, "%x,", &value2) != 1)
 		{	if (feof(f))
 			{	fprintf(stderr, "File %s must contain an even number of 32 bit words.\n", filename);
@@ -94,7 +94,7 @@ static void file_load_x64(const char *filename, vector<uint64_t>& memory)
 		return;
 	}
 	uint64_t value;
-	while (fscanf(f, "%Lx,", &value) == 1)
+	while ((fscanf(f, "%*[ \t]"), fscanf(f, "//%*[^\n]"), fscanf(f, "%Lx,", &value)) == 1)
 		memory.push_back(value);
 	if (!feof(f))
 	{	char buf[10];
