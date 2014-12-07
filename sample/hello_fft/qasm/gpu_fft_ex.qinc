@@ -64,20 +64,19 @@
         mov -, srel(i+1) # Master releases slave
     .endr
 
-    mov r0, arg_vdw; mov r3, PASS16_STRIDE;
     add ra_save_ptr, ra_save_ptr, rb_0x40; mov r1, ra_save_ptr
-
-    mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0))
+    # (MM) Optimized: better use of both ALUs
+    mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0)); mov r0, arg_vdw
+    mov r3, PASS16_STRIDE
 
     .rep i, 16
         add r0, r0, r2; mov vw_setup, r0
+        # (MM) Optimized: scheduling of branch instruction
+        .if i==14
+            bra -, ra_link_1
+        .endif
         add r1, r1, r3; mov vw_addr,  r1
     .endr
-
-    bra -, ra_link_1
-    nop
-    nop
-    nop
 .endm
 .endif
 
@@ -92,20 +91,18 @@
         mov -, srel(i+1) # Master releases slave
     .endr
 
-    mov r0, ra_vdw_32
     add ra_save_ptr, ra_save_ptr, rb_0x40; mov r1, ra_save_ptr
-
-    mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0))
+    # (MM) Optimized: better use of both ALUs
+    mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0)); mov r0, ra_vdw_32
     mov r3, PASS32_STRIDE
 
     .rep i, 32
         add r0, r0, r2; mov vw_setup, r0
+        # (MM) Optimized: scheduling of branch instruction
+        .if i == 30
+            bra -, ra_link_1
+        .endif
         add r1, r1, r3; mov vw_addr,  r1
     .endr
-
-    bra -, ra_link_1
-    nop
-    nop
-    nop
 .endm
 .endif
