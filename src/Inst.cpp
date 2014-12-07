@@ -150,17 +150,20 @@ void Inst::reset()
 }
 
 void Inst::optimize()
-{	switch (Sig)
+{	value_t val;
+	switch (Sig)
 	{case S_SMI:
 		if (OpM == M_NOP && MuxAA == X_RB && MuxAB == X_RB && SImmd < 48)
 		{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
-			value_t val = SMIValue();
+			val = SMIValue();
 			if (eval(OpA, val, val))
-			{	Sig = S_LDI;
-				LdMode = L_LDI;
-				Immd = val;
-				goto ldi;
-			}
+				goto mkLDI;
+		}
+		if (OpA == A_NOP && MuxMA == X_RB && MuxMB == X_RB && SImmd < 48)
+		{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
+			val = SMIValue();
+			if (eval(OpM, val, val))
+				goto mkLDI;
 		}
 	 default:
 		switch (OpA)
@@ -175,21 +178,31 @@ void Inst::optimize()
 		 case A_XOR:
 		 case A_SUB:
 			if (OpM == M_NOP && MuxAA == MuxAB)
-			{	// convert to LDI ..., 0
-				Sig = S_LDI;
-				LdMode = L_LDI;
-				Immd.uValue = 0;
-			}
+				goto mkLDI0; // convert to LDI ..., 0
 			break;
 		}
-		if (OpM == M_NOP || WAddrM == R_NOP)
-		{	CondM = C_NEVER;
+		switch (OpM)
+		{default:
+			if (WAddrM != R_NOP || (SF && (OpA == A_NOP || CondA == C_NEVER)))
+				break;
+		 case M_NOP:
+			CondM = C_NEVER;
 			//MuxMA = X_R0;
 			//MuxMB = X_R0;
+			break;
+		 case M_V8SUBS:
+			if (OpA == A_NOP && MuxMA == MuxMB)
+				goto mkLDI0; // convert to LDI ..., 0
+			break;
 		}
 		break;
+	 mkLDI0:
+		val.uValue = 0;
+	 mkLDI:
+		Sig = S_LDI;
+		LdMode = L_LDI;
+		Immd = val;
 	 case S_LDI: // ldi, sema
-	 ldi:
 		if (WAddrA == R_NOP && !SF)
 			CondA = C_NEVER;
 		if (WAddrM == R_NOP)

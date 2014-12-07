@@ -34,7 +34,7 @@ struct Inst
 	,	S_BRANCH  ///< Branch Instruction
 	};
 	/// ADD ALU operator
-	enum opadd
+	enum opadd : uint8_t
 	{	A_NOP
 	,	A_FADD    ///< rd = ra + rb         (floating point addition)
 	,	A_FSUB    ///< rd = ra - rb         (floating point subtraction)
@@ -61,7 +61,7 @@ struct Inst
 	,	A_V8SUBS  ///< rd[i] = sat8(ra[i]-rb[i]), i = 0..3 / a..d
 	};
 	/// MUL ALU operator
-	enum opmul
+	enum opmul : uint8_t
 	{	M_NOP
 	,	M_FMUL    ///< rd = ra * rb
 	,	M_MUL24
@@ -72,7 +72,7 @@ struct Inst
 	,	M_V8SUBS  ///< rd[i] = sat8(ra[i] - rb[i]), i = 0..3 / a..d
 	};
 	/// Branch condition
-	enum condb
+	enum condb : uint8_t
 	{	B_ALLZ    ///< all zero set
 	,	B_ALLNZ   ///< all zero clear
 	,	B_ANYZ    ///< any zero set
@@ -88,7 +88,7 @@ struct Inst
 	,	B_AL = 15 ///< always (default)
 	};
 	/// LAU write condition
-	enum conda
+	enum conda : uint8_t
 	{	C_NEVER   ///< Never (NB gates ALU – useful for LDI instructions to save ALU power)
 	,	C_AL      ///< Always (default)
 	,	C_ZS      ///< zero set
@@ -99,7 +99,7 @@ struct Inst
 	,	C_CC      ///< carry clear
 	};
 	/// Pack mode
-	enum pack
+	enum pack : uint8_t
 	{	P_32
 	,	P_16a
 	,	P_16b
@@ -118,7 +118,7 @@ struct Inst
 	,	P_8dS
 	};
 	/// Unpack mode
-	enum unpack
+	enum unpack : uint8_t
 	{	U_32
 	,	U_16a
 	,	U_16b
@@ -129,7 +129,7 @@ struct Inst
 	,	U_8d
 	};
 	/// ALU input multiplexer values
-	enum mux
+	enum mux : uint8_t
 	{	X_R0
 	,	X_R1
 	,	X_R2
@@ -140,11 +140,11 @@ struct Inst
 	,	X_RB     ///< Register file B
 	};
 	/// Special named registers
-	enum reg
+	enum reg : uint8_t
 	{	R_NOP = 39
 	};
 	/// ldi variant
-	enum ldmode
+	enum ldmode : uint8_t
 	{	L_LDI = 0///< load
 	,	L_PES = 1///< load immediate per element signed
 	,	L_PEU = 3///< load immediate per element unsigned
