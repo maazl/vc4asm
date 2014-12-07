@@ -1,2 +1,2 @@
-../bin/vc4dis -x shader_1k.hex -v >shader_1k.dis
-../bin/vc4asm -c shader_1k.loop shader_1k.dis 2>log
+../bin/vc4dis -x shader_512.hex -v >shader_512.dis
+../bin/vc4asm -c shader_512.loop shader_512.dis 2>log
