@@ -1026,7 +1026,7 @@ void Parser::parseIF(int)
 	if (doPreprocessor(PP_MACRO))
 		return;
 
-	AtIf.emplace_back(Context.back()->Line, 4 * isDisabled() | doCondition());
+	AtIf.emplace_back(Context.back()->Line, isDisabled() ? 4 : doCondition());
 }
 
 void Parser::parseELSEIF(int)
