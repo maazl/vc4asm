@@ -1,6 +1,4 @@
-CC = arm-linux-gnueabihf-gcc
-
-H = hex/shader_256.hex \
+S = hex/shader_256.hex \
     hex/shader_512.hex \
     hex/shader_1k.hex \
     hex/shader_2k.hex \
@@ -9,19 +7,29 @@ H = hex/shader_256.hex \
     hex/shader_16k.hex \
     hex/shader_32k.hex \
     hex/shader_64k.hex \
-    hex/shader_128k.hex
+    hex/shader_128k.hex \
+    hex/shader_256k.hex \
+    hex/shader_512k.hex \
+    hex/shader_1024k.hex
 
-C = hello_fft.c mailbox.c gpu_fft.c gpu_fft_twiddles.c gpu_fft_shaders.c
+C = mailbox.c gpu_fft.c gpu_fft_base.c gpu_fft_twiddles.c gpu_fft_shaders.c
 
-B = hello_fft.bin
+C1D = $(C) hello_fft.c
+C2D = $(C) hello_fft_2d.c gpu_fft_trans.c
 
-F = -lrt -lm -o $(B)
+H1D = gpu_fft.h
+H2D = gpu_fft.h gpu_fft_trans.h hello_fft_2d_bitmap.h
+
+F = -lrt -lm
 
 hex/shader_%.hex : qasm/gpu_fft_%.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc
 	../../bin/vc4asm -V -c $@ ../../share/vc4.qinc $<
 
-$(B):	$(H) $(C)
-	$(CC) $(C) $(F)
+hello_fft.bin:	$(S) $(C1D) $(H1D)
+	gcc -o hello_fft.bin $(F) $(C1D)
+
+hello_fft_2d.bin:	$(S) hex/shader_trans.hex $(C2D) $(H2D)
+	gcc -o hello_fft_2d.bin $(F) $(C2D)
 
 clean:
-	rm -f $(B) $(H)
+	rm -f *.bin hex/*.hex

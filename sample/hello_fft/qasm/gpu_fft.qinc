@@ -1,4 +1,3 @@
-#
 # BCM2835 "GPU_FFT"
 #
 # Copyright (c) 2013, Andrew Holme.
@@ -25,7 +24,6 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
 
 ##############################################################################
 # Bit-rotated write
@@ -37,29 +35,23 @@
 ##############################################################################
 # Load twiddle factors
 
-.macro load_tw, elem_8, stride, off, num, addr
-    add r0, elem_8, addr;        mov r1, addr
+.macro load_tw, stride, off, num, addr
+    mov r0, addr
+    add r1, r0, 4
 
-	# fill fifo
+    shl r2, elem_num, 3
+
     .rep i, num
-        add r0,  r0, stride; mov t0s, r0
+        add t0s, r0, r2
+        add r0,  r0, stride; ldtmu0
+        mov ra_tw_re+off+i, r4
     .endr
-    # read fifo
-    add r1, r1, r2;             ldtmu0
-    .rep i, num-1
-        mov ra_tw_re+off+i, r4; ldtmu0
-    .endr
-    add r1, r1, 4;           mov ra_tw_re+off+num-1, r4
-    # fill fifo
+
     .rep i, num
-        add r1,  r1, stride; mov t0s, r1
+        add t0s, r1, r2
+        add r1,  r1, stride; ldtmu0
+        mov rb_tw_im+off+i, r4
     .endr
-    # read fifo
-    ldtmu0
-    .rep i, num-1
-        mov rb_tw_im+off+i, r4; ldtmu0
-    .endr
-    mov rb_tw_im+off+num-1, r4
 .endm
 
 ##############################################################################
@@ -153,14 +145,8 @@
 ##############################################################################
 
 .macro body_ra_save_32
-    # write_vpm_32
-    mov vw_setup, ra_vpm_lo
-    fadd vpm, ra_32_re, r0
-    fadd vpm, rb_32_im, r1
-    mov vw_setup, ra_vpm_hi
-    fsub vpm, ra_32_re, r0
-    fsub vpm, rb_32_im, r1
-    
+    write_vpm_32
+
     mov -, vw_wait
 
     .rep i, 7
@@ -178,16 +164,13 @@
 ##############################################################################
 
 .macro body_rx_save_slave_32
-    # write_vpm_32
-    mov vw_setup, ra_vpm_lo
-    mov vr_setup, ra_vpm_lo
-    fadd vpm, ra_32_re, r0
-    fadd vpm, rb_32_im, r1
-    mov vw_setup, ra_vpm_hi
+    write_vpm_32
+
     bra -, ra_sync
+
+    nop
+    mov vr_setup, ra_vpm_lo
     mov -, vpm
-    fsub vpm, ra_32_re, r0
-    fsub vpm, rb_32_im, r1
 .endm
 
 ##############################################################################
@@ -226,28 +209,16 @@
     .rep i, 8
         brr -, r:2f
         mov -, sacq(i) # Slave waits for master
-        mov vw_setup, rb_vpm
-        fadd vpm, ra_64+0, rb_64+0
+        nop
+        nop
     .endr
 :2
-    # write_vpm_64
-    # mov vw_setup, rb_vpm
-    # fadd vpm, ra_64+0, rb_64+0
-    fadd vpm, ra_64+1, rb_64+1
-
-    mov vw_setup, rb_vpm_16
-    fadd vpm, ra_64+2, rb_64+2
-    fadd vpm, ra_64+3, rb_64+3
-
-    mov vw_setup, rb_vpm_32
-    fsub vpm, ra_64+0, rb_64+0
-    fsub vpm, ra_64+1, rb_64+1
+    write_vpm_64
 
     brr -, ra_temp
-
-    mov vw_setup, rb_vpm_48
-    fsub vpm, ra_64+2, rb_64+2
-    fsub vpm, ra_64+3, rb_64+3
+    nop
+    nop
+    nop
 
     .rep i, 8
         bra -, ra_link_1
@@ -277,19 +248,19 @@
     .rep i, 7
         bra -, ra_link_1
         mov -, srel(i+9) # Slave releases master
-        nop
         mov -, sacq(i+1) # Slave waits for master
+        nop
     .endr
 .endm
 
 ##############################################################################
 
 .macro fft_twiddles_32
-    nop;             fmul r3, r0, ra_tw_re+TW32_ACTIVE # rr
-    nop;             fmul r2, r1, rb_tw_im+TW32_ACTIVE # ii
-    fsub r2, r3, r2; fmul r3, r1, ra_tw_re+TW32_ACTIVE # ir
-    mov  r0, r2;     fmul r1, r0, rb_tw_im+TW32_ACTIVE # ri
-    fadd r1, r1, r3
+    nop;                  fmul ra_temp, r0, ra_tw_re+TW32_ACTIVE # rr
+    nop;                  fmul r2,      r1, rb_tw_im+TW32_ACTIVE # ii
+    nop;                  fmul r3,      r1, ra_tw_re+TW32_ACTIVE # ir
+    fsub r0, ra_temp, r2; fmul r1,      r0, rb_tw_im+TW32_ACTIVE # ri
+    fadd r1, r1,      r3
 .endm
 
 ##############################################################################
@@ -317,19 +288,9 @@
 
 .macro bit_rev, shift, mask
     and r1, r0, mask
-    .if shift == 2
-    shr r0, r0, shift; v8adds r1, r1, r1 # can't overflow
-    and r0, r0, mask;  v8adds r1, r1, r1 # can't overflow
-    .endif
-    .if shift == 1
-    shr r0, r0, shift
-    and r0, r0, mask;  v8adds r1, r1, r1 # can't overflow
-    .endif
-    .if shift != 1 && shift != 2
     shr r0, r0, shift
     and r0, r0, mask
     shl r1, r1, shift
-    .endif
     or  r0, r0, r1
 .endm
 
@@ -377,10 +338,13 @@
 ##############################################################################
 
 .macro read_lin, stride
-    shl r0, ra_load_idx, 3;      mov r1, ra_load_idx
-    add r0, r0, ra_addr_x
-    add ra_load_idx, r1, stride; mov t0s, r0
-    add t0s, r0, 4
+    add ra_load_idx, ra_load_idx, stride; mov r0, ra_load_idx
+
+    shl r0, r0, 3
+    add r1, r0, 4
+
+    add t0s, ra_addr_x, r0
+    add t0s, ra_addr_x, r1
 .endm
 
 .macro load_lin, stride, call
@@ -406,21 +370,25 @@
 # Rotate twiddles
 
 .macro next_twiddles_32, tw32
-    mov r2, ra_tw_re+TW32_ACTIVE; fmul r0, ra_tw_re+TW32_ACTIVE, rb_tw_im+tw32 # b.cos
-    mov r3, rb_tw_im+TW32_ACTIVE; fmul r1, rb_tw_im+TW32_ACTIVE, ra_tw_re+tw32 # a.sin
-    fsub r1, r1, r0;              fmul r0, r3, rb_tw_im+tw32                   # b.sin
-    fsub rb_tw_im+TW32_ACTIVE, rb_tw_im+TW32_ACTIVE, r1; fmul r1, r2, ra_tw_re+tw32 # a.cos
-    fadd r1, r1, r0; 
-    fsub ra_tw_re+TW32_ACTIVE, ra_tw_re+TW32_ACTIVE, r1
+    mov r2, ra_tw_re+TW32_ACTIVE; mov r3, rb_tw_im+TW32_ACTIVE
+    nop;             fmul r0, r2, ra_tw_re+tw32 # a.cos
+    nop;             fmul r1, r2, rb_tw_im+tw32 # b.cos
+    nop;             fmul r2, r3, rb_tw_im+tw32 # b.sin
+    fadd r2, r0, r2; fmul r3, r3, ra_tw_re+tw32 # a.sin
+    fsub r3, r3, r1
+    fsub ra_tw_re+TW32_ACTIVE, ra_tw_re+TW32_ACTIVE, r2
+    fsub rb_tw_im+TW32_ACTIVE, rb_tw_im+TW32_ACTIVE, r3
 .endm
 
 .macro next_twiddles_16, tw16
-    mov r2, ra_tw_re+TW16_ACTIVE+3; fmul r1, ra_tw_re+TW16_ACTIVE+3, rb_tw_im+tw16 # b.cos
-    mov r3, rb_tw_im+TW16_ACTIVE+3; fmul r0, rb_tw_im+TW16_ACTIVE+3, ra_tw_re+tw16 # a.sin
-    fsub r3, r0, r1;                fmul r1, r3, rb_tw_im+tw16                     # b.sin
-    fsub r3, rb_tw_im+TW16_ACTIVE+3, r3; fmul r0, r2, ra_tw_re+tw16                # a.cos
-    fadd r2, r0, r1;
+    mov r2, ra_tw_re+TW16_ACTIVE+3; mov r3, rb_tw_im+TW16_ACTIVE+3
+    nop;             fmul r0, r2, ra_tw_re+tw16 # a.cos
+    nop;             fmul r1, r2, rb_tw_im+tw16 # b.cos
+    nop;             fmul r2, r3, rb_tw_im+tw16 # b.sin
+    fadd r2, r0, r2; fmul r3, r3, ra_tw_re+tw16 # a.sin
+    fsub r3, r3, r1
     fsub r2, ra_tw_re+TW16_ACTIVE+3, r2
+    fsub r3, rb_tw_im+TW16_ACTIVE+3, r3
 
     unpack_twiddles
 .endm
@@ -443,8 +411,9 @@
     mov r2, ra_tw_re+tw16; mov r3, rb_tw_im+tw16
     unpack_twiddles
     mov r0, rb_inst
-    shl r0, r0, m;         mov ra_points, 0
+    shl r0, r0, m
     add ra_load_idx, r0, elem_num
+    mov ra_points, 0
     mov ra_save_ptr, rb_addr_y
 .endm
 
@@ -496,23 +465,28 @@
     loader_16 rb_0x10, mode
     fft_twiddles_32
 
-    fadd r3,       rb_32_im, r1
-    fsub rb_32_im, rb_32_im, r1; fmul r1, r3,       ra_tw_re+TW64_P1_BASE0 # ir 
-    fadd r2,       ra_32_re, r0; fmul r3, r3,       rb_tw_im+TW64_P1_BASE0 # ii
-    fsub ra_32_re, ra_32_re, r0; fmul r0, r2,       rb_tw_im+TW64_P1_BASE0 # ri
-    fadd rb_64+1,  r0,       r1; fmul r2, r2,       ra_tw_re+TW64_P1_BASE0 # rr
-    fsub rb_64+0,  r2,       r3; fmul r0, ra_32_re, rb_tw_im+TW64_P1_BASE1 # ri
-    mov  r3,       rb_32_im;     fmul r1, rb_32_im, ra_tw_re+TW64_P1_BASE1 # ir
+    fsub r3, rb_32_im, r1
+    fsub r2, ra_32_re, r0
+    fadd r1, rb_32_im, r1
+    fadd r0, ra_32_re, r0
+
+    nop;                        fmul rb_32_im, r1, ra_tw_re+TW64_P1_BASE0 # ir
+    nop;                        fmul ra_32_re, r1, rb_tw_im+TW64_P1_BASE0 # ii
+    nop;                        fmul r1,       r0, rb_tw_im+TW64_P1_BASE0 # ri
+    fadd rb_64+1, r1, rb_32_im; fmul r0,       r0, ra_tw_re+TW64_P1_BASE0 # rr
+    fsub rb_64+0, r0, ra_32_re; fmul ra_32_re, r3, rb_tw_im+TW64_P1_BASE1 # ii
+    nop;                        fmul rb_32_im, r3, ra_tw_re+TW64_P1_BASE1 # ir
     bra -, ra_save_64
-    mov  r2,       ra_32_re;     fmul r3, r3,       rb_tw_im+TW64_P1_BASE1 # ii
-    fadd rb_64+3,  r0,       r1; fmul r2, r2,       ra_tw_re+TW64_P1_BASE1 # rr
-    fsub rb_64+2,  r2,       r3;
+    nop;                        fmul r3,       r2, rb_tw_im+TW64_P1_BASE1 # ri
+    fadd rb_64+3, r3, rb_32_im; fmul r2,       r2, ra_tw_re+TW64_P1_BASE1 # rr
+    fsub rb_64+2, r2, ra_32_re
 .endm
 
 ##############################################################################
 
 .macro exit, flag
-    mov interrupt, flag; thrend
+    mov interrupt, flag
+    nop; nop; thrend
     nop
     nop
 .endm

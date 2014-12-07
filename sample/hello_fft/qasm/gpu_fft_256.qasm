@@ -1,4 +1,3 @@
-#
 # BCM2835 "GPU_FFT"
 #
 # Copyright (c) 2013, Andrew Holme.
@@ -25,7 +24,6 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
 
 .set STAGES, 8
 
@@ -100,9 +98,8 @@ mov rb_vdw, vdw_setup_0(16, 16, dma_h32(16,0))
 ##############################################################################
 # Load twiddle factors
 
-shl     r2, elem_num, 3
-load_tw r2, rb_0x80,         0, TW_SHARED, unif
-load_tw r2, rb_0x80, TW_SHARED, TW_UNIQUE, unif
+load_tw rb_0x80,         0, TW_SHARED, unif
+load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 
 ##############################################################################
 # Instance
