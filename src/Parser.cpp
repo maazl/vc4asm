@@ -1010,12 +1010,36 @@ void Parser::parseUNSET(int flags)
 	consts.erase(r);
 }
 
+bool Parser::doCondition()
+{
+	const exprValue& param = ParseExpression();
+	if (param.Type != V_INT)
+		Fail("Conditional expression must be a integer constant, found '%s'.", param.toString().c_str());
+	if (NextToken() != END)
+		Fail("Expected end of line, found '%s'.", Token.c_str());
+	return param.uValue != 0;
+}
+
 void Parser::parseIF(int)
 {
-	if (doPreprocessor())
+	if (doPreprocessor(PP_MACRO))
 		return;
 
-	AtIf.emplace_back(Context.back()->Line, isDisabled() || ParseExpression().uValue == 0);
+	AtIf.emplace_back(Context.back()->Line, 4 * isDisabled() | doCondition());
+}
+
+void Parser::parseELSEIF(int)
+{
+	if (doPreprocessor(PP_MACRO))
+		return;
+
+	if (!AtIf.size())
+		return Error(".elseif without .if");
+
+	if (AtIf.back().State == 0)
+		AtIf.back().State = doCondition();
+	else
+		AtIf.back().State |= 2;
 }
 
 void Parser::parseELSE(int)
@@ -1026,10 +1050,9 @@ void Parser::parseELSE(int)
 	if (!AtIf.size())
 		return Error(".else without .if");
 	if (NextToken() != END)
-		Error("Expected end of line. .%s has no arguments.", Token.c_str());
+		Error("Expected end of line. .else has no arguments.");
 
-	if (AtIf.size() < 2 || !AtIf[AtIf.size()-2].Disabled)
-		AtIf.back().Disabled = !AtIf.back().Disabled;
+	++AtIf.back().State;
 }
 
 void Parser::parseENDIF(int)
@@ -1040,19 +1063,25 @@ void Parser::parseENDIF(int)
 	if (!AtIf.size())
 		return Error(".endif without .if");
 	if (NextToken() != END)
-		Error("Expected end of line. .%s has no arguments.", Token.c_str());
+		Error("Expected end of line. .endif has no arguments.");
 
 	AtIf.pop_back();
 }
 
-bool Parser::isDisabled()
+void Parser::parseASSERT(int)
 {
-	return AtIf.size() != 0 && AtIf.back().Disabled;
+	if (doPreprocessor())
+		return;
+
+	if (!doCondition())
+		Error("Assertion failed.");
 }
 
 void Parser::beginMACRO(int)
 {
-	doPreprocessor(PP_IF);
+	if (doPreprocessor(PP_IF))
+		return;
+
 	if (AtMacro)
 		return Error("Cannot nest macro definitions.\n"
 		     "  In definition of macro starting at %s.",
@@ -1089,7 +1118,9 @@ void Parser::beginMACRO(int)
 
 void Parser::endMACRO(int)
 {
-	doPreprocessor(PP_IF);
+	if (doPreprocessor(PP_IF))
+		return;
+
 	if (!AtMacro)
 		return Error(".endm outside a macro definition.");
 	AtMacro = NULL;

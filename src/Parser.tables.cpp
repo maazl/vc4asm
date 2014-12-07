@@ -303,6 +303,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x00000002,  1, Inst::A_ADD }
 ,	{ 0x00000002, 29, Inst::A_NOT }
 ,	{ 0x00000002,  2, Inst::M_V8MIN }
+,	{ 0x00000002,  1, Inst::M_V8ADDS }
 ,	{ 0x00000003,  3, Inst::A_OR }
 ,	{ 0x00000003, 28, Inst::A_NOT }
 ,	{ 0x00000003,  3, Inst::M_V8MIN }
@@ -319,6 +320,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x00000006,  3, Inst::A_ADD }
 ,	{ 0x00000006, 25, Inst::A_NOT }
 ,	{ 0x00000006,  6, Inst::M_V8MIN }
+,	{ 0x00000006,  3, Inst::M_V8ADDS }
 ,	{ 0x00000007,  7, Inst::A_OR }
 ,	{ 0x00000007, 24, Inst::A_NOT }
 ,	{ 0x00000007,  7, Inst::M_V8MIN }
@@ -328,6 +330,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x00000008, 35, Inst::A_FTOI }
 ,	{ 0x00000008, 23, Inst::A_NOT }
 ,	{ 0x00000008,  8, Inst::M_V8MIN }
+,	{ 0x00000008,  4, Inst::M_V8ADDS }
 ,	{ 0x00000009,  9, Inst::A_OR }
 ,	{ 0x00000009, 22, Inst::A_NOT }
 ,	{ 0x00000009,  9, Inst::M_V8MIN }
@@ -336,6 +339,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x0000000a,  5, Inst::A_ADD }
 ,	{ 0x0000000a, 21, Inst::A_NOT }
 ,	{ 0x0000000a, 10, Inst::M_V8MIN }
+,	{ 0x0000000a,  5, Inst::M_V8ADDS }
 ,	{ 0x0000000b, 11, Inst::A_OR }
 ,	{ 0x0000000b, 20, Inst::A_NOT }
 ,	{ 0x0000000b, 11, Inst::M_V8MIN }
@@ -343,6 +347,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x0000000c,  6, Inst::A_ADD }
 ,	{ 0x0000000c, 19, Inst::A_NOT }
 ,	{ 0x0000000c, 12, Inst::M_V8MIN }
+,	{ 0x0000000c,  6, Inst::M_V8ADDS }
 ,	{ 0x0000000d, 13, Inst::A_OR }
 ,	{ 0x0000000d, 18, Inst::A_NOT }
 ,	{ 0x0000000d, 13, Inst::M_V8MIN }
@@ -350,21 +355,30 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x0000000e,  7, Inst::A_ADD }
 ,	{ 0x0000000e, 17, Inst::A_NOT }
 ,	{ 0x0000000e, 14, Inst::M_V8MIN }
+,	{ 0x0000000e,  7, Inst::M_V8ADDS }
 ,	{ 0x0000000f, 15, Inst::A_OR }
 ,	{ 0x0000000f, 16, Inst::A_NOT }
 ,	{ 0x0000000f, 15, Inst::M_V8MIN }
 ,	{ 0x00000010,  8, Inst::A_ADD } // 16
 ,	{ 0x00000010,  4, Inst::M_MUL24 }
 ,	{ 0x00000010, 36, Inst::A_FTOI }
+,	{ 0x00000010,  8, Inst::M_V8ADDS }
 ,	{ 0x00000012,  9, Inst::A_ADD } // 18
+,	{ 0x00000012,  9, Inst::M_V8ADDS }
 ,	{ 0x00000014, 10, Inst::A_ADD } // 20
+,	{ 0x00000014, 10, Inst::M_V8ADDS }
 ,	{ 0x00000016, 11, Inst::A_ADD } // 22
+,	{ 0x00000016, 11, Inst::M_V8ADDS }
 ,	{ 0x00000018, 12, Inst::A_ADD } // 24
 ,	{ 0x00000018,  3, Inst::A_SHL }
+,	{ 0x00000018, 12, Inst::M_V8ADDS }
 ,	{ 0x00000019,  5, Inst::M_MUL24 } // 25
 ,	{ 0x0000001a, 13, Inst::A_ADD } // 26
+,	{ 0x0000001a, 13, Inst::M_V8ADDS }
 ,	{ 0x0000001c, 14, Inst::A_ADD } // 28
+,	{ 0x0000001c, 14, Inst::M_V8ADDS }
 ,	{ 0x0000001e, 15, Inst::A_ADD } // 30
+,	{ 0x0000001e, 15, Inst::M_V8ADDS }
 ,	{ 0x00000020, 37, Inst::A_FTOI } // 32
 ,	{ 0x00000020,  4, Inst::A_SHL }
 ,	{ 0x00000024,  6, Inst::M_MUL24 } // 36
@@ -631,7 +645,37 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xfffffffe, 30, Inst::M_V8MIN }
 ,	{ 0xffffffff, 31, Inst::A_OR }  // -1
 ,	{ 0xffffffff,  0, Inst::A_NOT }
+,	{ 0xffffffff, 16, Inst::A_V8ADDS }
+,	{ 0xffffffff, 17, Inst::A_V8ADDS }
+,	{ 0xffffffff, 18, Inst::A_V8ADDS }
+,	{ 0xffffffff, 19, Inst::A_V8ADDS }
+,	{ 0xffffffff, 20, Inst::A_V8ADDS }
+,	{ 0xffffffff, 21, Inst::A_V8ADDS }
+,	{ 0xffffffff, 22, Inst::A_V8ADDS }
+,	{ 0xffffffff, 23, Inst::A_V8ADDS }
+,	{ 0xffffffff, 24, Inst::A_V8ADDS }
+,	{ 0xffffffff, 25, Inst::A_V8ADDS }
+,	{ 0xffffffff, 26, Inst::A_V8ADDS }
+,	{ 0xffffffff, 27, Inst::A_V8ADDS }
+,	{ 0xffffffff, 28, Inst::A_V8ADDS }
+,	{ 0xffffffff, 29, Inst::A_V8ADDS }
+,	{ 0xffffffff, 30, Inst::A_V8ADDS }
 ,	{ 0xffffffff, 31, Inst::M_V8MIN }
+,	{ 0xffffffff, 16, Inst::M_V8ADDS }
+,	{ 0xffffffff, 17, Inst::M_V8ADDS }
+,	{ 0xffffffff, 18, Inst::M_V8ADDS }
+,	{ 0xffffffff, 19, Inst::M_V8ADDS }
+,	{ 0xffffffff, 20, Inst::M_V8ADDS }
+,	{ 0xffffffff, 21, Inst::M_V8ADDS }
+,	{ 0xffffffff, 22, Inst::M_V8ADDS }
+,	{ 0xffffffff, 23, Inst::M_V8ADDS }
+,	{ 0xffffffff, 24, Inst::M_V8ADDS }
+,	{ 0xffffffff, 25, Inst::M_V8ADDS }
+,	{ 0xffffffff, 26, Inst::M_V8ADDS }
+,	{ 0xffffffff, 27, Inst::M_V8ADDS }
+,	{ 0xffffffff, 28, Inst::M_V8ADDS }
+,	{ 0xffffffff, 29, Inst::M_V8ADDS }
+,	{ 0xffffffff, 30, Inst::M_V8ADDS }
 ,	{ 0,           0, Inst::A_NOP } // dummy entry for termination
 };
 
@@ -806,8 +850,11 @@ const Parser::opExtEntry Parser::extMap[] =
 };
 
 const Parser::opEntry<8> Parser::directiveMap[] =
-{	{ "const",   &Parser::parseSET,   2 }
+{	{ "assert",  &Parser::parseASSERT }
+,	{ "const",   &Parser::parseSET,   2 }
+,	{ "elif",    &Parser::parseELSEIF }
 ,	{ "else",    &Parser::parseELSE }
+,	{ "elseif",  &Parser::parseELSEIF }
 ,	{ "endif",   &Parser::parseENDIF }
 ,	{ "endm",    &Parser::endMACRO }
 ,	{ "endr",    &Parser::endREP }

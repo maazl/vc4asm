@@ -164,8 +164,8 @@ class Parser
 	typedef unordered_map<string,function> funcs_t;
 	struct ifContext
 	{	unsigned       Line;
-		bool           Disabled;
-		ifContext(unsigned line, bool disabled) : Line(line), Disabled(disabled) {}
+		unsigned       State;       ///< 0 = .if false, 1 = .if true, 2 = .else, 4 = inherited .false
+		ifContext(unsigned line, unsigned state) : Line(line), State(state) {}
 	};
 	typedef vector<ifContext> ifs_t;
 	struct fileContext : public location
@@ -254,10 +254,13 @@ class Parser
 	void             endREP(int);
 	void             parseSET(int flags);
 	void             parseUNSET(int flags);
+	bool             doCondition();
 	void             parseIF(int);
 	void             parseELSE(int);
+	void             parseELSEIF(int);
 	void             parseENDIF(int);
-	bool             isDisabled();
+	bool             isDisabled() { return AtIf.size() != 0 && AtIf.back().State != 1; }
+	void             parseASSERT(int);
 	void             beginMACRO(int);
 	void             endMACRO(int);
 	void             doMACRO(macros_t::const_iterator m);
