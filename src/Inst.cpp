@@ -294,7 +294,7 @@ value_t Inst::SMIValue() const
 { value_t ret;
 	ret.uValue = 0;
 	if (SImmd < 32)
-		ret.iValue = (int8_t)SImmd << 5 >> 5; // signed expand
+		ret.iValue = (int8_t)(SImmd << 3) >> 3; // signed expand
 	else if (SImmd < 48)
 		ret.iValue = ((int32_t)(SImmd ^ 40) << 23) + 0x3b800000;
 	return ret;

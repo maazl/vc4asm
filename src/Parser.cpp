@@ -712,6 +712,7 @@ void Parser::assembleMOV(int mode)
 			mode = Inst::L_PES;
 		break;
 	 case V_INT:
+	 case V_FLOAT:
 		// try small immediate first
 		if (!isLDI && mode < 0)
 		{	for (const smiEntry* si = getSmallImmediateALU(param.uValue); si->Value == param.uValue; ++si)
