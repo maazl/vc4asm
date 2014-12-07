@@ -443,9 +443,8 @@
     mov r2, ra_tw_re+tw16; mov r3, rb_tw_im+tw16
     unpack_twiddles
     mov r0, rb_inst
-    shl r0, r0, m
+    shl r0, r0, m;         mov ra_points, 0
     add ra_load_idx, r0, elem_num
-    mov ra_points, 0
     mov ra_save_ptr, rb_addr_y
 .endm
 
@@ -513,8 +512,7 @@
 ##############################################################################
 
 .macro exit, flag
-    mov interrupt, flag
-    nop; nop; thrend
+    mov interrupt, flag; thrend
     nop
     nop
 .endm
