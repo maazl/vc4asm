@@ -684,7 +684,7 @@ void Parser::assembleMOV(int mode)
 			if (param.rValue.Rotate == 16)
 				Fail("Can only rotate ALU source left by r5.");
 			if (Instruct.Sig == Inst::S_SMI && Instruct.SImmd >= 48)
-				Fail("Vector rotation is already applied to the instruction.");
+				Fail("Vector rotation is already active on this instruction.");
 			doSMI(48 + (-param.rValue.Rotate & 0xf));
 		}
 		if (useMUL)
@@ -716,7 +716,7 @@ void Parser::assembleMOV(int mode)
 		// try small immediate first
 		if (!isLDI && mode < 0)
 		{	for (const smiEntry* si = getSmallImmediateALU(param.uValue); si->Value == param.uValue; ++si)
-			{	if ( !si->OpCode.isMul() ^ useMUL
+			{	if ( (!si->OpCode.isMul() ^ useMUL)
 					&& ( param.uValue == 0 || Instruct.Sig == Inst::S_NONE
 						|| (Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd) ))
 				{	if (param.uValue != 0) // zero value does not require SMI
@@ -743,12 +743,12 @@ void Parser::assembleMOV(int mode)
 		Fail("Load immediate cannot be used with signals.");
 	 case Inst::S_LDI:
 		if (Instruct.Immd.uValue != param.uValue || Instruct.LdMode != mode)
-			Fail("Tried to load two different immediate values in one instruction.");
+			Fail("Tried to load two different immediate values in one instruction. (0x%x vs. 0x%x)", Instruct.Immd.uValue, param.uValue);
 	 case Inst::S_NONE:;
 	}
 	// LDI or semaphore
 	if (Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP)
-		Fail("Cannot combine load immediate with ALU instructions.");
+		Fail("Cannot combine load immediate with value %s with ALU instructions.", param.toString().c_str());
 	Instruct.Sig = Inst::S_LDI;
 	Instruct.LdMode = (Inst::ldmode)mode;
 	Instruct.Immd = param;
