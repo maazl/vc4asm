@@ -308,11 +308,11 @@
 .macro bit_rev, shift, mask
     # (MM) Optimized: use MUL ALU for small shifts
     and r1, r0, mask
-    .if shift == 2
-        shr r0, r0, shift; v8adds r1, r1, r1 # can't overflow because of mask
-        and r0, r0, mask;  v8adds r1, r1, r1 # can't overflow because of mask
-    .elseif shift == 1
+    .if shift == 1
         shr r0, r0, shift
+        and r0, r0, mask;  v8adds r1, r1, r1 # can't overflow because of mask
+    .elseif shift == 2
+        shr r0, r0, shift; v8adds r1, r1, r1 # can't overflow because of mask
         and r0, r0, mask;  v8adds r1, r1, r1 # can't overflow because of mask
     .else
         shr r0, r0, shift

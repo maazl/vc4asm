@@ -58,7 +58,6 @@
 # Registers
 
 .set ra_link_0,         ra0
-#    rx_0x00FF00FF      rb0
 .set ra_save_ptr,       ra1
 .set rb_vdw_32,         rb1
 .set ra_temp,           ra2
@@ -90,7 +89,6 @@
 .set rx_0x55555555,     ra29
 .set rx_0x33333333,     ra30
 .set rx_0x0F0F0F0F,     ra31
-.set rx_0x00FF00FF,     rb0
 
 .set rb_0x10,           rb27
 .set rb_0x40,           rb28
@@ -112,7 +110,6 @@ mov rb_0x100,   0x100
 mov rx_0x55555555, 0x55555555
 mov rx_0x33333333, 0x33333333
 mov rx_0x0F0F0F0F, 0x0F0F0F0F
-mov rx_0x00FF00FF, 0x00FF00FF
 
 mov ra_vdw_32, vdw_setup_0(1, 16, dma_h32( 0,0))
 mov rb_vdw_32, vdw_setup_0(1, 16, dma_h32(32,0))
