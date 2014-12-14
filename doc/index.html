@@ -22,8 +22,11 @@
       so the work uses only the code from <a href="https://github.com/raspberrypi/userland/tree/master/host_applications/linux/apps/hello_pi/hello_fft">hello_fft</a>
       which is available as source and binary as Rosetta Stone.</p>
     <p><a href="#vc4asm">&rarr; Assembler</a>, <a href="#vc4dis">&rarr;
-        Disassembler</a>, <a href="#build">&rarr;Build instructions</a>, <a href="#contact">&rarr;
-        Contact</a></p>
+        Disassembler</a>, <a href="#build">&rarr;Build instructions</a>, <a href="#sample">&rarr;Samples</a>
+      <a href="#contact">&rarr; Contact</a></p>
+    <h2>Download</h2>
+    <p><a href="../vc4asm.tar.bz2">Source code, Raspberry Pi binary, examples
+        and this documentation</a> (100k)</p>
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
     <p>The heart of the software. It assembles QPU code to binary or C
       constants.</p>
@@ -115,6 +118,16 @@
       <li>Execute <tt>make</tt>.</li>
       <li>Now <tt>vc4asm</tt> and <tt>vc4dis</tt> executables should build.</li>
     </ul>
+    <h2><a id="sample" name="sample"></a>Sample programs</h2>
+    <p>All sample programs require <i>root access</i> to run. This is because
+      of the need to call <tt>mmap</tt>.</p>
+    <h3>simple</h3>
+    <p>This is a very simple program that demonstrates the use of all available
+      operators with small immediate values. It is not optimized in any way.</p>
+    <h3>hello_fft</h3>
+    <p>This is the well known hello_fft sample available. The only difference is
+      that it is faster because the shader code has been optimized. The gain is
+      about 10% of code size and about 3% of the run time.</p>
     <h2><a id="contact" name="contact"></a>Contact</h2>
     <p>Comments, ideas, bugs, improvements to <i>raspi at maazl dot de</i>.</p>
   </body>
