@@ -309,6 +309,6 @@ value_t Inst::SMIValue() const
 	if (SImmd < 32)
 		ret.iValue = (int8_t)(SImmd << 3) >> 3; // signed expand
 	else if (SImmd < 48)
-		ret.iValue = ((int32_t)(SImmd ^ 40) << 23) + 0x3b800000;
+		ret.iValue = ((int32_t)(SImmd ^ 0x28) << 23) + 0x3b800000;
 	return ret;
 }

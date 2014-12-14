@@ -402,8 +402,8 @@ Inst::mux Parser::muxReg(reg_t reg)
 uint8_t Parser::getSmallImmediate(uint32_t i)
 {	if (i + 16 <= 0x1f)
 		return (uint8_t)(i & 0x1f);
-	if ((i & 0x807fffff) == 0 && i - 0x3b800000 <= 0x7800000)
-		return (uint8_t)(((i | 0x80000000) >> 23) - 0x57);
+	if ((i & 0x807fffff) == 0 && i - 0x3b800000U <= 0x7800000U)
+		return (uint8_t)(((i >> 23) - 0x77) ^ 0x28);
 	return 0xff; // failed
 }
 

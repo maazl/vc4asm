@@ -297,7 +297,12 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x00000001,  1, Inst::A_OR }
 ,	{ 0x00000001, 32, Inst::A_FTOI }
 ,	{ 0x00000001, 30, Inst::A_NOT }
+,	{ 0x00000001, 31, Inst::A_SHR }
 ,	{ 0x00000001,  1, Inst::M_V8MIN }
+,	{ 0x00000001, 12, Inst::M_V8MULD }
+,	{ 0x00000001, 13, Inst::M_V8MULD }
+,	{ 0x00000001, 14, Inst::M_V8MULD }
+,	{ 0x00000001, 15, Inst::M_V8MULD }
 ,	{ 0x00000002,  2, Inst::A_OR }
 ,	{ 0x00000002, 33, Inst::A_FTOI }
 ,	{ 0x00000002,  1, Inst::A_ADD }
@@ -306,6 +311,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x00000002,  1, Inst::M_V8ADDS }
 ,	{ 0x00000003,  3, Inst::A_OR }
 ,	{ 0x00000003, 28, Inst::A_NOT }
+,	{ 0x00000003, 30, Inst::A_SHR }
 ,	{ 0x00000003,  3, Inst::M_V8MIN }
 ,	{ 0x00000004,  4, Inst::A_OR }
 ,	{ 0x00000004,  2, Inst::A_ADD }
@@ -323,6 +329,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x00000006,  3, Inst::M_V8ADDS }
 ,	{ 0x00000007,  7, Inst::A_OR }
 ,	{ 0x00000007, 24, Inst::A_NOT }
+,	{ 0x00000007, 29, Inst::A_SHR }
 ,	{ 0x00000007,  7, Inst::M_V8MIN }
 ,	{ 0x00000008,  8, Inst::A_OR }
 ,	{ 0x00000008,  4, Inst::A_ADD }
@@ -356,8 +363,9 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x0000000e, 17, Inst::A_NOT }
 ,	{ 0x0000000e, 14, Inst::M_V8MIN }
 ,	{ 0x0000000e,  7, Inst::M_V8ADDS }
-,	{ 0x0000000f, 15, Inst::A_OR }
+,	{ 0x0000000f, 15, Inst::A_OR }  // 15
 ,	{ 0x0000000f, 16, Inst::A_NOT }
+,	{ 0x0000000f, 28, Inst::A_SHR }
 ,	{ 0x0000000f, 15, Inst::M_V8MIN }
 ,	{ 0x00000010,  8, Inst::A_ADD } // 16
 ,	{ 0x00000010,  4, Inst::M_MUL24 }
@@ -377,72 +385,116 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x0000001a, 13, Inst::M_V8ADDS }
 ,	{ 0x0000001c, 14, Inst::A_ADD } // 28
 ,	{ 0x0000001c, 14, Inst::M_V8ADDS }
+,	{ 0x0000001c,  8, Inst::A_CLZ }
+,	{ 0x0000001c,  9, Inst::A_CLZ }
+,	{ 0x0000001c, 10, Inst::A_CLZ }
+,	{ 0x0000001c, 11, Inst::A_CLZ }
+,	{ 0x0000001c, 12, Inst::A_CLZ }
+,	{ 0x0000001c, 13, Inst::A_CLZ }
+,	{ 0x0000001c, 15, Inst::A_CLZ }
+,	{ 0x0000001d,  4, Inst::A_CLZ } // 29
+,	{ 0x0000001d,  5, Inst::A_CLZ }
+,	{ 0x0000001d,  6, Inst::A_CLZ }
+,	{ 0x0000001d,  7, Inst::A_CLZ }
 ,	{ 0x0000001e, 15, Inst::A_ADD } // 30
+,	{ 0x0000001e,  2, Inst::A_CLZ }
+,	{ 0x0000001e,  3, Inst::A_CLZ }
 ,	{ 0x0000001e, 15, Inst::M_V8ADDS }
+,	{ 0x0000001f,  1, Inst::A_CLZ } // 31
+,	{ 0x0000001f, 27, Inst::A_SHR }
 ,	{ 0x00000020, 37, Inst::A_FTOI } // 32
-,	{ 0x00000020,  4, Inst::A_SHL }
+,	{ 0x00000020,  0, Inst::A_CLZ }
 ,	{ 0x00000024,  6, Inst::M_MUL24 } // 36
 ,	{ 0x00000031,  7, Inst::M_MUL24 } // 49
-,	{ 0x00000040, 38, Inst::A_FTOI } // 64
+,	{ 0x0000003f, 26, Inst::A_SHR }   // 63
+,	{ 0x00000040, 38, Inst::A_FTOI }  // 64
+,	{ 0x00000040,  4, Inst::A_SHL }
 ,	{ 0x00000040,  8, Inst::M_MUL24 }
 ,	{ 0x00000051,  9, Inst::M_MUL24 } // 81
 ,	{ 0x00000064, 10, Inst::M_MUL24 } // 100
 ,	{ 0x00000079, 11, Inst::M_MUL24 } // 121
-,	{ 0x00000080, 39, Inst::A_FTOI } // 128
+,	{ 0x0000007f, 25, Inst::A_SHR }   // 127
+,	{ 0x00000080, 39, Inst::A_FTOI }  // 128
 ,	{ 0x00000090, 12, Inst::M_MUL24 } // 144
-,	{ 0x000000a0,  5, Inst::A_SHL } // 160
-,	{ 0x000000a8, 13, Inst::M_MUL24 } // 169
+,	{ 0x000000a0,  5, Inst::A_SHL }   // 160
+,	{ 0x000000a9, 13, Inst::M_MUL24 } // 169
 ,	{ 0x000000c4, 14, Inst::M_MUL24 } // 196
 ,	{ 0x000000e1, 15, Inst::M_MUL24 } // 225
+,	{ 0x000000ff, 24, Inst::A_SHR } // 255
 ,	{ 0x00000180,  6, Inst::A_SHL } // 384
+,	{ 0x000001ff, 23, Inst::A_SHR } // 511
 ,	{ 0x00000380,  7, Inst::A_SHL } // 896
+,	{ 0x000003ff, 22, Inst::A_SHR } // 1023
+,	{ 0x000007ff, 21, Inst::A_SHR } // 2047
 ,	{ 0x00000800,  8, Inst::A_SHL } // 2048
+,	{ 0x00000fff, 20, Inst::A_SHR } // 4095
 ,	{ 0x00001200,  9, Inst::A_SHL } // 4608
+,	{ 0x00001fff, 19, Inst::A_SHR } // 8191
 ,	{ 0x00002800, 10, Inst::A_SHL } // 10240
+,	{ 0x00003fff, 18, Inst::A_SHR } // 16383
 ,	{ 0x00005800, 11, Inst::A_SHL } // 22528
+,	{ 0x00007fff, 17, Inst::A_SHR } // 32767
 ,	{ 0x0000c000, 12, Inst::A_SHL } // 49152
+,	{ 0x0000ffff, 16, Inst::A_SHR } // 65535
 ,	{ 0x0001a000, 13, Inst::A_SHL } // 106496
-,	{ 0x0001e000, 15, Inst::A_ROR }
 ,	{ 0x00038000, 14, Inst::A_SHL } // 229376
-,	{ 0x00068000, 13, Inst::A_ROR } // 425984
 ,	{ 0x00078000, 15, Inst::A_SHL } // 491520
-,	{ 0x000c0000, 12, Inst::A_ROR } // 786432
-,	{ 0x00160000, 11, Inst::A_ROR }
-,	{ 0x00280000, 10, Inst::A_ROR }
-,	{ 0x00480000,  9, Inst::A_ROR }
+,	{ 0x001e0000, 15, Inst::A_ROR }
+,	{ 0x00380000, 14, Inst::A_ROR }
+,	{ 0x00680000, 13, Inst::A_ROR }
+,	{ 0x00c00000, 12, Inst::A_ROR }
+,	{ 0x01600000, 11, Inst::A_ROR }
+,	{ 0x02800000, 10, Inst::A_ROR }
+,	{ 0x04800000,  9, Inst::A_ROR }
 ,	{ 0x08000000,  8, Inst::A_ROR }
 ,	{ 0x0e000000,  7, Inst::A_ROR }
+,	{ 0x0e000000, 41, Inst::M_V8MULD }
+,	{ 0x0e400000, 40, Inst::M_V8MULD }
+,	{ 0x0e400000, 42, Inst::M_V8MULD }
+,	{ 0x0f000000, 43, Inst::M_V8MULD }
+,	{ 0x0f000000, 45, Inst::M_V8MULD }
+,	{ 0x0f400000, 44, Inst::M_V8MULD }
+,	{ 0x0f400000, 46, Inst::M_V8MULD }
+,	{ 0x10000000, 47, Inst::M_V8MULD }
+,	{ 0x10000000, 33, Inst::M_V8MULD }
+,	{ 0x10400000, 32, Inst::M_V8MULD }
+,	{ 0x10400000, 34, Inst::M_V8MULD }
+,	{ 0x11000000, 35, Inst::M_V8MULD }
+,	{ 0x11000000, 37, Inst::M_V8MULD }
+,	{ 0x11400000, 36, Inst::M_V8MULD }
+,	{ 0x11400000, 38, Inst::M_V8MULD }
+,	{ 0x12000000, 39, Inst::M_V8MULD }
 ,	{ 0x18000000,  6, Inst::A_ROR }
 ,	{ 0x28000000,  5, Inst::A_ROR }
-,	{ 0x39800000, 40, Inst::M_FMUL }
-,	{ 0x3a800000, 41, Inst::M_FMUL }
-,	{ 0x3b800000, 42, Inst::M_FMUL }
-,	{ 0x3c800000, 43, Inst::M_FMUL }
-,	{ 0x3b800000, 40, Inst::A_OR }   // .00390625
+,	{ 0x37800000, 40, Inst::M_FMUL } // 1/65536.
+,	{ 0x38800000, 41, Inst::M_FMUL } // 1/16384.
+,	{ 0x39800000, 42, Inst::M_FMUL } // 1/4096.
+,	{ 0x3a800000, 43, Inst::M_FMUL } // 1/1024.
+,	{ 0x3b800000, 40, Inst::A_OR }   // 1/256.
 ,	{ 0x3b800000, 40, Inst::M_V8MIN }
 ,	{ 0x3b800000, 44, Inst::M_FMUL }
-,	{ 0x3c000000, 41, Inst::A_OR }   // .0078125
+,	{ 0x3c000000, 41, Inst::A_OR }   // 1/128.
 ,	{ 0x3c000000, 40, Inst::A_FADD }
 ,	{ 0x3c000000, 41, Inst::M_V8MIN }
-,	{ 0x3c800000, 42, Inst::A_OR }   // .015625
+,	{ 0x3c800000, 42, Inst::A_OR }   // 1/64.
 ,	{ 0x3c800000, 41, Inst::A_FADD }
 ,	{ 0x3c800000, 42, Inst::M_V8MIN }
 ,	{ 0x3c800000, 45, Inst::M_FMUL }
-,	{ 0x3d000000, 43, Inst::A_OR }   // .03125
+,	{ 0x3d000000, 43, Inst::A_OR }   // 1/32.
 ,	{ 0x3d000000, 42, Inst::A_FADD }
 ,	{ 0x3d000000, 43, Inst::M_V8MIN }
-,	{ 0x3d800000, 44, Inst::A_OR }   // .0625
+,	{ 0x3d800000, 44, Inst::A_OR }   // 1/16.
 ,	{ 0x3d800000, 43, Inst::A_FADD }
 ,	{ 0x3d800000, 44, Inst::M_V8MIN }
 ,	{ 0x3d800000, 46, Inst::M_FMUL }
-,	{ 0x3e000000, 45, Inst::A_OR }   // .125
+,	{ 0x3e000000, 45, Inst::A_OR }   // 1/8.
 ,	{ 0x3e000000, 44, Inst::A_FADD }
 ,	{ 0x3e000000, 45, Inst::M_V8MIN }
-,	{ 0x3e800000, 46, Inst::A_OR }   // .25
+,	{ 0x3e800000, 46, Inst::A_OR }   // 1/4.
 ,	{ 0x3e800000, 45, Inst::A_FADD }
 ,	{ 0x3e800000, 46, Inst::M_V8MIN }
 ,	{ 0x3e800000, 47, Inst::M_FMUL }
-,	{ 0x3f000000, 47, Inst::A_OR }   // .5
+,	{ 0x3f000000, 47, Inst::A_OR }   // 1/2.
 ,	{ 0x3f000000, 46, Inst::A_FADD }
 ,	{ 0x3f000000, 47, Inst::M_V8MIN }
 ,	{ 0x3f800000, 32, Inst::A_OR }   // 1.0
@@ -459,6 +511,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x40800000,  4, Inst::A_ITOF }
 ,	{ 0x40800000, 33, Inst::A_FADD }
 ,	{ 0x40800000, 34, Inst::M_V8MIN }
+,	{ 0x40800000, 33, Inst::M_FMUL }
 ,	{ 0x40a00000,  5, Inst::A_ITOF } // 5.0
 ,	{ 0x40c00000,  6, Inst::A_ITOF } // 6.0
 ,	{ 0x40e00000,  7, Inst::A_ITOF } // 7.0
@@ -532,9 +585,42 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x7eff0000, 32, Inst::M_V8ADDS }
 ,	{ 0x7eff0000, 32, Inst::A_V8ADDS }
 ,	{ 0x7f000000, 32, Inst::A_ADD }
+,	{ 0x7f800000, 16, Inst::A_FSUB } // NaN
+,	{ 0x7f800000, 16, Inst::M_FMUL }
+,	{ 0x7f800000, 17, Inst::A_FSUB }
+,	{ 0x7f800000, 17, Inst::M_FMUL }
+,	{ 0x7f800000, 18, Inst::A_FSUB }
+,	{ 0x7f800000, 18, Inst::M_FMUL }
+,	{ 0x7f800000, 19, Inst::A_FSUB }
+,	{ 0x7f800000, 19, Inst::M_FMUL }
+,	{ 0x7f800000, 20, Inst::A_FSUB }
+,	{ 0x7f800000, 20, Inst::M_FMUL }
+,	{ 0x7f800000, 21, Inst::A_FSUB }
+,	{ 0x7f800000, 21, Inst::M_FMUL }
+,	{ 0x7f800000, 22, Inst::A_FSUB }
+,	{ 0x7f800000, 22, Inst::M_FMUL }
+,	{ 0x7f800000, 23, Inst::A_FSUB }
+,	{ 0x7f800000, 23, Inst::M_FMUL }
+,	{ 0x7f800000, 24, Inst::A_FSUB }
+,	{ 0x7f800000, 24, Inst::M_FMUL }
+,	{ 0x7f800000, 25, Inst::A_FSUB }
+,	{ 0x7f800000, 25, Inst::M_FMUL }
+,	{ 0x7f800000, 26, Inst::A_FSUB }
+,	{ 0x7f800000, 26, Inst::M_FMUL }
+,	{ 0x7f800000, 27, Inst::A_FSUB }
+,	{ 0x7f800000, 27, Inst::M_FMUL }
+,	{ 0x7f800000, 28, Inst::A_FSUB }
+,	{ 0x7f800000, 28, Inst::M_FMUL }
+,	{ 0x7f800000, 29, Inst::A_FSUB }
+,	{ 0x7f800000, 29, Inst::M_FMUL }
+,	{ 0x7f800000, 30, Inst::A_FSUB }
+,	{ 0x7f800000, 30, Inst::M_FMUL }
+,	{ 0x7f800000, 31, Inst::A_FSUB }
+,	{ 0x7f800000, 31, Inst::M_FMUL }
 ,	{ 0x80000000,  1, Inst::A_ROR } // INT_MIN
 ,	{ 0x80000000, 33, Inst::M_V8ADDS }
 ,	{ 0x80000000, 33, Inst::A_ADD }
+,	{ 0x80000000, 30, Inst::A_SHL }
 ,	{ 0x80ff0000, 34, Inst::M_V8ADDS }
 ,	{ 0x80ff0000, 34, Inst::A_V8ADDS }
 ,	{ 0x81000000, 34, Inst::A_ADD }
@@ -550,6 +636,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x85000000, 38, Inst::A_ADD }
 ,	{ 0x86000000, 39, Inst::M_V8ADDS }
 ,	{ 0x86000000, 39, Inst::A_ADD }
+,	{ 0xa0000000, 29, Inst::A_SHL }
 ,	{ 0xbcffffff, 39, Inst::A_NOT }
 ,	{ 0xbd7fffff, 38, Inst::A_NOT }
 ,	{ 0xbdffffff, 37, Inst::A_NOT }
@@ -559,6 +646,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xbf800000, 29, Inst::A_ITOF } // -1.0
 ,	{ 0xbfffffff, 33, Inst::A_NOT }
 ,	{ 0xc0000000, 30, Inst::A_ITOF } // -2.0
+,	{ 0xc0000000, 28, Inst::A_SHL }
 ,	{ 0xc0400000, 29, Inst::A_ITOF } // -3.0
 ,	{ 0xc07fffff, 32, Inst::A_NOT }
 ,	{ 0xc0800000, 28, Inst::A_ITOF } // -4.0
@@ -576,27 +664,94 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xc1700000, 17, Inst::A_ITOF } // -15.0
 ,	{ 0xc17fffff, 46, Inst::A_NOT }
 ,	{ 0xc1800000, 16, Inst::A_ITOF } // -16.0
-,	{ 0xc1ffffff, 45, Inst::A_NOT } // ~-32.0
+,	{ 0xc1ffffff, 45, Inst::A_NOT }
 ,	{ 0xc27fffff, 44, Inst::A_NOT }
 ,	{ 0xc2ffffff, 43, Inst::A_NOT }
 ,	{ 0xc37fffff, 42, Inst::A_NOT }
 ,	{ 0xc3ffffff, 41, Inst::A_NOT }
 ,	{ 0xc47fffff, 40, Inst::A_NOT }
+,	{ 0xd8000000, 27, Inst::A_SHL }
+,	{ 0xe0000100, 16, Inst::M_MUL24 }
+,	{ 0xe20000e1, 17, Inst::M_MUL24 }
+,	{ 0xe40000c4, 18, Inst::M_MUL24 }
+,	{ 0xe60000a9, 19, Inst::M_MUL24 }
+,	{ 0xe8000000, 26, Inst::A_SHL }
+,	{ 0xe8000090, 20, Inst::M_MUL24 }
+,	{ 0xea000079, 21, Inst::M_MUL24 }
+,	{ 0xec000064, 22, Inst::M_MUL24 }
+,	{ 0xee000051, 23, Inst::M_MUL24 }
+,	{ 0xf0000040, 24, Inst::M_MUL24 }
+,	{ 0xf2000000, 25, Inst::A_SHL }
+,	{ 0xf2000031, 25, Inst::M_MUL24 }
+,	{ 0xf4000024, 26, Inst::M_MUL24 }
+,	{ 0xf6000019, 27, Inst::M_MUL24 }
+,	{ 0xf8000000, 24, Inst::A_SHL }
+,	{ 0xf8000010, 28, Inst::M_MUL24 }
+,	{ 0xfa000009, 29, Inst::M_MUL24 }
+,	{ 0xfb800000, 23, Inst::A_SHL }
+,	{ 0xfc000004, 30, Inst::M_MUL24 }
+,	{ 0xfd800000, 22, Inst::A_SHL }
+,	{ 0xfe000001, 31, Inst::M_MUL24 }
+,	{ 0xfea00000, 21, Inst::A_SHL }
+,	{ 0xff400000, 20, Inst::A_SHL }
+,	{ 0xff800000, 16, Inst::A_FADD } // -NaN
+,	{ 0xff800000, 17, Inst::A_FADD }
+,	{ 0xff800000, 18, Inst::A_FADD }
+,	{ 0xff800000, 19, Inst::A_FADD }
+,	{ 0xff800000, 20, Inst::A_FADD }
+,	{ 0xff800000, 21, Inst::A_FADD }
+,	{ 0xff800000, 22, Inst::A_FADD }
+,	{ 0xff800000, 23, Inst::A_FADD }
+,	{ 0xff800000, 24, Inst::A_FADD }
+,	{ 0xff800000, 25, Inst::A_FADD }
+,	{ 0xff800000, 26, Inst::A_FADD }
+,	{ 0xff800000, 27, Inst::A_FADD }
+,	{ 0xff800000, 28, Inst::A_FADD }
+,	{ 0xff800000, 29, Inst::A_FADD }
+,	{ 0xff800000, 30, Inst::A_FADD }
+,	{ 0xff800000, 31, Inst::A_FADD }
+,	{ 0xff980000, 19, Inst::A_SHL }
+,	{ 0xffc80000, 18, Inst::A_SHL }
+,	{ 0xffe20000, 17, Inst::A_SHL }
+,	{ 0xfff00000, 16, Inst::A_SHL }
+,	{ 0xfff0ffff, 16, Inst::A_ROR }
+,	{ 0xfff8ffff, 17, Inst::A_ROR }
+,	{ 0xfffcbfff, 18, Inst::A_ROR }
+,	{ 0xfffe7fff, 19, Inst::A_ROR }
+,	{ 0xffff4fff, 20, Inst::A_ROR }
+,	{ 0xffffafff, 21, Inst::A_ROR }
+,	{ 0xffffdbff, 22, Inst::A_ROR }
+,	{ 0xffffefff, 23, Inst::A_ROR } // -4097
+,	{ 0xfffff8ff, 24, Inst::A_ROR } // -1793
+,	{ 0xfffffcff, 25, Inst::A_ROR } // -769
+,	{ 0xfffffebf, 26, Inst::A_ROR } // -321
+,	{ 0xffffff7f, 27, Inst::A_ROR } // -129
+,	{ 0xffffffcf, 28, Inst::A_ROR } // -49
 ,	{ 0xffffffe0, 16, Inst::A_ADD } // -32
 ,	{ 0xffffffe2, 17, Inst::A_ADD } // -30
+,	{ 0xffffffe2, 16, Inst::M_V8MULD }
 ,	{ 0xffffffe4, 18, Inst::A_ADD } // -28
+,	{ 0xffffffe4, 17, Inst::M_V8MULD }
 ,	{ 0xffffffe6, 19, Inst::A_ADD } // -26
+,	{ 0xffffffe6, 18, Inst::M_V8MULD }
 ,	{ 0xffffffe8, 20, Inst::A_ADD } // -24
-,	{ 0xffffffea, 21, Inst::A_ADD } // -22
-,	{ 0xffffffec, 22, Inst::A_ADD } // -20
-,	{ 0xffffffee, 23, Inst::A_ADD } // -18
-,	{ 0xfffffff0, 16, Inst::A_OR }  // -16
+,	{ 0xffffffe8, 19, Inst::M_V8MULD }
+,	{ 0xffffffe9, 20, Inst::M_V8MULD } // -23
+,	{ 0xffffffea, 21, Inst::A_ADD }    // -22
+,	{ 0xffffffeb, 21, Inst::M_V8MULD } // -21
+,	{ 0xffffffec, 22, Inst::A_ADD }    // -20
+,	{ 0xffffffed, 22, Inst::M_V8MULD } // -19
+,	{ 0xffffffee, 23, Inst::A_ADD }    // -18
+,	{ 0xffffffef, 23, Inst::M_V8MULD } // -17
+,	{ 0xffffffef, 29, Inst::A_ROR }
+,	{ 0xfffffff0, 16, Inst::A_OR }     // -16
 ,	{ 0xfffffff0, 24, Inst::A_ADD }
 ,	{ 0xfffffff0, 15, Inst::A_NOT }
 ,	{ 0xfffffff0, 16, Inst::M_V8MIN }
 ,	{ 0xfffffff1, 17, Inst::A_OR }  // -15
 ,	{ 0xfffffff1, 17, Inst::M_V8MIN }
 ,	{ 0xfffffff1, 14, Inst::A_NOT }
+,	{ 0xfffffff1, 24, Inst::M_V8MULD }
 ,	{ 0xfffffff2, 18, Inst::A_OR }  // -14
 ,	{ 0xfffffff2, 25, Inst::A_ADD }
 ,	{ 0xfffffff2, 13, Inst::A_NOT }
@@ -604,6 +759,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xfffffff3, 19, Inst::A_OR }  // -13
 ,	{ 0xfffffff3, 12, Inst::A_NOT }
 ,	{ 0xfffffff3, 19, Inst::M_V8MIN }
+,	{ 0xfffffff3, 25, Inst::M_V8MULD }
 ,	{ 0xfffffff4, 20, Inst::A_OR }  // -12
 ,	{ 0xfffffff4, 26, Inst::A_ADD }
 ,	{ 0xfffffff4, 11, Inst::A_NOT }
@@ -611,6 +767,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xfffffff5, 21, Inst::A_OR }  // -11
 ,	{ 0xfffffff5, 10, Inst::A_NOT }
 ,	{ 0xfffffff5, 21, Inst::M_V8MIN }
+,	{ 0xfffffff5, 26, Inst::M_V8MULD }
 ,	{ 0xfffffff6, 22, Inst::A_OR }  // -10
 ,	{ 0xfffffff6, 27, Inst::A_ADD }
 ,	{ 0xfffffff6,  9, Inst::A_NOT }
@@ -618,6 +775,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xfffffff7, 23, Inst::A_OR }  // -9
 ,	{ 0xfffffff7,  8, Inst::A_NOT }
 ,	{ 0xfffffff7, 23, Inst::M_V8MIN }
+,	{ 0xfffffff7, 27, Inst::M_V8MULD }
 ,	{ 0xfffffff8, 24, Inst::A_OR }  // -8
 ,	{ 0xfffffff8, 28, Inst::A_ADD }
 ,	{ 0xfffffff8,  7, Inst::A_NOT }
@@ -625,6 +783,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xfffffff9, 25, Inst::A_OR }  // -7
 ,	{ 0xfffffff9,  6, Inst::A_NOT }
 ,	{ 0xfffffff9, 25, Inst::M_V8MIN }
+,	{ 0xfffffff9, 28, Inst::M_V8MULD }
 ,	{ 0xfffffffa, 26, Inst::A_OR }  // -6
 ,	{ 0xfffffffa, 29, Inst::A_ADD }
 ,	{ 0xfffffffa,  5, Inst::A_NOT }
@@ -632,6 +791,8 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xfffffffb, 27, Inst::A_OR }  // -5
 ,	{ 0xfffffffb,  4, Inst::A_NOT }
 ,	{ 0xfffffffb, 27, Inst::M_V8MIN }
+,	{ 0xfffffffb, 30, Inst::A_ROR }
+,	{ 0xfffffffb, 29, Inst::M_V8MULD }
 ,	{ 0xfffffffc, 28, Inst::A_OR }  // -4
 ,	{ 0xfffffffc, 30, Inst::A_ADD }
 ,	{ 0xfffffffc,  3, Inst::A_NOT }
@@ -639,6 +800,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xfffffffd, 29, Inst::A_OR }  // -3
 ,	{ 0xfffffffd,  2, Inst::A_NOT }
 ,	{ 0xfffffffd, 29, Inst::M_V8MIN }
+,	{ 0xfffffffd, 30, Inst::M_V8MULD }
 ,	{ 0xfffffffe, 30, Inst::A_OR }  // -2
 ,	{ 0xfffffffe, 31, Inst::A_ADD }
 ,	{ 0xfffffffe,  1, Inst::A_NOT }
@@ -734,12 +896,13 @@ const Parser::opEntry<8> Parser::opcodeMap[] =
 ,	{"thrsw",  &Parser::assembleSIG,  Inst::S_THRSW }
 ,	{"tswitch",&Parser::assembleSIG,  Inst::S_THRSW }
 ,	{"unlscb", &Parser::assembleSIG,  Inst::S_SBDONE }
+,	{"v8adds", &Parser::assembleADD,  Inst::A_V8ADDS } // alternative M_V8ADDS
 ,	{"v8max",  &Parser::assembleMUL,  Inst::M_V8MAX }
 ,	{"v8min",  &Parser::assembleMUL,  Inst::M_V8MIN }
 ,	{"v8muld", &Parser::assembleMUL,  Inst::M_V8MULD }
-,	{"v8adds", &Parser::assembleADD,  Inst::A_V8ADDS } // alternative M_V8ADDS
 ,	{"v8subs", &Parser::assembleADD,  Inst::A_V8SUBS } // alternative M_V8SUBS
 ,	{"waitscb",&Parser::assembleSIG,  Inst::S_SBWAIT }
+,	{"xor",    &Parser::assembleADD,  Inst::A_XOR }
 };
 
 const Parser::opExtEntry Parser::extMap[] =

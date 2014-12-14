@@ -5,6 +5,8 @@
 .func vdw_setup_1(stride) 0xc0000000 | stride
 .func vpm_setup(num, stride, dma) (num & 0xf) << 20 | (stride & 0x3f) << 12 | (dma & 0xfff)
 .func dma_h32(y, x) 0x4000 | (y & 0x7f) << 7 | (x & 0xf) << 3
+.func dma_v32(y, x) (y & 0x7f) << 7 | (x & 0xf) << 3
+.func h32(y, x) 0xa00 | (y & 0x30) | (x & 0xf)
 .func v32(y, x) 0x200 | (y & 0x30) | (x & 0xf)
 
 # functional semaphore style
