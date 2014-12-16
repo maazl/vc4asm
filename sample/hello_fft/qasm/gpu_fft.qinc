@@ -142,8 +142,10 @@
 
     bra -, ra_sync
 
-    nop
+    # (MM) Optimized: save another cycle by increased distance
+    # between vpm setup and vpm read.
     mov vr_setup, arg_vpm
+    nop
     mov -, vpm
 .endm
 
