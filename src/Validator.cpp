@@ -20,10 +20,10 @@ Validator::state::state(const state& r, int at, int target)
 ,	Start(target)
 {	// relocate Last...
 	target -= at;
-	const int* sp = r.LastRreg[0];
-	int* dp = LastRreg[0];
+	const int* sp = &r.LastLDr4;
+	int* dp = &LastLDr4;
 	do
-	{	*dp++ = *sp <= NEVER ? NEVER : *sp + target;
+	{	*dp = *sp <= NEVER ? NEVER : *sp + target;
 	} while (++dp < (int*)(this+1));
 }
 

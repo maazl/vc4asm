@@ -28,6 +28,10 @@ class Validator
 		const int From = 0;
 		/// Start instruction where the parsing started.
 		const int Start = 0;
+		int LastRotReg = -1;
+		int LastLDr4 = NEVER;
+		int LastBRANCH = NEVER;
+		int LastTEND = NEVER;
 		/// last register file read access at instruction #, [B!A][number]
 		/// For peripherals registers that are mapped to both register files
 		/// the entries for register file A also track register file B access.
@@ -36,10 +40,6 @@ class Validator
 		/// For peripherals registers that are mapped to both register files
 		/// the entries for register file A also track register file B access.
 		int LastWreg[2][64];
-		int LastLDr4 = NEVER;
-		int LastRotReg = -1;
-		int LastBRANCH = NEVER;
-		int LastTEND = NEVER;
 		state();
 		state(const state& r) = delete;
 		state(const state& r, int at, int target);
