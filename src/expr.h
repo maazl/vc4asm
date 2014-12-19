@@ -49,8 +49,9 @@ enum valueType : char
 ,	V_LDPEU     ///< load per element unsigned, otherwise like V_INT
 ,	V_FLOAT     ///< float literal or the result of an float expression
 ,	V_REG       ///< register
-,	V_LABEL     ///< Label reference, iValue = index to Labels
+,	V_LABEL     ///< Label reference, iValue = Label value (only valid in Pass 2)
 };
+extern const char* type2string(valueType type);
 struct value_t
 {	union
 	{	uint32_t  uValue;   ///< Value as unsigned integer

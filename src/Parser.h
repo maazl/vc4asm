@@ -136,12 +136,6 @@ class Parser
 	};
 	typedef vector<label> labels_t;
 	typedef unordered_map<string,unsigned> lnames_t;
-	struct fixup
-	{	unsigned       Label;
-		unsigned       Instr;
-		fixup(unsigned label, unsigned instr) : Label(label), Instr(instr) {}
-	};
-	typedef vector<fixup> fixups_t;
 	struct constDef
 	{	exprValue      Value;
 		location       Definition;
@@ -190,23 +184,26 @@ class Parser
 	};
 
 	// parser working set
+	bool             Pass2 = false;
+	vector<string>   Filenames;
+
 	char             Line[1024];  ///< Buffer for line input. Well, static size...
 	char*            At = NULL;   ///< Current location within Line
 	string           Token;       ///< Current token
+	Inst             Instruct;    ///< current instruction
+	bool             HaveNOP;     ///< at least one NOP in the current line so far
 	// context
 	macro*           AtMacro = NULL;///< Currently at a macro definition
 	ifs_t            AtIf;        ///< List of (nested) if statements.
 	contexts_t       Context;     ///< Include and macro call stack
 	// definitions
 	labels_t         Labels;      ///< Label values
+	unsigned         LabelCount = 0;///< Next free label index
 	lnames_t         LabelsByName;///< Label names
-	fixups_t         Fixups;      ///< delayed label fixups
 	funcs_t          Functions;   ///< Function definitions
 	macros_t         Macros;      ///< Macros
 	// instruction
 	vector<uint64_t> Instructions;
-	Inst             Instruct;    ///< current instruction
-	bool             HaveNOP;     ///< at least one NOP in the current line so far
  private:
 	string           enrichMsg(string msg);
 	void             Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR;
@@ -236,6 +233,7 @@ class Parser
 
 	void             doALUTarget(bool mul);
 	Inst::mux        doALUExpr(bool mul);
+	void             doBRASource();
 
 	// OP codes
 	void             assembleADD(int op);
@@ -272,8 +270,12 @@ class Parser
 
 	void             ParseLine();
 	void             ParseFile();
+
+	void             ResetPass();
+	void             EnsurePass2();
  public:
 	                 Parser();
+  void             Reset();
 	void             ParseFile(const string& file);
 	const vector<uint64_t>& GetInstructions();
 };

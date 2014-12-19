@@ -40,10 +40,6 @@ Parser::saveLineContext::~saveLineContext()
 }
 
 
-Parser::Parser()
-{	Context.emplace_back(new fileContext(CTX_ROOT, string(), 0));
-}
-
 string Parser::enrichMsg(string msg)
 {	// Show context
 	contextType type = CTX_CURRENT;
@@ -95,7 +91,7 @@ void Parser::Error(const char* fmt, ...)
 }
 
 void Parser::Msg(severity level, const char* fmt, ...)
-{	if (Verbose < level)
+{	if (!Pass2 || Verbose < level)
 		return;
 	va_list va;
 	va_start(va, fmt);
@@ -311,15 +307,19 @@ exprValue Parser::ParseExpression()
 						Token.erase(Token.size()-1);
 					}
 				}
-				const auto& l = LabelsByName.emplace(Token, Labels.size());
+				const auto& l = LabelsByName.emplace(Token, LabelCount);
 				if (l.second || (forward && Labels[l.first->second].Definition))
 				{	// new label
-					l.first->second = Labels.size();
-					Labels.emplace_back(Token);
-					Labels.back().Reference = *Context.back();
+					l.first->second = LabelCount;
+					if (!Pass2)
+						Labels.emplace_back(Token);
+					else if (Labels.size() <= LabelCount || Labels[LabelCount].Name != Token)
+						Fail("Inconsistent Label definition during Pass 2.");
+					Labels[LabelCount].Reference = *Context.back();
+					++LabelCount;
 				}
-				eval.PushValue(exprValue(l.first->second, V_LABEL));
-				return eval.Evaluate();
+				eval.PushValue(exprValue(Labels[l.first->second].Value, V_LABEL));
+				break;
 			}
 
 		 default:
@@ -597,6 +597,35 @@ Inst::mux Parser::doALUExpr(bool mul)
 	}
 }
 
+void Parser::doBRASource()
+{
+	auto param2 = ParseExpression();
+	switch (param2.Type)
+	{default:
+		Fail("Data type is not allowed as branch target.");
+	 case V_LABEL:
+		if (Instruct.Rel)
+			param2.uValue -= (Instructions.size() + 4) * 8;
+		else
+			Msg(WARNING, "Using value of label as target of a absolute branch instruction.");
+	 case V_INT:
+		if (Instruct.Immd.uValue)
+			Fail("Cannot specify two immediate values as branch target.");
+		Instruct.Immd = param2;
+		break;
+	 case V_REG:
+		if (!(param2.rValue.Type & R_A) || param2.rValue.Num >= 32)
+			Fail("Branch target must be from register file A and no hardware register.");
+		if (param2.rValue.Rotate)
+			Fail("Cannot use vector rotation with branch instruction.");
+		if (Instruct.Reg)
+			Fail("Cannot specify two registers as branch target.");
+		Instruct.Reg = true;
+		Instruct.RAddrA = param2.rValue.Num;
+		break;
+	}
+}
+
 void Parser::assembleADD(int add_op)
 {
 	if (Instruct.Sig >= Inst::S_LDI)
@@ -669,7 +698,7 @@ void Parser::assembleMOV(int mode)
 	exprValue param = ParseExpression();
 	switch (param.Type)
 	{default:
-		Fail("The last parameter of a MOV instruction must be a register or a immediate value.");
+		Fail("The last parameter of a MOV instruction must be a register or a immediate value. Found %s", type2string(param.Type));
 	 case V_REG:
 		if (param.rValue.Type & R_SEMA)
 		{	// semaphore access by LDI like instruction
@@ -764,6 +793,8 @@ void Parser::assembleBRANCH(int relative)
 	Instruct.CondBr = Inst::B_AL;
 	Instruct.Rel = !!relative;
 	Instruct.RAddrA = 0;
+	Instruct.Reg = false;
+	Instruct.Immd.uValue = 0;
 
 	doInstrExt(false);
 
@@ -771,31 +802,15 @@ void Parser::assembleBRANCH(int relative)
 
 	if (NextToken() != COMMA)
 		Fail("Expected ', <branch target>' after first argument to branch instruction, found %s.", Token.c_str());
-	auto param2 = ParseExpression();
-	switch (param2.Type)
+	doBRASource();
+	switch (NextToken())
 	{default:
-		Fail("Data type is not allowed as branch target.");
-	 case V_INT:
-		Instruct.Reg = false;
-		Instruct.Immd = param2;
-		break;
-	 case V_REG:
-		if (!(param2.rValue.Type & R_A) || param2.rValue.Num >= 32)
-			Fail("Branch target must be from register file A and no hardware register.");
-		if (param2.rValue.Rotate)
-			Fail("Cannot use vector rotation with branch instruction.");
-		Instruct.Reg = true;
-		Instruct.RAddrA = param2.rValue.Num;
-		Instruct.Immd.uValue = 0;
-		break;
-	 case V_LABEL:
-		Instruct.Reg = false;
-		Instruct.Immd.uValue = Labels[param2.uValue].Value;
-		if (!Labels[param2.uValue].Definition)
-			Fixups.emplace_back(param2.uValue, Instructions.size());
-		if (relative)
-			Instruct.Immd.uValue -= (Instructions.size() + 4) * 8;
-		break;
+		Fail("Expected ',' or end of line, found '%s'.", Token.c_str());
+	 case COMMA: // second branch target
+		doBRASource();
+		if (NextToken() != END)
+			Fail("Expected end of line after branch instruction.");
+	 case END:;
 	}
 }
 
@@ -871,13 +886,15 @@ void Parser::ParseInstruction()
 void Parser::defineLabel()
 {
 	// Lookup symbol
-	const auto& lname = LabelsByName.emplace(Token, Labels.size());
+	const auto& lname = LabelsByName.emplace(Token, LabelCount);
 	label* lp;
 	if (lname.second)
 	{	// new label, not yet referenced
 	 new_label:
-		Labels.emplace_back(Token);
-		lp = &Labels.back();
+		if (!Pass2)
+			Labels.emplace_back(Token);
+		lp = &Labels[LabelCount];
+		++LabelCount;
 	} else
 	{	// Label already in the lookup table.
 		lp = &Labels[lname.first->second];
@@ -887,11 +904,14 @@ void Parser::defineLabel()
 				return Error("Redefinition of non-local label %s, previously defined at %s.",
 					Token.c_str(), lp->Definition.toString().c_str());
 			// redefinition allowed, but this is always a new label
-			lname.first->second = Labels.size();
+			lname.first->second = LabelCount;
 			goto new_label;
 		}
 	}
-	lp->Value = Instructions.size() * sizeof(uint64_t);
+	if (!Pass2)
+		lp->Value = Instructions.size() * sizeof(uint64_t);
+	else if (lp->Name != Token || lp->Value != Instructions.size() * sizeof(uint64_t))
+		return Error("Inconsistent Label definition during Pass 2.");
 	lp->Definition = *Context.back();
 
 	if (Preprocessed)
@@ -1386,13 +1406,62 @@ void Parser::ParseFile()
 	}
 }
 void Parser::ParseFile(const string& file)
-{	saveContext ctx(*this, new fileContext(CTX_INCLUDE, file, 0));
+{	if (Pass2)
+		throw string("Cannot add another file after pass 2 has been entered.");
+	saveContext ctx(*this, new fileContext(CTX_INCLUDE, file, 0));
 	ParseFile();
+	Filenames.emplace_back(file);
+}
+
+void Parser::ResetPass()
+{	AtMacro = NULL;
+	AtIf.clear();
+	Context.clear();
+	Context.emplace_back(new fileContext(CTX_ROOT, string(), 0));
+	Functions.clear();
+	Macros.clear();
+	LabelsByName.clear();
+	LabelCount = 0;
+	Instructions.clear();
+}
+
+void Parser::EnsurePass2()
+{
+	if (Pass2 || !Success)
+		return;
+
+	// enter pass 2
+	Pass2 = true;
+	ResetPass();
+
+	// Check all labels
+	for (auto& label : Labels)
+	{	if (!label.Definition)
+			return Error("Label '%s' is undefined. Referenced from %s.\n",
+				label.Name.c_str(), label.Reference.toString().c_str());
+		label.Definition.Line = 0;
+	}
+
+	for (auto file : Filenames)
+	{	saveContext ctx(*this, new fileContext(CTX_INCLUDE, file, 0));
+		ParseFile();
+	}
+}
+
+Parser::Parser()
+{	Reset();
+}
+
+void Parser::Reset()
+{ ResetPass();
+	Labels.clear();
+	Pass2 = false;
+	Filenames.clear();
 }
 
 const vector<uint64_t>& Parser::GetInstructions()
 {
-	for (fixup fix : Fixups)
+	/*for (fixup fix : Fixups)
 	{	const label& l = Labels[fix.Label];
 		if (!l.Definition)
 		{	Success = false;
@@ -1401,7 +1470,9 @@ const vector<uint64_t>& Parser::GetInstructions()
 		} else
 			Instructions[fix.Instr] += l.Value - (uint64_t)(Instructions[fix.Instr] & 0x80000000) * 2;
 	}
-	Fixups.clear();
+	Fixups.clear();*/
+
+	EnsurePass2();
 
 	return Instructions;
 }
