@@ -24,6 +24,7 @@ Validator::state::state(const state& r, int at, int target)
 	int* dp = &LastLDr4;
 	do
 	{	*dp = *sp <= NEVER ? NEVER : *sp + target;
+		++sp;
 	} while (++dp < (int*)(this+1));
 }
 
