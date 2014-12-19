@@ -53,6 +53,7 @@ const Parser::regEntry Parser::regMap[] =
 ,	{ "mutex_acquire",  { 51, R_RDAB } }
 ,	{ "mutex_rel",      { 51, R_WRAB } }
 ,	{ "mutex_release",  { 51, R_WRAB } }
+,	{ "nop",            { 39, R_RWAB } }
 ,	{ "qpu_num",        { 38, R_RDB  } }
 ,	{ "qpu_number",     { 38, R_RDB  } }
 ,	{ "quad_x",         { 41, R_RDA  } }
@@ -977,6 +978,7 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "ifcs",           &Parser::addIf,     Inst::C_CS,     E_DSTOP }
 ,	{ "ifn",            &Parser::addIf,     Inst::C_NS,     E_DSTOP }
 ,	{ "ifnc",           &Parser::addIf,     Inst::C_NC,     E_DSTOP }
+,	{ "ifnn",           &Parser::addIf,     Inst::C_NC,     E_DSTOP }
 ,	{ "ifns",           &Parser::addIf,     Inst::C_NS,     E_DSTOP }
 ,	{ "ifnz",           &Parser::addIf,     Inst::C_ZC,     E_DSTOP }
 ,	{ "ifp",            &Parser::addIf,     Inst::C_NC,     E_DSTOP }
