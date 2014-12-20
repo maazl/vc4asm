@@ -194,6 +194,7 @@ class Parser
 	bool             HaveNOP;     ///< at least one NOP in the current line so far
 	// context
 	macro*           AtMacro = NULL;///< Currently at a macro definition
+	unsigned         Back = 0;    ///< Insert # instructions in the past
 	ifs_t            AtIf;        ///< List of (nested) if statements.
 	contexts_t       Context;     ///< Include and macro call stack
 	// definitions
@@ -250,6 +251,8 @@ class Parser
 
 	void             beginREP(int);
 	void             endREP(int);
+	void             beginBACK(int);
+	void             endBACK(int);
 	void             parseSET(int flags);
 	void             parseUNSET(int flags);
 	bool             doCondition();

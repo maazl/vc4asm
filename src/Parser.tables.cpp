@@ -1026,10 +1026,12 @@ const Parser::opExtEntry Parser::extMap[] =
 
 const Parser::opEntry<8> Parser::directiveMap[] =
 {	{ "assert",  &Parser::parseASSERT }
+,	{ "back",    &Parser::beginBACK }
 ,	{ "const",   &Parser::parseSET,   2 }
 ,	{ "elif",    &Parser::parseELSEIF }
 ,	{ "else",    &Parser::parseELSE }
 ,	{ "elseif",  &Parser::parseELSEIF }
+,	{ "endb",    &Parser::endBACK }
 ,	{ "endif",   &Parser::parseENDIF }
 ,	{ "endm",    &Parser::endMACRO }
 ,	{ "endr",    &Parser::endREP }

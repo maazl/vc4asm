@@ -152,7 +152,7 @@ struct Inst
 	};
 
 	sig        Sig;     ///< Signaling bits
-	bool       WS;      ///< Wrire swap
+	bool       WS;      ///< Write swap
 	uint8_t    WAddrA;  ///< Write address ADD ALU
 	uint8_t    WAddrM;  ///< Write address MUL ALU
 	uint8_t    RAddrA;  ///< Read address for register file A, invalid for ldi and semaphore instructions

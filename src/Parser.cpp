@@ -605,7 +605,7 @@ void Parser::doBRASource()
 		Fail("Data type is not allowed as branch target.");
 	 case V_LABEL:
 		if (Instruct.Rel)
-			param2.uValue -= (Instructions.size() + 4) * 8;
+			param2.uValue -= (Instructions.size() - Back + 4) * sizeof(uint64_t);
 		else
 			Msg(WARNING, "Using value of label as target of a absolute branch instruction.");
 	 case V_INT:
@@ -909,8 +909,8 @@ void Parser::defineLabel()
 		}
 	}
 	if (!Pass2)
-		lp->Value = Instructions.size() * sizeof(uint64_t);
-	else if (lp->Name != Token || lp->Value != Instructions.size() * sizeof(uint64_t))
+		lp->Value = (Instructions.size() - Back) * sizeof(uint64_t);
+	else if (lp->Name != Token || lp->Value != (Instructions.size() - Back) * sizeof(uint64_t))
 		return Error("Inconsistent Label definition during Pass 2.");
 	lp->Definition = *Context.back();
 
@@ -988,6 +988,37 @@ void Parser::endREP(int)
 	}
 }
 
+void Parser::beginBACK(int)
+{
+	if (doPreprocessor())
+		return;
+
+	if (Back)
+		return Error("Cannot nest .back directives.");
+	exprValue param = ParseExpression();
+	if (param.Type != V_INT)
+		return Error("Expected integer constant after .back.");
+	if (param.uValue > 3)
+		return Error("Cannot move instructions more than 3 slots back.");
+	if (param.uValue > Instructions.size())
+		return Error("Cannot move instructions back before the start of the code.");
+	if (NextToken() != END)
+		return Error("Expected end of line, found '%s'.", Token.c_str());
+	Back = param.uValue;
+}
+
+void Parser::endBACK(int)
+{
+	if (doPreprocessor())
+		return;
+
+	if (!Back)
+		return Error(".endb without .back.");
+	if (NextToken() != END)
+		return Error("Expected end of line, found '%s'.", Token.c_str());
+	Back = 0;
+}
+
 void Parser::parseSET(int flags)
 {
 	if (doPreprocessor())
@@ -999,7 +1030,7 @@ void Parser::parseSET(int flags)
 	if (NextToken() != COMMA)
 		return Error("Directive .set requires ', <value>'.");
 
-	const auto& expr = ParseExpression();
+	exprValue expr = ParseExpression();
 	if (NextToken() != END)
 		return Error("Syntax error: unexpected %s.", Token.c_str());
 
@@ -1374,7 +1405,7 @@ void Parser::ParseLine()
 		HaveNOP = false;
 		ParseInstruction();
 		Instruct.optimize();
-		Instructions.push_back(Instruct.encode());
+		Instructions.insert(Instructions.end() - Back, Instruct.encode());
 		return;
 	}
 }
