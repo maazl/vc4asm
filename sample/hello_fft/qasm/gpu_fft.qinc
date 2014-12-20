@@ -65,14 +65,16 @@
 .macro inst_vpm, in_inst, out_0, out_1, out_2, out_3
     mov r0, vpm_setup(1, 1, v32( 0,0))
     mov r1, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
-    mov r2, vpm_setup(1, 1, v32( 0,2)) - vpm_setup(1, 1, v32(0,0))
-
-    nop; mul24 r2, r2, in_inst
+    # (MM) Optimized: instruction packing
+    mul24 r2, in_inst, vpm_setup(1, 1, v32(0,2)) - vpm_setup(1, 1, v32(0,0))
 
     add out_0, r0, r2; v8adds r0, r0, r1
     add out_1, r0, r2; v8adds r0, r0, r1
+    # (MM) Optimized: do not assign to r39 (nop)
+    .if out_2 != nop
     add out_2, r0, r2; v8adds r0, r0, r1
     add out_3, r0, r2
+    .endif
 .endm
 
 ##############################################################################
@@ -140,7 +142,8 @@
 .macro body_rx_save_slave_16, arg_vpm
     write_vpm_16 arg_vpm
 
-    bra -, ra_sync
+    # (MM) Optimized: easier procedure chains
+    brr -, r:sync, ra_sync
 
     # (MM) Optimized: save another cycle by increased distance
     # between vpm setup and vpm read.
@@ -178,7 +181,8 @@
     fadd vpm, ra_32_re, r0
     fadd vpm, rb_32_im, r1
     mov vw_setup, ra_vpm_hi
-    bra -, ra_sync
+    # (MM) Optimized: easier procedure chains
+    brr -, r:sync, ra_sync
     mov -, vpm
     fsub vpm, ra_32_re, r0
     fsub vpm, rb_32_im, r1
@@ -288,21 +292,24 @@
 # FFT-16 codelet
 
 .macro body_fft_16
+# (MM) Optimized: better use of both ALUs, no need for ra_temp
+    mov r3, 1<<0;              fmul      r2, ra_tw_re+TW16_ACTIVE+0, r0
 .rep i, 4
-    and.setf -, elem_num, (1<<i)
-    nop;                       fmul.ifnz ra_temp, ra_tw_re+TW16_ACTIVE+i, r0
-    nop;                       fmul.ifnz r2,      rb_tw_im+TW16_ACTIVE+i, r1
-    fsub.ifnz r0, ra_temp, r2; fmul.ifnz r3,      rb_tw_im+TW16_ACTIVE+i, r0
-    nop;                       fmul.ifnz r1,      ra_tw_re+TW16_ACTIVE+i, r1
-    fadd.ifnz r1, r1, r3; mov r2, r0 << (1<<i)
-    fadd.ifz  r0, r2, r0; mov r3, r0 >> (1<<i)
+.if i!=0
+    fsub.ifnz r1, r2, r1;      fmul      r2, ra_tw_re+TW16_ACTIVE+i, r0
+.endif
+    and.setf -, elem_num, r3;  fmul      r3, rb_tw_im+TW16_ACTIVE+i, r1
+    fsub.ifnz r0, r2, r3;      fmul.ifnz r2, rb_tw_im+TW16_ACTIVE+i, r0
+    mov r3, 1<<(i+1);          fmul.ifnz r1, ra_tw_re+TW16_ACTIVE+i, r1
+    fadd.ifnz r1, r1, r2;      mov.ifz  r2, r0 << (1<<i)
+    fadd.ifz  r0, r2, r0;      mov.ifnz r2, r0 >> (1<<i)
 .if i==3
     bra -, ra_link_0
 .endif
-    fsub.ifnz r0, r3, r0; mov r2, r1 << (1<<i)
-    fadd.ifz  r1, r2, r1; mov r3, r1 >> (1<<i)
-    fsub.ifnz r1, r3, r1
+    fsub.ifnz r0, r2, r0;      mov.ifz  r2, r1 << (1<<i)
+    fadd.ifz  r1, r2, r1;      mov.ifnz r2, r1 >> (1<<i)
 .endr
+    fsub.ifnz r1, r2, r1
 .endm
 
 ##############################################################################
@@ -457,7 +464,8 @@
 
 .macro body_pass_16, mode
     loader_16 rb_0x80, mode
-    bra -, ra_save_16
+    # (MM) Optimized: easier procedure chains
+    brr -, r:save_16, ra_save_16
     nop
     mov ra_vpm_lo, rb_vpm_lo; mov rb_vpm_lo, ra_vpm_lo
     mov ra_vdw_16, rb_vdw_16; mov rb_vdw_16, ra_vdw_16
@@ -468,7 +476,8 @@
     mov ra_32_re, r0; mov rb_32_im, r1
     loader_16 rb_0x10, mode
     fft_twiddles_32
-    bra -, ra_save_32
+    # (MM) Optimized: easier procedure chains
+    brr -, r:save_32, ra_save_32
     mov ra_vpm_lo, rb_vpm_lo; mov rb_vpm_lo, ra_vpm_lo
     mov ra_vpm_hi, rb_vpm_hi; mov rb_vpm_hi, ra_vpm_hi
     mov ra_vdw_32, rb_vdw_32; mov rb_vdw_32, ra_vdw_32
@@ -498,7 +507,8 @@
     fadd rb_64+1, r0, r1;        fmul r2, r2, ra_tw_re+TW64_P1_BASE0 # rr
     fsub rb_64+0, r2, r3;        fmul r0, ra_32_re, rb_tw_im+TW64_P1_BASE1 # ri
     mov r3, rb_32_im;            fmul r1, rb_32_im, ra_tw_re+TW64_P1_BASE1 # ir
-    bra -, ra_save_64
+    # (MM) Optimized: easier procedure chains
+    brr -, r:save_64, ra_save_64
     mov r2, ra_32_re;            fmul r3, r3, rb_tw_im+TW64_P1_BASE1 # ii
     fadd rb_64+3, r0, r1;        fmul r2, r2, ra_tw_re+TW64_P1_BASE1 # rr
     fsub rb_64+2, r2, r3

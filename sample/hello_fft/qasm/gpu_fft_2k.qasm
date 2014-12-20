@@ -60,11 +60,11 @@
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
 .set ra_save_32,        ra4
-.set rx_save_slave_32,  rb4
+#
 .set ra_load_idx,       ra5
 .set rb_inst,           rb5
 .set ra_sync,           ra6
-.set rx_sync_slave,     rb6
+#
 .set ra_points,         ra7
 .set rb_vpm_48,         rb7
 .set ra_link_1,         ra8
@@ -72,7 +72,7 @@
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
 .set ra_save_64,        ra10
-.set rx_save_slave_64,  rb10
+#
 
 .set ra_64,             ra11 # 4
 .set rb_64,             rb11 # 4
@@ -123,8 +123,16 @@ load_tw r3, TW_SHARED, TW_UNIQUE, unif
 ##############################################################################
 # Instance
 
-mov rb_inst, unif
-inst_vpm rb_inst, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
+# (MM) Optimized: better procedure chains
+# Saves several branch instructions and 3 rb registers
+    sub r0, unif, 1;     mov ra_sync, 0
+    add.setf r3, r0, 1;  mov ra_save_32, 0
+    shl r0, r0, 5;       mov ra_save_64, 0
+    mov r1,              :sync_slave - :sync
+    add.ifnz ra_sync, r1, r0; mov rb_inst, r3
+    mov.ifnz ra_save_32, :save_slave_32 - :save_32
+    mov.ifnz ra_save_64, :save_slave_64 - :save_64
+inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
 ##############################################################################
 # Macros
@@ -143,59 +151,13 @@ inst_vpm rb_inst, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 .endm
 
 ##############################################################################
-# Master/slave procedures
-
-proc ra_save_32, r:1f
-body_ra_save_32
-:1
-
-proc rx_save_slave_32, r:1f
-body_rx_save_slave_32
-:1
-
-proc ra_save_64, r:1f
-body_ra_save_64 rb_0x40
-:1
-
-proc rx_save_slave_64, r:1f
-body_rx_save_slave_64
-:1
-
-proc ra_sync, r:1f
-body_ra_sync
-:1
-
-proc rx_sync_slave, r:main
-body_rx_sync_slave
-
-##############################################################################
-# Subroutines
-
-:fft_16
-    body_fft_16
-
-:pass_1
-    body_pass_64 LOAD_REVERSED, rb_0x1D0
-
-:pass_2
-    body_pass_32 LOAD_STRAIGHT
-
-##############################################################################
 # Top level
-
-:main
-    mov.setf r0, rb_inst
-    sub r0, r0, 1
-    shl r0, r0, 5
-    add.ifnz ra_sync, rx_sync_slave, r0
-    mov.ifnz ra_save_32, rx_save_slave_32
-    mov.ifnz ra_save_64, rx_save_slave_64
 
 :loop
     mov.setf ra_addr_x, unif # Ping buffer or null
-    mov      rb_addr_y, unif # Pong buffer or IRQ enable
-
+    # (MM) Optimized: branch sooner
     brr.allz -, r:end
+    mov      rb_addr_y, unif # Pong buffer or IRQ enable
 
 ##############################################################################
 # Pass 1
@@ -215,7 +177,8 @@ body_rx_sync_slave
         mov r0, 0x200
         add ra_points, ra_points, r0
 
-    bra ra_link_1, ra_sync
+    # (MM) Optimized: easier procedure chains
+    brr ra_link_1, r:sync, ra_sync
     nop
     ldtmu0
     ldtmu0
@@ -250,17 +213,50 @@ body_rx_sync_slave
         mov r0, 0x100
         add ra_points, ra_points, r0
 
-    bra ra_link_1, ra_sync
-    nop
-    ldtmu0
-    ldtmu0
+    # (MM) Optimized: easier procedure chains
+    brr r0, r:sync, ra_sync
+    # (MM) Optimized: redirect ra_link_1 to :loop to save branch and 3 nop.
+    mov r1, :loop - :1f
+    add ra_link_1, r0, r1; ldtmu0
+    nop;                   ldtmu0
+:1
 
 ##############################################################################
 
-    brr -, r:loop
-    nop
-    nop
-    nop
-
 :end
     exit rb_addr_y
+
+# (MM) Optimized: easier procedure chains
+##############################################################################
+# Master/slave procedures
+
+:save_32
+    body_ra_save_32
+
+:save_slave_32
+    body_rx_save_slave_32
+
+:save_64
+    body_ra_save_64 rb_0x40
+
+:save_slave_64
+    body_rx_save_slave_64
+
+:sync
+    body_ra_sync
+
+:sync_slave
+    body_rx_sync_slave
+
+##############################################################################
+# Subroutines
+
+:fft_16
+    body_fft_16
+
+:pass_1
+    body_pass_64 LOAD_REVERSED, rb_0x1D0
+
+:pass_2
+    body_pass_32 LOAD_STRAIGHT
+

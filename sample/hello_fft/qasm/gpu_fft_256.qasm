@@ -45,25 +45,26 @@
 ##############################################################################
 # Registers
 
-.set ra_link_1,         ra0
+.set ra_link_0,         ra0
 #                       rb0
 .set ra_save_ptr,       ra1
 #                       rb1
 .set ra_temp,           ra2
-#                       rb2
+#
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
 .set ra_save_16,        ra4
-.set rx_save_slave_16,  rb4
+#
 .set ra_load_idx,       ra5
 .set rb_inst,           rb5
 .set ra_sync,           ra6
-.set rx_sync_slave,     rb6
+#
 .set ra_points,         ra7
 #                       rb7
+.set ra_link_1,         ra8
 
-.set ra_tw_re,          ra8
-.set rb_tw_im,          rb8
+.set ra_tw_re,          ra9
+.set rb_tw_im,          rb9
 
 .set ra_vpm,            ra27
 .set rb_vpm,            rb27
@@ -76,11 +77,6 @@
 
 .set rb_0x40,           rb30
 .set rb_0x80,           rb31
-
-##############################################################################
-# Register alias
-
-.set ra_link_0, ra_save_16
 
 ##############################################################################
 # Constants
@@ -104,8 +100,21 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 ##############################################################################
 # Instance
 
-mov rb_inst, unif
-inst_vpm rb_inst, ra_vpm, rb_vpm, -, -
+# (MM) Optimized: better procedure chains
+# Saves several branch instructions and 2 registers
+    sub.setf r0, unif, 1; mov r3, unif
+    # get physical address for ra_link_0
+    brr r2, 0
+    mov r1, :save_16 - :0f
+    add r2, r2, r1;  mov ra_save_16, 0
+    shl r0, r0, 5;   mov ra_sync, 0
+:0  mov r1, :sync_slave - :sync
+    mov.ifnn ra_save_16,  :save_slave_16 - :save_16
+    add.ifnn ra_sync, r1, r0
+    # absolute and relative address of save_16
+    add ra_link_0, r2, ra_save_16; mov rb_inst, r3
+
+inst_vpm r3, ra_vpm, rb_vpm, -, -
 
 ##############################################################################
 # Macros
@@ -117,24 +126,6 @@ inst_vpm rb_inst, ra_vpm, rb_vpm, -, -
 .macro init_stage, tw16
     init_stage_16 tw16, 4
 .endm
-
-##############################################################################
-# Master/slave procedures
-
-proc ra_save_16, r:1f
-body_ra_save_16 ra_vpm, ra_vdw
-:1
-
-proc rx_save_slave_16, r:1f
-body_rx_save_slave_16 ra_vpm
-:1
-
-proc ra_sync, r:1f
-body_ra_sync
-:1
-
-proc rx_sync_slave, r:main
-body_rx_sync_slave
 
 ##############################################################################
 # Redefining this macro
@@ -154,33 +145,13 @@ body_rx_sync_slave
 .endm
 
 ##############################################################################
-# Subroutines
-
-:fft_16
-    body_fft_16
-
-:pass_1
-:pass_2
-    brr -, r:fft_16
-    nop;        ldtmu0
-    mov r0, r4; ldtmu0
-    mov r1, r4
-
-##############################################################################
 # Top level
-
-:main
-    mov.setf r0, rb_inst
-    sub r0, r0, 1
-    shl r0, r0, 5
-    add.ifnz ra_sync, rx_sync_slave, r0
-    mov.ifnz ra_save_16, rx_save_slave_16
 
 :loop
     mov.setf ra_addr_x, unif # Ping buffer or null
-    mov      rb_addr_y, unif # Pong buffer or IRQ enable
-
+    # (MM) Optimized: branch earlier
     brr.allz -, r:end
+    mov      rb_addr_y, unif # Pong buffer or IRQ enable
 
 ##############################################################################
 # Pass 1
@@ -196,7 +167,8 @@ body_rx_sync_slave
     mov ra_vdw, rb_vdw; mov rb_vdw, ra_vdw
 .endr
 
-    bra ra_link_1, ra_sync
+    # (MM) Optimized: easier procedure chains
+    brr ra_link_1, r:sync, ra_sync
     nop
     nop
     nop
@@ -221,17 +193,43 @@ body_rx_sync_slave
     mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
     mov ra_vdw, rb_vdw; mov rb_vdw, ra_vdw
 
-    bra ra_link_1, ra_sync
+    # (MM) Optimized: easier procedure chains
+    brr r0, r:sync, ra_sync
+    # (MM) Optimized: redirect ra_link_1 to :loop to save branch and 3 nop.
+    mov r1, :loop - :1f
+    add ra_link_1, r0, r1
     nop
-    nop
-    nop
+:1
 
 ##############################################################################
 
-    brr -, r:loop
-    nop
-    nop
-    nop
-
 :end
     exit rb_addr_y
+
+# (MM) Optimized: easier procedure chains
+##############################################################################
+# Master/slave procedures
+
+:save_16
+    body_ra_save_16 ra_vpm, ra_vdw
+
+:save_slave_16
+    body_rx_save_slave_16 ra_vpm
+
+:sync
+    body_ra_sync
+
+:sync_slave
+    body_rx_sync_slave
+
+##############################################################################
+# Subroutines
+
+:pass_1
+:pass_2
+    nop;        ldtmu0
+    mov r0, r4; ldtmu0
+    mov r1, r4
+:fft_16
+    body_fft_16
+
