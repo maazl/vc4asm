@@ -70,5 +70,6 @@ struct exprValue : value_t
 	exprValue(reg_t r) : Type(V_REG) { rValue = r; }
 	string      toString() const;
 };
+bool operator==(exprValue l, exprValue r);
 
 #endif

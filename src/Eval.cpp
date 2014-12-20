@@ -309,13 +309,13 @@ bool Eval::operate::Apply(bool unary)
 	 case EQ:
 		if (types == (1<<V_INT | 1<<V_FLOAT))
 			PropFloat();
-		lhs.iValue = lhs.uValue == rhs.uValue && lhs.rValue.Type == rhs.rValue.Type;
+		lhs.iValue = lhs == rhs;
 		lhs.Type = V_INT;
 		break;
 	 case NE:
 		if (types == (1<<V_INT | 1<<V_FLOAT))
 			PropFloat();
-		lhs.iValue = lhs.uValue != rhs.uValue || lhs.rValue.Type != rhs.rValue.Type;
+		lhs.iValue = !(lhs == rhs);
 		lhs.Type = V_INT;
 		break;
 	 case AND:
