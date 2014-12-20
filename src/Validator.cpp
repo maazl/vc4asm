@@ -44,6 +44,17 @@ void Validator::Message(int refloc, const char* fmt, ...)
 		fprintf(stderr, "  referring to instruction at 0x%x\n", BaseAddr + refloc * sizeof(uint64_t));
 }
 
+int Validator::FromMux(Inst::mux m)
+{	switch (m)
+	{case Inst::X_RA:
+		return Instruct.RAddrA;
+	 case Inst::X_RB:
+		return Instruct.RAddrB + 64;
+	 default:
+		return (int)m + 32;
+	}
+}
+
 void Validator::TerminateRq(int after)
 {	after += At;
 	if (after < To)
@@ -145,11 +156,16 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 			if ((regWA & -4) == 52 || (regWB & -4) == 52)
 				Message(last, "SFU is already in use.");
 		}
-		// rot r5
-		if (rot && Instruct.SImmd == 48 && (st.LastWreg[0][37] == At-1 || st.LastWreg[1][37] == At-1))
-			Message(At-1, "Vector rotation must not follow a write to r5.");
-		if (st.LastRotReg >= 0 && (regWA == st.LastRotReg || regWB == st.LastRotReg))
-			Message(At-1, "Must not write to the target of a vector in the following instruction.");
+		// vector rotations
+		if (rot)
+		{	// rot r5
+			if (Instruct.SImmd == 48 && (st.LastWreg[0][37] == At-1 || st.LastWreg[1][37] == At-1))
+				Message(At-1, "Vector rotation must not follow a write to r5.");
+			// check source A
+			if ( st.LastWreg[0][FromMux(Instruct.MuxMA)] == At-1
+				|| st.LastWreg[0][FromMux(Instruct.MuxMB)] == At-1 )
+				Message(At-1, "Must not write to the source of a vector rotation in the previous instruction.");
+		}
 		// TLB Z -> MS_FLAGS
 		if ((regRA == 42 || regRB == 42) && At - st.LastWreg[0][44] <= 2)
 			Message(st.LastWreg[0][44], "Cannot read multisample mask (ms_flags) in the two instructions after TLB Z write.");

@@ -48,14 +48,15 @@ class Validator
  private:
 	vector<bool> Done;
 	workitems_t WorkItems;
-	int From;         ///< 0 in case of the initial start address.
-	int Start;        ///< Start instruction where the parsing started.
-	int At;           ///< Current Instruction.
-	int To;           ///< End analysis here.
+	int  From;        ///< 0 in case of the initial start address.
+	int  Start;       ///< Start instruction where the parsing started.
+	int  At;          ///< Current Instruction.
+	int  To;          ///< End analysis here.
 	bool Pass2;       ///< Check only for dependencies of branch target.
 	Inst Instruct;
  private:
 	void Message(int refloc, const char* fmt, ...);
+	int  FromMux(Inst::mux m);
 	void TerminateRq(int after);
 	void ProcessItem(const vector<uint64_t>& instructions, state& st);
  public:
