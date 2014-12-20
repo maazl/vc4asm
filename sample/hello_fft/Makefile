@@ -10,7 +10,8 @@ S = hex/shader_256.hex \
     hex/shader_128k.hex \
     hex/shader_256k.hex \
     hex/shader_512k.hex \
-    hex/shader_1024k.hex
+    hex/shader_1024k.hex \
+    hex/shader_trans.hex
 
 C = mailbox.c gpu_fft.c gpu_fft_base.c gpu_fft_twiddles.c gpu_fft_shaders.c
 
@@ -24,6 +25,13 @@ F = -lrt -lm
 
 hex/shader_%.hex : qasm/gpu_fft_%.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc
 	../../bin/vc4asm -V -c $@ ../../share/vc4.qinc $<
+
+%.o : %.c %.h
+	gcc -o $@ -c $<
+
+all: hello_fft.bin hello_fft_2d.bin
+
+shader: $(S)
 
 hello_fft.bin:	$(S) $(C1D) $(H1D)
 	gcc -o hello_fft.bin $(F) $(C1D)

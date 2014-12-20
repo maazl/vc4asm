@@ -49,7 +49,7 @@ unsigned Microseconds(void) {
 
 int main(int argc, char *argv[]) {
     int i, j, k, ret, loops, freq, log2_N, jobs, N, mb = mbox_open();
-    unsigned t[2];
+    unsigned t[3];
     double tsq[2];
 
     struct GPU_FFT_COMPLEX *base;
@@ -74,6 +74,7 @@ int main(int argc, char *argv[]) {
         case -4: printf("Unable to map Videocore peripherals into ARM memory space.\n");      return -1;
     }
 
+    t[2] = 0;
     for (k=0; k<loops; k++) {
 
         for (j=0; j<jobs; j++) {
@@ -87,6 +88,7 @@ int main(int argc, char *argv[]) {
         t[0] = Microseconds();
         gpu_fft_execute(fft); // call one or many times
         t[1] = Microseconds();
+        t[2] += t[1] - t[0];
 
         tsq[0]=tsq[1]=0;
         for (j=0; j<jobs; j++) {
@@ -99,10 +101,12 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        printf("rel_rms_err = %0.2g, usecs = %d, k = %d\n",
-            sqrt(tsq[1]/tsq[0]), (t[1]-t[0])/jobs, k);
+        printf("rel_rms_err = %0.2g, usecs = %f, k = %d\n",
+            sqrt(tsq[1]/tsq[0]), (double)(t[1]-t[0])/jobs, k);
     }
 
     gpu_fft_release(fft); // Videocore memory lost if not freed !
+
+    printf("average: usecs = %f\n", (double)t[2]/jobs/loops);
     return 0;
 }
