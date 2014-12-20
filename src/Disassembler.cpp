@@ -124,6 +124,7 @@ void Disassembler::DoADD()
 				Inst::eval(Instruct.OpA, value, value);
 				append(", ");
 				appendImmd(value);
+				return;
 			}
 		}
 
@@ -163,6 +164,7 @@ void Disassembler::DoMUL()
 				Inst::eval(Instruct.OpM, value, value);
 				append(", ");
 				appendImmd(value);
+				return;
 			}
 		} else
 			appendSource(Instruct.MuxMA);
@@ -260,16 +262,19 @@ void Disassembler::DoBranch()
 	if (Instruct.WAddrA == Inst::R_NOP && Instruct.WAddrM == Inst::R_NOP)
 		append("-, ");
 	if (Instruct.Reg)
-		append(cRreg[0][Instruct.RAddrA]);
-	else // no register => try label
+	{	append(cRreg[0][Instruct.RAddrA]);
+		if (Instruct.Immd.iValue)
+			append(", ");
+	} else // no register => try label
 	{	uint32_t target = Instruct.Immd.uValue;
 		if (Instruct.Rel)
-			target += BaseAddr + 4*sizeof(uint64_t);
+			target += Addr + 4*sizeof(uint64_t);
 		auto l = Labels.find(target);
 		if (l != Labels.end())
 			return appendf(":%s", l->second.c_str());
+		return appendf(Instruct.Rel ? "%+d # %04x" : "%d # %04x", Instruct.Immd.iValue, target);
 	}
-	if (Instruct.Immd.iValue)
+	if (Instruct.Immd.iValue || !Instruct.Reg)
 		appendf(Instruct.Rel ? "%+d" : "%d", Instruct.Immd.iValue);
 }
 
@@ -297,9 +302,9 @@ void Disassembler::ScanLabels()
 			continue;
 		// link address
 		if (Instruct.WAddrA != Inst::R_NOP)
-			Labels.emplace(Addr, stringf("LL%zu_%s", Labels.size(), cRreg[Instruct.WS][Instruct.WAddrA]));
+			Labels.emplace(Addr, stringf("LL%zu_%s", Labels.size(), cWreg[Instruct.WS][Instruct.WAddrA]));
 		if (Instruct.WAddrM != Inst::R_NOP)
-			Labels.emplace(Addr, stringf("LL%zu_%s", Labels.size(), cRreg[!Instruct.WS][Instruct.WAddrM]));
+			Labels.emplace(Addr, stringf("LL%zu_%s", Labels.size(), cWreg[!Instruct.WS][Instruct.WAddrM]));
 		if (Instruct.Reg)
 			continue;
 		if (Instruct.Rel)
