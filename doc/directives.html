@@ -9,14 +9,14 @@
   </head>
   <body>
     <h1>VC4ASM - Assembler directives</h1>
-    <p><a href="index.html">&uarr; Top</a>, <a href="#.assert"><tt>.assert</tt></a>
-      <tt><a href="#.const">.const</a> <a href="#.constlc">.constlc</a></tt><tt><tt>
-          <a href="#.else">.else</a></tt> <a href="#.elseif">.elseif</a> <a href="#.endif">.endif</a>
-        <a href="#.endm">.endm</a> <a href="#.endr">.endr</a> <a href="#.equ">.equ</a>
-        <a href="#.func">.func</a> <a href="#.if">.if</a> <a href="#.include">.include</a>
-        <a href="#.macro">.macro</a> <a href="#.rep">.rep</a> <a href="#.set">.set</a>
-        <a href="#.setlc">.setlc</a> <a href="#.unset">.unset</a></tt><tt><tt>
-        </tt> <a href="#.unsetlc">.unsetlc</a></tt></p>
+    <p><a href="index.html">&uarr; Top</a>, <tt><a href="#.assert">.assert</a>
+        <a href="#.back">.back</a> <a href="#.const">.const</a> <a href="#.constlc">.constlc</a>
+        <a href="#.else">.else</a> <a href="#.elseif">.elseif</a> <a href="#.endb">.endb</a>
+        <a href="#.endif">.endif</a> <a href="#.endm">.endm</a> <a href="#.endr">.endr</a>
+        <a href="#.equ">.equ</a> <a href="#.func">.func</a> <a href="#.if">.if</a>
+        <a href="#.include">.include</a> <a href="#.macro">.macro</a> <a href="#.rep">.rep</a>
+        <a href="#.set">.set</a> <a href="#.setlc">.setlc</a> <a href="#.unset">.unset</a>
+        <a href="#.unsetlc">.unsetlc</a></tt></p>
     <h2><a id=".const" name=".const"></a><a id=".set" name=".set"></a><tt>.const
         .set .lconst .lset</tt> - define a constant</h2>
     <pre>.const <i>identifier</i>, <i>expression</i>
@@ -111,6 +111,24 @@
     <h3> Example</h3>
     <p>Acquire all 15 QPU semaphores.</p>
     <pre>.rep i 15<br>    sacq i<br>.endr</pre>
+    <h2><a id=".back" name=".back"></a><a id=".endb" name=".endb"></a><tt>.back</tt>
+      - emit code before the last few instructions</h2>
+    <pre>.back <var>count<br>    your_code</var><br>    ...<br>.endb<var></var></pre>
+    <dl>
+      <dt><tt><var>count</var></tt></dt>
+      <dd>Number of instructions to go back. Must be less or equal to 3.</dd>
+    </dl>
+    <p>The code between <tt>.back</tt> and <tt>.endb</tt> is inserted before
+      the last <var><tt>count</tt></var> instructions rather than at the
+      current location. This can be quite useful when dealing with macros and
+      branch instruction. But be aware that there might be dependencies, e.g.
+      the inserted code might modify registers that are used by last
+      instructions. <tt>vc4asm</tt> will not check for that.</p>
+    <h3> Example</h3>
+    <pre>some_macro<br>.back 3<br>brr -, r:loop<br>.endb</pre>
+    <p>The code above will insert the branch instruction before the last three
+      instructions emitted by the macro <tt>some_macro</tt> or even code
+      before.</p>
     <h2><a name=".if"></a><a name=".else"></a><a name=".elseif"></a><a name=".endif"></a><tt>.if</tt>
       - conditional compile</h2>
     <pre>.if <var>condition<br>    your code</var><br><var>    </var>...<br>.elseif <var>condition<br>    another code</var><br><var>    </var>...<br>.else<br>    <var>alternate code</var><br><var>    </var>...<br>.endif    </pre>
