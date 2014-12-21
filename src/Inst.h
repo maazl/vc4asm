@@ -73,18 +73,18 @@ struct Inst
 	};
 	/// Branch condition
 	enum condb : uint8_t
-	{	B_ALLZ    ///< all zero set
-	,	B_ALLNZ   ///< all zero clear
-	,	B_ANYZ    ///< any zero set
-	,	B_ANYNZ   ///< any zero clear
-	,	B_ALLN    ///< all negative set
+	{	B_ALLZS   ///< all zero set
+	,	B_ALLZC   ///< all zero clear
+	,	B_ANYZS   ///< any zero set
+	,	B_ANYZC   ///< any zero clear
+	,	B_ALLNS   ///< all negative set
 	,	B_ALLNN   ///< all negative clear
-	,	B_ANYN    ///< any negative set
-	,	B_ANYNN   ///< any negative clear
-	,	B_ALLC    ///< all carry set
-	,	B_ALLNC   ///< all carry clear
-	,	B_ANYC    ///< any carry set
-	,	B_ANYNC   ///< any carry clear
+	,	B_ANYNS   ///< any negative set
+	,	B_ANYNC   ///< any negative clear
+	,	B_ALLCS   ///< all carry set
+	,	B_ALLCC   ///< all carry clear
+	,	B_ANYCS   ///< any carry set
+	,	B_ANYCC   ///< any carry clear
 	,	B_AL = 15 ///< always (default)
 	};
 	/// LAU write condition

@@ -426,7 +426,7 @@ opcode.unpack<var>yy</var> <var>destination, ...</var><br>opcode<var></var> <var
     </dl>
     <p>All patterns are nibbles in little endian memory order.</p>
     <h2><a id="sema" name="sema"></a>Semaphore instruction</h2>
-    <pre>sacq <var>destination, number</var><br>srel <var>destination, number</var><br>mov <var>destination</var>, sacq<var>number</var><br>mov <var>destination</var>, srel<var>number</var></pre>
+    <pre>sacq <var>destination, number</var><br>srel <var>destination, number</var><br>mov <var>destination, sacqnumber</var><br>mov <var>destination, srelnumber</var></pre>
     <dl>
       <dt><var><tt>destination</tt></var></dt>
       <dd>Target <a href="expressions.html#register">register</a>, usually <tt>-</tt>,
@@ -446,7 +446,7 @@ opcode.unpack<var>yy</var> <var>destination, ...</var><br>opcode<var></var> <var
       function below provides Broadcom compatible syntax.</p>
     <pre>.func sacq(i) sacq0 + i<br>mov -, sacq(7)</pre>
     <h2><a id="bra" name="bra"></a>Branch instruction</h2>
-    <pre>bra.<var>cond destination, </var><var>target</var><br>brr.<var>cond destination, </var><var>target</var></pre>
+    <pre>bra.<var>cond destination, </var><var>target</var><br>brr.<var>cond destination, target</var><br>bra.<var>cond destination, target1, target2</var><br>brr.<var>cond destination, target1, target2</var><br>bra.<var>cond destination1, destination2, target1, target2</var><br>brr.<var>cond destination1, destination2, target1, target2</var></pre>
     <dl>
       <dt><var><tt>.cond</tt></var></dt>
       <dd>Branch condition, optional. One of:<br>
@@ -485,12 +485,17 @@ opcode.unpack<var>yy</var> <var>destination, ...</var><br>opcode<var></var> <var
           </tbody>
         </table>
       </dd>
-      <dt><var><tt>destination</tt></var></dt>
+      <dt><var><tt>destination, destination1, destination2</tt></var></dt>
       <dd>Target <a href="expressions.html#register">register</a> or <tt>-</tt>.
-        The destination receives the PC position where the branch takes place,
-        i.e. PC + 4.</dd>
-      <dt><var><tt>target</tt></var></dt>
-      <dd>Register from register file A, constant or label.</dd>
+        The destination(s) receive the PC position where the branch takes place,
+        i.e. PC + 4, but the assignment only takes place if the branch is
+        actually taken.<br>
+        The option to have two destination registers require to specify two
+        branch targets also. In doubt use <tt>0</tt> or <tt>-</tt>, e.g: <tt>brr
+          ra_link, r0, -, r:target</tt></dd>
+      <dt><var><tt>target, target1, target2</tt></var></dt>
+      <dd>Register from register file A, constant or label. Branch instructions
+        can add two targets if one of them is a register.</dd>
     </dl>
     <p><tt>bra</tt> creates an absolute branch, i.e. target must be a physical
       memory address. <tt>brr</tt> creates a relative branch.</p>

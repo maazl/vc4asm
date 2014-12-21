@@ -232,9 +232,9 @@ class Parser
 	void             addRot(int, bool mul);
 	void             doInstrExt(bool mul);
 
-	void             doALUTarget(bool mul);
+	void             doALUTarget(exprValue param, bool mul);
 	Inst::mux        doALUExpr(bool mul);
-	void             doBRASource();
+	void             doBRASource(exprValue param);
 
 	// OP codes
 	void             assembleADD(int op);

@@ -539,9 +539,8 @@ void Parser::doInstrExt(bool mul)
 	At -= Token.size();
 }
 
-void Parser::doALUTarget(bool mul)
-{	exprValue param = ParseExpression();
-	if (param.Type != V_REG)
+void Parser::doALUTarget(exprValue param, bool mul)
+{	if (param.Type != V_REG)
 		Fail("The first argument to a ALU or branch instruction must be a register or '-', found %s.", Token.c_str());
 	if (!(param.rValue.Type & R_WRITE))
 		Fail("The register is not writable.");
@@ -597,31 +596,36 @@ Inst::mux Parser::doALUExpr(bool mul)
 	}
 }
 
-void Parser::doBRASource()
+void Parser::doBRASource(exprValue param)
 {
-	auto param2 = ParseExpression();
-	switch (param2.Type)
+	switch (param.Type)
 	{default:
 		Fail("Data type is not allowed as branch target.");
 	 case V_LABEL:
 		if (Instruct.Rel)
-			param2.uValue -= (Instructions.size() - Back + 4) * sizeof(uint64_t);
+			param.uValue -= (Instructions.size() - Back + 4) * sizeof(uint64_t);
 		else
 			Msg(WARNING, "Using value of label as target of a absolute branch instruction.");
 	 case V_INT:
+		if (!param.uValue)
+			return;
 		if (Instruct.Immd.uValue)
 			Fail("Cannot specify two immediate values as branch target.");
-		Instruct.Immd = param2;
+		Instruct.Immd = param;
 		break;
 	 case V_REG:
-		if (!(param2.rValue.Type & R_A) || param2.rValue.Num >= 32)
+		if (!(param.rValue.Type & R_WRITE))
+			Fail("Branch target register is not writable.");
+		if (param.rValue.Num == Inst::R_NOP && !param.rValue.Rotate && (param.rValue.Type & R_AB))
+			return;
+		if (!(param.rValue.Type & R_A) || param.rValue.Num >= 32)
 			Fail("Branch target must be from register file A and no hardware register.");
-		if (param2.rValue.Rotate)
+		if (param.rValue.Rotate)
 			Fail("Cannot use vector rotation with branch instruction.");
 		if (Instruct.Reg)
 			Fail("Cannot specify two registers as branch target.");
 		Instruct.Reg = true;
-		Instruct.RAddrA = param2.rValue.Num;
+		Instruct.RAddrA = param.rValue.Num;
 		break;
 	}
 }
@@ -653,7 +657,7 @@ void Parser::assembleADD(int add_op)
 
 	doInstrExt(false);
 
-	doALUTarget(false);
+	doALUTarget(ParseExpression(), false);
 
 	if (!Instruct.isUnary())
 		Instruct.MuxAA = doALUExpr(false);
@@ -674,7 +678,7 @@ void Parser::assembleMUL(int mul_op)
 
 	doInstrExt(true);
 
-	doALUTarget(true);
+	doALUTarget(ParseExpression(), true);
 
 	Instruct.MuxMA = doALUExpr(true);
 	Instruct.MuxMB = doALUExpr(true);
@@ -691,7 +695,7 @@ void Parser::assembleMOV(int mode)
 
 	doInstrExt(useMUL);
 
-	doALUTarget(useMUL);
+	doALUTarget(ParseExpression(), useMUL);
 
 	if (NextToken() != COMMA)
 		Fail("Expected ', <source1>' after first argument to ALU instruction, found %s.", Token.c_str());
@@ -798,25 +802,39 @@ void Parser::assembleBRANCH(int relative)
 
 	doInstrExt(false);
 
-	doALUTarget(false);
+	doALUTarget(ParseExpression(), false);
 
 	if (NextToken() != COMMA)
 		Fail("Expected ', <branch target>' after first argument to branch instruction, found %s.", Token.c_str());
-	doBRASource();
+	auto param2 = ParseExpression();
 	switch (NextToken())
 	{default:
 		Fail("Expected ',' or end of line, found '%s'.", Token.c_str());
-	 case COMMA: // second branch target
-		doBRASource();
-		if (NextToken() != END)
-			Fail("Expected end of line after branch instruction.");
-	 case END:;
+	 case END:
+		doBRASource(param2);
+		break;
+	 case COMMA:
+		auto param3 = ParseExpression();
+		switch (NextToken())
+		{default:
+			Fail("Expected ',' or end of line, found '%s'.", Token.c_str());
+		case END: // we have 3 arguments => #2 and #3 are branch target
+			doBRASource(param2);
+			doBRASource(param3);
+			break;
+		case COMMA: // we have 4 arguments, so #2 is a target and #3 the first source
+			doALUTarget(param2, true);
+			doBRASource(param3);
+			doBRASource(ParseExpression());
+			if (NextToken() != END)
+				Fail("Expected end of line after branch instruction.");
+		}
 	}
 }
 
 void Parser::assembleSEMA(int type)
 {
-	doALUTarget(false);
+	doALUTarget(ParseExpression(), false);
 	if (NextToken() != COMMA)
 		Fail("Expected ', <number>' after first argument to semaphore instruction, found %s.", Token.c_str());
 
