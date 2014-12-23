@@ -102,22 +102,27 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 2 registers
-    sub.setf r0, unif, 1; mov r3, unif
+    shl.setf r0, unif, 5; mov r3, unif
     # get physical address for ra_link_0
     brr r2, 0
     mov r1, :save_16 - :0f
-    add r2, r2, r1;  mov ra_save_16, 0
-    shl r0, r0, 5;   mov ra_sync, 0
-:0  mov r1, :sync_slave - :sync
-    mov.ifnn ra_save_16,  :save_slave_16 - :save_16
-    add.ifnn ra_sync, r1, r0
-    # absolute and relative address of save_16
-    add ra_link_0, r2, ra_save_16; mov rb_inst, r3
+    add r2, r2, r1;       mov ra_save_16, 0
+    mov rb_inst, r3;      mov ra_sync, 0
+:0  mov r1, :sync_slave - :sync - 4*8 # -> rb_inst-1
+    mov.ifnz ra_save_16,  :save_slave_16 - :save_16
+    add.ifnz ra_sync, r1, r0
+    # absolute address of save_16
+    add ra_link_0, r2, ra_save_16
 
 inst_vpm r3, ra_vpm, rb_vpm, -, -
 
 ##############################################################################
 # Macros
+
+.macro swap_vpm_vdw
+    mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
+    mov ra_vdw, rb_vdw; mov rb_vdw, ra_vdw
+.endm
 
 .macro next_twiddles, tw16
     next_twiddles_16 tw16
@@ -159,14 +164,17 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
     init_stage TW16_P1_BASE
     read_rev rb_0x80
     read_rev rb_0x80
+    # (MM) Optimized: move branch before the last instruction of read_rev
+    .back 1
+    brr ra_link_1, r:pass_1
+    .endb
+    swap_vpm_vdw
 
-.rep i, 2
+# :start of hidden loop
     brr ra_link_1, r:pass_1
     nop
-    mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
-    mov ra_vdw, rb_vdw; mov rb_vdw, ra_vdw
-.endr
-
+    swap_vpm_vdw
+    
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
     nop
@@ -180,18 +188,18 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
     init_stage TW16_P2_BASE
     read_lin rb_0x80
     read_lin rb_0x80
-
+    # (MM) Optimized: move branch before the last instruction of read_lin
+    .back 1
     brr ra_link_1, r:pass_2
-    nop
-    mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
-    mov ra_vdw, rb_vdw; mov rb_vdw, ra_vdw
+    .endb
+    swap_vpm_vdw
 
     next_twiddles TW16_P2_STEP
-
+    # (MM) Optimized: move branch before the last instruction of next_twiddles
+    .back 1
     brr ra_link_1, r:pass_2
-    nop
-    mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
-    mov ra_vdw, rb_vdw; mov rb_vdw, ra_vdw
+    .endb
+    swap_vpm_vdw
 
     # (MM) Optimized: easier procedure chains
     brr r0, r:sync, ra_sync

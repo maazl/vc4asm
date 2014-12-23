@@ -174,18 +174,15 @@
 ##############################################################################
 
 .macro body_rx_save_slave_32
+    write_vpm_32
     # (MM) Optimized: scheduled instructions of write_vpm_32 with vpm read code
     # to reduce QPU stalls because of fifo dependencies at vpm access.
-    mov vw_setup, ra_vpm_lo
+    .back 2
     mov vr_setup, ra_vpm_lo
-    fadd vpm, ra_32_re, r0
-    fadd vpm, rb_32_im, r1
-    mov vw_setup, ra_vpm_hi
     # (MM) Optimized: easier procedure chains
     brr -, r:sync, ra_sync
     mov -, vpm
-    fsub vpm, ra_32_re, r0
-    fsub vpm, rb_32_im, r1
+    .endb
 .endm
 
 ##############################################################################
@@ -213,19 +210,16 @@
 ##############################################################################
 
 .macro body_rx_save_slave_64
-    mov r0, rb_inst
-    shl ra_temp, r0, 5
-    nop
-    brr -, ra_temp
-    nop
-    nop
-    nop
-
-    # (MM) Optimized: scheduled code of write_vpm_64 with branch instructions,
-    # saves 5 instructions.
-    .rep i, 8
-        brr -, r:2f
-        mov -, sacq(i) # Slave waits for master
+    # (MM) Optimized:
+    # - Calculate entry point at setup like for body_rx_sync_slave,
+    # saves 7 instructions
+    # - Scheduled code of write_vpm_64 with branch instructions,
+    # saves another 5 instructions.
+    # - Removed unnecessary code for semaphore 0 (8 instructions dead code).
+    # - Furthermore store the return address as offset for the second branch to srel.
+    .rep i, 7
+        brr ra_temp, r:2f
+        mov -, sacq(i+1) # Slave waits for master
         mov vw_setup, rb_vpm # start with write_vpm_64 here
         fadd vpm, ra_64+0, rb_64+0
     .endr
@@ -238,17 +232,21 @@
     mov vw_setup, rb_vpm_32
     fsub vpm, ra_64+0, rb_64+0
     fsub vpm, ra_64+1, rb_64+1
-    brr -, ra_temp
+
+    # (MM) Optimized: Take the return address from above as base of the branch target.
+    bra -, ra_temp, :3f - :2 - 4*8
+
     mov vw_setup, rb_vpm_48
     fsub vpm, ra_64+2, rb_64+2
     fsub vpm, ra_64+3, rb_64+3
 
-    .rep i, 8
+    .rep i, 7
         bra -, ra_link_1
         mov vr_setup, rb_vpm
         mov -, vpm
-        mov -, srel(i+8) # Slave releases master
+        mov -, srel(i+9) # Slave releases master
     .endr
+:3
 .endm
 
 ##############################################################################
@@ -393,11 +391,13 @@
 # Unpack twiddles
 
 .macro unpack_twiddles
-.rep i, 4
+# (MM) Optimized: do not rotate r2/r3 unnecessarily at the last turn
+.rep i, 3
     and.setf -, elem_num, (8>>i)
     mov ra_tw_re+TW16_ACTIVE+3-i, r2; mov.ifnz r2, r2 >> (8>>i)
     mov rb_tw_im+TW16_ACTIVE+3-i, r3; mov.ifnz r3, r3 >> (8>>i)
 .endr
+    mov ra_tw_re+TW16_ACTIVE+3-3, r2; mov rb_tw_im+TW16_ACTIVE+3-3, r3
 .endm
 
 ##############################################################################

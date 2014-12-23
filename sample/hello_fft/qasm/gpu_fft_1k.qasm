@@ -153,21 +153,24 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
     init_stage TW16_P1_BASE, TW32_P1_BASE
     read_rev rb_0x10
 
-        brr ra_link_1, r:pass_1
-        nop
-        mov r0, 0x100
-        add ra_points, ra_points, r0
-
-        shr.setf -, ra_points, STAGES
-
-        brr.allz -, r:pass_1
-        nop
-        mov r0, 0x100
-        add ra_points, ra_points, r0
-
-    bra ra_link_1, ra_sync
+    # (MM) Optimized: place branch before the last two instructions of read_rev
+    .back 2
+    brr ra_link_1, r:pass_1
+    .endb
+    mov ra_points, (1<<STAGES) / 0x100 - 1
+        
+# :start of hidden loop
+    # (MM) Optimized: branch unconditional and patch the return address
+    # for the last turn.
+    brr r0, r:pass_1
+    sub.setf ra_points, ra_points, 1
+    mov.ifz ra_link_1, r0
     nop
+       
+    # (MM) Optimized: easier procedure chains
+    brr ra_link_1, r:sync, ra_sync
     ldtmu0
+    nop
     ldtmu0
 
 ##############################################################################
@@ -176,20 +179,22 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
     swap_buffers
     init_stage TW16_P2_BASE, TW32_P2_BASE
     read_lin rb_0x10
+    # (MM) Optimized: place branch before the last two instructions of read_lin
+    .back 2
+    brr ra_link_1, r:pass_2
+    .endb
+    mov ra_points, (1<<STAGES) / 0x100 - 1
 
-        brr ra_link_1, r:pass_2
-        nop
-        mov r0, 0x100
-        add ra_points, ra_points, r0
+# :start of hidden loop
+    next_twiddles TW16_P2_STEP, TW32_P2_STEP
 
-        next_twiddles TW16_P2_STEP, TW32_P2_STEP
-
-        shr.setf -, ra_points, STAGES
-
-        brr.allz -, r:pass_2
-        nop
-        mov r0, 0x100
-        add ra_points, ra_points, r0
+    # (MM) Optimized: branch unconditional and patch the return address for
+    # the last turn, move the branch before the last instruction of next_twiddles.
+    .back 1
+    brr r0, r:pass_2
+    .endb
+    sub.setf ra_points, ra_points, 1
+    mov.ifz ra_link_1, r0
 
     # (MM) Optimized: easier procedure chains
     brr r0, r:sync, ra_sync

@@ -88,7 +88,8 @@ int main(int argc, char *argv[]) {
         t[0] = Microseconds();
         gpu_fft_execute(fft); // call one or many times
         t[1] = Microseconds();
-        t[2] += t[1] - t[0];
+        if (k)
+            t[2] += t[1] - t[0];
 
         tsq[0]=tsq[1]=0;
         for (j=0; j<jobs; j++) {
@@ -107,6 +108,7 @@ int main(int argc, char *argv[]) {
 
     gpu_fft_release(fft); // Videocore memory lost if not freed !
 
-    printf("average: usecs = %f\n", (double)t[2]/jobs/loops);
+    if (loops > 1)
+        printf("average: usecs = %f\n", (double)t[2]/jobs/(loops-1));
     return 0;
 }

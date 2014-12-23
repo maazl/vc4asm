@@ -125,13 +125,15 @@ load_tw r3, TW_SHARED, TW_UNIQUE, unif
 
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 3 rb registers
-    sub r0, unif, 1;     mov ra_sync, 0
-    add.setf r3, r0, 1;  mov ra_save_32, 0
-    shl r0, r0, 5;       mov ra_save_64, 0
-    mov r1,              :sync_slave - :sync
-    add.ifnz ra_sync, r1, r0; mov rb_inst, r3
+    mov.setf r3, unif;  mov ra_sync, 0
+    mov rb_inst, r3;    mov ra_save_32, 0
+    shl r0, r3, 5;      mov ra_save_64, 0
+    mov.ifnz r1,         :sync_slave    - :sync    - 4*8 # -> rb_inst-1
+    add.ifnz ra_sync, r1, r0
     mov.ifnz ra_save_32, :save_slave_32 - :save_32
-    mov.ifnz ra_save_64, :save_slave_64 - :save_64
+    mov.ifnz r1,         :save_slave_64 - :save_64 - 4*8 # -> rb_inst-1
+    add.ifnz ra_save_64, r1, r0
+
 inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
 ##############################################################################
@@ -164,23 +166,25 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
     init_stage 6, TW16_P1_BASE, TW32_P1_BASE
     read_rev rb_0x10
+    
+    # (MM) Optimized: place branch before the last two instructions of read_rev
+    .back 2
+    brr ra_link_1, r:pass_1
+    .endb
+    mov ra_points, (1<<STAGES) / 0x200 - 1
 
-        brr ra_link_1, r:pass_1
-        nop
-        mov r0, 0x200
-        add ra_points, ra_points, r0
-
-        shr.setf -, ra_points, STAGES
-
-        brr.allz -, r:pass_1
-        nop
-        mov r0, 0x200
-        add ra_points, ra_points, r0
+# :start of hidden loop
+    # (MM) Optimized: branch unconditional and patch the return address
+    # for the last turn.
+    brr r0, r:pass_1
+    sub.setf ra_points, ra_points, 1
+    mov.ifz ra_link_1, r0
+    nop
 
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
-    nop
     ldtmu0
+    nop
     ldtmu0
 
 ##############################################################################
@@ -199,19 +203,22 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
     init_stage 5, TW16_P2_BASE, TW32_P2_BASE
     read_lin rb_0x10
 
-        brr ra_link_1, r:pass_2
-        nop
-        mov r0, 0x100
-        add ra_points, ra_points, r0
+    # (MM) Optimized: place branch before the last two instructions of read_lin
+    .back 2
+    brr ra_link_1, r:pass_2
+    .endb
+    mov ra_points, (1<<STAGES) / 0x100 - 1
 
-        next_twiddles TW16_P2_STEP, TW32_P2_STEP
+# :start of hidden loop
+    next_twiddles TW16_P2_STEP, TW32_P2_STEP
 
-        shr.setf -, ra_points, STAGES
-
-        brr.allz -, r:pass_2
-        nop
-        mov r0, 0x100
-        add ra_points, ra_points, r0
+    # (MM) Optimized: branch unconditional and patch the return address for
+    # the last turn, move the branch before the last instruction of next_twiddles.
+    .back 1
+    brr r0, r:pass_2
+    .endb
+    sub.setf ra_points, ra_points, 1
+    mov.ifz ra_link_1, r0
 
     # (MM) Optimized: easier procedure chains
     brr r0, r:sync, ra_sync

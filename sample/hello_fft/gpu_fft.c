@@ -27,9 +27,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <string.h>
+#include <stdio.h>
 
 #include "gpu_fft.h"
-
 #define GPU_FFT_BUSY_WAIT_LIMIT (5<<12) // ~1ms
 
 typedef struct GPU_FFT_COMPLEX COMPLEX;
@@ -64,6 +64,8 @@ int gpu_fft_prepare(
             twid_bytes +        // twiddles
             unif_bytes +        // uniforms
             mail_bytes;         // mailbox message
+    printf("info_bytes = %d\ndata_bytes = %d\ncode_bytes = %d\ntwid_bytes = %d\nunif_bytes = %d\nmail_bytes = %d\ntotal_bytes = %d\n",
+      info_bytes, data_bytes*jobs*2, code_bytes, twid_bytes, unif_bytes, mail_bytes, size);
 
     ret = gpu_fft_alloc(mb, size, &ptr);
     if (ret) return ret;
