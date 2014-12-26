@@ -1,14 +1,40 @@
 # general definitions
 
 # VPM setup helpers
-.func vdw_setup_0(units, depth, dma) 0x80000000 | (units & 0x7f) << 23 | (depth & 0x7f) << 16 | (dma & 0xffff)
-.func vdw_setup_1(stride) 0xc0000000 | stride
-.func vpm_setup(num, stride, dma) (num & 0xf) << 20 | (stride & 0x3f) << 12 | (dma & 0xfff)
-.func dma_h32(y, x) 0x4000 | (y & 0x7f) << 7 | (x & 0xf) << 3
-.func dma_v32(y, x) (y & 0x7f) << 7 | (x & 0xf) << 3
-.func h32(y, x) 0xa00 | (y & 0x30) | (x & 0xf)
-.func v32(y, x) 0x200 | (y & 0x30) | (x & 0xf)
+.func vdw_setup_0(units, depth, dma)
+  0x80000000 | (units & 0x7f) << 23 | (depth & 0x7f) << 16 | (dma & 0xffff)
+.endf
+.func vdw_setup_1(stride)
+  .assert (stride & ~0x1fff) == 0
+  0xc0000000 | stride
+.endf
+.func vpm_setup(num, stride, dma)
+  .assert num <= 16 && num > 0
+  .assert stride <= 64 && stride > 0
+  .assert (dma & ~0xfff) == 0
+  (num & 0xf) << 20 | (stride & 0x3f) << 12 | dma
+.endf
+.func dma_h32(y, x)
+  .assert (y & ~0x7f) == 0
+  .assert (x & ~0xf) == 0
+  0x4000 | y << 7 | x << 3
+.endf
+.func dma_v32(y, x)
+  .assert (y & ~0x7f) == 0
+  .assert (x & ~0xf) == 0
+  y << 7 | x << 3
+.endf
+.func h32(y, x)
+  .assert (y & ~0x30) == 0
+  .assert (x & ~0xf) == 0
+  0xa00 | y | x
+.endf
+.func v32(y, x)
+  .assert (y & ~0x30) == 0
+  .assert (x & ~0xf) == 0
+  0x200 | y | x
+.endf
 
 # functional semaphore style
-.func sacq(i) sacq0 + i
-.func srel(i) srel0 + i
+.set sacq(i) sacq0 + i
+.set srel(i) srel0 + i

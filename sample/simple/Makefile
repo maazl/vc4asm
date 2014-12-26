@@ -15,3 +15,5 @@ smitest.hex : smitest.qasm
 
 clean :
 	rm smitest.hex *.o
+
+shader : smitest.hex

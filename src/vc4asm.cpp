@@ -50,8 +50,7 @@ int main(int argc, char **argv)
 	Parser parser;
 
 	if (writePRE)
-	{
-		parser.Preprocessed = fopen(writePRE, "wt");
+	{	parser.Preprocessed = fopen(writePRE, "wt");
 		if (parser.Preprocessed == NULL)
 		{	fprintf(stderr, "Failed to open %s for writing.", writePRE);
 			return -1;

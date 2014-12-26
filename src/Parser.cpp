@@ -248,7 +248,7 @@ exprValue Parser::parseElemInt()
 exprValue Parser::ParseExpression()
 {
 	Eval eval;
- 	try
+	try
 	{next:
 		switch (NextToken())
 		{case WORD:
@@ -266,6 +266,13 @@ exprValue Parser::ParseExpression()
 				if (fp != Functions.end())
 				{	// Hit!
 					eval.PushValue(doFUNC(fp));
+					break;
+				}
+			}
+			{	// try functional macro
+				auto mp = MacroFuncs.find(Token);
+				if (mp != MacroFuncs.end())
+				{	eval.PushValue(doFUNCMACRO(mp));
 					break;
 				}
 			}
@@ -1044,22 +1051,58 @@ void Parser::parseSET(int flags)
 
 	if (NextToken() != WORD)
 		return Error("Directive .set requires identifier.");
-	string Name = Token;
-	if (NextToken() != COMMA)
-		return Error("Directive .set requires ', <value>'.");
+	string name = Token;
+	switch (NextToken())
+	{default:
+		return Error("Directive .set requires ', <value>' or '(<arguments>) <value>'. Fount %s.", Token.c_str());
+	 case BRACE1:
+		{	function func(*Context.back());
+		 next:
+			if (NextToken() != WORD)
+				return Error("Function argument name expected. Found '%s'.", Token.c_str());
+			func.Args.push_back(Token);
+			switch (NextToken())
+			{default:
+				return Error("Expected ',' or ')' after function argument.");
+			 case NUM:
+				return Error("Function arguments must not start with a digit.");
+			 case COMMA:
+				goto next;
+			 case END:
+				return Error("Unexpected end of function argument definition");
+			 case BRACE2:
+				break;
+			}
 
-	exprValue expr = ParseExpression();
-	if (NextToken() != END)
-		return Error("Syntax error: unexpected %s.", Token.c_str());
+			// Anything after ')' is function body and evaluated delayed
+			At += strspn(At, " \t\r\n,");
+			func.DefLine = Line;
+			func.Start = At;
 
-	auto& current = flags & 1 ? *Context.back() : *Context.front();
-	auto r = current.Consts.emplace(Name, constDef(expr, current));
-	if (!r.second)
-	{	if (flags & 2)
-			// redefinition not allowed
-			return Error("Identifier %s has already been defined at %s.",
-				Name.c_str(), r.first->second.Definition.toString().c_str());
-		r.first->second.Value = expr;
+			const auto& ret = Functions.emplace(name, func);
+			if (!ret.second)
+			{	Msg(INFO, "Redefinition of function %s.\n"
+				      "Previous definition at %s.",
+				  Token.c_str(), ret.first->second.Definition.toString().c_str());
+				ret.first->second = func;
+			}
+			break;
+		}
+	 case COMMA:
+		{	exprValue expr = ParseExpression();
+			if (NextToken() != END)
+				return Error("Syntax error: unexpected %s.", Token.c_str());
+
+			auto& current = flags & C_LOCAL ? *Context.back() : *Context.front();
+			auto r = current.Consts.emplace(name, constDef(expr, current));
+			if (!r.second)
+			{	if (flags & C_CONST)
+					// redefinition not allowed
+					return Error("Identifier %s has already been defined at %s.",
+						name.c_str(), r.first->second.Definition.toString().c_str());
+				r.first->second.Value = expr;
+			}
+		}
 	}
 }
 
@@ -1074,7 +1117,7 @@ void Parser::parseUNSET(int flags)
 	if (NextToken() != END)
 		return Error("Syntax error: unexpected %s.", Token.c_str());
 
-	auto& consts = (flags & 1 ? Context.back() : Context.front())->Consts;
+	auto& consts = (flags & C_LOCAL ? Context.back() : Context.front())->Consts;
 	auto r = consts.find(Name);
 	if (r == consts.end())
 		return Msg(WARNING, "Cannot unset %s because it has not yet been definied in the required context.", Name.c_str());
@@ -1148,7 +1191,7 @@ void Parser::parseASSERT(int)
 		Error("Assertion failed.");
 }
 
-void Parser::beginMACRO(int)
+void Parser::beginMACRO(int flags)
 {
 	if (doPreprocessor(PP_IF))
 		return;
@@ -1159,7 +1202,7 @@ void Parser::beginMACRO(int)
 		  AtMacro->Definition.toString().c_str());
 	if (NextToken() != WORD)
 		return Error("Expected macro name.");
-	AtMacro = &Macros[Token];
+	AtMacro = &(flags & M_FUNC ? MacroFuncs : Macros)[Token];
 	if (AtMacro->Definition.File.size())
 	{	Msg(INFO, "Redefinition of macro %s.\n"
 		          "  Previous definition at %s.",
@@ -1169,34 +1212,53 @@ void Parser::beginMACRO(int)
 		AtMacro->Content.clear();
 	}
 	AtMacro->Definition = *Context.back();
+	AtMacro->Flags = (macroFlags)flags;
 
+	int brace = 0;
 	while (true)
 		switch (NextToken())
-		{default:
+		{case BRACE1:
+			if (!AtMacro->Args.size())
+			{	brace = 1;
+				goto comma;
+			}
+		 default:
 			return Error("Expected ',' before (next) macro argument.");
 		 case NUM:
 			return Error("Macro arguments must not be numbers.");
 		 case COMMA:
+			if (brace == 2)
+				return Error("Expected end of line after closing brace.");
+		 comma:
 			// Macro argument
 			if (NextToken() != WORD)
 				return Error("Macro argument name expected. Found '%s'.", Token.c_str());
 			AtMacro->Args.push_back(Token);
 			break;
+		 case BRACE2:
+			if (brace != 1)
+				return Error("Unexpected closing brace.");
+			brace = 2;
+			break;
 		 case END:
+			if (brace == 1)
+				Error("Closing brace is missing");
 			return;
 		}
 }
 
-void Parser::endMACRO(int)
+void Parser::endMACRO(int flags)
 {
 	if (doPreprocessor(PP_IF))
 		return;
 
 	if (!AtMacro)
-		return Error(".endm outside a macro definition.");
+		return Error(".%s outside a macro definition.", Token.c_str());
+	if (AtMacro->Flags != flags)
+		return Error("Cannot close this macro with .%s. Expected .end%c.", Token.c_str(), flags & M_FUNC ? 'f' : 'm');
 	AtMacro = NULL;
 	if (NextToken() != END)
-		Error("Expected end of line. .endm has no arguments.");
+		Error("Expected end of line.");
 }
 
 void Parser::doMACRO(macros_t::const_iterator m)
@@ -1241,48 +1303,84 @@ void Parser::doMACRO(macros_t::const_iterator m)
 	}
 }
 
-void Parser::defineFUNC(int)
+exprValue Parser::doFUNCMACRO(macros_t::const_iterator m)
 {
-	if (doPreprocessor())
-		return;
-
-	if (NextToken() != WORD)
-		return Error("Expected function name");
-	string name = Token;
-
-	function func(*Context.back());
-
 	if (NextToken() != BRACE1)
-		return Error("Expected '(' after function name.");
- next:
-	if (NextToken() != WORD)
-		return Error("Function argument name expected. Found '%s'.", Token.c_str());
-	func.Args.push_back(Token);
-	switch (NextToken())
-	{default:
-		return Error("Expected ',' or ')' after function argument.");
-	 case NUM:
-		return Error("Function arguments must not start with a digit.");
-	 case COMMA:
-		goto next;
-	 case END:
-		return Error("Unexpected end of function argument definition");
-	 case BRACE2:
-		break;
+		Fail("Expected '(' after function name.");
+
+	// Fetch macro arguments
+	const auto& argnames = m->second.Args;
+	vector<exprValue> args;
+	args.reserve(argnames.size());
+	if (argnames.size() == 0)
+	{	// no arguments
+		if (NextToken() != BRACE2)
+			Fail("Expected ')' because function %s has no arguments.", m->first.c_str());
+	} else
+	{next:
+		args.push_back(ParseExpression());
+		switch (NextToken())
+		{case BRACE2:
+			// End of argument list. Are we complete?
+			if (args.size() != argnames.size())
+				Fail("Too few arguments for function %s. Expected %u, found %u.", m->first.c_str(), argnames.size(), args.size());
+			break;
+		 default:
+			Fail("Unexpected '%s' in argument list of function %s.", Token.c_str(), m->first.c_str());
+		 case COMMA:
+			// next argument
+			if (args.size() == argnames.size())
+				Fail("Too much arguments for function %s. Expected %u.", m->first.c_str(), argnames.size());
+			goto next;
+		}
 	}
 
-	// Anything after ')' is function body and evaluated delayed
-	At += strspn(At, " \t\r\n");
-	func.DefLine = Line;
-	func.Start = At;
+	// Setup invocation context
+	saveLineContext ctx(*this, new fileContext(CTX_MACRO, m->second.Definition.File, m->second.Definition.Line));
 
-	const auto& ret = Functions.emplace(name, func);
-	if (!ret.second)
-	{	Msg(INFO, "Redefinition of function %s.\n"
-		      "Previous definition at %s.",
-		  Token.c_str(), ret.first->second.Definition.toString().c_str());
-		ret.first->second = func;
+	// setup args inside new context to avoid interaction with argument values that are also functions.
+	auto& current = *Context.back();
+	current.Consts.reserve(current.Consts.size() + argnames.size());
+	size_t n = 0;
+	for (auto arg : argnames)
+		current.Consts.emplace(arg, constDef(args[n++], current));
+
+	// Invoke macro
+	exprValue ret;
+	for (const string& line : m->second.Content)
+	{	++Context.back()->Line;
+		strncpy(Line, line.c_str(), sizeof(Line));
+		At = Line;
+		switch (NextToken())
+		{case DOT:
+			// directives
+			ParseDirective();
+		 case END:
+			break;
+
+		 case COLON:
+		 label:
+			Error("Label definition not allowed in functional macro %s.", m->first.c_str());
+			break;
+
+		 default:
+			if (doPreprocessor())
+				break;
+			// read-ahead to see if the next token is a colon in which case
+			// this is a label.
+			if (*At == ':')
+				goto label;
+			if (ret.Type != V_NONE)
+			{	Error("Only one expression allowed per functional macro.");
+				break;
+			}
+			At -= Token.size();
+			ret = ParseExpression();
+		}
 	}
+	if (ret.Type == V_NONE)
+		Fail("Failed to return a value in functional macro %s.", m->first.c_str());
+	return ret;
 }
 
 exprValue Parser::doFUNC(funcs_t::const_iterator f)
@@ -1384,10 +1482,7 @@ void Parser::ParseLine()
 
  next:
 	switch (NextToken())
-	{default:
-		return Error("Syntax error");
-
-	 case DOT:
+	{case DOT:
 		// directives
 		ParseDirective();
 	 case END:
@@ -1400,6 +1495,9 @@ void Parser::ParseLine()
 		parseLabel();
 		goto next;
 
+	 default:
+		if (!AtMacro || (AtMacro->Flags & M_FUNC) == 0)
+			return Error("Syntax error. Unexpected '%s'.", Token.c_str());
 	 case WORD:
 		if (doPreprocessor())
 			return;

@@ -136,18 +136,17 @@ class Parser
 	};
 	typedef vector<label> labels_t;
 	typedef unordered_map<string,unsigned> lnames_t;
+	enum defFlags : unsigned char
+	{	C_NONE  = 0
+	,	C_LOCAL = 1
+	,	C_CONST = 2
+	};
 	struct constDef
 	{	exprValue      Value;
 		location       Definition;
 		constDef(const exprValue& value, const location& loc) : Value(value), Definition(loc) {}
 	};
 	typedef unordered_map<string,constDef> consts_t;
-	struct macro
-	{	location       Definition;
-		vector<string> Args;
-		vector<string> Content;
-	};
-	typedef unordered_map<string,macro> macros_t;
 	struct function
 	{	location       Definition;
 		vector<string> Args;
@@ -156,6 +155,17 @@ class Parser
 		function(const location& definition) : Definition(definition), Start(NULL) {}
 	};
 	typedef unordered_map<string,function> funcs_t;
+	enum macroFlags : unsigned char
+	{	M_NONE = 0
+	,	M_FUNC = 1
+	};
+	struct macro
+	{	location       Definition;
+		macroFlags     Flags;
+		vector<string> Args;
+		vector<string> Content;
+	};
+	typedef unordered_map<string,macro> macros_t;
 	struct ifContext
 	{	unsigned       Line;
 		unsigned       State;       ///< 0 = .if false, 1 = .if true, 2 = .else, 4 = inherited .false
@@ -201,7 +211,8 @@ class Parser
 	labels_t         Labels;      ///< Label values
 	unsigned         LabelCount = 0;///< Next free label index
 	lnames_t         LabelsByName;///< Label names
-	funcs_t          Functions;   ///< Function definitions
+	funcs_t          Functions;   ///< Single line function definitions
+	macros_t         MacroFuncs;  ///< Multi line function definitions
 	macros_t         Macros;      ///< Macros
 	// instruction
 	vector<uint64_t> Instructions;
@@ -262,10 +273,10 @@ class Parser
 	void             parseENDIF(int);
 	bool             isDisabled() { return AtIf.size() != 0 && AtIf.back().State != 1; }
 	void             parseASSERT(int);
-	void             beginMACRO(int);
-	void             endMACRO(int);
+	void             beginMACRO(int flags);
+	void             endMACRO(int flags);
 	void             doMACRO(macros_t::const_iterator m);
-	void             defineFUNC(int);
+	exprValue        doFUNCMACRO(macros_t::const_iterator m);
 	exprValue        doFUNC(funcs_t::const_iterator f);
 	void             doINCLUDE(int);
 	bool             doPreprocessor(preprocType type = PP_ALL);

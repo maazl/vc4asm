@@ -10,7 +10,8 @@
 
 #include "expr.h"
 
-#include <stdint.h>
+#include <cstdint>
+using namespace std;
 
 
 struct Inst

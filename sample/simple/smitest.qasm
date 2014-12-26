@@ -6,7 +6,7 @@ mov rb0, 16*2*4-4
 
 :next
 # setup VPM write
-mov r2, vpm_setup(0, 1, v32(0,0))
+mov r2, vpm_setup(16, 1, v32(0,0))
 add vw_setup, r2, elem_num;
 
 add ra1, ra1, 4; mov t0s, ra1

@@ -18,20 +18,30 @@
         <a href="#.set">.set</a> <a href="#.setlc">.setlc</a> <a href="#.unset">.unset</a>
         <a href="#.unsetlc">.unsetlc</a></tt></p>
     <h2><a id=".const" name=".const"></a><a id=".set" name=".set"></a><tt>.const
-        .set .lconst .lset</tt> - define a constant</h2>
+        .set .lconst .lset</tt> - define a constant or single line function</h2>
     <pre>.const <i>identifier</i>, <i>expression</i>
 .set <i>identifier</i>, <i>expression</i>
 .lconst <i>identifier</i>, <i>expression</i>
-.lset <i>identifier</i>, <i>expression</i></pre>
+.lset <i>identifier</i>, <i>expression</i>.const <var>identifier</var>(<var>argument1, argument2</var> ...) <var>expression</var>
+.set <var>identifier</var>(<var>argument1, argument2</var> ...) <var>expression</var>
+.lconst <var>identifier</var>(<var>argument1, argument2</var> ...) <var>expression</var>
+.lset <var>identifier</var>(<var>argument1, argument2</var> ...) <var>expression</var></pre>
     <dl>
       <dt><var><tt>identifier</tt></var></dt>
       <dd>This identifier is assigned, i.e. from this line on. In case of <tt>.lset</tt>
         and <tt>.lconst</tt> the assignment is only preserved in the current
         context, e.g. the current include or macro.</dd>
+      <dt><tt><var>argument1, argument2</var> ...</tt></dt>
+      <dd><var></var>Function arguments. Function arguments must be expressions
+        of any type including registers, but they cannot be incomplete
+        expressions like operators or identifier fragments.<br>
+        These are identifiers that can be used in the <var><tt>expression</tt></var>
+        body like constants wherever an expression is allowed.</dd>
       <dt><tt><var>expression</var></tt></dt>
       <dd>This expression is assigned to <var><tt>identifier</tt></var>. The
         expression can be of any type including registers but it must evaluate
-        at the time <tt>.set</tt> is parsed. You cannot assign incomplete
+        at the time <tt>.set</tt> is parsed unless you have an argument list
+        which causes delayed evaluation. You cannot assign incomplete
         expressions like bare operators.</dd>
     </dl>
     <p>Constants can be used wherever an expression is allowed.</p>
@@ -39,10 +49,13 @@
       second assignment to the same identifier is an error. But final
       assignments neither prevent from shadowing in nested contexts nor from <tt>.unset</tt>.<br>
       <tt>.equ</tt> may be used as synonym for <tt>.set</tt>.</p>
+    <p>Further aliases for <tt>.set</tt> are: <tt>.define</tt>, <tt>.equ</tt>.</p>
     <h3> Example</h3>
-    <pre>.set ra_link_0, ra0<var></var></pre>
-    <h2><a id=".unset" name=".unset"></a><tt>.unset .lunset</tt> - revoke a
-      constant definition</h2>
+    <pre>.const ra_link_0, ra0<br><br>.set vpm_setup(num, stride, dma) (num &amp; 0xf) &lt;&lt; 20 | (stride &amp; 0x3f) &lt;&lt; 12 | (dma &amp; 0xfff)
+.set v32(y, x) 0x200 | (y &amp; 0x30) | (x &amp; 0xf)<br><br>mov vw_setup, vpm_setup(1, 1, v32(0,0))
+<var></var></pre>
+    <h2><a name=".unset"></a><tt>.unset .lunset</tt> - revoke a constant
+      definition</h2>
     <pre>.unset <i>identifier</i>.lunset <i>identifier</i></pre>
     <dl>
       <dt><var><tt>identifier</tt></var></dt>
@@ -53,22 +66,25 @@
     </dl>
     <p><tt>.lunset</tt> only removes the identifier from the current local
       context.</p>
-    <h2><a id=".func" name=".func"></a><tt>.func</tt> - define a user function</h2>
-    <pre>.func <var>identifier</var>(<var>argument1, argument2</var> ...) <var>body</var></pre>
+    <h2><a name=".func"></a><a name=".endf"></a><tt>.func</tt> - define a multi
+      line user function</h2>
+    <pre>.func <var>identifier</var>(<var>argument1, argument2</var> ...)<br> &nbsp;<var>body</var><br>.endf<var></var></pre>
     <dl>
       <dt><var><tt>identifier</tt></var></dt>
       <dd>Name of the function.</dd>
       <dt><tt><var>argument1, argument2</var> ...</tt></dt>
       <dd><var></var>Function arguments. These are identifiers that can be used
         in the function body like constants wherever an expression is allowed.</dd>
+      <dt><var><tt>body</tt></var></dt>
+      <dd>The function body may only contain a single expression like <a href="#.set"><tt>.set()</tt></a>.
+        But you may use <tt><a href="#.if">.if</a></tt>, <tt><a href="#.assert">.assert</a></tt>
+        and also <tt>.set</tt> etc. to decide what expression should evaluate.</dd>
     </dl>
-    <p>Functions are similar to constants but their value depends on arguments.
-      Function arguments must be expressions of any type including registers,
-      but they cannot be incomplete expressions like operators or identifier
-      fragments.</p>
+    <p>Functions are similar to constants with parameters but their body is
+      multi line.</p>
     <h3>Example</h3>
-    <pre>.func vpm_setup(num, stride, dma) (num &amp; 0xf) &lt;&lt; 20 | (stride &amp; 0x3f) &lt;&lt; 12 | (dma &amp; 0xfff)
-.func v32(y, x) 0x200 | (y &amp; 0x30) | (x &amp; 0xf)<br><br>mov vw_setup, vpm_setup(1, 1, v32(0,0))</pre>
+    <pre>.func vpm_setup(num, stride, dma)<br>  .assert num &lt;= 16 &amp;&amp; num &gt; 0<br>  .assert stride &lt;= 64 &amp;&amp; stride &gt; 0<br>  .assert (dma &amp; ~0xfff) == 0<br>  (num &amp; 0xf) &lt;&lt; 20 | (stride &amp; 0x3f) &lt;&lt; 12 | dma<br>.endf<br>.func v32(y, x)<br>  .assert (y &amp; ~0x30) == 0<br>  .assert (x &amp; ~0xf) == 0<br> &nbsp;0x200 | y | x<br>.endf<br><br>mov vw_setup, vpm_setup(1, 1, v32(0,0))</pre>
+    <p>The example above provides a checked version of the example to <a href="#.set"><tt>.set</tt></a>.</p>
     <h2><a id=".macro" name=".macro"></a><a id=".endm" name=".endm"></a><tt>.macro</tt>
       - define a macro</h2>
     <pre>.macro <var>identifier, argument1, argument2</var> ...<br>    <var>your code</var><br>    ...<br>.endm</pre>

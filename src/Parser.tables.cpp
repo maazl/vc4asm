@@ -1026,23 +1026,26 @@ const Parser::opExtEntry Parser::extMap[] =
 const Parser::opEntry<8> Parser::directiveMap[] =
 {	{ "assert",  &Parser::parseASSERT }
 ,	{ "back",    &Parser::beginBACK }
-,	{ "const",   &Parser::parseSET,   2 }
+,	{ "const",   &Parser::parseSET,   C_CONST }
+,	{ "define",  &Parser::parseSET,   C_NONE }
 ,	{ "elif",    &Parser::parseELSEIF }
 ,	{ "else",    &Parser::parseELSE }
 ,	{ "elseif",  &Parser::parseELSEIF }
 ,	{ "endb",    &Parser::endBACK }
+,	{ "endf",    &Parser::endMACRO,   M_FUNC }
 ,	{ "endif",   &Parser::parseENDIF }
-,	{ "endm",    &Parser::endMACRO }
+,	{ "endm",    &Parser::endMACRO,   M_NONE }
 ,	{ "endr",    &Parser::endREP }
-,	{ "equ",     &Parser::parseSET,   0 }
-,	{ "func",    &Parser::defineFUNC }
+,	{ "equ",     &Parser::parseSET,   C_NONE }
+,	{ "func",    &Parser::beginMACRO, M_FUNC }
 ,	{ "if",      &Parser::parseIF }
 ,	{ "include", &Parser::doINCLUDE }
-,	{ "lconst",  &Parser::parseSET,   3 }
-,	{ "lset",    &Parser::parseSET,   1 }
-,	{ "lunset",  &Parser::parseUNSET, 1 }
-,	{ "macro",   &Parser::beginMACRO }
+,	{ "lconst",  &Parser::parseSET,   C_LOCAL|C_CONST }
+,	{ "lset",    &Parser::parseSET,   C_LOCAL }
+,	{ "lunset",  &Parser::parseUNSET, C_LOCAL }
+,	{ "macro",   &Parser::beginMACRO, M_NONE }
 ,	{ "rep",     &Parser::beginREP }
-,	{ "set",     &Parser::parseSET,   0 }
-,	{ "unset",   &Parser::parseUNSET, 0 }
+,	{ "set",     &Parser::parseSET,   C_NONE }
+,	{ "undef",   &Parser::parseUNSET, C_NONE }
+,	{ "unset",   &Parser::parseUNSET, C_NONE }
 };

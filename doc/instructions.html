@@ -444,7 +444,7 @@ opcode.unpack<var>yy</var> <var>destination, ...</var><br>opcode<var></var> <var
     <pre>sacq -, 7<br>mov -, sacq7</pre>
     <p><var></var>The two instructions above are equivalent. The following
       function below provides Broadcom compatible syntax.</p>
-    <pre>.func sacq(i) sacq0 + i<br>mov -, sacq(7)</pre>
+    <pre>.set sacq(i) sacq0 + i<br>mov -, sacq(7)</pre>
     <h2><a id="bra" name="bra"></a>Branch instruction</h2>
     <pre>bra.<var>cond destination, </var><var>target</var><br>brr.<var>cond destination, target</var><br>bra.<var>cond destination, target1, target2</var><br>brr.<var>cond destination, target1, target2</var><br>bra.<var>cond destination1, destination2, target1, target2</var><br>brr.<var>cond destination1, destination2, target1, target2</var></pre>
     <dl>
