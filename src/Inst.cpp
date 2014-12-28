@@ -44,13 +44,14 @@ bool Inst::eval(opadd op, value_t& l, value_t r)
 	 case A_SUB:
 		l.iValue -= r.iValue; break;
 	 case A_SHR:
-		l.uValue >>= r.uValue; break;
+		l.uValue >>= r.uValue & 0x1f; break;
 	 case A_ASR:
-		l.iValue >>= r.iValue; break;
+		l.iValue >>= r.iValue & 0x1f; break;
 	 case A_ROR:
+		r.iValue &= 0x1f;
 		l.uValue = l.uValue >> r.iValue | l.uValue << (32-r.iValue); break;
 	 case A_SHL:
-		l.iValue <<= r.iValue; break;
+		l.iValue <<= r.iValue & 0x1f; break;
 	 case A_MIN:
 		l.iValue = min(l.iValue, r.iValue); break;
 	 case A_MAX:
