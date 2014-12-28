@@ -141,7 +141,7 @@
       the last <var><tt>count</tt></var> instructions rather than at the
       current location. This can be quite useful when dealing with macros and
       branch instruction. But be aware that there might be dependencies, e.g.
-      the inserted code might modify registers that are used by last
+      the inserted code might modify registers or flags that are used by last
       instructions. <tt>vc4asm</tt> will not check for that.</p>
     <h3> Example</h3>
     <pre>some_macro<br>.back 3<br>brr -, r:loop<br>.endb</pre>
@@ -176,7 +176,7 @@
       <tt>.setlc</tt> are only valid within the included file and sub includes.</p>
     <h2><tt><a id=".byte" name=".byte"></a><a id=".short" name=".short"></a><a id=".int"
           name=".int"></a><a id=".long" name=".long"></a><a id=".float" name=".float"></a>.byte
-        .short .int .long .float</tt> - place constants between code blocks</h2>
+        .short .int .long .float</tt> - place constants inside code blocks</h2>
     <pre>.byte <var>constant, constant</var> ...<br>.short <var><var>constant, constant</var></var> ...<var></var>.int <var><var>constant, constant</var></var> ...<br>.long <var>constant, constant</var> ...
 .float <var>constant, constant</var> ...</pre>
     <dl>
@@ -189,7 +189,7 @@
     <p><tt>.byte</tt> creates 8 bit constants (signed or unsigned), <tt>.short</tt>
       creates 16 bit constants (signed or unsigned), <tt>.int</tt> creates 32
       bit constants (signed, unsigned or float) and <tt>.float</tt> forces 32
-      bit floating point constants. The result is always stores in big endian
+      bit floating point constants. The result is always stored in big endian
       format.</p>
     <p>There are restrictions when placing constants in the code:</p>
     <ul>
