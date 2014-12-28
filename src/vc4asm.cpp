@@ -43,7 +43,13 @@ int main(int argc, char **argv)
 	}
 
 	if (!outfname && !writeCPP && !writeCPP2 && !writePRE) {
-		fputs("Usage: vc4asm [-o <bin-output>] [-{c|C} <c-output>] [-E <preprocessed>] [-V] <qasm-file>\n", stderr);
+		fputs("vc4asm V0.1.1\n"
+			"Usage: vc4asm [-o <bin-output>] [-{c|C} <c-output>] [-V] <qasm-file(s)>\n"
+			" -o<file> Binary output file.\n"
+			" -c<file> C output file with trailing ','.\n"
+			" -C<file> C output file withOUT trailing ','.\n"
+			" -V       Run instruction verifier and print warnings about suspicious code.\n"
+			, stderr);
 		return 1;
 	}
 

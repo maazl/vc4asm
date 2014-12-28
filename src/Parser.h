@@ -260,6 +260,7 @@ class Parser
 	void             defineLabel();
 	void             parseLabel();
 
+	void             parseDATA(int type);
 	void             beginREP(int);
 	void             endREP(int);
 	void             beginBACK(int);

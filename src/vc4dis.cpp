@@ -108,9 +108,19 @@ static void file_load_x64(const char *filename, vector<uint64_t>& memory)
 
 int main(int argc, char * argv[]) {
 	if (argc < 2) {
-    fprintf(stderr, "vc4dis: Pass in a file name to disassemble as the first argument\n");
-    return 1;
-  }
+		fputs("vc4dis V0.1\n"
+			"Usage: vc4dis [-x[32|64]] [-M] [-F] [-v] [-b <addr>] [-o <out_file>] [-V] <code_file(s)>\n"
+			" -x    Hexadecimal input, comma separated (rather than binary).\n"
+			" -x64  64 bit formatted hexadecimal input.\n"
+			" -M    Do not print simple ALU instructions and load immediate as mov.\n"
+			" -F    Print floating point constants as hexadecimal.\n"
+			" -v    Write internal instruction field as comment behind every line.\n"
+			" -b<addr> base address (only for output).\n"
+			" -o<file> Write output to this file rather than stdout.\n"
+			" -V    Run instruction verifier and print warnings about suspicious code.\n"
+			, stderr);
+		return 1;
+	}
 
 	Disassembler dis;
 	dis.Out = stdout;

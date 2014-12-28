@@ -10,13 +10,18 @@
   <body>
     <h1>VC4ASM - Assembler directives</h1>
     <p><a href="index.html">&uarr; Top</a>, <tt><a href="#.assert">.assert</a>
-        <a href="#.back">.back</a> <a href="#.const">.const</a> <a href="#.constlc">.constlc</a>
-        <a href="#.else">.else</a> <a href="#.elseif">.elseif</a> <a href="#.endb">.endb</a>
-        <a href="#.endif">.endif</a> <a href="#.endm">.endm</a> <a href="#.endr">.endr</a>
-        <a href="#.equ">.equ</a> <a href="#.func">.func</a> <a href="#.if">.if</a>
-        <a href="#.include">.include</a> <a href="#.macro">.macro</a> <a href="#.rep">.rep</a>
-        <a href="#.set">.set</a> <a href="#.setlc">.setlc</a> <a href="#.unset">.unset</a>
-        <a href="#.unsetlc">.unsetlc</a></tt></p>
+        <a href="#.back">.back</a> </tt><tt> <a href="#.byte">.byte</a> </tt><tt><a
+          href="#.const">.const</a>&nbsp;<a href="#.else">.else</a> <a href="#.elseif">.elseif</a>
+        <a href="#.back">.endb</a></tt><tt><tt> <a href="#.func">.endf</a> </tt>
+        <a href="#.endif">.endif</a> <a href="#.macro">.endm</a> <a href="#.rep">.endr</a>
+        <a href="#.equ">.equ</a></tt><tt><tt> <a href="#.float">.float</a> </tt>
+        <a href="#.func">.func</a> <a href="#.if">.if</a> <a href="#.include">.include</a>
+      </tt><tt><tt><a href="#.int">.int</a></tt></tt><tt><tt><tt> <a href="#.const">.lconst</a>
+          </tt> </tt></tt><tt><tt><tt><a href="#.long">.long</a></tt></tt></tt><tt><tt><tt><tt>
+              <a href="#.set">.lset</a></tt></tt></tt></tt><tt><tt><tt><tt><tt>
+                <a href="#.unset">.lunset</a> </tt> </tt> </tt> </tt> <a href="#.macro">.macro</a>
+        <a href="#.rep">.rep</a> <a href="#.set">.set</a>&nbsp;</tt><tt><tt><a
+            href="#.short">.short</a> </tt> <a href="#.unset">.unset</a></tt></p>
     <h2><a id=".const" name=".const"></a><a id=".set" name=".set"></a><tt>.const
         .set .lconst .lset</tt> - define a constant or single line function</h2>
     <pre>.const <i>identifier</i>, <i>expression</i>
@@ -66,8 +71,7 @@
     </dl>
     <p><tt>.lunset</tt> only removes the identifier from the current local
       context.</p>
-    <h2><a name=".func"></a><a name=".endf"></a><tt>.func</tt> - define a multi
-      line user function</h2>
+    <h2><a name=".func"></a><tt>.func</tt> - define a multi line user function</h2>
     <pre>.func <var>identifier</var>(<var>argument1, argument2</var> ...)<br> &nbsp;<var>body</var><br>.endf<var></var></pre>
     <dl>
       <dt><var><tt>identifier</tt></var></dt>
@@ -85,8 +89,7 @@
     <h3>Example</h3>
     <pre>.func vpm_setup(num, stride, dma)<br>  .assert num &lt;= 16 &amp;&amp; num &gt; 0<br>  .assert stride &lt;= 64 &amp;&amp; stride &gt; 0<br>  .assert (dma &amp; ~0xfff) == 0<br>  (num &amp; 0xf) &lt;&lt; 20 | (stride &amp; 0x3f) &lt;&lt; 12 | dma<br>.endf<br>.func v32(y, x)<br>  .assert (y &amp; ~0x30) == 0<br>  .assert (x &amp; ~0xf) == 0<br> &nbsp;0x200 | y | x<br>.endf<br><br>mov vw_setup, vpm_setup(1, 1, v32(0,0))</pre>
     <p>The example above provides a checked version of the example to <a href="#.set"><tt>.set</tt></a>.</p>
-    <h2><a id=".macro" name=".macro"></a><a id=".endm" name=".endm"></a><tt>.macro</tt>
-      - define a macro</h2>
+    <h2><a id=".macro" name=".macro"></a><tt>.macro</tt> - define a macro</h2>
     <pre>.macro <var>identifier, argument1, argument2</var> ...<br>    <var>your code</var><br>    ...<br>.endm</pre>
     <dl>
       <dt><var><tt>identifier</tt></var></dt>
@@ -112,8 +115,8 @@
     nop
     nop
 .endm<br><br>proc ra23, r:1f<br>    <var>subroutine body</var><br>    ...<br>:1</pre>
-    <h2><a id=".rrep" name="constant"></a><a id=".endr" name=".endr"></a><tt>.rep</tt>
-      - repeat a code block multiple times</h2>
+    <h2><a id=".rrep" name="constant"></a><tt>.rep</tt> - repeat a code block
+      multiple times</h2>
     <pre>.rep <var>identifier</var>, <var>count<br>    your_code</var><br>    ...<br>.endr<var></var></pre>
     <dl>
       <dt><var><tt>identifier</tt></var></dt>
@@ -127,8 +130,8 @@
     <h3> Example</h3>
     <p>Acquire all 15 QPU semaphores.</p>
     <pre>.rep i 15<br>    sacq i<br>.endr</pre>
-    <h2><a id=".back" name=".back"></a><a id=".endb" name=".endb"></a><tt>.back</tt>
-      - emit code before the last few instructions</h2>
+    <h2><a id=".back" name=".back"></a><tt>.back</tt> - emit code before the
+      last few instructions</h2>
     <pre>.back <var>count<br>    your_code</var><br>    ...<br>.endb<var></var></pre>
     <dl>
       <dt><tt><var>count</var></tt></dt>
@@ -147,7 +150,7 @@
       before.</p>
     <h2><a name=".if"></a><a name=".else"></a><a name=".elseif"></a><a name=".endif"></a><tt>.if</tt>
       - conditional compile</h2>
-    <pre>.if <var>condition<br>    your code</var><br><var>    </var>...<br>.elseif <var>condition<br>    another code</var><br><var>    </var>...<br>.else<br>    <var>alternate code</var><br><var>    </var>...<br>.endif    </pre>
+    <pre>.if <var>condition<br>    your code</var><br><var>    </var>...<br>.elseif <var>condition<br>    another code</var><br><var>    </var>...<br>.else<br>    <var>alternate code</var><br><var>    </var>...<br>.endif</pre>
     <dl>
       <dt><tt><var>condition</var></tt></dt>
       <dd>Expression to check. The expression must be constant and of type
@@ -171,6 +174,40 @@
     </dl>
     <p>An included file denotes a local context. Definitions that are local like
       <tt>.setlc</tt> are only valid within the included file and sub includes.</p>
-    <pre><var></var></pre>
+    <h2><tt><a id=".byte" name=".byte"></a><a id=".short" name=".short"></a><a id=".int"
+          name=".int"></a><a id=".long" name=".long"></a><a id=".float" name=".float"></a>.byte
+        .short .int .long .float</tt> - place constants between code blocks</h2>
+    <pre>.byte <var>constant, constant</var> ...<br>.short <var><var>constant, constant</var></var> ...<var></var>.int <var><var>constant, constant</var></var> ...<br>.long <var>constant, constant</var> ...
+.float <var>constant, constant</var> ...</pre>
+    <dl>
+      <dt><tt><var>constant</var></tt></dt>
+      <dd>Expression that evaluates to an integer or floating point constant.</dd>
+    </dl>
+    <p>The above directive directly place constants in the code. This might be
+      used to load constants by using the return value of a branch instruction
+      as address. Or you may emit opcodes that are unsupported by vc4asm.</p>
+    <p><tt>.byte</tt> creates 8 bit constants (signed or unsigned), <tt>.short</tt>
+      creates 16 bit constants (signed or unsigned), <tt>.int</tt> creates 32
+      bit constants (signed, unsigned or float) and <tt>.float</tt> forces 32
+      bit floating point constants. The result is always stores in big endian
+      format.</p>
+    <p>There are restrictions when placing constants in the code:</p>
+    <ul>
+      <li>First of all the constants must not break the 64 bit instruction
+        alignment. I.e. each line (not each block!) should emit a multiple of 64
+        bit. vc4asm will use padding bytes otherwise.</li>
+      <li>You should ensure that the constants will not accidentally be executed
+        unless they contain valid Videocore IV instructions.</li>
+    </ul>
+    <p>In general you should prefer uniforms over constants in the code because
+      they are easier to access. In most cases it is also more efficient to use
+      <tt>ldi</tt>. But as soon as you add some offsets to the address that
+      depends on the QPU element number or something like that the latter two
+      are no longer an option.</p>
+    <h3> Example</h3>
+    <p>Load two float constants into r1, r2...</p>
+    <pre>    brr r0, r:1f<br>    mov t0s, r0<br>    add r0, r0, 4; ldtmu0  # load first floating point value after :0
+    mov r1, r4;    mov t0s, r0<br>:0  .float 3.14159, 2.71828, ...<br>:1  add r0, r0, 4; ldtmu0  # load second floating point value after :0
+    mov r2, r4     mov t0s, r0</pre>
   </body>
 </html>

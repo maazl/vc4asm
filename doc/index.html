@@ -24,9 +24,15 @@
     <p><a href="#vc4asm">&rarr; Assembler</a>, <a href="#vc4dis">&rarr;
         Disassembler</a>, <a href="#build">&rarr;Build instructions</a>, <a href="#sample">&rarr;Samples</a>
       <a href="#contact">&rarr; Contact</a></p>
-    <h2>Download</h2>
-    <p><a href="../vc4asm.tar.bz2">Source code, Raspberry Pi binary, examples
-        and this documentation</a> (100k)</p>
+    <h2>Download &amp; history</h2>
+    <p>Download <a href="../vc4asm.tar.bz2">Source code, Raspberry Pi binary,
+        examples and this documentation</a> (100k)</p>
+    <dl>
+      <dt>V0.1</dt>
+      <dd>First public release.</dd>
+      <dt>V0.1.1</dt>
+      <dd>Added support for binary constants between the code.</dd>
+    </dl>
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
     <p>The heart of the software. It assembles QPU code to binary or C
       constants.</p>
@@ -121,6 +127,13 @@
     <h2><a id="sample" name="sample"></a>Sample programs</h2>
     <p>All sample programs require <i>root access</i> to run. This is because
       of the need to call <tt>mmap</tt>.</p>
+    <p>Furthermore you need to create a local character device named <tt>char_dev</tt>
+      to access the vcio driver of the Raspi kernel: <tt>sudo mknod char_dev c
+        100 0</tt><br>
+      The latter won't work if you are at an nfs share or something like that.
+      In this case create the device in the root file system e.g. <tt>/dev/vcio</tt>
+      and place a symbolic link to the device with <tt>ln -s /dev/vcio char_dev</tt>.</p>
+    <p>All these restrictions apply to the original <tt>hello_fft</tt> as well.</p>
     <h3>simple</h3>
     <p>This is a very simple program that demonstrates the use of all available
       operators with small immediate values. It is not optimized in any way.</p>

@@ -1,3 +1,5 @@
+.set RES_COUNT, 30
+
 shl r0, elem_num, 3;
 mov ra0, unif # vector count
 add ra1, r0, unif; # base address
@@ -45,21 +47,23 @@ v8min vpm, r0, r1 # Y24
 v8max vpm, r0, r1
 v8adds vpm, r0, r1
 v8subs vpm, r0, r1
+.long 0x009e7040, 0x10020c27
+.long 0x009e7001, 0x100049f0
 
 # dma write
-mov vw_setup, vdw_setup_1((28-16)*4)
+mov vw_setup, vdw_setup_1((RES_COUNT-16)*4)
 mov vw_setup, vdw_setup_0(16, 16, dma_h32(0,0))
 mov vw_addr, ra3
 mov -, vw_wait
-mov vw_setup, vdw_setup_1((28-12)*4)
-mov vw_setup, vdw_setup_0(16, 12, dma_h32(16,0))
+mov vw_setup, vdw_setup_1((RES_COUNT-14)*4)
+mov vw_setup, vdw_setup_0(16, RES_COUNT-16, dma_h32(16,0))
 mov r2, 16*4
 add r1, ra3, r2
 mov vw_addr, r1
 
 sub.setf ra0, ra0, 1
 brr.anynz -, :next
-mov r2, 28*16*4
+mov r2, RES_COUNT*16*4
 add ra3, ra3, r2
 mov -, vw_wait
 

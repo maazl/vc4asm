@@ -5,6 +5,7 @@
 #include "mailbox.h"
 
 #define VEC_COUNT 3*16
+#define RES_COUNT 30
 #define GPU_MEM_FLG 0xC // cached=0xC; direct=0x4
 
 static const unsigned code[] =
@@ -22,16 +23,17 @@ static const unsigned input[VEC_COUNT*2] =
 	0x41800000,0x41800000, 0x42000000,0x42000000, 0x42800000,0x42800000, 0x43000000,0x43000000
 };
 
-static const char op[28][8] =
+static const char op[RES_COUNT][8] =
 {	"fadd", "fsub", "fmin", "fmax", "fminabs", "fmaxabs", "ftoi", "itof",
 	"add", "sub", "shr", "asr", "ror", "shl", "min", "max", "and", "or", "xor", "not", "clz",
-	"fmul", "mul24", "v8muld", "v8min", "v8max", "v8adds", "v8subs"
+	"fmul", "mul24", "v8muld", "v8min", "v8max", "v8adds", "v8subs",
+	"A0", "M0"
 };
 
 struct GPU
 {
 	unsigned code[sizeof code / sizeof *code];
-	unsigned data[VEC_COUNT*(2+28)]; // 2 input, 28 output
+	unsigned data[VEC_COUNT*(2+RES_COUNT)]; // 2 input + output
 	unsigned unif[3];
 	unsigned mail[2];
 	unsigned handle;
@@ -121,8 +123,8 @@ int main()
 		unsigned A = gpu->data[2*i];
 		unsigned B = gpu->data[2*i+1];
 		printf("\n A\t%i\t0x%08x\n B\t%i\t0x%08x\n", A, A, B, B);
-		volatile unsigned* rp = &gpu->data[2*VEC_COUNT+28*i];
-		for (j = 0; j < 28; ++j)
+		volatile unsigned* rp = &gpu->data[2*VEC_COUNT+RES_COUNT*i];
+		for (j = 0; j < RES_COUNT; ++j)
 			printf("%s\t%i\t0x%08x\n", op[j], rp[j], rp[j]);
 	}
 

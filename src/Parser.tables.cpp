@@ -1026,8 +1026,10 @@ const Parser::opExtEntry Parser::extMap[] =
 const Parser::opEntry<8> Parser::directiveMap[] =
 {	{ "assert",  &Parser::parseASSERT }
 ,	{ "back",    &Parser::beginBACK }
+,	{ "byte",    &Parser::parseDATA,  1 }
 ,	{ "const",   &Parser::parseSET,   C_CONST }
 ,	{ "define",  &Parser::parseSET,   C_NONE }
+,	{ "dword",   &Parser::parseDATA,  4 }
 ,	{ "elif",    &Parser::parseELSEIF }
 ,	{ "else",    &Parser::parseELSE }
 ,	{ "elseif",  &Parser::parseELSEIF }
@@ -1037,15 +1039,20 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "endm",    &Parser::endMACRO,   M_NONE }
 ,	{ "endr",    &Parser::endREP }
 ,	{ "equ",     &Parser::parseSET,   C_NONE }
+,	{ "float",   &Parser::parseDATA,  -4 }
 ,	{ "func",    &Parser::beginMACRO, M_FUNC }
 ,	{ "if",      &Parser::parseIF }
 ,	{ "include", &Parser::doINCLUDE }
+,	{ "int",     &Parser::parseDATA,  4 }
 ,	{ "lconst",  &Parser::parseSET,   C_LOCAL|C_CONST }
+,	{ "long",    &Parser::parseDATA,  4 }
 ,	{ "lset",    &Parser::parseSET,   C_LOCAL }
 ,	{ "lunset",  &Parser::parseUNSET, C_LOCAL }
 ,	{ "macro",   &Parser::beginMACRO, M_NONE }
 ,	{ "rep",     &Parser::beginREP }
 ,	{ "set",     &Parser::parseSET,   C_NONE }
+,	{ "short",   &Parser::parseDATA,  2 }
 ,	{ "undef",   &Parser::parseUNSET, C_NONE }
 ,	{ "unset",   &Parser::parseUNSET, C_NONE }
+,	{ "word",    &Parser::parseDATA,  2 }
 };

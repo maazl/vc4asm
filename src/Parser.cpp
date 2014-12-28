@@ -957,6 +957,47 @@ void Parser::parseLabel()
 	defineLabel();
 }
 
+void Parser::parseDATA(int type)
+{ int count = 0;
+	uint64_t target = 0;
+ next:
+	exprValue value = ParseExpression();
+	if (value.Type != V_INT && value.Type != V_FLOAT)
+		return Error("Immediate data instructions require integer or floating point constants. Found %s.", type2string(value.Type));
+	switch (type)
+	{case -4:
+		if (value.Type == V_INT)
+			value.fValue = value.iValue;
+		type = 4;
+		break;
+	 case 1: // byte
+		if (value.iValue > 0xFF || value.iValue < -0x80)
+			Msg(WARNING, "Byte value out of range: 0x%x", value.uValue);
+		break;
+	 case 2: // short
+		if (value.iValue > 0xFFFF || value.iValue < -0x8000)
+			Msg(WARNING, "Short integer value out of range: 0x%x", value.uValue);
+	}
+	// store value
+	target |= (uint64_t)value.uValue << count;
+	if ((count += (type << 3)) >= 64)
+	{	Instructions.push_back(target);
+		count = 0;
+		target = 0;
+	}
+	switch (NextToken())
+	{default:
+		return Error("Syntax error. Expected ',' or end of line.");
+	 case COMMA:
+		goto next;
+	 case END:;
+	}
+	if (count & 63)
+	{	Msg(INFO, "Used padding to enforce 64 bit alignment of immediate data.");
+		Instructions.push_back(target);
+	}
+}
+
 void Parser::beginREP(int)
 {
 	if (doPreprocessor())
