@@ -36,6 +36,7 @@ class Parser
 	};
  public:
 	bool Success = true;
+	bool Extensions = false;
 	FILE* Preprocessed = NULL;
 	severity Verbose = WARNING;
  private:
@@ -62,13 +63,15 @@ class Parser
 		reg_t       Value;
 	}             regMap[];
 	class opAddMul
-	{	int8_t      Op;      ///< ADD or MUL ALU opcode, bit 7 set: MUL ALU
+	{	int8_t      Op;      ///< ADD or MUL ALU opcode, bit 7 set: MUL ALU, bit 6 set: undocumented opcode
 	 public:
 		constexpr   opAddMul(Inst::opadd op) : Op(op) {}
 		constexpr   opAddMul(Inst::opmul op) : Op(op|0x80) {}
+		constexpr   opAddMul(int op)         : Op(op|0x40) {}
 		bool        isMul() const { return Op < 0; }
-		Inst::opadd asAdd() const { return (Inst::opadd)Op; }
-		Inst::opmul asMul() const { return (Inst::opmul)(Op ^ 0x80); }
+		bool        isExt() const { return (Op & 0x40) != 0; }
+		Inst::opadd asAdd() const { return (Inst::opadd)(Op & 0x1f); }
+		Inst::opmul asMul() const { return (Inst::opmul)(Op & 0x7); }
 	};
 	static const struct smiEntry
 	{	uint32_t    Value;

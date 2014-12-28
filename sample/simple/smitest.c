@@ -5,7 +5,7 @@
 #include "mailbox.h"
 
 #define VEC_COUNT 3*16
-#define RES_COUNT 30
+#define RES_COUNT 38
 #define GPU_MEM_FLG 0xC // cached=0xC; direct=0x4
 
 static const unsigned code[] =
@@ -27,7 +27,7 @@ static const char op[RES_COUNT][8] =
 {	"fadd", "fsub", "fmin", "fmax", "fminabs", "fmaxabs", "ftoi", "itof",
 	"add", "sub", "shr", "asr", "ror", "shl", "min", "max", "and", "or", "xor", "not", "clz",
 	"fmul", "mul24", "v8muld", "v8min", "v8max", "v8adds", "v8subs",
-	"A0", "M0"
+	"A0", "A9", "A10", "A11", "A25", "A26", "A27", "A28", "A29", "M0"
 };
 
 struct GPU

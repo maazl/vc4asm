@@ -758,6 +758,7 @@ void Parser::assembleMOV(int mode)
 		if (!isLDI && mode < 0)
 		{	for (const smiEntry* si = getSmallImmediateALU(param.uValue); si->Value == param.uValue; ++si)
 			{	if ( (!si->OpCode.isMul() ^ useMUL)
+					&& (Extensions || !si->OpCode.isExt())
 					&& ( param.uValue == 0 || Instruct.Sig == Inst::S_NONE
 						|| (Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd) ))
 				{	if (param.uValue != 0) // zero value does not require SMI

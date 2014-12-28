@@ -372,18 +372,30 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x0000000c, 19, Inst::A_NOT }
 ,	{ 0x0000000c, 12, Inst::M_V8MIN }
 ,	{ 0x0000000c,  6, Inst::M_V8ADDS }
+,	{ 0x0000000c,  0, 0x80 } // MUL op 0
+,	{ 0x0000000c,  4, 0x80 } // MUL op 0
+,	{ 0x0000000c,  8, 0x80 } // MUL op 0
 ,	{ 0x0000000d, 13, Inst::A_OR }
 ,	{ 0x0000000d, 18, Inst::A_NOT }
 ,	{ 0x0000000d, 13, Inst::M_V8MIN }
+,	{ 0x0000000d,  1, 0x80 } // MUL op 0
+,	{ 0x0000000d,  5, 0x80 } // MUL op 0
+,	{ 0x0000000d,  9, 0x80 } // MUL op 0
 ,	{ 0x0000000e, 14, Inst::A_OR }
 ,	{ 0x0000000e,  7, Inst::A_ADD }
 ,	{ 0x0000000e, 17, Inst::A_NOT }
 ,	{ 0x0000000e, 14, Inst::M_V8MIN }
 ,	{ 0x0000000e,  7, Inst::M_V8ADDS }
+,	{ 0x0000000e,  2, 0x80 } // MUL op 0
+,	{ 0x0000000e,  6, 0x80 } // MUL op 0
+,	{ 0x0000000e, 10, 0x80 } // MUL op 0
 ,	{ 0x0000000f, 15, Inst::A_OR }  // 15
 ,	{ 0x0000000f, 16, Inst::A_NOT }
 ,	{ 0x0000000f, 28, Inst::A_SHR }
 ,	{ 0x0000000f, 15, Inst::M_V8MIN }
+,	{ 0x0000000f,  3, 0x80 } // MUL op 0
+,	{ 0x0000000f,  7, 0x80 } // MUL op 0
+,	{ 0x0000000f, 11, 0x80 } // MUL op 0
 ,	{ 0x00000010,  8, Inst::A_ADD } // 16
 ,	{ 0x00000010,  4, Inst::M_MUL24 }
 ,	{ 0x00000010, 36, Inst::A_FTOI }
@@ -547,16 +559,28 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x41800000, 35, Inst::A_FADD }
 ,	{ 0x41800000, 36, Inst::M_V8MIN }
 ,	{ 0x41800000, 34, Inst::M_FMUL }
+,	{ 0x41800000, 32, 0x80 } // MUL op 0
+,	{ 0x41800000, 40, 0x80 } // MUL op 0
+,	{ 0x41800000, 44, 0x80 } // MUL op 0
 ,	{ 0x42000000, 37, Inst::A_OR }   // 32.0
 ,	{ 0x42000000, 36, Inst::A_FADD }
 ,	{ 0x42000000, 37, Inst::M_V8MIN }
+,	{ 0x42000000, 33, 0x80 } // MUL op 0
+,	{ 0x42000000, 41, 0x80 } // MUL op 0
+,	{ 0x42000000, 45, 0x80 } // MUL op 0
 ,	{ 0x42800000, 38, Inst::A_OR }   // 64.0
 ,	{ 0x42800000, 37, Inst::A_FADD }
 ,	{ 0x42800000, 38, Inst::M_V8MIN }
 ,	{ 0x42800000, 35, Inst::M_FMUL }
+,	{ 0x42800000, 34, 0x80 } // MUL op 0
+,	{ 0x42800000, 42, 0x80 } // MUL op 0
+,	{ 0x42800000, 46, 0x80 } // MUL op 0
 ,	{ 0x43000000, 39, Inst::A_OR }   // 128.0
 ,	{ 0x43000000, 38, Inst::A_FADD }
 ,	{ 0x43000000, 39, Inst::M_V8MIN }
+,	{ 0x42800000, 35, 0x80 } // MUL op 0
+,	{ 0x43000000, 43, 0x80 } // MUL op 0
+,	{ 0x43000000, 47, 0x80 } // MUL op 0
 ,	{ 0x43800000, 39, Inst::A_FADD } // 256.0
 ,	{ 0x43800000, 36, Inst::M_FMUL }
 ,	{ 0x44800000, 37, Inst::M_FMUL } // 1024.0
@@ -814,14 +838,23 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xfffffffc, 30, Inst::A_ADD }
 ,	{ 0xfffffffc,  3, Inst::A_NOT }
 ,	{ 0xfffffffc, 28, Inst::M_V8MIN }
+,	{ 0xfffffffc, 16, 0x80 } // MUL op 0
+,	{ 0xfffffffc, 20, 0x80 } // MUL op 0
+,	{ 0xfffffffc, 24, 0x80 } // MUL op 0
 ,	{ 0xfffffffd, 29, Inst::A_OR }  // -3
 ,	{ 0xfffffffd,  2, Inst::A_NOT }
 ,	{ 0xfffffffd, 29, Inst::M_V8MIN }
 ,	{ 0xfffffffd, 30, Inst::M_V8MULD }
+,	{ 0xfffffffd, 17, 0x80 } // MUL op 0
+,	{ 0xfffffffd, 21, 0x80 } // MUL op 0
+,	{ 0xfffffffd, 25, 0x80 } // MUL op 0
 ,	{ 0xfffffffe, 30, Inst::A_OR }  // -2
 ,	{ 0xfffffffe, 31, Inst::A_ADD }
 ,	{ 0xfffffffe,  1, Inst::A_NOT }
 ,	{ 0xfffffffe, 30, Inst::M_V8MIN }
+,	{ 0xfffffffe, 18, 0x80 } // MUL op 0
+,	{ 0xfffffffe, 22, 0x80 } // MUL op 0
+,	{ 0xfffffffe, 26, 0x80 } // MUL op 0
 ,	{ 0xffffffff, 31, Inst::A_OR }  // -1
 ,	{ 0xffffffff,  0, Inst::A_NOT }
 ,	{ 0xffffffff, 16, Inst::A_V8ADDS }
