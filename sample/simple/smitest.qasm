@@ -59,7 +59,6 @@ v8subs vpm, r0, r1
 .long 0x009e7001, 0x100049f0 # Mnop
 
 # dma write
-# vdw is buggy and can't write more than 16 lines at once
 mov r2, 16*4; mov r1, ra3
 .rep i, (RES_COUNT-1)/16
 mov vw_setup, vdw_setup_1((RES_COUNT-16)*4)
