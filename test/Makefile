@@ -1,6 +1,6 @@
 all : asm
 
-asm : test_256 test_512 test_1k test_2k test_4k test_8k test_16k test_32k test_64k test_128k test_256k test_512k test_1024k test_trans
+asm : test_256 test_512 test_1k test_2k test_4k test_8k test_16k test_32k test_64k test_128k test_256k test_512k test_1024k test_2048k test_trans
 
 clean :
 	rm gpu_fft_*.hex *.strip
