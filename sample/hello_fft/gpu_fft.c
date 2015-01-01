@@ -1,5 +1,5 @@
 /*
-BCM2835 "GPU_FFT" release 2.0 BETA
+BCM2835 "GPU_FFT" release 2.0
 Copyright (c) 2014, Andrew Holme.
 All rights reserved.
 
@@ -27,9 +27,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <string.h>
-#include <stdio.h>
 
 #include "gpu_fft.h"
+
 #define GPU_FFT_BUSY_WAIT_LIMIT (5<<12) // ~1ms
 
 typedef struct GPU_FFT_COMPLEX COMPLEX;
@@ -64,8 +64,6 @@ int gpu_fft_prepare(
             twid_bytes +        // twiddles
             unif_bytes +        // uniforms
             mail_bytes;         // mailbox message
-    printf("info_bytes = %d\ndata_bytes = %d\ncode_bytes = %d\ntwid_bytes = %d\nunif_bytes = %d\nmail_bytes = %d\ntotal_bytes = %d\n",
-      info_bytes, data_bytes*jobs*2, code_bytes, twid_bytes, unif_bytes, mail_bytes, size);
 
     ret = gpu_fft_alloc(mb, size, &ptr);
     if (ret) return ret;
@@ -78,7 +76,7 @@ int gpu_fft_prepare(
     // For transpose
     info->x = 1<<log2_N;
     info->y = jobs;
-
+    
     // Ping-pong buffers leave results in or out of place
     info->in = info->out = ptr.arm.cptr;
     info->step = data_bytes / sizeof(COMPLEX);
@@ -129,7 +127,7 @@ int gpu_fft_prepare(
 }
 
 unsigned gpu_fft_execute(struct GPU_FFT *info) {
-    gpu_fft_base_exec(&info->base, GPU_FFT_QPUS);
+    return gpu_fft_base_exec(&info->base, GPU_FFT_QPUS);
 }
 
 void gpu_fft_release(struct GPU_FFT *info) {
