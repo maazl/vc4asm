@@ -1067,10 +1067,13 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "else",    &Parser::parseELSE }
 ,	{ "elseif",  &Parser::parseELSEIF }
 ,	{ "endb",    &Parser::endBACK }
+,	{ "endback", &Parser::endBACK }
 ,	{ "endf",    &Parser::endMACRO,   M_FUNC }
+,	{ "endfunc", &Parser::endMACRO,   M_FUNC }
 ,	{ "endif",   &Parser::parseENDIF }
 ,	{ "endm",    &Parser::endMACRO,   M_NONE }
 ,	{ "endr",    &Parser::endREP }
+,	{ "endrep",  &Parser::endREP }
 ,	{ "equ",     &Parser::parseSET,   C_NONE }
 ,	{ "float",   &Parser::parseDATA,  -4 }
 ,	{ "func",    &Parser::beginMACRO, M_FUNC }
