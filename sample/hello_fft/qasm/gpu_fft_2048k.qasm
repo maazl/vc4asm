@@ -67,7 +67,7 @@
 .set rb_vpm_32,         rb2
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
-#                       ra4
+.set ra_0x7F,           ra4
 .set rx_0x0F0F0F0F,     rb4
 .set ra_load_idx,       ra5
 .set rb_inst,           rb5
@@ -76,11 +76,11 @@
 .set ra_points,         ra7
 .set rb_vpm_48,         rb7
 .set ra_link_1,         ra8
-.set rb_0x10,           rb8
+.set rb_link_1,         rb8
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
-#                       ra10
-.set rx_0x55555555,     rb10
+.set rx_0x55555555,     ra10
+.set rb_0x10,           rb10
 
 .set ra_64,             ra11 # 4
 .set rb_64,             rb11 # 4
@@ -91,7 +91,7 @@
 ##############################################################################
 # Dual-use registers
 
-.set rb_STAGES,         rb_64+0
+.set rb_pass2_link,     rb_64+0
 .set rb_0xF0,           rb_64+1
 .set rb_0x40,           rb_64+2
 
@@ -110,6 +110,7 @@ mov rx_0x55555555, 0x55555555
 mov rx_0x33333333, 0x33333333
 mov rx_0x0F0F0F0F, 0x0F0F0F0F
 mov r5rep,      0x1D0
+mov ra_0x7F,    0x7F
 
 ##############################################################################
 # Load twiddle factors
@@ -189,7 +190,6 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
     mov ra_vdw_32, vdw_setup_0(1, 16, dma_h32( 0,0))
     mov rb_vdw_32, vdw_setup_0(1, 16, dma_h32(32,0))
 
-    mov rb_STAGES, STAGES
     mov rb_0xF0, 0xF0
     mov rb_0x40, 0x40
 
@@ -200,28 +200,33 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
     init_stage 5, TW16_P2_BASE, TW32_P2_BASE
     read_lin rb_0x10
 
-        brr ra_link_1, r:pass_2
-        nop
-        mov r0, 0x100
-        add ra_points, ra_points, r0
+    # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
+    # and setup for loop below
+    brr ra_link_1, rb_link_1, -, r:pass_2
+    mov r0, :3f - :1f
+    add rb_pass2_link, r0, ra_link_1
+    mov ra_points, (1<<STAGES) / 0x100 - 2
+:1
+    brr r0, r:pass_2
+    # (MM) Optimized: patch the return address for the last turn to save the
+    # conditional branches.
+    # if ra_points == 0 => ra_link_1 = :3 = rb_pass2_link
+    # else if ra_points % 127 == 0 => ra_link_1 = :2 = r0
+    # else => ra_link_1 = :1 = rb_link_1 = unchanged
+    sub.setf ra_points, ra_points, 1; mov r1, ra_points
+    and.setf -, r1, ra_0x7F;   mov.ifn r0, rb_pass2_link
+    mov.ifz ra_link_1, r0;
+:2
+    next_twiddles TW16_P2_STEP, TW32_P2_STEP
 
-        mov r0, 0x7FFF
-        and.setf -, ra_points, r0
-
-        brr.allnz -, r:pass_2
-        nop
-        mov r0, 0x100
-        add.ifnz ra_points, ra_points, r0
-
-        next_twiddles TW16_P2_STEP, TW32_P2_STEP
-
-        shr.setf -, ra_points, rb_STAGES
-
-        brr.allz -, r:pass_2
-        nop
-        mov r0, 0x100
-        add ra_points, ra_points, r0
-
+    # (MM) Optimized: place branch before the last instruction of next_twiddles
+    # and link directly to :1.
+    .back 1
+    brr -, r:pass_2
+    .endb
+    mov ra_link_1, rb_link_1
+    sub ra_points, ra_points, 1
+:3
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
     ldtmu0
@@ -235,23 +240,38 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
     init_stage 5, TW16_P3_BASE, TW32_P3_BASE
     read_lin rb_0x10
 
-    .rep i, 4
-        brr ra_link_1, r:pass_3
-        nop
-        mov r0, 0x100
-        add ra_points, ra_points, r0
+    # (MM) Optimized: place branch before the last instruction of read_lin
+    # and keep return address additionally in rb_link_1 for loop.
+    .back 1
+    brr ra_link_1, rb_link_1, -, r:pass_3
+    .endb
+    mov ra_points, (1<<STAGES) / 0x100 - 1
+    mov rb_pass2_link, :3f - :2f
+
+# :start of hidden loop
+    .rep i, 2
+    brr ra_link_1, r:pass_3
+    nop
+    nop
+    nop
     .endr
 
-        next_twiddles TW16_P3_STEP, TW32_P3_STEP
+    # (MM) Optimized: patch the return address for the last turn to save the
+    # conditional branch and the unecessary twiddle load after the last turn.
+    brr ra_link_1, r0, -, r:pass_3
+    sub.setf ra_points, ra_points, 4
+    add.ifn ra_link_1, r0, rb_pass2_link
+    nop
+:2
+    next_twiddles TW16_P3_STEP, TW32_P3_STEP
 
-        shr.setf -, ra_points, rb_STAGES
-
-        mov r0, 0x100
-        brr.allz -, r:pass_3
-        add ra_points, ra_points, r0
-        mov r0, (4-1)*4*8
-        sub ra_link_1, ra_link_1, r0
-
+    # (MM) Optimized: place branch before the last two instructions of next_twiddles
+    # and patch return adress to :1.
+    .back 2
+    brr -, r:pass_3
+    .endb
+    mov ra_link_1, rb_link_1
+:3
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
     ldtmu0
@@ -265,19 +285,22 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
     init_stage 5, TW16_P4_BASE, TW32_P4_BASE
     read_lin rb_0x10
 
-        brr ra_link_1, r:pass_4
-        nop
-        mov r0, 0x100
-        add ra_points, ra_points, r0
+    # (MM) Optimized: place branch before the last two instructions of read_lin
+    .back 2
+    brr ra_link_1, r:pass_4
+    .endb
+    mov ra_points, (1<<STAGES) / 0x100 - 1
 
-        next_twiddles TW16_P4_STEP, TW32_P4_STEP
+# :start of hidden loop
+    next_twiddles TW16_P4_STEP, TW32_P4_STEP
 
-        shr.setf -, ra_points, rb_STAGES
-
-        brr.allz -, r:pass_4
-        nop
-        mov r0, 0x100
-        add ra_points, ra_points, r0
+    # (MM) Optimized: place the branch before the last instruction of next_twiddles
+    # and branch unconditional and patch the return address of the last turn.
+    .back 1
+    brr r0, r:pass_4
+    .endb
+    sub.setf ra_points, ra_points, 1
+    mov.ifz ra_link_1, r0
 
     # (MM) Optimized: easier procedure chains
     brr r0, r:sync, ra_sync

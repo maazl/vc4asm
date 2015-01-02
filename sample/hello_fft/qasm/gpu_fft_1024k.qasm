@@ -275,7 +275,6 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
     init_stage TW16_P4_BASE, TW32_P4_BASE
     read_lin rb_0x10
 
-
     # (MM) Optimized: place branch before the last two instructions of read_lin
     .back 2
     brr ra_link_1, r:pass_4

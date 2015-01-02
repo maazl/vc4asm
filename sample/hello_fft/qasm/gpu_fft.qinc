@@ -439,13 +439,13 @@
 .endm
 
 .macro init_stage_16, tw16, m
-    mov r2, ra_tw_re+tw16; mov r3, rb_tw_im+tw16
-    unpack_twiddles
     mov r0, rb_inst
     # (MM) Optimized: better use of both ALUs
-    shl r0, r0, m;   mov ra_points, 0  
+    shl r0, r0, m
     add ra_load_idx, r0, elem_num
     mov ra_save_ptr, rb_addr_y
+    mov r2, ra_tw_re+tw16; mov r3, rb_tw_im+tw16
+    unpack_twiddles
 .endm
 
 ##############################################################################
