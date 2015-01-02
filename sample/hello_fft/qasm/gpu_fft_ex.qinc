@@ -85,12 +85,13 @@
 
     .rep i, 16
         add r0, r0, r2; mov vw_setup, r0
-        # (MM) Optimized: scheduling of branch instruction
-        .if i==14
-            bra -, ra_link_1
-        .endif
         add r1, r1, r3; mov vw_addr,  r1
     .endr
+
+    # (MM) Optimized: scheduling of branch instruction
+    .back 3
+    bra -, ra_link_1
+    .endb
 .endm
 .endif
 
@@ -112,11 +113,12 @@
 
     .rep i, 32
         add r0, r0, r2; mov vw_setup, r0
-        # (MM) Optimized: scheduling of branch instruction
-        .if i == 30
-            bra -, ra_link_1
-        .endif
         add r1, r1, r3; mov vw_addr,  r1
     .endr
+
+    # (MM) Optimized: scheduling of branch instruction
+    .back 3
+    bra -, ra_link_1
+    .endb
 .endm
 .endif

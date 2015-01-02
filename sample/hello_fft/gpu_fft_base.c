@@ -46,7 +46,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define GPU_FFT_MEM_MAP 0x0 // cached=0x0; direct=0x20000000
 
 #define GPU_FFT_NO_FLUSH 1
-#define GPU_FFT_TIMEOUT 6000 // ms
+#define GPU_FFT_TIMEOUT 2000 // ms
 
 unsigned gpu_fft_base_exec_direct (
     struct GPU_FFT_BASE *base,

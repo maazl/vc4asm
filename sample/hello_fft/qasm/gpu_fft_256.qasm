@@ -45,7 +45,7 @@
 ##############################################################################
 # Registers
 
-.set ra_link_0,         ra0
+#                       ra0
 #                       rb0
 .set ra_save_ptr,       ra1
 #                       rb1
@@ -102,17 +102,11 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 2 registers
-    shl.setf r0, unif, 5; mov r3, unif
-    # get physical address for ra_link_0
-    brr r2, 0
-    mov r1, :save_16 - :0f
-    add r2, r2, r1;       mov ra_save_16, 0
-    mov rb_inst, r3;      mov ra_sync, 0
-:0  mov r1, :sync_slave - :sync - 4*8 # -> rb_inst-1
+    mov r3, unif;         mov ra_save_16, 0
+    shl.setf r0, r3, 5;   mov ra_sync, 0
+    mov.ifnz r1, :sync_slave - :sync - 4*8 # -> rb_inst-1
     mov.ifnz ra_save_16,  :save_slave_16 - :save_16
-    add.ifnz ra_sync, r1, r0
-    # absolute address of save_16
-    add ra_link_0, r2, ra_save_16
+    add.ifnz ra_sync, r1, r0; mov rb_inst, r3
 
 inst_vpm r3, ra_vpm, rb_vpm, -, -
 
@@ -164,13 +158,13 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
     init_stage TW16_P1_BASE
     read_rev rb_0x80
     read_rev rb_0x80
+
     # (MM) Optimized: move branch before the last instruction of read_rev
     .back 1
     brr ra_link_1, r:pass_1
     .endb
     swap_vpm_vdw
 
-# :start of hidden loop
     brr ra_link_1, r:pass_1
     nop
     swap_vpm_vdw
@@ -238,6 +232,11 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
     nop;        ldtmu0
     mov r0, r4; ldtmu0
     mov r1, r4
-:fft_16
+#:fft_16
     body_fft_16
+
+    # (MM) Optimized: link directly to save_16
+    .back 3
+    brr -, ra_save_16, r:save_16
+    .endb
 

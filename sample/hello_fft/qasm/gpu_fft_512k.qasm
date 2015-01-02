@@ -63,7 +63,7 @@
 .set rb_vpm_lo,         rb2
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
-.set ra_save_16,        ra4
+#                       ra4
 .set rb_pass2_link,     rb4
 .set ra_load_idx,       ra5
 .set rb_inst,           rb5
@@ -124,13 +124,11 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 # Instance
 
 # (MM) Optimized: better procedure chains
-# Saves several branch instructions and 3 rb registers
-    sub r0, unif, 1;     mov ra_sync, 0
-    add.setf r3, r0, 1;  mov ra_save_16, 0
-    shl r0, r0, 5;       mov ra_save_32, 0
-    mov r1,              :sync_slave - :sync
+# Saves several branch instructions and 4 registers
+    mov.setf r3, unif;    mov ra_sync, 0
+    shl r0, r3, 5;        mov ra_save_32, 0
+    mov r1,              :sync_slave - :sync - 4*8 # -> rb_inst-1
     add.ifnz ra_sync, r1, r0; mov rb_inst, r3
-    mov.ifnz ra_save_16, :save_slave_16 - :save_16
     mov.ifnz ra_save_32, :save_slave_32 - :save_32
     
 inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
@@ -312,12 +310,6 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 ##############################################################################
 # Master/slave procedures
 
-:save_16
-    body_ra_save_16 ra_vpm_lo, ra_vdw_16
-
-:save_slave_16
-    body_rx_save_slave_16 ra_vpm_lo
-
 :save_32
     body_ra_save_32
 
@@ -336,13 +328,37 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 :fft_16
     body_fft_16
 
+    .back 3
+    bra -, ra_link_0
+    .endb
+
 :pass_1
     body_pass_32 LOAD_REVERSED
+
+    .back 3
+    brr -, ra_save_32, r:save_32
+    .endb
 
 :pass_2
     body_pass_16 LOAD_STRAIGHT
 
+    # (MM) Optimized: link to slave procedure without need for a register
+    .back 2 # cannot go back more than 2 instructions into body_pass_16
+    mov.setf -, rb_inst
+    brr.allnz -, r:1f
+    .endb
+    nop
+
+    body_ra_save_16 ra_vpm_lo, ra_vdw_16
+
+:1
+    body_rx_save_slave_16 ra_vpm_lo
+
 :pass_3
 :pass_4
     body_pass_32 LOAD_STRAIGHT
+
+    .back 3
+    brr -, ra_save_32, r:save_32
+    .endb
 

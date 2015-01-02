@@ -231,9 +231,21 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 :fft_16
     body_fft_16
 
+    .back 3
+    bra -, ra_link_0
+    .endb
+
 :pass_1
     body_pass_32 LOAD_REVERSED
 
+    .back 3
+    brr -, ra_save_32, r:save_32
+    .endb
+
 :pass_2
     body_pass_32 LOAD_STRAIGHT
+
+    .back 3
+    brr -, ra_save_32, r:save_32
+    .endb
 

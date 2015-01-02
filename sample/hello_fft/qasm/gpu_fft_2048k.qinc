@@ -57,34 +57,12 @@
         add r1, r1, r3; mov vw_addr,  r1
     .endr
 
+    # (MM) Optimized: place branch before the last 3 instructions to save 3 nop.
+    .back 3
     bra -, ra_link_1
-    nop
-    nop
-    nop
+    .endb
 .endm
 
-# (MM) Optimized: do not replace bit_rev by slower version
+# (MM) Optimized: do not replace macros by slower version
 #.macro bit_rev
-
-.macro read_rev, stride
-    add ra_load_idx, ra_load_idx, stride; mov r0, ra_load_idx
-
-    mov r2, 0x55555555
-    bit_rev 1,       r2  # 16 SIMD
-    mov r2, 0x33333333
-    bit_rev 2,       r2
-    mov r2, 0x0F0F0F0F
-    bit_rev 4,       r2
-    mov r2, 0x00FF00FF
-    bit_rev 8,       r2
-    mov r2, 0x0000FFFF
-    bit_rev rb_0x10, r2
-
-    shr r0, r0, 32-STAGES-3 # r0 = re = {idx[0:STAGES-1], 1'b0, 2'b0}
-    add r1, r0, 4           # r1 = im = {idx[0:STAGES-1], 1'b1, 2'b0}
-
-    interleave
-
-    add t0s, ra_addr_x, r0
-    add t0s, ra_addr_x, r1
-.endm
+#.macro read_rev

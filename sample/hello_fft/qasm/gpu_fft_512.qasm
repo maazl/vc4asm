@@ -55,20 +55,20 @@
 .set rb_vpm_lo,         rb2
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
-.set ra_save_16,        ra4
-#
+#                       ra4
+#                       rb4
 .set ra_load_idx,       ra5
 .set rb_inst,           rb5
 .set ra_sync,           ra6
-#
+#                       rb6
 .set ra_points,         ra7
 .set rb_vpm_hi,         rb7
 .set ra_link_1,         ra8
 #                       rb8
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
-.set ra_save_32,        ra10
-#
+#                       ra10
+#                       rb10
 
 .set ra_tw_re,          ra11 # 9
 .set rb_tw_im,          rb11 # 9
@@ -116,14 +116,11 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 # Instance
 
 # (MM) Optimized: better procedure chains
-# Saves several branch instructions and 3 rb registers
-    sub r0, unif, 1;     mov ra_sync, 0
-    add.setf r3, r0, 1;  mov ra_save_16, 0
-    shl r0, r0, 5;       mov ra_save_32, 0
-    mov r1,              :sync_slave - :sync
-    add.ifnz ra_sync, r1, r0; mov rb_inst, r3
-    mov.ifnz ra_save_16, :save_slave_16 - :save_16
-    mov.ifnz ra_save_32, :save_slave_32 - :save_32
+# Saves several branch instructions and 5 registers
+    mov.setf r3, unif;  mov ra_sync, 0
+    shl r0, r3, 5;      mov rb_inst, r3
+    mov r1, :sync_slave - :sync - 4*8 # -> rb_inst-1
+    add.ifnz ra_sync, r1, r0
     
 inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 
@@ -210,18 +207,6 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 ##############################################################################
 # Master/slave procedures
 
-:save_16
-    body_ra_save_16 ra_vpm_lo, ra_vdw_16
-
-:save_slave_16
-    body_rx_save_slave_16 ra_vpm_lo
-
-:save_32
-    body_ra_save_32
-
-:save_slave_32
-    body_rx_save_slave_32
-
 :sync
     body_ra_sync
 
@@ -234,9 +219,36 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 :fft_16
     body_fft_16
 
+    .back 3
+    bra -, ra_link_0
+    .endb
+
 :pass_1
     body_pass_32 LOAD_REVERSED
 
+    # (MM) Optimized: link to slave procedure without need for a register
+    .back 3
+    mov.setf -, rb_inst
+    brr.allnz -, r:1f
+    .endb
+
+    body_ra_save_32
+
+:1
+    body_rx_save_slave_32
+
 :pass_2
     body_pass_16 LOAD_STRAIGHT
+
+    # (MM) Optimized: link to slave procedure without need for a register
+    .back 2 # cannot go back more than 2 instructions into body_pass_16
+    mov.setf -, rb_inst
+    brr.allnz -, r:1f
+    .endb
+    nop
+
+    body_ra_save_16 ra_vpm_lo, ra_vdw_16
+
+:1
+    body_rx_save_slave_16 ra_vpm_lo
 

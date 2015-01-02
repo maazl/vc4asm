@@ -120,12 +120,11 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 2 rb registers
-    sub.setf r0, unif, 1; mov r3, unif
-    mov rb_inst, r3;      mov ra_sync, 0
-    shl r0, r0, 5;        mov ra_save_32, 0
-    mov r1,              :sync_slave - :sync
-    add.ifnn ra_sync, r1, r0
-    mov.ifnn ra_save_32, :save_slave_32 - :save_32
+    mov.setf r3, unif;    mov ra_sync, 0
+    shl r0, r3, 5;        mov ra_save_32, 0
+    mov r1,              :sync_slave - :sync - 4*8 # -> rb_inst-1
+    add.ifnz ra_sync, r1, r0; mov rb_inst, r3
+    mov.ifnz ra_save_32, :save_slave_32 - :save_32
 
 inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 
@@ -283,10 +282,21 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 :fft_16
     body_fft_16
 
+    .back 3
+    bra -, ra_link_0
+    .endb
+
 :pass_1
     body_pass_32 LOAD_REVERSED
+
+    .back 3
+    brr -, ra_save_32, r:save_32
+    .endb
 
 :pass_2
 :pass_3
     body_pass_32 LOAD_STRAIGHT
 
+    .back 3
+    brr -, ra_save_32, r:save_32
+    .endb
