@@ -80,16 +80,6 @@ static const char msgpfx[][10]
 ,	"Info: "
 };
 
-void Parser::Error(const char* fmt, ...)
-{	Success = false;
-	va_list va;
-	va_start(va, fmt);
-	fputs(msgpfx[ERROR], stderr);
-	fputs(enrichMsg(vstringf(fmt, va)).c_str(), stderr);
-	va_end(va);
-	fputc('\n', stderr);
-}
-
 void Parser::Msg(severity level, const char* fmt, ...)
 {	if (!Pass2 || Verbose < level)
 		return;
@@ -446,21 +436,21 @@ void Parser::doSMI(uint8_t si)
 void Parser::addIf(int cond, bool mul)
 {
 	if (Instruct.Sig == Inst::S_BRANCH)
-		return Error("Cannot apply conditional store (.ifxx) to branch instruction.");
+		Fail("Cannot apply conditional store (.ifxx) to branch instruction.");
 	auto& target = mul ? Instruct.CondM : Instruct.CondA;
 	if (target != Inst::C_AL)
-		return Error("Store condition (.if) already specified.");
+		Fail("Store condition (.if) already specified.");
 	target = (Inst::conda)cond;
 }
 
 void Parser::addUnpack(int mode, bool mul)
 {
 	if (Instruct.Sig >= Inst::S_LDI)
-		return Error("Cannot apply .unpack to branch and load immediate instructions.");
+		Fail("Cannot apply .unpack to branch and load immediate instructions.");
 	if (Instruct.Unpack != Inst::U_32)
-		return Error("Only on .unpack per instruction, please.");
+		Fail("Only on .unpack per instruction, please.");
 	if (Instruct.Sig != Inst::S_LDI && Instruct.Pack != Inst::P_32 && Instruct.PM != mul)
-		return Error(".unpack conflicts with .pack instruction of ADD ALU.");
+		Fail(".unpack conflicts with .pack instruction of ADD ALU.");
 	if (mul)
 	{	// TODO ensure source R4
 		Instruct.PM = true;
@@ -471,11 +461,11 @@ void Parser::addUnpack(int mode, bool mul)
 void Parser::addPack(int mode, bool mul)
 {
 	if (Instruct.Sig == Inst::S_BRANCH)
-		return Error("Cannot apply .pack to branch instruction.");
+		Fail("Cannot apply .pack to branch instruction.");
 	if (Instruct.Pack != Inst::P_32)
-		return Error("Only on .pack per instruction, please.");
+		Fail("Only on .pack per instruction, please.");
 	if (Instruct.Sig != Inst::S_LDI && Instruct.Unpack != Inst::U_32 && Instruct.PM != mul)
-		return Error(".pack conflicts with .unpack instruction of ADD ALU.");
+		Fail(".pack conflicts with .unpack instruction of ADD ALU.");
 	/* TODO: MUL ALU pack modes, cannot activate until we know the target
 	if (mul)
 	{	if (mode < Inst::P_8abcdS && mode != Inst::P_32)
@@ -489,21 +479,21 @@ void Parser::addPack(int mode, bool mul)
 void Parser::addSetF(int, bool mul)
 {
 	if (Instruct.Sig == Inst::S_BRANCH)
-		return Error("Cannot apply .setf to branch instruction.");
+		Fail("Cannot apply .setf to branch instruction.");
 	if ( Instruct.Sig != Inst::S_LDI
 		&& (Instruct.CondA == Inst::C_NEVER && Instruct.OpA == Inst::A_NOP) != mul )
-		return Error("Cannot apply .setf because the flags of the other ALU will be used.");
+		Fail("Cannot apply .setf because the flags of the other ALU will be used.");
 	if (Instruct.SF)
-		return Error("Don't use .setf twice.");
+		Fail("Don't use .setf twice.");
 	Instruct.SF = true;
 }
 
 void Parser::addCond(int cond, bool mul)
 {
 	if (Instruct.Sig != Inst::S_BRANCH)
-		return Error("Branch condition codes can only be applied to branch instructions.");
+		Fail("Branch condition codes can only be applied to branch instructions.");
 	if (Instruct.CondBr != Inst::B_AL)
-		return Error("Only one branch condition per instruction, please.");
+		Fail("Only one branch condition per instruction, please.");
 	Instruct.CondBr = (Inst::condb)cond;
 }
 
@@ -658,7 +648,7 @@ void Parser::assembleADD(int add_op)
 
 	Instruct.OpA = (Inst::opadd)add_op;
 	if (add_op == Inst::A_NOP)
-	{	HaveNOP = true;
+	{	Flags |= IF_HAVE_NOP;
 		return;
 	}
 
@@ -696,7 +686,7 @@ void Parser::assembleMOV(int mode)
 	if (Instruct.Sig == Inst::S_BRANCH)
 		Fail("Cannot use MOV together with branch instruction.");
 	bool isLDI = Instruct.Sig == Inst::S_LDI;
-	bool useMUL = HaveNOP || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP);
+	bool useMUL = (Flags & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP);
 	if (useMUL && (Instruct.WAddrM != Inst::R_NOP || (!isLDI && Instruct.OpM != Inst::M_NOP)))
 		Fail("Both ALUs are already used by the current instruction.");
 
@@ -884,9 +874,10 @@ void Parser::assembleSIG(int bits)
 void Parser::ParseInstruction()
 {
 	while (true)
-	{	const opEntry<8>* op = binary_search(opcodeMap, Token.c_str());
+	{	Flags &= ~IF_CMB_ALLOWED;
+		const opEntry<8>* op = binary_search(opcodeMap, Token.c_str());
 		if (!op)
-			return Error("Invalid opcode or unknown macro: %s", Token.c_str());
+			Fail("Invalid opcode or unknown macro: %s", Token.c_str());
 
 		if (Preprocessed)
 			fputs(Token.c_str(), Preprocessed);
@@ -898,6 +889,7 @@ void Parser::ParseInstruction()
 		 case END:
 			return;
 		 case SEMI:
+			Flags |= IF_CMB_ALLOWED;
 			switch (NextToken())
 			{default:
 				Fail("Expected additional instruction after ';'.");
@@ -927,7 +919,7 @@ void Parser::defineLabel()
 		if (lp->Definition)
 		{	// redefinition
 			if (!isdigit(lp->Name[0]))
-				return Error("Redefinition of non-local label %s, previously defined at %s.",
+				Fail("Redefinition of non-local label %s, previously defined at %s.",
 					Token.c_str(), lp->Definition.toString().c_str());
 			// redefinition allowed, but this is always a new label
 			lname.first->second = LabelCount;
@@ -937,7 +929,7 @@ void Parser::defineLabel()
 	if (!Pass2)
 		lp->Value = (Instructions.size() - Back) * sizeof(uint64_t);
 	else if (lp->Name != Token || lp->Value != (Instructions.size() - Back) * sizeof(uint64_t))
-		return Error("Inconsistent Label definition during Pass 2.");
+		Fail("Inconsistent Label definition during Pass 2.");
 	lp->Definition = *Context.back();
 
 	if (Preprocessed)
@@ -950,7 +942,9 @@ void Parser::parseLabel()
 {
 	switch (NextToken())
 	{default:
-		return Error("Expected label name after ':'.");
+		Fail("Expected label name after ':'.");
+	 case END:
+		Flags |= IF_BRANCH_TARGET;
 	 case WORD:
 	 case NUM:;
 	}
@@ -964,7 +958,7 @@ void Parser::parseDATA(int type)
  next:
 	exprValue value = ParseExpression();
 	if (value.Type != V_INT && value.Type != V_FLOAT)
-		return Error("Immediate data instructions require integer or floating point constants. Found %s.", type2string(value.Type));
+		Fail("Immediate data instructions require integer or floating point constants. Found %s.", type2string(value.Type));
 	switch (type)
 	{case -4:
 		if (value.Type == V_INT)
@@ -983,12 +977,13 @@ void Parser::parseDATA(int type)
 	target |= (uint64_t)value.uValue << count;
 	if ((count += (type << 3)) >= 64)
 	{	Instructions.push_back(target);
+		InstFlags.push_back(IF_NONE);
 		count = 0;
 		target = 0;
 	}
 	switch (NextToken())
 	{default:
-		return Error("Syntax error. Expected ',' or end of line.");
+		Fail("Syntax error. Expected ',' or end of line.");
 	 case COMMA:
 		goto next;
 	 case END:;
@@ -996,6 +991,7 @@ void Parser::parseDATA(int type)
 	if (count & 63)
 	{	Msg(INFO, "Used padding to enforce 64 bit alignment of immediate data.");
 		Instructions.push_back(target);
+		InstFlags.push_back(IF_NONE);
 	}
 }
 
@@ -1008,16 +1004,16 @@ void Parser::beginREP(int)
 	AtMacro->Definition = *Context.back();
 
 	if (NextToken() != WORD)
-		return Error("Expected loop variable name after .rep.");
+		Fail("Expected loop variable name after .rep.");
 
 	AtMacro->Args.push_back(Token);
 	if (NextToken() != COMMA)
-		return Error("Expected ', <count>' at .rep.");
+		Fail("Expected ', <count>' at .rep.");
 	const auto& expr = ParseExpression();
 	if (expr.Type != V_INT)
-		return Error("Second argument to .rep must be an integral number. Found %s", expr.toString().c_str());
+		Fail("Second argument to .rep must be an integral number. Found %s", expr.toString().c_str());
 	if (NextToken() != END)
-		return Error("Expected end of line.");
+		Fail("Expected end of line.");
 	AtMacro->Args.push_back(expr.toString());
 }
 
@@ -1027,7 +1023,7 @@ void Parser::endREP(int)
 	if (AtMacro != &iter->second)
 	{	if (doPreprocessor())
 			return;
-		return Error(".endr without .rep");
+		Fail(".endr without .rep");
 	}
 
 	const macro m = *AtMacro;
@@ -1061,17 +1057,23 @@ void Parser::beginBACK(int)
 		return;
 
 	if (Back)
-		return Error("Cannot nest .back directives.");
+		Fail("Cannot nest .back directives.");
 	exprValue param = ParseExpression();
 	if (param.Type != V_INT)
-		return Error("Expected integer constant after .back.");
+		Fail("Expected integer constant after .back.");
 	if (param.uValue > 5)
-		return Error("Cannot move instructions more than 5 slots back.");
+		Fail("Cannot move instructions more than 5 slots back.");
 	if (param.uValue > Instructions.size())
-		return Error("Cannot move instructions back before the start of the code.");
+		Fail("Cannot move instructions back before the start of the code.");
 	if (NextToken() != END)
-		return Error("Expected end of line, found '%s'.", Token.c_str());
+		Fail("Expected end of line, found '%s'.", Token.c_str());
 	Back = param.uValue;
+	// Load last instruction before .back to provide combine support
+	if (param.uValue < Instructions.size())
+	{	Instruct.decode(*(Instructions.end() - Back -1));
+		Flags = *(InstFlags.end() - Back -1);
+	} else
+		Flags = IF_NONE;
 }
 
 void Parser::endBACK(int)
@@ -1080,10 +1082,13 @@ void Parser::endBACK(int)
 		return;
 
 	if (!Back)
-		return Error(".endb without .back.");
+		Fail(".endb without .back.");
 	if (NextToken() != END)
-		return Error("Expected end of line, found '%s'.", Token.c_str());
+		Fail("Expected end of line, found '%s'.", Token.c_str());
 	Back = 0;
+	// Restore last instruction to provide combine support
+	Instruct.decode(Instructions.back());
+	Flags = InstFlags.back();
 }
 
 void Parser::parseSET(int flags)
@@ -1092,26 +1097,26 @@ void Parser::parseSET(int flags)
 		return;
 
 	if (NextToken() != WORD)
-		return Error("Directive .set requires identifier.");
+		Fail("Directive .set requires identifier.");
 	string name = Token;
 	switch (NextToken())
 	{default:
-		return Error("Directive .set requires ', <value>' or '(<arguments>) <value>'. Fount %s.", Token.c_str());
+		Fail("Directive .set requires ', <value>' or '(<arguments>) <value>'. Fount %s.", Token.c_str());
 	 case BRACE1:
 		{	function func(*Context.back());
 		 next:
 			if (NextToken() != WORD)
-				return Error("Function argument name expected. Found '%s'.", Token.c_str());
+				Fail("Function argument name expected. Found '%s'.", Token.c_str());
 			func.Args.push_back(Token);
 			switch (NextToken())
 			{default:
-				return Error("Expected ',' or ')' after function argument.");
+				Fail("Expected ',' or ')' after function argument.");
 			 case NUM:
-				return Error("Function arguments must not start with a digit.");
+				Fail("Function arguments must not start with a digit.");
 			 case COMMA:
 				goto next;
 			 case END:
-				return Error("Unexpected end of function argument definition");
+				Fail("Unexpected end of function argument definition");
 			 case BRACE2:
 				break;
 			}
@@ -1133,14 +1138,14 @@ void Parser::parseSET(int flags)
 	 case COMMA:
 		{	exprValue expr = ParseExpression();
 			if (NextToken() != END)
-				return Error("Syntax error: unexpected %s.", Token.c_str());
+				Fail("Syntax error: unexpected %s.", Token.c_str());
 
 			auto& current = flags & C_LOCAL ? *Context.back() : *Context.front();
 			auto r = current.Consts.emplace(name, constDef(expr, current));
 			if (!r.second)
 			{	if (flags & C_CONST)
 					// redefinition not allowed
-					return Error("Identifier %s has already been defined at %s.",
+					Fail("Identifier %s has already been defined at %s.",
 						name.c_str(), r.first->second.Definition.toString().c_str());
 				r.first->second.Value = expr;
 			}
@@ -1154,10 +1159,10 @@ void Parser::parseUNSET(int flags)
 		return;
 
 	if (NextToken() != WORD)
-		return Error("Directive .unset requires identifier.");
+		Fail("Directive .unset requires identifier.");
 	string Name = Token;
 	if (NextToken() != END)
-		return Error("Syntax error: unexpected %s.", Token.c_str());
+		Fail("Syntax error: unexpected %s.", Token.c_str());
 
 	auto& consts = (flags & C_LOCAL ? Context.back() : Context.front())->Consts;
 	auto r = consts.find(Name);
@@ -1190,7 +1195,7 @@ void Parser::parseELSEIF(int)
 		return;
 
 	if (!AtIf.size())
-		return Error(".elseif without .if");
+		Fail(".elseif without .if");
 
 	if (AtIf.back().State == 0)
 		AtIf.back().State = doCondition();
@@ -1204,9 +1209,9 @@ void Parser::parseELSE(int)
 		return;
 
 	if (!AtIf.size())
-		return Error(".else without .if");
+		Fail(".else without .if");
 	if (NextToken() != END)
-		Error("Expected end of line. .else has no arguments.");
+		Msg(ERROR, "Expected end of line. .else has no arguments.");
 
 	++AtIf.back().State;
 }
@@ -1217,9 +1222,9 @@ void Parser::parseENDIF(int)
 		return;
 
 	if (!AtIf.size())
-		return Error(".endif without .if");
+		Fail(".endif without .if");
 	if (NextToken() != END)
-		Error("Expected end of line. .endif has no arguments.");
+		Msg(ERROR, "Expected end of line. .endif has no arguments.");
 
 	AtIf.pop_back();
 }
@@ -1230,7 +1235,7 @@ void Parser::parseASSERT(int)
 		return;
 
 	if (!doCondition())
-		Error("Assertion failed.");
+		Msg(ERROR, "Assertion failed.");
 }
 
 void Parser::beginMACRO(int flags)
@@ -1239,11 +1244,11 @@ void Parser::beginMACRO(int flags)
 		return;
 
 	if (AtMacro)
-		return Error("Cannot nest macro definitions.\n"
+		Fail("Cannot nest macro definitions.\n"
 		     "  In definition of macro starting at %s.",
 		  AtMacro->Definition.toString().c_str());
 	if (NextToken() != WORD)
-		return Error("Expected macro name.");
+		Fail("Expected macro name.");
 	AtMacro = &(flags & M_FUNC ? MacroFuncs : Macros)[Token];
 	if (AtMacro->Definition.File.size())
 	{	Msg(INFO, "Redefinition of macro %s.\n"
@@ -1265,26 +1270,26 @@ void Parser::beginMACRO(int flags)
 				goto comma;
 			}
 		 default:
-			return Error("Expected ',' before (next) macro argument.");
+			Fail("Expected ',' before (next) macro argument.");
 		 case NUM:
-			return Error("Macro arguments must not be numbers.");
+			Fail("Macro arguments must not be numbers.");
 		 case COMMA:
 			if (brace == 2)
-				return Error("Expected end of line after closing brace.");
+				Fail("Expected end of line after closing brace.");
 		 comma:
 			// Macro argument
 			if (NextToken() != WORD)
-				return Error("Macro argument name expected. Found '%s'.", Token.c_str());
+				Fail("Macro argument name expected. Found '%s'.", Token.c_str());
 			AtMacro->Args.push_back(Token);
 			break;
 		 case BRACE2:
 			if (brace != 1)
-				return Error("Unexpected closing brace.");
+				Fail("Unexpected closing brace.");
 			brace = 2;
 			break;
 		 case END:
 			if (brace == 1)
-				Error("Closing brace is missing");
+				Fail("Closing brace is missing");
 			return;
 		}
 }
@@ -1295,12 +1300,12 @@ void Parser::endMACRO(int flags)
 		return;
 
 	if (!AtMacro)
-		return Error(".%s outside a macro definition.", Token.c_str());
+		Fail(".%s outside a macro definition.", Token.c_str());
 	if (AtMacro->Flags != flags)
-		return Error("Cannot close this macro with .%s. Expected .end%c.", Token.c_str(), flags & M_FUNC ? 'f' : 'm');
+		Fail("Cannot close this macro with .%s. Expected .end%c.", Token.c_str(), flags & M_FUNC ? 'f' : 'm');
 	AtMacro = NULL;
 	if (NextToken() != END)
-		Error("Expected end of line.");
+		Msg(ERROR, "Expected end of line.");
 }
 
 void Parser::doMACRO(macros_t::const_iterator m)
@@ -1317,11 +1322,11 @@ void Parser::doMACRO(macros_t::const_iterator m)
 				Fail("internal error");
 			 case COMMA:
 				if (args.size() == argnames.size())
-					return Error("Too much arguments for macro %s.", m->first.c_str());
+					Fail("Too much arguments for macro %s.", m->first.c_str());
 				continue;
 			 case END:
 				if (args.size() != argnames.size())
-					return Error("Too few arguments for macro %s.", m->first.c_str());
+					Fail("Too few arguments for macro %s.", m->first.c_str());
 			}
 			break;
 		}
@@ -1402,7 +1407,7 @@ exprValue Parser::doFUNCMACRO(macros_t::const_iterator m)
 
 		 case COLON:
 		 label:
-			Error("Label definition not allowed in functional macro %s.", m->first.c_str());
+			Msg(ERROR, "Label definition not allowed in functional macro %s.", m->first.c_str());
 			break;
 
 		 default:
@@ -1413,7 +1418,7 @@ exprValue Parser::doFUNCMACRO(macros_t::const_iterator m)
 			if (*At == ':')
 				goto label;
 			if (ret.Type != V_NONE)
-			{	Error("Only one expression allowed per functional macro.");
+			{	Msg(ERROR, "Only one expression allowed per functional macro.");
 				break;
 			}
 			At -= Token.size();
@@ -1487,7 +1492,7 @@ void Parser::doINCLUDE(int)
 	}
 	size_t len = strlen(At);
 	if (*At != '"' || At[len-1] != '"')
-		return Error("Syntax error. Expected \"<file-name>\" after .include, found '%s'.", At);
+		Fail("Syntax error. Expected \"<file-name>\" after .include, found '%s'.", At);
 	Token.assign(At+1, len-2);
 
 	Token = relpath(Context.back()->File, Token);
@@ -1500,11 +1505,11 @@ void Parser::doINCLUDE(int)
 void Parser::ParseDirective()
 {
 	if (NextToken() != WORD)
-		return Error("Expected assembler directive after '.'. Found '%s'.", Token.c_str());
+		Fail("Expected assembler directive after '.'. Found '%s'.", Token.c_str());
 
 	const opEntry<8>* op = binary_search(directiveMap, Token.c_str());
 	if (!op)
-		return Error("Invalid assembler directive: %s", Token.c_str());
+		Fail("Invalid assembler directive: %s", Token.c_str());
 
 	(this->*op->Func)(op->Arg);
 }
@@ -1521,10 +1526,14 @@ bool Parser::doPreprocessor(preprocType type)
 void Parser::ParseLine()
 {
 	At = Line;
+	bool trycombine = false;
+	bool isinst = false;
 
  next:
 	switch (NextToken())
 	{case DOT:
+		if (isinst)
+			goto def;
 		// directives
 		ParseDirective();
 	 case END:
@@ -1533,13 +1542,24 @@ void Parser::ParseLine()
 	 case COLON:
 		if (doPreprocessor())
 			return;
+		if (isinst)
+			goto def;
 
 		parseLabel();
 		goto next;
 
+	 case SEMI:
+		if (doPreprocessor())
+			return;
+		if (Flags & IF_CMB_ALLOWED)
+			trycombine = true;
+		isinst = true;
+		goto next;
+
+	 def:
 	 default:
 		if (!AtMacro || (AtMacro->Flags & M_FUNC) == 0)
-			return Error("Syntax error. Unexpected '%s'.", Token.c_str());
+			Fail("Syntax error. Unexpected '%s'.", Token.c_str());
 	 case WORD:
 		if (doPreprocessor())
 			return;
@@ -1559,11 +1579,28 @@ void Parser::ParseLine()
 			return;
 		}
 
+		if (trycombine)
+		{	char* atbak = At;
+			bool succbak = Success;
+			string tokenbak = Token;
+			try
+			{	// Try to parse into existing instruction.
+				ParseInstruction();
+				*(Instructions.end() - Back -1) = Instruct.encode();
+				*(InstFlags.end() - Back -1) = Flags;
+				return;
+			} catch (const string& msg)
+			{	// Combine failed => try new instruction.
+				At = atbak;
+				Success = succbak;
+				Token = tokenbak;
+			}
+		}
 		Instruct.reset();
-		HaveNOP = false;
+		Flags = IF_NONE;
 		ParseInstruction();
-		Instruct.optimize();
 		Instructions.insert(Instructions.end() - Back, Instruct.encode());
+		InstFlags.insert(InstFlags.end() - Back, Flags);
 		return;
 	}
 }
@@ -1572,7 +1609,7 @@ void Parser::ParseFile()
 {
 	FILE* f = fopen(Context.back()->File.c_str(), "r");
 	if (!f)
-		return Error("Failed to open file %s.", Context.back()->File.c_str());
+		Fail("Failed to open file %s.", Context.back()->File.c_str());
 	try
 	{	while (fgets(Line, sizeof(Line), f))
 		{	++Context.back()->Line;
@@ -1598,8 +1635,15 @@ void Parser::ParseFile(const string& file)
 {	if (Pass2)
 		throw string("Cannot add another file after pass 2 has been entered.");
 	saveContext ctx(*this, new fileContext(CTX_INCLUDE, file, 0));
-	ParseFile();
-	Filenames.emplace_back(file);
+	try
+	{	ParseFile();
+		Filenames.emplace_back(file);
+	} catch (const string& msg)
+	{	// recover from errors
+		fputs(msgpfx[ERROR], stderr);
+		fputs(msg.c_str(), stderr);
+		fputc('\n', stderr);
+	}
 }
 
 void Parser::ResetPass()
@@ -1626,7 +1670,7 @@ void Parser::EnsurePass2()
 	// Check all labels
 	for (auto& label : Labels)
 	{	if (!label.Definition)
-			return Error("Label '%s' is undefined. Referenced from %s.\n",
+			Fail("Label '%s' is undefined. Referenced from %s.\n",
 				label.Name.c_str(), label.Reference.toString().c_str());
 		label.Definition.Line = 0;
 	}
@@ -1634,6 +1678,14 @@ void Parser::EnsurePass2()
 	for (auto file : Filenames)
 	{	saveContext ctx(*this, new fileContext(CTX_INCLUDE, file, 0));
 		ParseFile();
+	}
+
+	// Optimize instructions
+	for (auto& inst : Instructions)
+	{	Inst optimized;
+		optimized.decode(inst);
+		optimized.optimize();
+		inst = optimized.encode();
 	}
 }
 
@@ -1650,17 +1702,6 @@ void Parser::Reset()
 
 const vector<uint64_t>& Parser::GetInstructions()
 {
-	/*for (fixup fix : Fixups)
-	{	const label& l = Labels[fix.Label];
-		if (!l.Definition)
-		{	Success = false;
-			fprintf(stderr, "Label '%s' is undefined. Referenced from %s.\n",
-				l.Name.c_str(), l.Reference.toString().c_str());
-		} else
-			Instructions[fix.Instr] += l.Value - (uint64_t)(Instructions[fix.Instr] & 0x80000000) * 2;
-	}
-	Fixups.clear();*/
-
 	EnsurePass2();
 
 	return Instructions;

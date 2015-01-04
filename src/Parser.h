@@ -195,6 +195,12 @@ class Parser
 		saveLineContext(Parser& parent, fileContext* ctx);
 		~saveLineContext();
 	};
+	enum InstFlags : uint8_t
+	{	IF_NONE
+	,	IF_HAVE_NOP                 ///< at least one NOP in the current instruction so far
+	,	IF_CMB_ALLOWED              ///< Instruction of the following line could be merged
+	,	IF_BRANCH_TARGET            ///< This instruction is a branch target
+	};
 
 	// parser working set
 	bool             Pass2 = false;
@@ -204,7 +210,7 @@ class Parser
 	char*            At = NULL;   ///< Current location within Line
 	string           Token;       ///< Current token
 	Inst             Instruct;    ///< current instruction
-	bool             HaveNOP;     ///< at least one NOP in the current line so far
+	uint8_t          Flags = IF_NONE;///< instruction flags
 	// context
 	macro*           AtMacro = NULL;///< Currently at a macro definition
 	unsigned         Back = 0;    ///< Insert # instructions in the past
@@ -219,10 +225,10 @@ class Parser
 	macros_t         Macros;      ///< Macros
 	// instruction
 	vector<uint64_t> Instructions;
+	vector<uint8_t>  InstFlags;
  private:
 	string           enrichMsg(string msg);
 	void             Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR;
-	void             Error(const char* fmt, ...) PRINTFATTR(2);
 	void             Msg(severity level, const char* fmt, ...) PRINTFATTR(3);
 
 	token_t          NextToken();
