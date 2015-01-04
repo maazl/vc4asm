@@ -70,7 +70,7 @@
 .set ra_0x7F,           ra4
 .set rx_0x0F0F0F0F,     rb4
 .set ra_load_idx,       ra5
-.set rb_inst,           rb5
+.set rx_0x55555555,     rb5
 .set ra_sync,           ra6
 .set rx_0x33333333,     rb6
 .set ra_points,         ra7
@@ -79,7 +79,7 @@
 .set rb_link_1,         rb8
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
-.set rx_0x55555555,     ra10
+.set rx_inst,           ra10
 .set rb_0x10,           rb10
 
 .set ra_64,             ra11 # 4
@@ -125,8 +125,8 @@ load_tw r3, TW_SHARED, TW_UNIQUE, unif
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 5 registers
     mov.setf r3, unif;  mov ra_sync, 0
-    shl r0, r3, 5;      mov rb_inst, r3
-    mov r1, :sync_slave - :sync - 4*8 # -> rb_inst-1
+    shl r0, r3, 5;      mov rx_inst, r3
+    mov r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     add.ifnz ra_sync, r1, r0
 inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
@@ -339,14 +339,11 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
     # (MM) Optimized procedure chains
     # link to entry point of slave procedure without need for a register
-    .back 5
-    ;mov.setf ra_temp, rb_inst
-    .endb
     .back 4
-    ;shl ra_temp, ra_temp, 5  # 4 instructions per instance
+    ;shl.setf ra_temp, rx_inst, 5  # 4 instructions per instance
     .endb
     .back 3
-    brr.allnz -, ra_temp, r:save_slave_64 - 4*8 # + (rb_inst-1) * 4*8
+    brr.allnz -, ra_temp, r:save_slave_64 - 4*8 # + (rx_inst-1) * 4*8
     .endb
 
 # save_64
@@ -363,7 +360,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
     # (MM) Optimized procedure chains
     # link to entry point of slave procedure without need for a register
     .back 3
-    ;mov.setf -, rb_inst
+    ;mov.setf -, rx_inst
     brr.allnz -, r:save_slave_32
     .endb
 

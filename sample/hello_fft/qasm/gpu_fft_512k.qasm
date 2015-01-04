@@ -66,7 +66,7 @@
 #                       ra4
 .set rb_pass2_link,     rb4
 .set ra_load_idx,       ra5
-.set rb_inst,           rb5
+.set rx_inst,           rb5
 .set ra_sync,           ra6
 #                       rb6
 .set ra_points,         ra7
@@ -127,8 +127,8 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 # Saves several branch instructions and 4 registers
     mov.setf r3, unif;    mov ra_sync, 0
     shl r0, r3, 5;        mov ra_save_32, 0
-    mov r1,              :sync_slave - :sync - 4*8 # -> rb_inst-1
-    add.ifnz ra_sync, r1, r0; mov rb_inst, r3
+    mov r1,              :sync_slave - :sync - 4*8 # -> rx_inst-1
+    add.ifnz ra_sync, r1, r0; mov rx_inst, r3
     mov.ifnz ra_save_32, :save_slave_32 - :save_32
     
 inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
@@ -344,7 +344,7 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 2 # cannot go back more than 2 instructions into body_pass_16
-    mov.setf -, rb_inst
+    mov.setf -, rx_inst
     brr.allnz -, r:1f
     .endb
     nop
