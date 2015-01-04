@@ -5,7 +5,7 @@
   0x80000000 | (units & 0x7f) << 23 | (depth & 0x7f) << 16 | (dma & 0xffff)
 .endf
 .func vdw_setup_1(stride)
-  .assert (stride & ~0x1fff) == 0
+  .assert (stride & ~0xffff) == 0 # VPM seems to support 16 bit stride rather than 13 as documented
   0xc0000000 | stride
 .endf
 .func vpm_setup(num, stride, dma)
