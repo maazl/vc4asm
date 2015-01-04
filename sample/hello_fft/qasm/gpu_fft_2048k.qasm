@@ -340,10 +340,10 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
     # (MM) Optimized procedure chains
     # link to entry point of slave procedure without need for a register
     .back 5
-    mov.setf ra_temp, rb_inst
+    ;mov.setf ra_temp, rb_inst
     .endb
     .back 4
-    shl ra_temp, ra_temp, 5  # 4 instructions per instance
+    ;shl ra_temp, ra_temp, 5  # 4 instructions per instance
     .endb
     .back 3
     brr.allnz -, ra_temp, r:save_slave_64 - 4*8 # + (rb_inst-1) * 4*8
@@ -363,7 +363,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
     # (MM) Optimized procedure chains
     # link to entry point of slave procedure without need for a register
     .back 3
-    mov.setf -, rb_inst
+    ;mov.setf -, rb_inst
     brr.allnz -, r:save_slave_32
     .endb
 
