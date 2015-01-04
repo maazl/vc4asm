@@ -65,13 +65,13 @@ class Eval
 	class operate
 	{	exprEntry& rhs;
 		exprEntry& lhs;
-		unsigned types;
+		unsigned  types;
 		void      TypesFail();
 		void      CheckInt();
 		void      CheckBool();
 		void      PropFloat();
 		void      CheckNumericPropFloat();
-		void      CheckRelational();
+		int       Compare();
 	 public:
 		operate(vector<exprEntry>& stack);
 		bool      Apply(bool unary);

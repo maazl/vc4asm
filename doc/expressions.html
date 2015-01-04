@@ -571,72 +571,36 @@
           <td rowspan="4">7 </td>
           <td rowspan="4">binary</td>
           <td><tt>&gt;</tt></td>
-          <td>int, int &rarr; int<br>
-            float, float &rarr; int<br>
-            int, float &rarr; int<br>
-            float, int &rarr; int<br>
-            reg, reg &rarr; int</td>
-          <td>greater than<br>
-            If registers are compared then both operands must be of the same
-            register type, i.e. from the same register file.</td>
+          <td>all &rarr; int</td>
+          <td>greater than</td>
         </tr>
         <tr>
           <td><tt>&gt;=</tt></td>
-          <td>int, int &rarr; int<br>
-            float, float &rarr; int<br>
-            int, float &rarr; int<br>
-            float, int &rarr; int<br>
-            reg, reg &rarr; int</td>
-          <td>greater than or equal<br>
-            If registers are compared then both operands must be of the same
-            register type, i.e. from the same register file.</td>
+          <td>all &rarr; int</td>
+          <td>greater than or equal</td>
         </tr>
         <tr>
           <td><tt>&lt;</tt> </td>
-          <td>int, int &rarr; int<br>
-            float, float &rarr; int<br>
-            int, float &rarr; int<br>
-            float, int &rarr; int<br>
-            reg, reg &rarr; int</td>
-          <td>less than<br>
-            If registers are compared then both operands must be of the same
-            register type, i.e. from the same register file.</td>
+          <td>all &rarr; int</td>
+          <td>less than</td>
         </tr>
         <tr>
           <td><tt>&lt;=</tt> </td>
-          <td>int, int &rarr; int<br>
-            float, float &rarr; int<br>
-            int, float &rarr; int<br>
-            float, int &rarr; int<br>
-            reg, reg &rarr; int</td>
-          <td>less than or equal<br>
-            If registers are compared then both operands must be of the same
-            register type, i.e. from the same register file.</td>
+          <td>all &rarr; int</td>
+          <td>less than or equal</td>
         </tr>
         <tr>
           <td colspan="1" rowspan="2">8<br>
           </td>
           <td colspan="1" rowspan="2">binary</td>
           <td><tt>==</tt> </td>
-          <td>int, int &rarr; int<br>
-            float, float &rarr; int<br>
-            int, float &rarr; int<br>
-            float, int &rarr; int<br>
-            reg, reg &rarr; int </td>
-          <td>equal<br>
-            If registers are compared then both operands must be of the same
-            register type, i.e. from the same register file. </td>
+          <td>all &rarr; int</td>
+          <td>equal</td>
         </tr>
         <tr>
           <td><tt>!=</tt> </td>
-          <td>int, int &rarr; int<br>
-            float, float &rarr; int<br>
-            int, float &rarr; int<br>
-            float, int &rarr; int<br>
-            reg, reg &rarr; int </td>
-          <td>not equal<br>
-            If registers are compared then both operands must be of the same
-            register type, i.e. from the same register file. </td>
+          <td>all &rarr; int</td>
+          <td>not equal</td>
         </tr>
         <tr>
           <td>9</td>
@@ -687,6 +651,28 @@
         </tr>
       </tbody>
     </table>
+    <h3>Relational operators and different operand types</h3>
+    <p>If the left and right hand side of a relational or equality operator has
+      a different data type, e.g. register vs. integer the following sequence
+      applies. Types with higher ordinals below always compare greater.</p>
+    <ol>
+      <li><b>Integer or floating point constant</b><br>
+        Integer comparison is always signed.<br>
+        If integer is compared against a float then the integer operand
+        propagates to float before the comparison. Note that this can cause a
+        loss of precision.</li>
+      <li><b>Load immediate per element constant</b><br>
+        Do not rely on comparison order of two LDIPES constants.</li>
+      <li><b>Register</b><br>
+        Comparing two registers is only reliable if both registers are exactly
+        of the same type. Even equality comparison might give unexpected
+        results. E.g. <tt>unif == ra32</tt> evaluates to false because <tt>ra32</tt>
+        is pinned to register file A while <tt>unif</tt> is not.</li>
+      <li><b>Semaphore register</b><br>
+        Acquire is greater than release.<b> </b></li>
+      <li><b>Label</b><br>
+        You can safely compare two labels.<b> </b></li>
+    </ol>
     <h3> Register operands</h3>
     <p>Some operators can be applied to registers rather than constants. This
       operators will <em>not modify the value at runtime</em>, instead they
@@ -703,6 +689,8 @@
         that the rotation direction is inverted when applied to a source
         argument, i.e. like if you <em>take</em> the value from a higher or
         lower element number.</dd>
+    </dl>
+    <dl>
     </dl>
   </body>
 </html>

@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <cstdarg>
+#include <climits>
 
 
 Eval::Fail::Fail(const char* format, ...)
@@ -65,18 +66,64 @@ void Eval::operate::CheckNumericPropFloat()
 		PropFloat();
 }
 
-void Eval::operate::CheckRelational()
-{	switch (types)
-	{default:
-		TypesFail();
-	 case 1<<V_INT | 1<<V_FLOAT:
+int Eval::operate::Compare()
+{	int ret;
+	switch (types)
+	{case 1<<V_INT | 1<<V_FLOAT:
 		PropFloat();
-	 case 1<<V_INT:
 	 case 1<<V_FLOAT:
+		if (lhs.fValue < rhs.fValue)
+			goto less;
+		if (lhs.fValue > rhs.fValue)
+			goto greater;
+		if (lhs.fValue == rhs.fValue)
+			goto equal;
+		ret = INT_MIN; // Indeterminate
+		goto end;
+	 case 1<<V_INT:
+		if (lhs.iValue < rhs.iValue)
+			goto less;
+		if (lhs.iValue > rhs.iValue)
+			goto greater;
+		goto equal;
+	 case 1<<V_LDPES:
+	 case 1<<V_LDPE:
+	 case 1<<V_LDPEU:
+	 case 1<<V_LABEL:
+		if (lhs.uValue < rhs.uValue)
+			goto less;
+		if (lhs.uValue > rhs.uValue)
+			goto greater;
+		goto equal;
 	 case 1<<V_REG:
-	 case 1<<V_LABEL:;
+		if (lhs.rValue.Type < rhs.rValue.Type)
+			goto less;
+		if (lhs.rValue.Type > rhs.rValue.Type)
+			goto greater;
+		if (lhs.rValue.Rotate < rhs.rValue.Rotate)
+			goto less;
+		if (lhs.rValue.Rotate > rhs.rValue.Rotate)
+			goto greater;
+		if (lhs.rValue.Num < rhs.rValue.Num)
+			goto less;
+		if (lhs.rValue.Num > rhs.rValue.Num)
+			goto greater;
+		goto equal;
+	 default:
+		if (lhs.Type > rhs.Type)
+			goto greater;
 	}
+ less:
+	ret = -1;
+	goto end;
+ greater:
+	ret = 1;
+	goto end;
+ equal:
+	ret = 0;
+ end:
 	lhs.Type = V_INT;
+	return ret;
 }
 
 bool Eval::operate::Apply(bool unary)
@@ -271,54 +318,31 @@ bool Eval::operate::Apply(bool unary)
 		lhs.uValue >>= rhs.uValue;
 		break;
 	 case GT:
-		CheckRelational();
-		if (rhs.Type == V_REG)
-			lhs.iValue = lhs.rValue.Num > rhs.rValue.Num;
-		else if (rhs.Type == V_FLOAT)
-			lhs.iValue = lhs.fValue > rhs.fValue;
-		else
-			lhs.iValue = lhs.iValue > rhs.iValue;
+		lhs.iValue = Compare() == 1;
 		break;
 	 case GE:
-		CheckRelational();
-		if (rhs.Type == V_REG)
-			lhs.iValue = lhs.rValue.Num >= rhs.rValue.Num;
-		else if (rhs.Type == V_FLOAT)
-			lhs.iValue = lhs.fValue >= rhs.fValue;
-		else
-			lhs.iValue = lhs.iValue >= rhs.iValue;
+		lhs.iValue = Compare() >= 0;
 		break;
 	 case LT:
-		CheckRelational();
-		if (rhs.Type == V_REG)
-			lhs.iValue = lhs.rValue.Num < rhs.rValue.Num;
-		else if (rhs.Type == V_FLOAT)
-			lhs.iValue = lhs.fValue < rhs.fValue;
-		else
-			lhs.iValue = lhs.iValue < rhs.iValue;
+		lhs.iValue = Compare() == -1;
 		break;
 	 case LE:
-		CheckRelational();
-		if (rhs.Type == V_REG)
-			lhs.iValue = lhs.rValue.Num <= rhs.rValue.Num;
-		else if (rhs.Type == V_FLOAT)
-			lhs.iValue = lhs.fValue <= rhs.fValue;
-		else
-			lhs.iValue = lhs.iValue <= rhs.iValue;
+		lhs.iValue = (unsigned)(Compare() + 1) <= 1; // take care of indeterminate
 		break;
 	 case EQ:
-		if (types == (1<<V_INT | 1<<V_FLOAT))
-			PropFloat();
-		lhs.iValue = lhs == rhs;
-		lhs.Type = V_INT;
+		lhs.iValue = Compare() == 0;
 		break;
 	 case NE:
-		if (types == (1<<V_INT | 1<<V_FLOAT))
-			PropFloat();
-		lhs.iValue = !(lhs == rhs);
-		lhs.Type = V_INT;
+		lhs.iValue = Compare() != 0;
 		break;
 	 case AND:
+		if (types == 1<<V_REG)
+		{	// Hack to mask registers
+			lhs.rValue.Num &= rhs.rValue.Num;
+			(uint8_t&)lhs.rValue.Type &= rhs.rValue.Type;
+			lhs.rValue.Rotate &= rhs.rValue.Rotate;
+			break;
+		}
 		CheckInt();
 		lhs.uValue &= rhs.uValue;
 		break;

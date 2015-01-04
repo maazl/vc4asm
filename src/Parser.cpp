@@ -238,6 +238,7 @@ exprValue Parser::parseElemInt()
 exprValue Parser::ParseExpression()
 {
 	Eval eval;
+	exprValue value;
 	try
 	{next:
 		switch (NextToken())
@@ -246,8 +247,8 @@ exprValue Parser::ParseExpression()
 				for (auto i = Context.end(); i != Context.begin(); )
 				{	auto c = (*--i)->Consts.find(Token);
 					if (c != (*i)->Consts.end())
-					{	eval.PushValue(c->second.Value);
-						goto next;
+					{	value = c->second.Value;
+						goto have_value;
 					}
 				}
 			}
@@ -255,21 +256,21 @@ exprValue Parser::ParseExpression()
 				auto fp = Functions.find(Token);
 				if (fp != Functions.end())
 				{	// Hit!
-					eval.PushValue(doFUNC(fp));
+					value = doFUNC(fp);
 					break;
 				}
 			}
 			{	// try functional macro
 				auto mp = MacroFuncs.find(Token);
 				if (mp != MacroFuncs.end())
-				{	eval.PushValue(doFUNCMACRO(mp));
+				{	value = doFUNCMACRO(mp);
 					break;
 				}
 			}
 			{	// try register
 				const regEntry* rp = binary_search(regMap, Token.c_str());
 				if (rp)
-				{	eval.PushValue(rp->Value);
+				{	value = rp->Value;
 					break;
 				}
 			}
@@ -286,23 +287,43 @@ exprValue Parser::ParseExpression()
 				switch (NextToken())
 				{default:
 					Fail("Expected Label after ':'.");
-				 case WORD:
-					break;
+				 case SQBRC1:
+					// Internal register constant
+					{	reg_t reg;
+						value = ParseExpression();
+						if (value.Type != V_INT)
+							Fail("Expecting integer constant, found %s.", type2string(value.Type));
+						reg.Num = (uint8_t)value.uValue;
+						if (NextToken() != COMMA)
+							Fail("Expected ',', found '%s'.", Token.c_str());
+						value = ParseExpression();
+						if (value.Type != V_INT)
+							Fail("Expecting integer constant, found %s.", type2string(value.Type));
+						reg.Type = (regType)value.uValue;
+						switch (NextToken())
+						{default:
+							Fail("Expected ',' or ']', found '%s'.", Token.c_str());
+						 case COMMA:
+							value = ParseExpression();
+							if (value.Type != V_INT)
+								Fail("Expecting integer constant, found %s.", type2string(value.Type));
+							reg.Rotate = (uint8_t)value.uValue;
+							if (NextToken() != SQBRC2)
+								Fail("Expected ']', found '%s'.", Token.c_str());
+							break;
+						 case SQBRC2:
+							reg.Rotate = 0;
+						}
+						value = reg;
+						goto have_value;
+					}
 				 case NUM:
 					// NextToken accepts some letters in numeric constants
-//					char* at_bak = At;
-//					if (NextToken() == WORD)
-//					{	if (Token == "f")
-//							// forward reference
-//							forward = true;
-//						else
-//							Fail("Invalid label postfix '%s'.", Token.c_str());
-//					} else
-//						At = at_bak; // Undo
 					if (Token.back() == 'f') // forward reference
 					{	forward = true;
 						Token.erase(Token.size()-1);
 					}
+				 case WORD:;
 				}
 				const auto& l = LabelsByName.emplace(Token, LabelCount);
 				if (l.second || (forward && Labels[l.first->second].Definition))
@@ -315,7 +336,7 @@ exprValue Parser::ParseExpression()
 					Labels[LabelCount].Reference = *Context.back();
 					++LabelCount;
 				}
-				eval.PushValue(exprValue(Labels[l.first->second].Value, V_LABEL));
+				value = exprValue(Labels[l.first->second].Value, V_LABEL);
 				break;
 			}
 
@@ -332,10 +353,11 @@ exprValue Parser::ParseExpression()
 					Fail("Invalid operator: %s", Token.c_str());
 				if (!eval.PushOperator(op->Op))
 					goto discard;
-				break;
+				goto next;
 			}
 		 case SQBRC1: // per QPU element constant
-			return parseElemInt();
+			value = parseElemInt();
+			break;
 
 		 case NUM:
 			// parse number
@@ -343,21 +365,20 @@ exprValue Parser::ParseExpression()
 			{	// integer
 				//size_t len;  sscanf of gcc4.8.2/Linux x32 can't read "0x80000000".
 				//if (sscanf(Token.c_str(), "%i%n", &stack.front().iValue, &len) != 1 || len != Token.size())
-				exprValue value;
 				if (parseUInt(Token.c_str(), value.uValue) != Token.size())
 					Fail("%s is no integral number.", Token.c_str());
 				value.Type = V_INT;
-				eval.PushValue(value);
 			} else
 			{	// float number
-				float value;
 				size_t len;
-				if (sscanf(Token.c_str(), "%f%n", &value, &len) != 1 || len != Token.size())
+				if (sscanf(Token.c_str(), "%f%n", &value.fValue, &len) != 1 || len != Token.size())
 					Fail("%s is no real number.", Token.c_str());
-				eval.PushValue(value);
+				value.Type = V_FLOAT;
 			}
 			break;
 		}
+	 have_value:
+		eval.PushValue(value);
 		goto next;
 	} catch (const string& msg)
 	{	throw enrichMsg(msg);
