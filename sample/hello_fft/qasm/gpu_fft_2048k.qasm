@@ -359,8 +359,10 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
     # (MM) Optimized procedure chains
     # link to entry point of slave procedure without need for a register
-    .back 3
+    .back 4
     ;mov.setf -, rx_inst
+    .endb
+    .back 3
     brr.allnz -, r:save_slave_32
     .endb
 

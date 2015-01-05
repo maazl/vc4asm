@@ -64,9 +64,9 @@
 
 .macro inst_vpm, in_inst, out_0, out_1, out_2, out_3
     mov r0, vpm_setup(1, 1, v32( 0,0))
-    mov r1, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
     # (MM) Optimized: instruction packing
-    mul24 r2, in_inst, vpm_setup(1, 1, v32(0,2)) - vpm_setup(1, 1, v32(0,0))
+    .assert vpm_setup(1, 1, v32(0,2)) - vpm_setup(1, 1, v32(0,0)) == 2
+    add r2, in_inst, in_inst; mov r1, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
 
     add out_0, r0, r2; v8adds r0, r0, r1
     add out_1, r0, r2; v8adds r0, r0, r1
@@ -279,11 +279,11 @@
 
 .macro fft_twiddles_32
     # (MM) Optimized: less memory I/O
-                     fmul r3, r0, ra_tw_re+TW32_ACTIVE # rr
+    ;                fmul r3, r0, ra_tw_re+TW32_ACTIVE # rr
                      fmul r2, r1, rb_tw_im+TW32_ACTIVE # ii
     fsub r2, r3, r2; fmul r3, r1, ra_tw_re+TW32_ACTIVE # ir
-    mov r0, r2;      fmul r1, r0, rb_tw_im+TW32_ACTIVE # ri
-    fadd r1, r1, r3;
+                     fmul r1, r0, rb_tw_im+TW32_ACTIVE;# ri
+    fadd r1, r1, r3; mov r0, r2;
 .endm
 
 ##############################################################################
