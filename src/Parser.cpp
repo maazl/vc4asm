@@ -454,62 +454,47 @@ void Parser::doSMI(uint8_t si)
 	Instruct.SImmd = si;
 }
 
-void Parser::addIf(int cond, bool mul)
+void Parser::addIf(int cond, InstContext ctx)
 {
 	if (Instruct.Sig == Inst::S_BRANCH)
 		Fail("Cannot apply conditional store (.ifxx) to branch instruction.");
-	auto& target = mul ? Instruct.CondM : Instruct.CondA;
+	auto& target = ctx & IC_MUL ? Instruct.CondM : Instruct.CondA;
 	if (target != Inst::C_AL)
 		Fail("Store condition (.if) already specified.");
 	target = (Inst::conda)cond;
 }
 
-void Parser::addUnpack(int mode, bool mul)
+void Parser::addUnpack(int mode, InstContext ctx)
 {
 	if (Instruct.Sig >= Inst::S_LDI)
 		Fail("Cannot apply .unpack to branch and load immediate instructions.");
-	if (Instruct.Unpack != Inst::U_32)
-		Fail("Only on .unpack per instruction, please.");
-	if (Instruct.Sig != Inst::S_LDI && Instruct.Pack != Inst::P_32 && Instruct.PM != mul)
-		Fail(".unpack conflicts with .pack instruction of ADD ALU.");
-	if (mul)
-	{	// TODO ensure source R4
-		Instruct.PM = true;
-	}
+	if (Instruct.Unpack != Inst::U_32 && Instruct.Unpack != mode)
+		Fail("Only one distinct .unpack per instruction, please.");
 	Instruct.Unpack = (Inst::unpack)mode;
 }
 
-void Parser::addPack(int mode, bool mul)
+void Parser::addPack(int mode, InstContext ctx)
 {
 	if (Instruct.Sig == Inst::S_BRANCH)
 		Fail("Cannot apply .pack to branch instruction.");
-	if (Instruct.Pack != Inst::P_32)
-		Fail("Only on .pack per instruction, please.");
-	if (Instruct.Sig != Inst::S_LDI && Instruct.Unpack != Inst::U_32 && Instruct.PM != mul)
-		Fail(".pack conflicts with .unpack instruction of ADD ALU.");
-	/* TODO: MUL ALU pack modes, cannot activate until we know the target
-	if (mul)
-	{	if (mode < Inst::P_8abcdS && mode != Inst::P_32)
-			return Error("MUL ALU does not support pack mode.");
-		mode &= 7;
-		Instruct.PM = true;
-	}*/
+	if (Instruct.Pack != Inst::P_32 && Instruct.Pack != mode)
+		Fail("Only one distinct .pack per instruction, please.");
 	Instruct.Pack = (Inst::pack)mode;
 }
 
-void Parser::addSetF(int, bool mul)
+void Parser::addSetF(int, InstContext ctx)
 {
 	if (Instruct.Sig == Inst::S_BRANCH)
 		Fail("Cannot apply .setf to branch instruction.");
 	if ( Instruct.Sig != Inst::S_LDI
-		&& (Instruct.CondA == Inst::C_NEVER && Instruct.OpA == Inst::A_NOP) != mul )
+		&& (Instruct.CondA == Inst::C_NEVER && Instruct.OpA == Inst::A_NOP) != (ctx & IC_MUL) )
 		Fail("Cannot apply .setf because the flags of the other ALU will be used.");
 	if (Instruct.SF)
 		Fail("Don't use .setf twice.");
 	Instruct.SF = true;
 }
 
-void Parser::addCond(int cond, bool mul)
+void Parser::addCond(int cond, InstContext ctx)
 {
 	if (Instruct.Sig != Inst::S_BRANCH)
 		Fail("Branch condition codes can only be applied to branch instructions.");
@@ -518,9 +503,9 @@ void Parser::addCond(int cond, bool mul)
 	Instruct.CondBr = (Inst::condb)cond;
 }
 
-void Parser::addRot(int, bool mul)
+void Parser::addRot(int, InstContext ctx)
 {
-	if (!mul)
+	if ((ctx & IC_MUL) == 0)
 		Fail("QPU element rotation is only available with the MUL ALU.");
 	auto count = ParseExpression();
 	if (NextToken() != COMMA)
@@ -542,17 +527,21 @@ void Parser::addRot(int, bool mul)
 	doSMI(si);
 }
 
-void Parser::doInstrExt(bool mul)
+void Parser::doInstrExt(InstContext ctx)
 {
 	while (NextToken() == DOT)
 	{	if (NextToken() != WORD)
 			Fail("Expected instruction extension after dot.");
 
 		const opExtEntry* ep = binary_search(extMap, Token.c_str());
-		if (ep == NULL)
-			Fail("Unknown instruction extension '%s'.", Token.c_str());
-
-		(this->*(ep->Func))(ep->Arg, mul);
+		if (!ep)
+		 fail:
+			Fail("Unknown instruction extension '%s' within this context.", Token.c_str());
+		opExtFlags filter = ctx & IC_SRC ? E_SRC : ctx & IC_DST ? E_DST : E_OP;
+		while ((ep->Flags & filter) == 0)
+			if (strcmp(Token.c_str(), (++ep)->Name) != 0)
+				goto fail;
+		(this->*(ep->Func))(ep->Arg, ctx);
 	}
 	At -= Token.size();
 }
@@ -582,6 +571,8 @@ void Parser::doALUTarget(exprValue param, bool mul)
 			Fail("Can only rotate ALU target left by r5.");
 		doSMI(48 + (param.rValue.Rotate & 0xf));
 	}
+
+	doInstrExt((InstContext)(mul*IC_MUL | IC_DST));
 }
 
 Inst::mux Parser::doALUExpr(bool mul)
@@ -612,6 +603,8 @@ Inst::mux Parser::doALUExpr(bool mul)
 			return Inst::X_RB;
 		}
 	}
+
+	doInstrExt((InstContext)(mul*IC_MUL | IC_SRC));
 }
 
 void Parser::doBRASource(exprValue param)
@@ -673,7 +666,7 @@ void Parser::assembleADD(int add_op)
 		return;
 	}
 
-	doInstrExt(false);
+	doInstrExt(IC_NONE);
 
 	doALUTarget(ParseExpression(), false);
 
@@ -694,7 +687,7 @@ void Parser::assembleMUL(int mul_op)
 	if (mul_op == Inst::M_NOP)
 		return;
 
-	doInstrExt(true);
+	doInstrExt(IC_MUL);
 
 	doALUTarget(ParseExpression(), true);
 
@@ -711,7 +704,7 @@ void Parser::assembleMOV(int mode)
 	if (useMUL && (Instruct.WAddrM != Inst::R_NOP || (!isLDI && Instruct.OpM != Inst::M_NOP)))
 		Fail("Both ALUs are already used by the current instruction.");
 
-	doInstrExt(useMUL);
+	doInstrExt((InstContext)(useMUL * IC_MUL));
 
 	doALUTarget(ParseExpression(), useMUL);
 
@@ -819,7 +812,7 @@ void Parser::assembleBRANCH(int relative)
 	Instruct.Reg = false;
 	Instruct.Immd.uValue = 0;
 
-	doInstrExt(false);
+	doInstrExt(IC_NONE);
 
 	doALUTarget(ParseExpression(), false);
 

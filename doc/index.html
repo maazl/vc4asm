@@ -22,8 +22,9 @@
       so the work uses only the code from <a href="https://github.com/raspberrypi/userland/tree/master/host_applications/linux/apps/hello_pi/hello_fft">hello_fft</a>
       which is available as source and binary as Rosetta Stone.</p>
     <p><a href="#vc4asm">&rarr; Assembler</a>, <a href="#vc4dis">&rarr;
-        Disassembler</a>, <a href="#build">&rarr;Build instructions</a>, <a href="#sample">&rarr;Samples</a>
-      <a href="#contact">&rarr; Contact</a></p>
+        Disassembler</a>, <a href="#bugs">&rarr; Known problems</a> <a href="#build">&rarr;
+        Build instructions</a>, <a href="#sample">&rarr;Samples</a> <a href="#contact">&rarr;
+        Contact</a></p>
     <h2>Download &amp; history</h2>
     <p>Download <a href="../vc4asm.tar.bz2">Source code, Raspberry Pi binary,
         examples and this documentation</a> (100k)</p>
@@ -36,6 +37,8 @@
       <dd>Added type detection macros.<br>
         Optional automatic instruction packing (experimental).<br>
         Merged with gpu_fft V2.0 including 2M FFT, a few further optimizations.</dd>
+      <dt>V0.1.3</dt>
+      <dd>Fixed pack/unpack instruction, still incomplete.</dd>
     </dl>
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
     <p>The heart of the software. It assembles QPU code to binary or C
@@ -116,6 +119,11 @@
       a single result as if they were concatenated.<br>
       The format of the input is controlled by the <tt>-x</tt> option. All
       input files must use the same format.</p>
+    <h2><a id="bugs" name="bugs"></a>Known problems</h2>
+    <ul>
+      <li>The pack/unpack modes of r4/MUL ALU (pm=1) do not work. I simply had
+        no idea so far how to implement this with reasonable effort.</li>
+    </ul>
     <h2><a id="build" name="build"></a>Build instructions</h2>
     <p>The source code has hopefully no major platform dependencies, i.e. you
       don't need to build it on the Raspberry. But it requires a <a href="https://en.wikipedia.org/wiki/C++11">C++11</a>

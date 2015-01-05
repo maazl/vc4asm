@@ -25,17 +25,22 @@
         MUL ALU then the ADD ALU is preferred as long as it has not already been
         used in the current line. You might use <tt>nop</tt> to explicitly mark
         the ADD ALU as used and place the second ALU instruction to the MUL ALU.</li>
-      <li>A trailing <tt>;</tt> indicates that the assembler my try to merge
-        the current instruction with the next one if next instruction is
-        preceded with <tt>;</tt> and the two instructions fit into a single OP
-        code. E.g.<br>
-        <tt>add r0, r0, 1;<br>
-          ;mov r2, 64</tt><br>
-        generates the same code as<br>
-        <tt>add r0, r0, 1; mov r2, 64</tt><br>
-        This might cross macro boundaries. But be aware that dependencies might
-        break your code. E.g. a read to a register file might move immediately
-        after a write to the same register.</li>
+    </ul>
+    <h2>Optimizations</h2>
+    <h3>Instruction joining</h3>
+    <p>A trailing <tt>;</tt> indicates that the assembler my try to merge the
+      current instruction with the next one if next instruction is preceded with
+      <tt>;</tt> and the two instructions fit into a single OP code. E.g.</p>
+    <pre>add r0, r0, 1;<br>;mov r2, 64</pre>
+    <p>generates the same code as</p>
+    <pre>add r0, r0, 1; mov r2, 64</pre>
+    <p>This might cross macro boundaries. But be aware that dependencies might
+      break your code. E.g. a read to a register file might move immediately
+      after a write to the same register. Take special care of branch targets.
+      They should not be joined with the previous instruction. Placing a bare
+      colon in front of a line defines an anonymous label and prevents
+      instruction joining over this point. Ordinary labels will do the same.</p>
+    <ul>
     </ul>
     <h2><a id="ADD" name="ADD"></a>ADD ALU instruction</h2>
     <pre><var>binaryopcode destination, source1, source2</var><br><var>unaryopcode destination, source1</var><var>opcode</var>.if<var>cc</var> ...<var>
