@@ -1576,8 +1576,8 @@ void Parser::ParseLine()
 	 case SEMI:
 		if (doPreprocessor())
 			return;
-		/*if ((Flags & (IF_CMB_ALLOWED|IF_BRANCH_TARGET)) == IF_CMB_ALLOWED)
-			trycombine = true;*/
+		if ((Flags & (IF_CMB_ALLOWED|IF_BRANCH_TARGET)) == IF_CMB_ALLOWED)
+			trycombine = true;
 		isinst = true;
 		goto next;
 

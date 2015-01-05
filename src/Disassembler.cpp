@@ -326,7 +326,10 @@ void Disassembler::Disassemble()
 
 		DoInstruction();
 		*CodeAt = 0;
-		fprintf(Out, "  %-48s # %04zx: %016llx %s\n", Code, Addr, i, Comment);
+		if (PrintComment)
+			fprintf(Out, "  %-48s # %04zx: %016llx %s\n", Code, Addr, i, Comment);
+		else
+			fprintf(Out, "  %s\n", Code);
 		Addr += sizeof(uint64_t);
 	}
 }

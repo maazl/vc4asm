@@ -22,6 +22,7 @@ class Disassembler
 	FILE*       Out = NULL;
 	bool        UseMOV = true;
 	bool        UseFloat = true;
+	bool        PrintComment = false;
 	bool        PrintFields = false;
 	uint32_t    BaseAddr = 0;
 	vector<uint64_t> Instructions;

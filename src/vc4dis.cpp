@@ -114,7 +114,8 @@ int main(int argc, char * argv[]) {
 			" -x64  64 bit formatted hexadecimal input.\n"
 			" -M    Do not print simple ALU instructions and load immediate as mov.\n"
 			" -F    Print floating point constants as hexadecimal.\n"
-			" -v    Write internal instruction field as comment behind every line.\n"
+			" -v    Binary code and offset as comment behind each line.\n"
+			" -v2   Write internal instruction field as comment behind every line also.\n"
 			" -b<addr> base address (only for output).\n"
 			" -o<file> Write output to this file rather than stdout.\n"
 			" -V    Run instruction verifier and print warnings about suspicious code.\n"
@@ -127,10 +128,10 @@ int main(int argc, char * argv[]) {
 	bool check = false;
 
 	int c;
-	while ((c = getopt(argc, argv, "x::MFvb:o:V")) != -1)
+	while ((c = getopt(argc, argv, "x::MFv::b:o:V")) != -1)
 	{	switch (c)
 		{case 'x':
-			if (!optarg || (hexinput = atoi(optarg + 2) == 0))
+			if (!optarg || (hexinput = atoi(optarg)) == 0)
 				hexinput = 32;
 			break;
 		 case 'M':
@@ -138,7 +139,10 @@ int main(int argc, char * argv[]) {
 		 case 'F':
 			dis.UseFloat = false; break;
 		 case 'v':
-			dis.PrintFields = true; break;
+			if (optarg && atoi(optarg) >= 2)
+				dis.PrintFields = true;
+			dis.PrintComment = true;
+			break;
 		 case 'b':
 			dis.BaseAddr = atol(optarg); break;
 		 case 'o':
