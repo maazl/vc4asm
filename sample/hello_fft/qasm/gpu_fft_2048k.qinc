@@ -48,19 +48,27 @@
     add ra_save_ptr, ra_save_ptr, r1; mov r1, ra_save_ptr
     mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0))
     mov r3, PASS64_STRIDE
+    # (MM) Optimized: shorter code, slightly faster because of cache efficiency
+    mov.setf ra_temp, 30
 
     .rep i, 7
         mov -, sacq(i+9) # Master waits for slaves
     .endr
 
-    .rep i, 64
+:0  .rep i, 2
         add r0, r0, r2; mov vw_setup, r0
         add r1, r1, r3; mov vw_addr,  r1
     .endr
-
-    # (MM) Optimized: place branch before the last 3 instructions to save 3 nop.
+    .back 2
+        brr.allnz -, r:0
+        sub.setf ra_temp, ra_temp, 1
+    .endb
+    .rep i, 2
+        add r0, r0, r2; mov vw_setup, r0
+        add r1, r1, r3; mov vw_addr,  r1
+    .endr
     .back 3
-    bra -, ra_link_1
+        bra -, ra_link_1
     .endb
 .endm
 
