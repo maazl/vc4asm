@@ -408,7 +408,7 @@
     mov r3, rb_tw_im+TW32_ACTIVE; fmul r1, rb_tw_im+TW32_ACTIVE, ra_tw_re+tw32 # a.sin
     fsub r1, r1, r0;                                     fmul r0, r3, rb_tw_im+tw32 # b.sin
     fsub rb_tw_im+TW32_ACTIVE, rb_tw_im+TW32_ACTIVE, r1; fmul r1, r2, ra_tw_re+tw32 # a.cos
-    fadd r1, r1, r0;
+    fadd r1, r1, r0
     fsub ra_tw_re+TW32_ACTIVE, ra_tw_re+TW32_ACTIVE, r1
 .endm
 
@@ -418,7 +418,7 @@
     mov r3, rb_tw_im+TW16_ACTIVE+3; fmul r0, rb_tw_im+TW16_ACTIVE+3, ra_tw_re+tw16 # a.sin
     fsub r3, r0, r1;                     fmul r1, r3, rb_tw_im+tw16 # b.sin
     fsub r3, rb_tw_im+TW16_ACTIVE+3, r3; fmul r0, r2, ra_tw_re+tw16 # a.cos
-    fadd r2, r0, r1;
+    fadd r2, r0, r1
     fsub r2, ra_tw_re+TW16_ACTIVE+3, r2
 
     unpack_twiddles
@@ -441,15 +441,13 @@
 .macro init_stage_16, tw16, m
     # (MM) Optimized: better use of both ALUs
     .if isRegfileB(rx_inst)
-    mov r0, rx_inst
+    ;mov r0, rx_inst
     shl r0, r0, m
     .else
-    shl r0, rx_inst, m
+    ;shl r0, rx_inst, m
     .endif
-    add ra_load_idx, r0, elem_num
-    mov ra_save_ptr, rb_addr_y
-
-    mov r2, ra_tw_re+tw16; mov r3, rb_tw_im+tw16
+    add ra_load_idx, r0, elem_num; mov r3, rb_tw_im+tw16
+    mov ra_save_ptr, rb_addr_y;    mov r2, ra_tw_re+tw16
     unpack_twiddles
 .endm
 
@@ -495,7 +493,7 @@
     fadd ra_64+0, ra_32_re, r0
     fadd ra_64+1, rb_32_im, r1
     fsub ra_64+2, ra_32_re, r0
-    fsub ra_64+3, rb_32_im, r1
+    fsub ra_64+3, rb_32_im, r1;
 
     loader_16 step, mode
     mov ra_32_re, r0; mov rb_32_im, r1
@@ -514,7 +512,7 @@
     # place branch from outside individually
     mov r2, ra_32_re;            fmul r3, r3, rb_tw_im+TW64_P1_BASE1 # ii
     fadd rb_64+3, r0, r1;        fmul r2, r2, ra_tw_re+TW64_P1_BASE1 # rr
-    fsub rb_64+2, r2, r3
+    fsub rb_64+2, r2, r3;
 .endm
 
 ##############################################################################
