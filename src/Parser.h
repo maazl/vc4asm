@@ -196,10 +196,10 @@ class Parser
 		~saveLineContext();
 	};
 	enum InstFlags : uint8_t
-	{	IF_NONE
-	,	IF_HAVE_NOP                 ///< at least one NOP in the current instruction so far
-	,	IF_CMB_ALLOWED              ///< Instruction of the following line could be merged
-	,	IF_BRANCH_TARGET            ///< This instruction is a branch target
+	{	IF_NONE          = 0
+	,	IF_HAVE_NOP      = 1        ///< at least one NOP in the current instruction so far
+	,	IF_CMB_ALLOWED   = 2        ///< Instruction of the following line could be merged
+	,	IF_BRANCH_TARGET = 4        ///< This instruction is a branch target
 	};
 
 	// parser working set

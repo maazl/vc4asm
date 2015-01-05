@@ -476,7 +476,7 @@ void Parser::addUnpack(int mode, bool mul)
 	{	// TODO ensure source R4
 		Instruct.PM = true;
 	}
-	Instruct.Pack = (Inst::pack)mode;
+	Instruct.Unpack = (Inst::unpack)mode;
 }
 
 void Parser::addPack(int mode, bool mul)
@@ -837,11 +837,11 @@ void Parser::assembleBRANCH(int relative)
 		switch (NextToken())
 		{default:
 			Fail("Expected ',' or end of line, found '%s'.", Token.c_str());
-		case END: // we have 3 arguments => #2 and #3 are branch target
+		 case END: // we have 3 arguments => #2 and #3 are branch target
 			doBRASource(param2);
 			doBRASource(param3);
 			break;
-		case COMMA: // we have 4 arguments, so #2 is a target and #3 the first source
+		 case COMMA: // we have 4 arguments, so #2 is a target and #3 the first source
 			doALUTarget(param2, true);
 			doBRASource(param3);
 			doBRASource(ParseExpression());
@@ -963,14 +963,13 @@ void Parser::parseLabel()
 {
 	switch (NextToken())
 	{default:
-		Fail("Expected label name after ':'.");
+		Fail("Expected label name after ':', found '%s'.", Token.c_str());
+	 case WORD:
+	 case NUM:
+		defineLabel();
 	 case END:
 		Flags |= IF_BRANCH_TARGET;
-	 case WORD:
-	 case NUM:;
 	}
-
-	defineLabel();
 }
 
 void Parser::parseDATA(int type)
@@ -1014,6 +1013,7 @@ void Parser::parseDATA(int type)
 		Instructions.push_back(target);
 		InstFlags.push_back(IF_NONE);
 	}
+	Flags = IF_NONE;
 }
 
 void Parser::beginREP(int)
@@ -1088,6 +1088,8 @@ void Parser::beginBACK(int)
 		Fail("Cannot move instructions back before the start of the code.");
 	if (NextToken() != END)
 		Fail("Expected end of line, found '%s'.", Token.c_str());
+	// Update Flags first
+	InstFlags.back() = Flags;
 	Back = param.uValue;
 	// Load last instruction before .back to provide combine support
 	if (param.uValue < Instructions.size())
@@ -1106,6 +1108,8 @@ void Parser::endBACK(int)
 		Fail(".endb without .back.");
 	if (NextToken() != END)
 		Fail("Expected end of line, found '%s'.", Token.c_str());
+	// Update Flags
+	*(InstFlags.end() - Back -1) = Flags;
 	Back = 0;
 	// Restore last instruction to provide combine support
 	Instruct.decode(Instructions.back());
@@ -1572,8 +1576,8 @@ void Parser::ParseLine()
 	 case SEMI:
 		if (doPreprocessor())
 			return;
-		if (Flags & IF_CMB_ALLOWED)
-			trycombine = true;
+		/*if ((Flags & (IF_CMB_ALLOWED|IF_BRANCH_TARGET)) == IF_CMB_ALLOWED)
+			trycombine = true;*/
 		isinst = true;
 		goto next;
 
@@ -1589,6 +1593,7 @@ void Parser::ParseLine()
 		// this is a label.
 		if (*At == ':')
 		{	defineLabel();
+			Flags |= IF_BRANCH_TARGET;
 			++At;
 			goto next;
 		}
@@ -1607,7 +1612,8 @@ void Parser::ParseLine()
 			try
 			{	// Try to parse into existing instruction.
 				ParseInstruction();
-				*(Instructions.end() - Back -1) = Instruct.encode();
+				uint64_t inst = Instruct.encode();
+				*(Instructions.end() - Back -1) = inst;
 				*(InstFlags.end() - Back -1) = Flags;
 				return;
 			} catch (const string& msg)
@@ -1618,10 +1624,12 @@ void Parser::ParseLine()
 			}
 		}
 		Instruct.reset();
-		Flags = IF_NONE;
+		Flags &= IF_BRANCH_TARGET;
 		ParseInstruction();
-		Instructions.insert(Instructions.end() - Back, Instruct.encode());
+		uint64_t inst = Instruct.encode();
+		Instructions.insert(Instructions.end() - Back, inst);
 		InstFlags.insert(InstFlags.end() - Back, Flags);
+		Flags &= ~IF_BRANCH_TARGET;
 		return;
 	}
 }
@@ -1677,6 +1685,7 @@ void Parser::ResetPass()
 	LabelsByName.clear();
 	LabelCount = 0;
 	Instructions.clear();
+	InstFlags.clear();
 }
 
 void Parser::EnsurePass2()
