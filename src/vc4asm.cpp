@@ -70,60 +70,60 @@ int main(int argc, char **argv)
 		}
 		if (!parser.Success)
 			throw string("Aborted because of earlier errors.");
+
+		if (check)
+		Validator().Validate(parser.GetInstructions());
+
+		if (writeCPP)
+		{	FILE* of = fopen(writeCPP, "wt");
+			if (of == NULL)
+			{	fprintf(stderr, "Failed to open %s for writing.", writeCPP);
+				return -1;
+			}
+
+			const char* tpl = CPPTemplate + 2; // no ,\n in the first line
+			for (auto code : parser.GetInstructions())
+			{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
+				tpl = CPPTemplate;
+			}
+			fputs(",\n", of);
+			fclose(of);
+		}
+		if (writeCPP2)
+		{	FILE* of = fopen(writeCPP2, "wt");
+			if (of == NULL)
+			{	fprintf(stderr, "Failed to open %s for writing.", writeCPP2);
+				return -1;
+			}
+
+			const char* tpl = CPPTemplate + 2; // no ,\n in the first line
+			for (auto code : parser.GetInstructions())
+			{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
+				tpl = CPPTemplate;
+			}
+			fputc('\n', of);
+			fclose(of);
+		}
+
+		if (outfname)
+		{
+			#if (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__) || (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN)
+			for (auto& i : memory)
+				i = swap_uint64(i);
+			#endif
+			FILE* of = fopen(outfname, "wb");
+			if (of == NULL)
+			{	fprintf(stderr, "Failed to open %s for writing.", outfname);
+				return -1;
+			}
+			fwrite(&*parser.GetInstructions().begin(), sizeof(uint64_t), parser.GetInstructions().size(), of);
+			fclose(of);
+		}
 	} catch (const string& msg)
 	{	fputs(msg.c_str(), stderr);
 	  fputc('\n', stderr);
 		return 1;
 	}
 
-	if (check)
-		Validator().Validate(parser.GetInstructions());
-
-	if (writeCPP)
-	{	FILE* of = fopen(writeCPP, "wt");
-		if (of == NULL)
-		{	fprintf(stderr, "Failed to open %s for writing.", writeCPP);
-			return -1;
-		}
-
-		const char* tpl = CPPTemplate + 2; // no ,\n in the first line
-		for (auto code : parser.GetInstructions())
-		{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
-			tpl = CPPTemplate;
-		}
-		fputs(",\n", of);
-		fclose(of);
-	}
-	if (writeCPP2)
-	{	FILE* of = fopen(writeCPP2, "wt");
-		if (of == NULL)
-		{	fprintf(stderr, "Failed to open %s for writing.", writeCPP2);
-			return -1;
-		}
-
-		const char* tpl = CPPTemplate + 2; // no ,\n in the first line
-		for (auto code : parser.GetInstructions())
-		{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
-			tpl = CPPTemplate;
-		}
-		fputc('\n', of);
-		fclose(of);
-	}
-
-	if (outfname)
-	{
-		#if (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__) || (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN)
-		for (auto& i : memory)
-			i = swap_uint64(i);
-		#endif
-		FILE* of = fopen(outfname, "wb");
-		if (of == NULL)
-		{	fprintf(stderr, "Failed to open %s for writing.", outfname);
-			return -1;
-		}
-		fwrite(&*parser.GetInstructions().begin(), sizeof(uint64_t), parser.GetInstructions().size(), of);
-		fclose(of);
-	}
-
-	return 0;
+	return !parser.Success;
 }
