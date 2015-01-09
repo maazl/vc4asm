@@ -10,12 +10,12 @@
   <body>
     <h1>VC4ASM - Assembler directives</h1>
     <p><a href="index.html">&uarr; Top</a>, <tt><a href="#.assert">.assert</a>
-        <a href="#.back">.back</a> </tt><tt> <a href="#.byte">.byte</a> </tt><tt><a
-          href="#.const">.const</a>&nbsp;<a href="#.else">.else</a> <a href="#.elseif">.elseif</a>
-        <a href="#.back">.endb</a></tt><tt><tt> <a href="#.func">.endf</a> </tt>
-        <a href="#.endif">.endif</a> <a href="#.macro">.endm</a> <a href="#.rep">.endr</a>
-        <a href="#.equ">.equ</a></tt><tt><tt> <a href="#.float">.float</a> </tt>
-        <a href="#.func">.func</a> <a href="#.if">.if</a> <a href="#.include">.include</a>
+        <a href="#.back">.back</a> </tt><tt> <a href="#.byte">.byte</a> <a href="#.clone">.clone</a>
+      </tt><tt><a href="#.const">.const</a>&nbsp;<a href="#.else">.else</a> <a
+          href="#.elseif">.elseif</a> <a href="#.back">.endb</a></tt><tt><tt> <a
+            href="#.func">.endf</a> </tt> <a href="#.endif">.endif</a> <a href="#.macro">.endm</a>
+        <a href="#.rep">.endr</a> <a href="#.equ">.equ</a></tt><tt><tt> <a href="#.float">.float</a>
+        </tt> <a href="#.func">.func</a> <a href="#.if">.if</a> <a href="#.include">.include</a>
       </tt><tt><tt><a href="#.int">.int</a></tt></tt><tt><tt><tt> <a href="#.const">.lconst</a>
           </tt> </tt></tt><tt><tt><tt><a href="#.long">.long</a></tt></tt></tt><tt><tt><tt><tt>
               <a href="#.set">.lset</a></tt></tt></tt></tt><tt><tt><tt><tt><tt>
@@ -148,6 +148,26 @@
     <p>The code above will insert the branch instruction before the last three
       instructions emitted by the macro <tt>some_macro</tt> or even code
       before.</p>
+    <h2><tt><a id=".clone" name=".clone"></a>.clone</tt> - copy instructions</h2>
+    <pre>.clone <var>label, count</var></pre>
+    <dl>
+      <dt><var><tt>label</tt></var></dt>
+      <dd>Copy instructions starting at this label.</dd>
+      <dt><var><tt>count</tt></var></dt>
+      <dd>Number of instructions to copy.</dd>
+    </dl>
+    <p><tt>.clone</tt> inserts copies <var><tt>count</tt></var> instructions
+      starting at <var><tt>label</tt></var> and inserts them at the current
+      location. It is intended to optimize branch instructions that cannot be
+      placed earlier. The concept is to copy the first few instruction of a
+      branch target instead of using <tt>nop</tt>. Currently the label must
+      already been defined, i.e .clone cannot work forward because the code has
+      not yet been generated.</p>
+    <h3>Example</h3>
+    <pre>brr -, r:target + 3*8<br>.clone :target, 3</pre>
+    <p>This copies the first 3 instructions of <tt>:target</tt> after the
+      branch and branches after the 3<smaller><sup>rd</sup></smaller>
+      instruction of <tt>:target</tt> instead.</p>
     <h2><a name=".if"></a><a name=".else"></a><a name=".elseif"></a><a name=".endif"></a><tt>.if</tt>
       - conditional compile</h2>
     <pre>.if <var>condition<br>    your code</var><br><var>    </var>...<br>.elseif <var>condition<br>    another code</var><br><var>    </var>...<br>.else<br>    <var>alternate code</var><br><var>    </var>...<br>.endif</pre>

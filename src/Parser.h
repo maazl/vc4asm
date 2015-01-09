@@ -222,7 +222,6 @@ class Parser
 	char*            At = NULL;   ///< Current location within Line
 	string           Token;       ///< Current token
 	Inst             Instruct;    ///< current instruction
-	uint8_t          Flags = IF_NONE;///< instruction flags
 	// context
 	macro*           AtMacro = NULL;///< Currently at a macro definition
 	unsigned         Back = 0;    ///< Insert # instructions in the past
@@ -242,6 +241,10 @@ class Parser
 	string           enrichMsg(string msg);
 	void             Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR;
 	void             Msg(severity level, const char* fmt, ...) PRINTFATTR(3);
+
+	/// Ensure minimum size of InstFlags array.
+	void             FlagsSize(size_t min);
+	uint8_t&         Flags() { return InstFlags[Instructions.size() - Back]; }
 
 	token_t          NextToken();
 	/// Work around for gcc on 32 bit Linux that can't read "0x80000000" with sscanf anymore.
@@ -286,6 +289,7 @@ class Parser
 	void             endREP(int);
 	void             beginBACK(int);
 	void             endBACK(int);
+	void             parseCLONE(int);
 	void             parseSET(int flags);
 	void             parseUNSET(int flags);
 	bool             doCondition();

@@ -929,6 +929,8 @@ const Parser::opEntry<8> Parser::opcodeMap[] =
 ,	{"min",    &Parser::assembleADD,  Inst::A_MIN }
 ,	{"mov",    &Parser::assembleMOV,  -1 }
 ,	{"mul24",  &Parser::assembleMUL,  Inst::M_MUL24 }
+,	{"mv8adds",&Parser::assembleMUL,  Inst::M_V8ADDS } // force MUL ALU
+,	{"mv8subs",&Parser::assembleMUL,  Inst::M_V8SUBS } // force MUL ALU
 ,	{"nop",    &Parser::assembleADD,  Inst::A_NOP } // alternative M_NOP
 ,	{"not",    &Parser::assembleADD,  Inst::A_NOT }
 ,	{"or",     &Parser::assembleADD,  Inst::A_OR }
@@ -1060,6 +1062,7 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 {	{ "assert",  &Parser::parseASSERT }
 ,	{ "back",    &Parser::beginBACK }
 ,	{ "byte",    &Parser::parseDATA,  1 }
+,	{ "clone",   &Parser::parseCLONE }
 ,	{ "const",   &Parser::parseSET,   C_CONST }
 ,	{ "define",  &Parser::parseSET,   C_NONE }
 ,	{ "dword",   &Parser::parseDATA,  4 }

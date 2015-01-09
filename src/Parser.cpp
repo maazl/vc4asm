@@ -91,6 +91,11 @@ void Parser::Msg(severity level, const char* fmt, ...)
 	fputc('\n', stderr);
 }
 
+void Parser::FlagsSize(size_t min)
+{	if (InstFlags.size() < min)
+		InstFlags.resize(min, IF_NONE);
+}
+
 Parser::token_t Parser::NextToken()
 {
 	At += strspn(At, " \t\r\n");
@@ -332,7 +337,7 @@ exprValue Parser::ParseExpression()
 					if (!Pass2)
 						Labels.emplace_back(Token);
 					else if (Labels.size() <= LabelCount || Labels[LabelCount].Name != Token)
-						Fail("Inconsistent Label definition during Pass 2.");
+						Fail("Inconsistent label definition during Pass 2.");
 					Labels[LabelCount].Reference = *Context.back();
 					++LabelCount;
 				}
@@ -657,12 +662,12 @@ void Parser::assembleADD(int add_op)
 			add_op = Inst::M_V8SUBS; break;
 		}
 		// retry with MUL ALU
-		return assembleMUL(add_op);
+		return assembleMUL(add_op | 0x100); // The added numbed is discarded at the cast but avoids recursive retry.
 	}
 
 	Instruct.OpA = (Inst::opadd)add_op;
 	if (add_op == Inst::A_NOP)
-	{	Flags |= IF_HAVE_NOP;
+	{	Flags() |= IF_HAVE_NOP;
 		return;
 	}
 
@@ -681,7 +686,19 @@ void Parser::assembleMUL(int mul_op)
 	if (Instruct.Sig >= Inst::S_LDI)
 		Fail("Cannot use MUL ALU in load immediate or branch instruction.");
 	if (Instruct.WAddrM != Inst::R_NOP || Instruct.OpM != Inst::M_NOP)
-		Fail("The MUL ALU has already been used by the current instruction.");
+	{	switch (mul_op)
+		{default:
+			Fail("The MUL ALU has already been used by the current instruction.");
+		 case Inst::M_NOP:
+			mul_op = Inst::A_NOP; break;
+		 case Inst::M_V8ADDS:
+			mul_op = Inst::A_V8ADDS; break;
+		 case Inst::M_V8SUBS:
+			mul_op = Inst::A_V8SUBS; break;
+		}
+		// retry with MUL ALU
+		return assembleADD(mul_op | 0x100); // The added numbed is discarded at the cast but avoids recursive retry.
+	}
 
 	Instruct.OpM = (Inst::opmul)mul_op;
 	if (mul_op == Inst::M_NOP)
@@ -700,7 +717,7 @@ void Parser::assembleMOV(int mode)
 	if (Instruct.Sig == Inst::S_BRANCH)
 		Fail("Cannot use MOV together with branch instruction.");
 	bool isLDI = Instruct.Sig == Inst::S_LDI;
-	bool useMUL = (Flags & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP);
+	bool useMUL = (Flags() & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP);
 	if (useMUL && (Instruct.WAddrM != Inst::R_NOP || (!isLDI && Instruct.OpM != Inst::M_NOP)))
 		Fail("Both ALUs are already used by the current instruction.");
 
@@ -842,6 +859,13 @@ void Parser::assembleBRANCH(int relative)
 				Fail("Expected end of line after branch instruction.");
 		}
 	}
+
+	// add branch target flag for the branch point unless the target is 0
+	if (Instruct.Reg || Instruct.Immd.uValue != 0)
+	{	size_t pos = Instructions.size() - Back + 4;
+		FlagsSize(pos + 1);
+		InstFlags[pos] |= IF_BRANCH_TARGET;
+	}
 }
 
 void Parser::assembleSEMA(int type)
@@ -887,8 +911,9 @@ void Parser::assembleSIG(int bits)
 
 void Parser::ParseInstruction()
 {
+	auto& flags = Flags();
 	while (true)
-	{	Flags &= ~IF_CMB_ALLOWED;
+	{	flags &= ~IF_CMB_ALLOWED;
 		const opEntry<8>* op = binary_search(opcodeMap, Token.c_str());
 		if (!op)
 			Fail("Invalid opcode or unknown macro: %s", Token.c_str());
@@ -899,14 +924,14 @@ void Parser::ParseInstruction()
 
 		switch (NextToken())
 		{default:
-			Fail("Expected end of line after instruction.");
+			Fail("Expected end of line ore ';' after instruction. Found '%s'.", Token.c_str());
 		 case END:
 			return;
 		 case SEMI:
-			Flags |= IF_CMB_ALLOWED;
+			flags |= IF_CMB_ALLOWED;
 			switch (NextToken())
 			{default:
-				Fail("Expected additional instruction after ';'.");
+				Fail("Expected additional instruction or end of line after ';'. Found '%s'.", Token.c_str());
 			 case END:
 				return;
 			 case WORD:;
@@ -961,7 +986,7 @@ void Parser::parseLabel()
 	 case NUM:
 		defineLabel();
 	 case END:
-		Flags |= IF_BRANCH_TARGET;
+		Flags() |= IF_BRANCH_TARGET;
 	}
 }
 
@@ -986,11 +1011,12 @@ void Parser::parseDATA(int type)
 		if (value.iValue > 0xFFFF || value.iValue < -0x8000)
 			Msg(WARNING, "Short integer value out of range: 0x%x", value.uValue);
 	}
+	// Prevent optimizer across .data segment
+	Flags() |= IF_BRANCH_TARGET;
 	// store value
 	target |= (uint64_t)value.uValue << count;
 	if ((count += (type << 3)) >= 64)
 	{	Instructions.push_back(target);
-		InstFlags.push_back(IF_NONE);
 		count = 0;
 		target = 0;
 	}
@@ -1004,9 +1030,11 @@ void Parser::parseDATA(int type)
 	if (count & 63)
 	{	Msg(INFO, "Used padding to enforce 64 bit alignment of immediate data.");
 		Instructions.push_back(target);
-		InstFlags.push_back(IF_NONE);
 	}
-	Flags = IF_NONE;
+	// Prevent optimizer across .data segment
+	FlagsSize(Instructions.size() - Back + 1);
+	Flags() |= IF_BRANCH_TARGET;
+	Instruct.reset();
 }
 
 void Parser::beginREP(int)
@@ -1081,15 +1109,16 @@ void Parser::beginBACK(int)
 		Fail("Cannot move instructions back before the start of the code.");
 	if (NextToken() != END)
 		Fail("Expected end of line, found '%s'.", Token.c_str());
-	// Update Flags first
-	InstFlags.back() = Flags;
 	Back = param.uValue;
+	size_t pos = Instructions.size() - Back;
 	// Load last instruction before .back to provide combine support
-	if (param.uValue < Instructions.size())
-	{	Instruct.decode(*(Instructions.end() - Back -1));
-		Flags = *(InstFlags.end() - Back -1);
-	} else
-		Flags = IF_NONE;
+	if (pos)
+		Instruct.decode(Instructions[pos-1]);
+
+	if (Pass2)
+		while (++pos < Instructions.size())
+			if (InstFlags[pos] & IF_BRANCH_TARGET)
+				Msg(WARNING, ".back crosses branch target at address 0x%x. Code might not work.", pos*8);
 }
 
 void Parser::endBACK(int)
@@ -1097,16 +1126,42 @@ void Parser::endBACK(int)
 	if (doPreprocessor())
 		return;
 
-	if (!Back)
-		Fail(".endb without .back.");
+	/* avoids .back 0  if (!Back)
+		Fail(".endb without .back.");*/
 	if (NextToken() != END)
 		Fail("Expected end of line, found '%s'.", Token.c_str());
-	// Update Flags
-	*(InstFlags.end() - Back -1) = Flags;
 	Back = 0;
 	// Restore last instruction to provide combine support
-	Instruct.decode(Instructions.back());
-	Flags = InstFlags.back();
+	if (!Instructions.empty())
+		Instruct.decode(Instructions.back());
+}
+
+void Parser::parseCLONE(int)
+{
+	if (doPreprocessor())
+		return;
+
+	exprValue param1 = ParseExpression();
+	if (param1.Type != V_LABEL)
+		Fail("The first argument to .clone must by a label. Found %s.", type2string(param1.Type));
+	param1.uValue >>= 3; // offset in instructions rather than bytes
+	if (NextToken() != COMMA)
+		Fail("Expected ', <count>' at .clone.");
+	exprValue param2 = ParseExpression();
+	if (param2.Type != V_INT || param2.uValue > 3)
+		Fail("Expected integer constant in the range [0,3].");
+	FlagsSize(Instructions.size() - Back + param2.uValue);
+	param2.uValue += param1.uValue; // end offset rather than count
+
+	if (param2.uValue >= Instructions.size())
+		Fail("TODO: Cannot clone forward.");
+	size_t pos = Instructions.size() - Back;
+	for (size_t src = param1.uValue; src < param2.uValue; ++src)
+		InstFlags[pos++] |= InstFlags[src] & ~IF_BRANCH_TARGET;
+	Instructions.insert(Instructions.end() - Back, Instructions.begin() + param1.uValue, Instructions.begin() + param2.uValue);
+	// Restore last instruction to provide combine support
+	if (pos)
+		Instruct.decode(Instructions[pos-1]);
 }
 
 void Parser::parseSET(int flags)
@@ -1348,7 +1403,8 @@ void Parser::doMACRO(macros_t::const_iterator m)
 			}
 			break;
 		}
-	}
+	} else if (NextToken() != END)
+		Fail("The macro %s does not take arguments.", m->first.c_str());
 
 	// Setup invocation context
 	saveContext ctx(*this, new fileContext(CTX_MACRO, m->second.Definition.File, m->second.Definition.Line));
@@ -1546,6 +1602,8 @@ void Parser::ParseLine()
 	At = Line;
 	bool trycombine = false;
 	bool isinst = false;
+	size_t pos = Instructions.size() - Back;
+	FlagsSize(pos + 1);
 
  next:
 	switch (NextToken())
@@ -1569,7 +1627,7 @@ void Parser::ParseLine()
 	 case SEMI:
 		if (doPreprocessor())
 			return;
-		if ((Flags & (IF_CMB_ALLOWED|IF_BRANCH_TARGET)) == IF_CMB_ALLOWED)
+		if (pos && (InstFlags[pos-1] & IF_CMB_ALLOWED) && (InstFlags[pos] && IF_BRANCH_TARGET) == 0)
 			trycombine = true;
 		isinst = true;
 		goto next;
@@ -1586,7 +1644,7 @@ void Parser::ParseLine()
 		// this is a label.
 		if (*At == ':')
 		{	defineLabel();
-			Flags |= IF_BRANCH_TARGET;
+			InstFlags[pos] |= IF_BRANCH_TARGET;
 			++At;
 			goto next;
 		}
@@ -1605,9 +1663,7 @@ void Parser::ParseLine()
 			try
 			{	// Try to parse into existing instruction.
 				ParseInstruction();
-				uint64_t inst = Instruct.encode();
-				*(Instructions.end() - Back -1) = inst;
-				*(InstFlags.end() - Back -1) = Flags;
+				Instructions[pos-1] = Instruct.encode();
 				return;
 			} catch (const string& msg)
 			{	// Combine failed => try new instruction.
@@ -1616,13 +1672,12 @@ void Parser::ParseLine()
 				Token = tokenbak;
 			}
 		}
+		// new instruction
 		Instruct.reset();
-		Flags &= IF_BRANCH_TARGET;
+
 		ParseInstruction();
 		uint64_t inst = Instruct.encode();
 		Instructions.insert(Instructions.end() - Back, inst);
-		InstFlags.insert(InstFlags.end() - Back, Flags);
-		Flags &= ~IF_BRANCH_TARGET;
 		return;
 	}
 }
