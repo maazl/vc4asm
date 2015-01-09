@@ -170,7 +170,7 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
     .endb
     mov ra_points, (1<<STAGES) / 0x100 - 1
 
-# :start of hidden loop
+:   # start of hidden loop
     # (MM) Optimized: branch unconditional and patch the return address
     # for the last turn.
     brr r0, r:pass_1
@@ -239,7 +239,7 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
     mov ra_points, (1<<STAGES) / 0x100 - 1
     mov rb_pass2_link, :3f - :2f
 
-# :start of hidden loop
+:   # start of hidden loop
     .rep i, 2
     brr ra_link_1, r:pass_3
     nop
@@ -282,7 +282,7 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
     .endb
     mov ra_points, (1<<STAGES) / 0x100 - 1
 
-# :start of hidden loop
+:   # start of hidden loop
     next_twiddles TW16_P4_STEP, TW32_P4_STEP
 
     # (MM) Optimized: place the branch before the last instruction of next_twiddles
@@ -325,9 +325,8 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 ##############################################################################
 # Subroutines
 
-:fft_16
-    body_fft_16
-
+# (MM) Optimized: joined load_xxx and ldtmu in FFT-16 codelet
+bodies_fft_16
     .back 3
     bra -, ra_link_0
     .endb

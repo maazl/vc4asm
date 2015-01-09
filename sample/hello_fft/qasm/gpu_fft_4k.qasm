@@ -77,11 +77,18 @@
 .set rx_0x5555,         ra28
 .set rx_0x3333,         ra29
 .set rx_0x0F0F,         ra30
-.set rx_0x00FF,         ra31
+#                       ra31
 
 .set rb_pass2_link,     rb29
 .set rb_0x40,           rb30
 .set rb_0x80,           rb31
+
+##############################################################################
+# Redefine compile time constants
+
+# (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
+# Redo this for the 4k FFT
+.set DEF_STRIDE,        rb_0x80
 
 ##############################################################################
 # Constants
@@ -92,7 +99,6 @@ mov rb_0x80,    0x80
 mov rx_0x5555,  0x5555
 mov rx_0x3333,  0x3333
 mov rx_0x0F0F,  0x0F0F
-mov rx_0x00FF,  0x00FF
 
 mov ra_vdw, vdw_setup_0(16, 16, dma_h32( 0,0))
 mov rb_vdw, vdw_setup_0(16, 16, dma_h32(16,0))
@@ -156,16 +162,22 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
     init_stage TW16_P1_BASE
     read_rev rb_0x80
 
-    brr ra_link_1, r:pass_1
     swap_vpm_vdw
+    .back 2
+    # (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
+    # This is basically the concept of the 4k FFT, so we call the FFT procedure directly.
+    brr ra_link_1, r:load_fft_16_rev
+    .endb
     mov ra_points, (1<<STAGES) / 0x80 - 1
 
-# :start of hidden loop
+:   # start of hidden loop
+    swap_vpm_vdw
     # (MM) Optimized: branch unconditional and patch the return address
     # for the last turn.
+    .back 1
+    brr r0, r:load_fft_16_rev
+    .endb
     sub.setf ra_points, ra_points, 1
-    brr r0, r:pass_1
-    swap_vpm_vdw
     mov.ifz ra_link_1, r0
 
     # (MM) Optimized: easier procedure chains
@@ -183,25 +195,32 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
 
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
     mov ra_points, (1<<STAGES) / 0x80 - 1
-    brr ra_link_1, rb_link_1, -, r:pass_2
     swap_vpm_vdw
+    .back 2
+    # (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
+    # This is basically the concept of the 4k FFT, so we call the FFT procedure directly.
+    brr ra_link_1, rb_link_1, -, r:load_fft_16_lin
+    .endb
     mov rb_pass2_link, :3f - :2f
 
-# :start of hidden loop
+:   # start of hidden loop
     swap_vpm_vdw
+
     # (MM) Optimized: patch the return address for the last turn to save the
     # conditional branch and the unecessary twiddle load after the last turn.
     .back 1
-    brr ra_link_1, r0, -, r:pass_2
+    brr ra_link_1, r0, -, r:load_fft_16_lin
     .endb
     sub.setf ra_points, ra_points, 2
     add.ifn ra_link_1, r0, rb_pass2_link
 :2
     next_twiddles TW16_P2_STEP
 
-    brr -, r:pass_2
+    ;mov ra_link_1, rb_link_1
     swap_vpm_vdw
-    mov ra_link_1, rb_link_1
+    .back 3
+    brr -, r:load_fft_16_lin
+    .endb
 :3
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
@@ -216,17 +235,22 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
     init_stage TW16_P3_BASE
     read_lin rb_0x80
 
-    brr ra_link_1, r:pass_3
     swap_vpm_vdw
+    .back 2
+    # (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
+    # This is basically the concept of the 4k FFT, so we call the FFT procedure directly.
+    brr ra_link_1, r:load_fft_16_lin
+    .endb
     mov ra_points, (1<<STAGES) / 0x80 - 1;
 
-# :start of hidden loop
+:   # start of hidden loop
     next_twiddles TW16_P3_STEP
     swap_vpm_vdw
+
     # (MM) Optimized: branch unconditional and patch the return address for
     # the last turn, move the branch before the last instruction of swap_vpm_vdw.
     .back 1
-    brr r0, r:pass_2
+    brr r0, r:load_fft_16_lin
     .endb
     sub.setf ra_points, ra_points, 1
     mov.ifz ra_link_1, r0
@@ -263,28 +287,10 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
 ##############################################################################
 # Subroutines
 
-:pass_1
-    read_rev rb_0x80
-    nop;        ldtmu0
-    mov r0, r4; ldtmu0
-    mov r1, r4
-    swizzle
-    brr -, r:fft_16
-    interleave
-
-:pass_2
-:pass_3
-    read_lin rb_0x80
-    nop;        ldtmu0
-    mov r0, r4; ldtmu0
-    mov r1, r4
-
-:fft_16
-    body_fft_16
-
+# (MM) Optimized: joined load_xxx and ldtmu in FFT-16 codelet
+bodies_fft_16
     # (MM) Optimized: link directly to save_16
     .back 3
     brr -, ra_save_16, r:save_16
     .endb
-
 

@@ -36,10 +36,15 @@
 .if STAGES>16
 .macro read_rev, stride
     # (MM) Optimized bit swap using regfile A unpack and swap only 24 bit
+    # saves 2 rb and a bunch of cycles
     ;mov.unpack8c r0, ra_load_idx
     shl.unpack8b r1, ra_load_idx, 8
     shl.unpack8a r1, ra_load_idx, rb_0x10; v8adds r0, r0, r1
-    add ra_load_idx, ra_load_idx, stride; v8adds r0, r0, r1
+    mv8adds r0, r0, r1;
+.if stride != 0
+    # (MM) Optimized: join stride with v8adds
+    ;add ra_load_idx, ra_load_idx, stride
+.endif
 
     bit_rev 1,  rx_0x55555555
     bit_rev 2,  rx_0x33333333
@@ -53,7 +58,7 @@
 .endif
     add r1, r0, 4         # r1 = im = {idx[0:STAGES-1], 1'b1, 2'b0}
 
-    interleave
+    interleave r0, r1
 
     add t0s, ra_addr_x, r0
     add t0s, ra_addr_x, r1

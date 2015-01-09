@@ -71,7 +71,7 @@
 .set ra_vdw,            ra28
 .set rb_vdw,            rb28
 
-.set rx_0x5555,         ra29
+.set rb_0x5555,         rb29
 .set rx_0x3333,         ra30
 .set rx_0x0F0F,         ra31
 
@@ -84,7 +84,7 @@
 mov rb_0x40,    0x40
 mov rb_0x80,    0x80
 
-mov rx_0x5555,  0x5555
+mov rb_0x5555,  0x5555
 mov rx_0x3333,  0x3333
 mov rx_0x0F0F,  0x0F0F
 
@@ -130,17 +130,22 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
 # Redefining this macro
 
 .macro read_rev, stride
-    add ra_load_idx, ra_load_idx, stride; mov r0, ra_load_idx
+    and r1, ra_load_idx, rb_0x5555; mov r2, ra_load_idx
+    shr r0, r2, 1
+    and r0, r0, rb_0x5555; v8adds r1, r1, r1 # can't overflow because of mask
+    mv8adds r0, r0, r1;                      # can't overflow because of mask
+    .if stride != 0
+    # (MM) Optimized: join stride with v8adds
+    ;add ra_load_idx, r2, stride
+    .endif
 
-    bit_rev 1, rx_0x5555    # 16 SIMD
     bit_rev 2, rx_0x3333
     bit_rev 4, rx_0x0F0F
-
-    shl r0, r0, 3           # {idx[0:7], 1'b0, 2'b0}
-    add r1, r0, 4           # {idx[0:7], 1'b1, 2'b0}
-
-    add t0s, ra_addr_x, r0
-    add t0s, ra_addr_x, r1
+    
+    ;v8adds r1, ra_addr_x, 4
+    shl r0, r0, 3
+    add t0s, r0, ra_addr_x  # {idx[0:7], 1'b0, 2'b0}
+    add t0s, r0, r1         # {idx[0:7], 1'b1, 2'b0}
 .endm
 
 ##############################################################################
@@ -157,13 +162,13 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
 
     init_stage TW16_P1_BASE
     read_rev rb_0x80
-    read_rev rb_0x80
+    read_rev 0
+    swap_vpm_vdw
 
     # (MM) Optimized: move branch before the last instruction of read_rev
-    .back 1
+    .back 3
     brr ra_link_1, r:pass_1
     .endb
-    swap_vpm_vdw
 
     brr ra_link_1, r:pass_1
     nop
@@ -181,19 +186,19 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
     swap_buffers
     init_stage TW16_P2_BASE
     read_lin rb_0x80
-    read_lin rb_0x80
+    read_lin 0
+    swap_vpm_vdw
     # (MM) Optimized: move branch before the last instruction of read_lin
-    .back 1
+    .back 3
     brr ra_link_1, r:pass_2
     .endb
-    swap_vpm_vdw
 
     next_twiddles TW16_P2_STEP
+    swap_vpm_vdw
     # (MM) Optimized: move branch before the last instruction of next_twiddles
-    .back 1
+    .back 3
     brr ra_link_1, r:pass_2
     .endb
-    swap_vpm_vdw
 
     # (MM) Optimized: easier procedure chains
     brr r0, r:sync, ra_sync
@@ -229,11 +234,7 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
 
 :pass_1
 :pass_2
-    nop;        ldtmu0
-    mov r0, r4; ldtmu0
-    mov r1, r4
-#:fft_16
-    body_fft_16
+    body_fft_16_lin
 
     # (MM) Optimized: link directly to save_16
     .back 3

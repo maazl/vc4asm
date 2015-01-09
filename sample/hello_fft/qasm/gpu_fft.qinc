@@ -86,6 +86,15 @@
     nop
 .endm
 
+# (MM) Optimized: clone instructions of branch target instead of nops.
+.macro brr_opt, dest, target, back
+    .assert back >= 0 && back <= 3
+    .back back
+    brr dest, target + 8 * (3 - back)
+    .endb
+    .clone target, (3-back)
+.endm
+
 ##############################################################################
 
 .macro write_vpm_16, arg
@@ -289,31 +298,68 @@
 ##############################################################################
 # FFT-16 codelet
 
-.macro body_fft_16
+# (MM) Optimized: joined load_xxx and ldtmu in FFT-16 codelet
+# Extracted stride from load_xxx to make it part of the procedure.
+# Saves several instructions and delays ldtmu for linear reads.
+
+# redefine this to compile a fixed stride into the fft_16 bodies.
+.set DEF_STRIDE, 0
+
+.macro body_fft_16_rev
+    ldtmu0
+    mov r0, r4; ldtmu0
+    interleave r0, r4
 # (MM) Optimized: better use of both ALUs, no need for ra_temp
-    mov r3, 1<<0;              fmul      r2, ra_tw_re+TW16_ACTIVE+0, r0
-.rep i, 4
-.if i!=0
-    fsub.ifnz r1, r2, r1;      fmul      r2, ra_tw_re+TW16_ACTIVE+i, r0
-.endif
-    and.setf -, elem_num, r3;  fmul      r3, rb_tw_im+TW16_ACTIVE+i, r1
-    fsub.ifnz r0, r2, r3;      fmul.ifnz r2, rb_tw_im+TW16_ACTIVE+i, r0
-    mov r3, 1<<(i+1);          fmul.ifnz r1, ra_tw_re+TW16_ACTIVE+i, r1
-    fadd.ifnz r1, r1, r2;      mov.ifz  r2, r0 << (1<<i)
-    fadd.ifz  r0, r2, r0;      mov.ifnz r2, r0 >> (1<<i)
-    # (MM) Optimized: easier procedure chains
-    # place branch from outside individually
-    fsub.ifnz r0, r2, r0;      mov.ifz  r2, r1 << (1<<i)
-    fadd.ifz  r1, r2, r1;      mov.ifnz r2, r1 >> (1<<i)
-.endr
-    fsub.ifnz r1, r2, r1;
+                               fmul      r2, ra_tw_re+TW16_ACTIVE+0, r0
+                               fmul      r3, rb_tw_im+TW16_ACTIVE+0, r1
+    .back 3
+    brr -, r:fft_16_cont
+    .endb
+.endm
+
+.macro body_fft_16_lin
+    and.setf -, elem_num, 1<<0
+    ldtmu0
+    # (MM) Optimized: better use of both ALUs, no need for ra_temp
+    mov r0, r4;                fmul      r2, ra_tw_re+TW16_ACTIVE+0, r4; ldtmu0
+    mov r1, r4;                fmul      r3, rb_tw_im+TW16_ACTIVE+0, r4
+:fft_16_cont
+    .rep i, 4
+    .if i!=0
+        fsub.ifnz r1, r2, r1;      fmul      r2, ra_tw_re+TW16_ACTIVE+i, r0
+        and.setf -, elem_num, r3;  fmul      r3, rb_tw_im+TW16_ACTIVE+i, r1
+    .endif
+        fsub.ifnz r0, r2, r3;      fmul.ifnz r2, rb_tw_im+TW16_ACTIVE+i, r0
+        mov r3, 1<<(i+1);          fmul.ifnz r1, ra_tw_re+TW16_ACTIVE+i, r1
+        fadd.ifnz r1, r1, r2;      mov.ifz  r2, r0 << (1<<i)
+        fadd.ifz  r0, r2, r0;      mov.ifnz r2, r0 >> (1<<i)
+        # (MM) Optimized: easier procedure chains
+        # place branch from outside individually
+        fsub.ifnz r0, r2, r0;      mov.ifz  r2, r1 << (1<<i)
+        fadd.ifz  r1, r2, r1;      mov.ifnz r2, r1 >> (1<<i)
+    .endr
+    fsub.ifnz r1, r2, r1;    
+.endm
+
+.macro bodies_fft_16
+:load_fft_16_rev
+    read_rev DEF_STRIDE
+
+#:fft_16_rev
+    body_fft_16_rev
+
+:load_fft_16_lin
+    read_lin DEF_STRIDE
+
+#:fft_16_lin
+    body_fft_16_lin
 .endm
 
 ##############################################################################
 
 .macro bit_rev, shift, mask
     # (MM) Optimized: use MUL ALU for small shifts
-    ;and r1, r0, mask
+    and r1, r0, mask
     .if shift == 1
         shr r0, r0, shift
         and r0, r0, mask;  v8adds r1, r1, r1 # can't overflow because of mask
@@ -325,27 +371,36 @@
         and r0, r0, mask
         shl r1, r1, shift
     .endif
-    or  r0, r0, r1;
+    # (MM) Optimized: mv8adds can be combined easier; cannot overflow
+    mv8adds  r0, r0, r1;
 .endm
 
 ##############################################################################
 
-.macro interleave
-    and.setf -, elem_num, 1; mov r2, r0
-    mov.ifz  r0, r2; mov.ifnz r0, r1 >> 1
-    mov.ifnz r1, r1; mov.ifz  r1, r2 << 1
+# (MM) Optimizes: allow alternate source registers
+# and allow instruction combining if im is not r1
+.macro interleave, re, im
+    and.setf -, elem_num, 1; mov r2, re
+    mov.ifz  r0, r2;         mov.ifnz r0, im >> 1
+    mov.ifnz r1, im;         mov.ifz  r1, r2 << 1
 .endm
 
 ##############################################################################
 
 .macro read_rev, stride
-    add ra_load_idx, ra_load_idx, stride; mov r0, ra_load_idx
+    # (MM) Optimized bit swap using regfile A unpack
+    # Saves a B register and 3 instruction but no speed.
+    shl.unpack8a r0, ra_load_idx, 8
+    or.unpack8b r0, ra_load_idx, r0
 
     bit_rev 1, rx_0x5555    # 16 SIMD
     bit_rev 2, rx_0x3333
     bit_rev 4, rx_0x0F0F
-    bit_rev 8, rx_0x00FF    # reversal creates left shift by 16-STAGES
-.if STAGES>13
+.if stride != 0
+    # (MM) Optimized: join stride with v8adds
+    ;add ra_load_idx, ra_load_idx, stride
+.endif
+.if STAGES>13               # reversal creates left shift by 16-STAGES
     shl r0, r0, STAGES-13
 .endif
 .if STAGES<13
@@ -353,37 +408,41 @@
 .endif                      # r0 = re = {idx[0:STAGES-1], 1'b0, 2'b0}
     add r1, r0, 4           # r1 = im = {idx[0:STAGES-1], 1'b1, 2'b0}
 
-    interleave
+    # (MM) Optimizes: allow alternate source registers for interleave
+    interleave r0, r1
     swizzle
 
     add t0s, ra_addr_x, r0
     add t0s, ra_addr_x, r1
 .endm
 
-.macro load_rev, stride, call
-    read_rev stride
-    nop;        ldtmu0
-    mov r0, r4; ldtmu0
-    mov r1, r4
-    brr ra_link_0, call
-    interleave
+# (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
+.macro load_rev
+    read_rev 0
+    # (MM) Optimized: joined ldtmu in FFT-16 codelet
+    .back 3
+    brr ra_link_0, r:fft_16_rev
+    .endb
 .endm
 
 ##############################################################################
 
 .macro read_lin, stride
-    shl r0, ra_load_idx, 3; mov r1, ra_load_idx
-    add r0, r0, ra_addr_x
-    add ra_load_idx, r1, stride; mov t0s, r0
-    add t0s, r0, 4
+    shl r0, ra_load_idx, 3; mov r2, ra_load_idx
+    add t0s, r0, ra_addr_x; v8adds r1, ra_addr_x, 4 # can't overflow, LSBs of ra_addr_x are 0
+.if stride != 0
+    add ra_load_idx, r2, stride
+.endif
+    add t0s, r0, r1;
 .endm
 
-.macro load_lin, stride, call
-    read_lin stride
-    brr ra_link_0, call
-    nop;        ldtmu0
-    mov r0, r4; ldtmu0
-    mov r1, r4
+# (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
+.macro load_lin
+    read_lin 0
+    # (MM) Optimized: joined ldtmu in FFT-16 codelet
+    .back 3
+    brr ra_link_0, r:fft_16_lin
+    .endb
 .endm
 
 ##############################################################################
@@ -409,7 +468,7 @@
     fsub r1, r1, r0;                                     fmul r0, r3, rb_tw_im+tw32 # b.sin
     fsub rb_tw_im+TW32_ACTIVE, rb_tw_im+TW32_ACTIVE, r1; fmul r1, r2, ra_tw_re+tw32 # a.cos
     fadd r1, r1, r0
-    fsub ra_tw_re+TW32_ACTIVE, ra_tw_re+TW32_ACTIVE, r1
+    fsub ra_tw_re+TW32_ACTIVE, ra_tw_re+TW32_ACTIVE, r1;
 .endm
 
 .macro next_twiddles_16, tw16
@@ -456,16 +515,20 @@
 .set LOAD_STRAIGHT, 0
 .set LOAD_REVERSED, 1
 
-.macro loader_16, stride, mode
+.macro loader_16, stride, mode, back
+    # (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
+    # (MM) Optimized: clone instructions of branch target instead of nops.
     .if mode==LOAD_REVERSED
-        load_rev stride, r:fft_16
+        brr_opt ra_link_0, r:load_fft_16_rev, back
     .else
-        load_lin stride, r:fft_16
+        brr_opt ra_link_0, r:load_fft_16_lin, back
     .endif
+
+    add ra_load_idx, ra_load_idx, stride;
 .endm
 
 .macro body_pass_16, mode
-    loader_16 rb_0x80, mode
+    loader_16 rb_0x80, mode, 0
     # (MM) Optimized: easier procedure chains
     # place branch from outside individually
     mov ra_vpm_lo, rb_vpm_lo; mov rb_vpm_lo, ra_vpm_lo
@@ -473,9 +536,9 @@
 .endm
 
 .macro body_pass_32, mode
-    loader_16 rb_0xF0, mode
+    loader_16 rb_0xF0, mode, 0
     mov ra_32_re, r0; mov rb_32_im, r1
-    loader_16 rb_0x10, mode
+    loader_16 rb_0x10, mode, 2
     fft_twiddles_32
     # (MM) Optimized: easier procedure chains
     # place branch from outside individually
@@ -485,9 +548,9 @@
 .endm
 
 .macro body_pass_64, mode, step
-    loader_16 rb_0x10, mode
+    loader_16 rb_0x10, mode, 0
     mov ra_32_re, r0; mov rb_32_im, r1
-    loader_16 rb_0x10, mode
+    loader_16 rb_0x10, mode, 2
     fft_twiddles_32
 
     fadd ra_64+0, ra_32_re, r0
@@ -495,9 +558,9 @@
     fsub ra_64+2, ra_32_re, r0
     fsub ra_64+3, rb_32_im, r1;
 
-    loader_16 step, mode
+    loader_16 step, mode, 3
     mov ra_32_re, r0; mov rb_32_im, r1
-    loader_16 rb_0x10, mode
+    loader_16 rb_0x10, mode, 2
     fft_twiddles_32
 
     # (MM) Optimized: better use of both ALUs and accumulators

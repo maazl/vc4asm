@@ -83,7 +83,7 @@
 .set rx_0x5555,         ra28
 .set rx_0x3333,         ra29
 .set rx_0x0F0F,         ra30
-.set rx_0x00FF,         ra31
+#                       ra31
 
 .set rb_0x10,           rb28
 .set rb_0x40,           rb29
@@ -111,7 +111,6 @@ mov rb_0x1D0,   0x1D0
 mov rx_0x5555,  0x5555
 mov rx_0x3333,  0x3333
 mov rx_0x0F0F,  0x0F0F
-mov rx_0x00FF,  0x00FF
 
 ##############################################################################
 # Load twiddle factors
@@ -169,7 +168,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
     .endb
     mov ra_points, (1<<STAGES) / 0x200 - 1
 
-# :start of hidden loop
+:   # start of hidden loop
     # (MM) Optimized: branch unconditional and patch the return address
     # for the last turn.
     brr r0, r:pass_1
@@ -205,7 +204,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
     .endb
     mov ra_points, (1<<STAGES) / 0x100 - 1
 
-# :start of hidden loop
+:   # start of hidden loop
     next_twiddles TW16_P2_STEP, TW32_P2_STEP
 
     # (MM) Optimized: branch unconditional and patch the return address for
@@ -242,9 +241,8 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 ##############################################################################
 # Subroutines
 
-:fft_16
-    body_fft_16
-
+# (MM) Optimized: joined load_xxx and ldtmu in FFT-16 codelet
+bodies_fft_16
     .back 3
     bra -, ra_link_0
     .endb
