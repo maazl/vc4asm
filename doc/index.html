@@ -130,8 +130,9 @@
     <h2><a id="build" name="build"></a>Build instructions</h2>
     <p>The source code has hopefully no major platform dependencies, i.e. you
       don't need to build it on the Raspberry. But it requires a <a href="https://en.wikipedia.org/wiki/C++11">C++11</a>
-      compliant compiler to build. So Raspbian Wheezy is not sufficient. In fact
-      I only tested with gcc 4.8/4.9.</p>
+      compliant compiler to build. Current Raspiban ships with gcc 4.9 which
+      works. Raspbian Wheezy seems not to be sufficient. While I succeeded with
+      gcc 4.7.3 on another platform, gcc 4.7.2 of Wheezy fails.</p>
     <ul>
       <li>Download and extract the source.</li>
       <li>Go to folder <tt>src</tt>.</li>
