@@ -45,7 +45,7 @@
 ##############################################################################
 # Registers
 
-#                       ra0
+.set rx_inst,           ra0
 #                       rb0
 .set ra_save_ptr,       ra1
 #                       rb1
@@ -56,7 +56,7 @@
 .set ra_save_16,        ra4
 #
 .set ra_load_idx,       ra5
-.set rx_inst,           rb5
+#                       rb5
 .set ra_sync,           ra6
 #
 .set ra_points,         ra7
@@ -106,7 +106,8 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
     shl.setf r0, r3, 5;   mov ra_sync, 0
     mov.ifnz r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     mov.ifnz ra_save_16,  :save_slave_16 - :save_16
-    add.ifnz ra_sync, r1, r0; mov rx_inst, r3
+    add.ifnz ra_sync, r1, r0;
+    ;mov rx_inst, r3
 
 inst_vpm r3, ra_vpm, rb_vpm, -, -
 
@@ -142,20 +143,19 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
     bit_rev 2, rx_0x3333
     bit_rev 4, rx_0x0F0F
     
-    ;v8adds r1, ra_addr_x, 4
     shl r0, r0, 3
-    add t0s, r0, ra_addr_x  # {idx[0:7], 1'b0, 2'b0}
-    add t0s, r0, r1         # {idx[0:7], 1'b1, 2'b0}
+    add t0s, r0, ra_addr_x; v8adds r1, ra_addr_x, 4 # {idx[0:7], 1'b0, 2'b0}
+    add t0s, r0, r1                                 # {idx[0:7], 1'b1, 2'b0}
 .endm
 
 ##############################################################################
 # Top level
 
 :loop
-    mov.setf ra_addr_x, unif # Ping buffer or null
+    mov.setf ra_addr_x, unif  # Ping buffer or null
     # (MM) Optimized: branch earlier
     brr.allz -, r:end
-    mov      rb_addr_y, unif # Pong buffer or IRQ enable
+    mov      rb_addr_y, unif; # Pong buffer or IRQ enable
 
 ##############################################################################
 # Pass 1

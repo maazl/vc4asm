@@ -324,21 +324,27 @@
     mov r0, r4;                fmul      r2, ra_tw_re+TW16_ACTIVE+0, r4; ldtmu0
     mov r1, r4;                fmul      r3, rb_tw_im+TW16_ACTIVE+0, r4
 :fft_16_cont
-    .rep i, 4
-    .if i!=0
-        fsub.ifnz r1, r2, r1;      fmul      r2, ra_tw_re+TW16_ACTIVE+i, r0
-        and.setf -, elem_num, r3;  fmul      r3, rb_tw_im+TW16_ACTIVE+i, r1
-    .endif
+    .rep i, 3
         fsub.ifnz r0, r2, r3;      fmul.ifnz r2, rb_tw_im+TW16_ACTIVE+i, r0
         mov r3, 1<<(i+1);          fmul.ifnz r1, ra_tw_re+TW16_ACTIVE+i, r1
         fadd.ifnz r1, r1, r2;      mov.ifz  r2, r0 << (1<<i)
         fadd.ifz  r0, r2, r0;      mov.ifnz r2, r0 >> (1<<i)
-        # (MM) Optimized: easier procedure chains
-        # place branch from outside individually
         fsub.ifnz r0, r2, r0;      mov.ifz  r2, r1 << (1<<i)
         fadd.ifz  r1, r2, r1;      mov.ifnz r2, r1 >> (1<<i)
+        fsub.ifnz r1, r2, r1;      fmul      r2, ra_tw_re+TW16_ACTIVE+i+1, r0
+        and.setf -, elem_num, r3;  fmul      r3, rb_tw_im+TW16_ACTIVE+i+1, r1
     .endr
-    fsub.ifnz r1, r2, r1;    
+    # (MM) rotation by 8 left and right is identical => no if required
+    # and use -(0-r1) instead of +r1 to make the last instruction unconditional
+    # Saves another instruction.
+    fsub.ifnz r0, r2, r3;      fmul.ifnz r2, rb_tw_im+TW16_ACTIVE+3, r0
+    fsub.ifz  r3, 0., r1;      fmul.ifnz r1, ra_tw_re+TW16_ACTIVE+3, r1
+    fadd.ifnz r1, r1, r2;      mov       r2, r0 << 8
+    fadd.ifz  r0, r2, r0;      mov.ifnz  r3, r1
+    fsub.ifnz r0, r2, r0;      mov       r2, r1 << 8
+    fsub      r1, r2, r3;
+    # (MM) Optimized: easier procedure chains
+    # place branch from outside individually
 .endm
 
 .macro bodies_fft_16
@@ -378,11 +384,17 @@
 ##############################################################################
 
 # (MM) Optimizes: allow alternate source registers
-# and allow instruction combining if im is not r1
+# and allow instruction combining if re is not r0
 .macro interleave, re, im
+    .if im != r1
+    ;and.setf -, elem_num, 1
+    mov.ifnz r1, im;         mov.ifz  r1, re << 1
+    mov.ifz  r0, re;         mov.ifnz r0, im >> 1
+    .else
     and.setf -, elem_num, 1; mov r2, re
     mov.ifz  r0, r2;         mov.ifnz r0, im >> 1
     mov.ifnz r1, im;         mov.ifz  r1, r2 << 1
+    .endif
 .endm
 
 ##############################################################################
@@ -394,26 +406,28 @@
     or.unpack8b r0, ra_load_idx, r0
 
     bit_rev 1, rx_0x5555    # 16 SIMD
-    bit_rev 2, rx_0x3333
-    bit_rev 4, rx_0x0F0F
 .if stride != 0
     # (MM) Optimized: join stride with v8adds
     ;add ra_load_idx, ra_load_idx, stride
 .endif
+    bit_rev 2, rx_0x3333
+    bit_rev 4, rx_0x0F0F
+    ;mov r3, 4 # prepare for below
+
 .if STAGES>13               # reversal creates left shift by 16-STAGES
     shl r0, r0, STAGES-13
 .endif
 .if STAGES<13
     shr r0, r0, 13-STAGES
-.endif                      # r0 = re = {idx[0:STAGES-1], 1'b0, 2'b0}
-    add r1, r0, 4           # r1 = im = {idx[0:STAGES-1], 1'b1, 2'b0}
+.endif
+    mv8adds r2, r0, r3; # r3 = 4
 
     # (MM) Optimizes: allow alternate source registers for interleave
-    interleave r0, r1
+    interleave r0, r2
     swizzle
 
-    add t0s, ra_addr_x, r0
-    add t0s, ra_addr_x, r1
+    add t0s, ra_addr_x, r0  # r0 = re = {idx[0:STAGES-1], 1'b0, 2'b0}
+    add t0s, ra_addr_x, r1  # r1 = im = {idx[0:STAGES-1], 1'b1, 2'b0}
 .endm
 
 # (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
@@ -428,12 +442,13 @@
 ##############################################################################
 
 .macro read_lin, stride
-    shl r0, ra_load_idx, 3; mov r2, ra_load_idx
-    add t0s, r0, ra_addr_x; v8adds r1, ra_addr_x, 4 # can't overflow, LSBs of ra_addr_x are 0
+    shl r0, ra_load_idx, 3; mov r1, ra_load_idx
+    # (MM) Optimized: write t0s earlier
+    add t0s, r0, ra_addr_x; v8adds r2, ra_addr_x, 4 # can't overflow, LSBs of ra_addr_x are 0
 .if stride != 0
-    add ra_load_idx, r2, stride
+    add ra_load_idx, r1, stride
 .endif
-    add t0s, r0, r1;
+    add t0s, r0, r2;
 .endm
 
 # (MM) Optimized: extracted stride from load_xxx to make read part of a procedure

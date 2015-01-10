@@ -141,10 +141,10 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 # Top level
 
 :loop
-    mov.setf ra_addr_x, unif # Ping buffer or null
+    mov.setf ra_addr_x, unif  # Ping buffer or null
     # (MM) Optimized: branch sooner
     brr.allz -, r:end
-    mov      rb_addr_y, unif # Pong buffer or IRQ enable
+    mov      rb_addr_y, unif; # Pong buffer or IRQ enable
 
 ##############################################################################
 # Pass 1

@@ -66,7 +66,7 @@
 #                       ra4
 .set rb_pass2_link,     rb4
 .set ra_load_idx,       ra5
-.set rx_inst,           rb5
+#                       rb5
 .set ra_sync,           ra6
 #                       rb6
 .set ra_points,         ra7
@@ -85,16 +85,17 @@
 .set ra_vpm_hi,         ra26
 .set ra_vdw_16,         ra27
 .set ra_vdw_32,         ra28
-
-.set rx_0x55555555,     ra29
-.set rx_0x33333333,     ra30
+#
+.set rx_inst,           ra30
 .set ra_0x7F,           ra31
 
-.set rb_0x10,           rb27
-.set rb_0x40,           rb28
-.set rb_0x80,           rb29
-.set rb_0xF0,           rb30
-.set rx_0x0F0F0F0F,     rb31
+.set rx_0x55555555,     rb25
+.set rx_0x33333333,     rb26
+.set rx_0x0F0F0F0F,     rb27
+.set rb_0x10,           rb28
+.set rb_0x40,           rb29
+.set rb_0x80,           rb30
+.set rb_0xF0,           rb31
 
 ##############################################################################
 # Constants
@@ -125,11 +126,12 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 4 registers
-    mov.setf r3, unif;    mov ra_sync, 0
-    shl r0, r3, 5;        mov ra_save_32, 0
-    mov r1,              :sync_slave - :sync - 4*8 # -> rx_inst-1
-    add.ifnz ra_sync, r1, r0; mov rx_inst, r3
+    mov.setf r3, unif;    mov ra_save_32, 0
+    shl r0, r3, 5;        mov ra_sync, 0
     mov.ifnz ra_save_32, :save_slave_32 - :save_32
+    mov r1,              :sync_slave - :sync - 4*8 # -> rx_inst-1
+    add.ifnz ra_sync, r1, r0;
+    ;mov rx_inst, r3
     
 inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 
@@ -153,10 +155,10 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 # Top level
 
 :loop
-    mov.setf ra_addr_x, unif # Ping buffer or null
+    mov.setf ra_addr_x, unif  # Ping buffer or null
     # (MM) Optimized: branch sooner
     brr.allz -, r:end
-    mov      rb_addr_y, unif # Pong buffer or IRQ enable
+    mov      rb_addr_y, unif; # Pong buffer or IRQ enable
 
 ##############################################################################
 # Pass 1

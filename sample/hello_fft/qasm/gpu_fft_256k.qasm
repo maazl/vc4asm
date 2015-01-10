@@ -61,10 +61,10 @@
 .set rb_vpm_lo,         rb2
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
-#                       ra4
+.set rx_inst,           ra4
 #                       rb4
 .set ra_load_idx,       ra5
-.set rx_inst,           rb5
+#                       rb5
 .set ra_sync,           ra6
 .set rb_STAGES,         rb6
 .set ra_points,         ra7
@@ -132,7 +132,8 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
     shl.setf r0, r3, 5;   mov ra_sync, 0
     mov.ifnz r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     mov.ifnz ra_save_32,  :save_slave_32 - :save_32
-    add.ifnz ra_sync, r1, r0; mov rx_inst, r3
+    add.ifnz ra_sync, r1, r0;
+    ;mov rx_inst, r3
     
 inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 
@@ -156,10 +157,10 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 # Top level
 
 :loop
-    mov.setf ra_addr_x, unif # Ping buffer or null
+    mov.setf ra_addr_x, unif  # Ping buffer or null
     # (MM) Optimized: branch sooner
     brr.allz -, r:end
-    mov      rb_addr_y, unif # Pong buffer or IRQ enable
+    mov      rb_addr_y, unif; # Pong buffer or IRQ enable
 
 ##############################################################################
 # Pass 1

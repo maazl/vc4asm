@@ -138,10 +138,10 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
 # Top level
 
 :loop
-    mov.setf ra_addr_x, unif # Ping buffer or null
+    mov.setf ra_addr_x, unif  # Ping buffer or null
     # (MM) Optimized: branch sooner
     brr.allz -, r:end
-    mov      rb_addr_y, unif # Pong buffer or IRQ enable
+    mov      rb_addr_y, unif; # Pong buffer or IRQ enable
 
 ##############################################################################
 # Pass 1
@@ -172,7 +172,7 @@ inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
     init_stage_16 TW16_P2_BASE, 4
     read_lin rb_0x80
 
-    mov ra_points, (1<<STAGES) / 0x80 - 1
+    ;mov ra_points, (1<<STAGES) / 0x80 - 1
     # (MM) Optimized: move branch into the read_rev code
     .back 3
     brr ra_link_1, r:pass_2
