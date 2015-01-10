@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 	}
 
 	if (!outfname && !writeCPP && !writeCPP2 && !writePRE) {
-		fputs("vc4asm V0.1.2\n"
+		fputs("vc4asm V0.1.3\n"
 			"Usage: vc4asm [-o <bin-output>] [-{c|C} <c-output>] [-V] <qasm-file(s)>\n"
 			" -o<file> Binary output file.\n"
 			" -c<file> C output file with trailing ','.\n"

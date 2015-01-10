@@ -11,8 +11,7 @@
     <h1>VC4ASM - macro assembler for Broadcom VideoCore IV<br>
       aka Raspberry Pi GPU</h1>
     <p class="abstract">The goal of the vc4asm project is a <b>full featured
-        macro assembler</b> and disassembler with <b>constraint checking</b>. A
-      simulator for debugging purposes is planned.<br>
+        macro assembler</b> and disassembler with <b>constraint checking</b>.<br>
       The work is based on <a href="https://github.com/jetpacapp/qpu-asm">qpu-asm
         from Pete Warden</a> which itself is based on <a href="https://github.com/elorimer/rpi-playground/tree/master/QPU/assembler">Eman's
         work</a> and some ideas also taken from <a href="https://github.com/hermanhermitage/videocoreiv-qpu"><span
@@ -20,7 +19,8 @@
       But it goes further by far. First of all it supports macros and functions.<br>
       Unfortunately this area is highly undocumented in the public domain. And
       so the work uses only the code from <a href="https://github.com/raspberrypi/userland/tree/master/host_applications/linux/apps/hello_pi/hello_fft">hello_fft</a>
-      which is available as source and binary as Rosetta Stone.</p>
+      which is available as source and binary as Rosetta Stone. However, I try
+      to keep it downwardly compatible to the Broadcom tools.</p>
     <p><a href="#vc4asm">&rarr; Assembler</a>, <a href="#vc4dis">&rarr;
         Disassembler</a>, <a href="#bugs">&rarr; Known problems</a> <a href="#build">&rarr;
         Build instructions</a>, <a href="#sample">&rarr;Samples</a> <a href="#contact">&rarr;
@@ -35,10 +35,13 @@
       <dd>Added support for binary constants between the code.</dd>
       <dt>V0.1.2</dt>
       <dd>Added type detection macros.<br>
-        Optional automatic instruction packing (experimental).<br>
-        Merged with gpu_fft V2.0 including 2M FFT, a few further optimizations.</dd>
+        Optional automatic instruction packing.<br>
+        Merged with gpu_fft V2.0 including 2Mi FFT, a few further optimizations.</dd>
       <dt>V0.1.3</dt>
-      <dd>Fixed pack/unpack instruction, still incomplete.</dd>
+      <dd>Fixed pack/unpack instruction, still incomplete.<br>
+        Added <tt>.clone</tt> directive (experimental).<br>
+        Further optimizations to hello_fft example.<br>
+        Several smaller bugfixes.</dd>
     </dl>
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
     <p>The heart of the software. It assembles QPU code to binary or C
@@ -146,13 +149,241 @@
       In this case create the device in the root file system e.g. <tt>/dev/vcio</tt>
       and place a symbolic link to the device with <tt>ln -s /dev/vcio char_dev</tt>.</p>
     <p>All these restrictions apply to the original <tt>hello_fft</tt> as well.</p>
-    <h3>simple</h3>
+    <h3><tt>simple</tt></h3>
     <p>This is a very simple program that demonstrates the use of all available
       operators with small immediate values. It is not optimized in any way.</p>
-    <h3>hello_fft</h3>
+    <h3><tt>hello_fft</tt></h3>
     <p>This is the well known hello_fft sample available. The only difference is
       that it is faster because the shader code has been optimized. The gain is
-      about 10% of code size and about 3% of the run time.</p>
+      about 25% of code size and 3% to 18% of the run time. The code will no
+      longer compile with another assembler since it uses some special features
+      for instruction packing and scheduling.</p>
+    <table border="1" cellpadding="2" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Batch&rarr;</th>
+          <th colspan="2" rowspan="1">Original</th>
+          <th colspan="2" rowspan="1">Optimized</th>
+          <th colspan="2" rowspan="1">Gain</th>
+        </tr>
+        <tr>
+          <th>&darr;Points</th>
+          <th>1</th>
+          <th>10</th>
+          <th>1</th>
+          <th>10</th>
+          <th>1</th>
+          <th>10</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="th">2<sup>8</sup></td>
+          <td>30.4 &micro;s</td>
+          <td>15.3 &micro;s</td>
+          <td>25.4 &micro;s</td>
+          <td>13.8 &micro;s</td>
+          <td>16%</td>
+          <td>10%</td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>9</sup></td>
+          <td>46.0 &micro;s<br>
+          </td>
+          <td>26.4 &micro;s<br>
+          </td>
+          <td>37.8 &micro;s<br>
+          </td>
+          <td>22.8 &micro;s<br>
+          </td>
+          <td>18%<br>
+          </td>
+          <td>14%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>10</sup></td>
+          <td>63.6 &micro;s<br>
+          </td>
+          <td>44.5 &micro;s<br>
+          </td>
+          <td>55.0 &micro;s<br>
+          </td>
+          <td>39.5 &micro;s<br>
+          </td>
+          <td>13%<br>
+          </td>
+          <td>11%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>11</sup></td>
+          <td>105.6 &micro;s<br>
+          </td>
+          <td>95.5 &micro;s<br>
+          </td>
+          <td>96 &micro;s*<br>
+          </td>
+          <td>82 &micro;s*<br>
+          </td>
+          <td>9%<br>
+          </td>
+          <td>14%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>12</sup></td>
+          <td>224 &micro;s<br>
+          </td>
+          <td>257 &micro;s<br>
+          </td>
+          <td>209 &micro;s<br>
+          </td>
+          <td>235 &micro;s<br>
+          </td>
+          <td>7%<br>
+          </td>
+          <td>9%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>13</sup></td>
+          <td>565 &micro;s<br>
+          </td>
+          <td>624 &micro;s<br>
+          </td>
+          <td>540 &micro;s<br>
+          </td>
+          <td>578 &micro;s<br>
+          </td>
+          <td>4%<br>
+          </td>
+          <td>7%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>14</sup></td>
+          <td>1.17 ms<br>
+          </td>
+          <td>1.18 ms<br>
+          </td>
+          <td>1.11 ms<br>
+          </td>
+          <td>1.11 ms<br>
+          </td>
+          <td>5%<br>
+          </td>
+          <td>6%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>15</sup></td>
+          <td>3.29 ms<br>
+          </td>
+          <td>3.063 ms<br>
+          </td>
+          <td>3.15 ms<br>
+          </td>
+          <td>2.943 ms<br>
+          </td>
+          <td>4%<br>
+          </td>
+          <td>4%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>16</sup></td>
+          <td>6.36 ms<br>
+          </td>
+          <td>6.146 ms<br>
+          </td>
+          <td>6.18 ms<br>
+          </td>
+          <td>5.958 ms<br>
+          </td>
+          <td>3%<br>
+          </td>
+          <td>3%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>17</sup></td>
+          <td>15.75 ms<br>
+          </td>
+          <td>15.50 ms<br>
+          </td>
+          <td>15.3 ms<br>
+          </td>
+          <td>14.84 ms<br>
+          </td>
+          <td>3%<br>
+          </td>
+          <td>4%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>18</sup></td>
+          <td>42.9 ms<br>
+          </td>
+          <td>42.96 ms<br>
+          </td>
+          <td>41.3 ms<br>
+          </td>
+          <td>41.19 ms<br>
+          </td>
+          <td>3%<br>
+          </td>
+          <td>4%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>19</sup></td>
+          <td>97.7xx<br>
+          </td>
+          <td>97.6 ms<br>
+          </td>
+          <td>93.6 ms<br>
+          </td>
+          <td>93.5 ms<br>
+          </td>
+          <td>4%<br>
+          </td>
+          <td>4%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>20</sup></td>
+          <td>197 ms<br>
+          </td>
+          <td><br>
+          </td>
+          <td>190 ms<br>
+          </td>
+          <td><br>
+          </td>
+          <td>4%<br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>21</sup></td>
+          <td>394 ms<br>
+          </td>
+          <td><br>
+          </td>
+          <td>379 ms<br>
+          </td>
+          <td><br>
+          </td>
+          <td>4%<br>
+          </td>
+          <td><br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    The Raspi was slightly overclocked. (*) Timing is unstable, reason unknown.<br>
     <h2><a id="contact" name="contact"></a>Contact</h2>
     <p>Comments, ideas, bugs, improvements to <i>raspi at maazl dot de</i>.</p>
   </body>

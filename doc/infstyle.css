@@ -18,10 +18,11 @@ h3 {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-th {  
+th,.th {  
   background-color: #eeeeee;  
   text-align: left;  
   vertical-align: bottom;
+  font-weight: bold;
 }
 
 td {  
@@ -40,3 +41,6 @@ pre {
   color: #cc0000;
 }
 
+sup,sub {
+  font-size: smaller;
+}

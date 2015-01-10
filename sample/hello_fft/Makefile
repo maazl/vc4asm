@@ -1,3 +1,5 @@
+CFLAGS = -O3
+
 S = hex/shader_256.hex \
     hex/shader_512.hex \
     hex/shader_1k.hex \
@@ -28,7 +30,7 @@ hex/shader_%.hex : qasm/gpu_fft_%.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qa
 	../../bin/vc4asm -V -c $@ ../../share/vc4.qinc $<
 
 %.o : %.c %.h
-	gcc -o $@ -c $<
+	gcc $(CFLAGS) -o $@ -c $<
 
 all: hello_fft.bin hello_fft_2d.bin
 
@@ -37,10 +39,10 @@ shader: $(S)
 hex/shader_2048.hex : qasm/gpu_fft_2048.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc qasm/gpu_fft_2048.qinc
 
 hello_fft.bin:	$(S) $(C1D) $(H1D)
-	gcc -o hello_fft.bin $(F) $(C1D)
+	gcc $(CFLAGS) -o hello_fft.bin $(F) $(C1D)
 
 hello_fft_2d.bin:	$(S) hex/shader_trans.hex $(C2D) $(H2D)
-	gcc -o hello_fft_2d.bin $(F) $(C2D)
+	gcc $(CFLAGS) -o hello_fft_2d.bin $(F) $(C2D)
 
 clean:
 	rm -f *.bin hex/*.hex
