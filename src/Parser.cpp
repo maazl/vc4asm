@@ -600,6 +600,7 @@ Inst::mux Parser::doALUExpr(bool mul)
 			}
 			return ret;
 		}
+	 case V_FLOAT:
 	 case V_INT:
 		{	uint8_t si = getSmallImmediate(param.uValue);
 			if (si == 0xff)
