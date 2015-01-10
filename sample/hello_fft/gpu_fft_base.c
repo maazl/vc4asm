@@ -29,6 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gpu_fft.h"
 #include "mailbox.h"
 
+#include <time.h>
+
 #define PERI_BASE 0x20000000
 #define PERI_SIZE 0x02000000
 
@@ -53,6 +55,7 @@ unsigned gpu_fft_base_exec_direct (
     int num_qpus) {
 
     unsigned q, t;
+    time_t limit = 0;
 
     base->peri[V3D_DBCFG] = 0; // Disallow IRQ
     base->peri[V3D_DBQITE] = 0; // Disable IRQ
@@ -70,10 +73,17 @@ unsigned gpu_fft_base_exec_direct (
 
     // Busy wait polling
     for (;;) {
-        if (((base->peri[V3D_SRQCS]>>16) & 0xff) == num_qpus) break; // All done?
+        q = 1000;
+        do
+            if (((base->peri[V3D_SRQCS]>>16) & 0xff) == num_qpus) // All done?
+                return 0;
+        while (--q);
+        if (!limit)
+        	limit = clock() + CLOCKS_PER_SEC * GPU_FFT_TIMEOUT / 1000;
+        else if (clock() >= limit)
+            // TODO: some cleanup required?
+            return -1;
     }
-
-    return 0;
 }
 
 unsigned gpu_fft_base_exec(
