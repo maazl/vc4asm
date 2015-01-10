@@ -1627,7 +1627,7 @@ void Parser::ParseLine()
 	 case SEMI:
 		if (doPreprocessor())
 			return;
-		if (pos && (InstFlags[pos-1] & IF_CMB_ALLOWED) && (InstFlags[pos] && IF_BRANCH_TARGET) == 0)
+		if (pos && (InstFlags[pos-1] & IF_CMB_ALLOWED) && (InstFlags[pos] & IF_BRANCH_TARGET) == 0)
 			trycombine = true;
 		isinst = true;
 		goto next;
@@ -1676,8 +1676,7 @@ void Parser::ParseLine()
 		Instruct.reset();
 
 		ParseInstruction();
-		uint64_t inst = Instruct.encode();
-		Instructions.insert(Instructions.end() - Back, inst);
+		Instructions.insert(Instructions.end() - Back, Instruct.encode());
 		return;
 	}
 }
