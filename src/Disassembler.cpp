@@ -322,7 +322,7 @@ void Disassembler::Disassemble()
 		// Label?
 		auto l = Labels.find(Addr);
 		if (l != Labels.end())
-			fprintf(Out, ":%s\t", l->second.c_str());
+			fprintf(Out, ":%s\n", l->second.c_str());
 
 		DoInstruction();
 		*CodeAt = 0;
