@@ -322,14 +322,14 @@ void Disassembler::Disassemble()
 		// Label?
 		auto l = Labels.find(Addr);
 		if (l != Labels.end())
-			fprintf(Out, ":%s\n", l->second.c_str());
+			fprintf(Out, ":%s\t", l->second.c_str());
 
 		DoInstruction();
 		*CodeAt = 0;
 		if (PrintComment)
-			fprintf(Out, "  %-48s # %04zx: %016llx %s\n", Code, Addr, i, Comment);
+			fprintf(Out, "\t%-48s # %04zx: %016llx %s\n", Code, Addr, i, Comment);
 		else
-			fprintf(Out, "  %s\n", Code);
+			fprintf(Out, "\t%s\n", Code);
 		Addr += sizeof(uint64_t);
 	}
 }
