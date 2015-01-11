@@ -580,7 +580,7 @@ void Parser::doALUTarget(exprValue param, bool mul)
 	doInstrExt((InstContext)(mul*IC_MUL | IC_DST));
 }
 
-Inst::mux Parser::doALUExpr(bool mul)
+Inst::mux Parser::doALUExpr(InstContext ctx)
 {	if (NextToken() != COMMA)
 		Fail("Expected ',' before next argument to ALU instruction, found %s.", Token.c_str());
 	exprValue param = ParseExpression();
@@ -590,7 +590,7 @@ Inst::mux Parser::doALUExpr(bool mul)
 	 case V_REG:
 		{	auto ret = muxReg(param.rValue);
 			if (param.rValue.Rotate)
-			{	if (!mul)
+			{	if ((ctx & IC_MUL) == 0)
 					Fail("Vector rotation is only available to the MUL ALU.");
 				if (param.rValue.Rotate == -16)
 					Fail("Can only rotate ALU source right by r5.");
@@ -604,13 +604,19 @@ Inst::mux Parser::doALUExpr(bool mul)
 	 case V_INT:
 		{	uint8_t si = getSmallImmediate(param.uValue);
 			if (si == 0xff)
-				Fail("Value 0x%x does not fit into the small immediate field.", param.uValue);
+			{	// special hack for add ,,16 or sub ,,16
+				if (param.uValue == 16 && ctx == IC_SRCB && (Instruct.OpA == Inst::A_ADD || Instruct.OpA == Inst::A_SUB))
+				{	(uint8_t&)Instruct.OpA ^= Inst::A_ADD ^ Inst::A_SUB; // swap add <-> sub
+					si = 16; // -16
+				} else
+					Fail("Value 0x%x does not fit into the small immediate field.", param.uValue);
+			}
 			doSMI(si);
 			return Inst::X_RB;
 		}
 	}
 
-	doInstrExt((InstContext)(mul*IC_MUL | IC_SRC));
+	doInstrExt(ctx);
 }
 
 void Parser::doBRASource(exprValue param)
@@ -677,9 +683,9 @@ void Parser::assembleADD(int add_op)
 	doALUTarget(ParseExpression(), false);
 
 	if (!Instruct.isUnary())
-		Instruct.MuxAA = doALUExpr(false);
+		Instruct.MuxAA = doALUExpr(IC_SRC);
 
-	Instruct.MuxAB = doALUExpr(false);
+	Instruct.MuxAB = doALUExpr(IC_SRCB);
 }
 
 void Parser::assembleMUL(int mul_op)
@@ -709,8 +715,8 @@ void Parser::assembleMUL(int mul_op)
 
 	doALUTarget(ParseExpression(), true);
 
-	Instruct.MuxMA = doALUExpr(true);
-	Instruct.MuxMB = doALUExpr(true);
+	Instruct.MuxMA = doALUExpr(IC_MULSRC);
+	Instruct.MuxMB = doALUExpr(IC_MULSRCB);
 }
 
 void Parser::assembleMOV(int mode)
@@ -1614,6 +1620,8 @@ void Parser::ParseLine()
 		// directives
 		ParseDirective();
 	 case END:
+		*Line = 0;
+		doPreprocessor(PP_MACRO);
 		return;
 
 	 case COLON:

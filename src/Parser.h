@@ -96,7 +96,11 @@ class Parser
 	{	IC_NONE          = 0
 	,	IC_MUL           = 1
 	,	IC_SRC           = 2
+	,	IC_MULSRC        = 3
 	,	IC_DST           = 4
+	,	IC_MULDST        = 5
+	,	IC_SRCB          = 10
+	,	IC_MULSRCB       = 11
 	};
 
 	enum contextType
@@ -268,7 +272,7 @@ class Parser
 	void             doInstrExt(InstContext ctx);
 
 	void             doALUTarget(exprValue param, bool mul);
-	Inst::mux        doALUExpr(bool mul);
+	Inst::mux        doALUExpr(InstContext ctx);
 	void             doBRASource(exprValue param);
 
 	// OP codes
