@@ -68,7 +68,7 @@
 .set ra_load_idx,       ra5
 #                       rb5
 .set ra_sync,           ra6
-.set rb_0x10,           rb6
+#    rb_stages,         rb6  # dual use
 .set ra_points,         ra7
 .set rb_vpm_48,         rb7
 .set ra_link_1,         ra8
@@ -92,7 +92,7 @@
 ##############################################################################
 # Dual-use registers
 
-.set rb_STAGES,         rb_0x10
+.set rb_STAGES,         rb6
 
 .set rb_pass2_link,     rb_64+0
 .set rb_0xF0,           rb_64+1
@@ -108,7 +108,6 @@
 ##############################################################################
 # Constants
 
-mov rb_0x10,    0x10
 mov r5rep,      0x1D0
 
 mov rx_0x5555,  0x5555
@@ -163,7 +162,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 # Pass 1
 
     init_stage 6, TW16_P1_BASE, TW32_P1_BASE
-    read_rev rb_0x10
+    read_rev 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_rev
     .back 2
@@ -202,7 +201,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
     swap_buffers
     init_stage 5, TW16_P2_BASE, TW32_P2_BASE
-    read_lin rb_0x10
+    read_lin 0x10
 
     # (MM) Optimized: place branch before the last instruction of read_lin
     # and keep return address additionally in rb_link_1 for loop.
@@ -246,7 +245,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
     swap_buffers
     init_stage 5, TW16_P3_BASE, TW32_P3_BASE
-    read_lin rb_0x10
+    read_lin 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_lin
     .back 2
@@ -302,7 +301,7 @@ bodies_fft_16
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 5
-    mov ra_temp, rx_inst
+    ;mov ra_temp, rx_inst
     .endb
     .back 4
     shl.setf ra_temp, ra_temp, 5  # 4 instructions per instance

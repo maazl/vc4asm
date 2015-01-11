@@ -80,7 +80,7 @@
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
 .set rx_inst,           ra10
-.set rb_0x10,           rb10
+#                       rb10
 
 .set ra_64,             ra11 # 4
 .set rb_64,             rb11 # 4
@@ -105,7 +105,6 @@
 ##############################################################################
 # Constants
 
-mov rb_0x10,    0x10
 mov rx_0x55555555, 0x55555555
 mov rx_0x33333333, 0x33333333
 mov rx_0x0F0F0F0F, 0x0F0F0F0F
@@ -159,7 +158,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 # Pass 1
 
     init_stage 6, TW16_P1_BASE, TW32_P1_BASE
-    read_rev rb_0x10
+    read_rev 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_rev
     .back 2
@@ -198,7 +197,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
     swap_buffers
     init_stage 5, TW16_P2_BASE, TW32_P2_BASE
-    read_lin rb_0x10
+    read_lin 0x10
 
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
     # and setup for loop below
@@ -238,7 +237,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
     swap_buffers
     init_stage 5, TW16_P3_BASE, TW32_P3_BASE
-    read_lin rb_0x10
+    read_lin 0x10
 
     # (MM) Optimized: place branch before the last instruction of read_lin
     # and keep return address additionally in rb_link_1 for loop.
@@ -283,7 +282,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
     swap_buffers
     init_stage 5, TW16_P4_BASE, TW32_P4_BASE
-    read_lin rb_0x10
+    read_lin 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_lin
     .back 2

@@ -553,7 +553,7 @@
 .macro body_pass_32, mode
     loader_16 rb_0xF0, mode, 0
     mov ra_32_re, r0; mov rb_32_im, r1
-    loader_16 rb_0x10, mode, 2
+    loader_16 0x10, mode, 2
     fft_twiddles_32
     # (MM) Optimized: easier procedure chains
     # place branch from outside individually
@@ -563,9 +563,9 @@
 .endm
 
 .macro body_pass_64, mode, step
-    loader_16 rb_0x10, mode, 0
+    loader_16 0x10, mode, 0
     mov ra_32_re, r0; mov rb_32_im, r1
-    loader_16 rb_0x10, mode, 2
+    loader_16 0x10, mode, 2
     fft_twiddles_32
 
     fadd ra_64+0, ra_32_re, r0
@@ -575,7 +575,7 @@
 
     loader_16 step, mode, 3
     mov ra_32_re, r0; mov rb_32_im, r1
-    loader_16 rb_0x10, mode, 2
+    loader_16 0x10, mode, 2
     fft_twiddles_32
 
     # (MM) Optimized: better use of both ALUs and accumulators

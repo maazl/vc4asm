@@ -85,7 +85,7 @@
 .set rx_0x0F0F,         ra30
 #                       ra31
 
-.set rb_0x10,           rb28
+#                       rb28
 .set rb_0x40,           rb29
 .set rb_0xF0,           rb30
 .set rb_0x1D0,          rb31
@@ -103,7 +103,6 @@
 ##############################################################################
 # Constants
 
-mov rb_0x10,    0x10
 mov rb_0x40,    0x40
 mov rb_0xF0,    0xF0
 mov rb_0x1D0,   0x1D0
@@ -160,7 +159,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 # Pass 1
 
     init_stage 6, TW16_P1_BASE, TW32_P1_BASE
-    read_rev rb_0x10
+    read_rev 0x10
     
     # (MM) Optimized: place branch before the last two instructions of read_rev
     .back 2
@@ -196,7 +195,7 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 
     swap_buffers
     init_stage 5, TW16_P2_BASE, TW32_P2_BASE
-    read_lin rb_0x10
+    read_lin 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_lin
     .back 2

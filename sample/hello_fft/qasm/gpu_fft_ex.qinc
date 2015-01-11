@@ -39,7 +39,7 @@
     # saves 2 rb and a bunch of cycles
     ;mov.unpack8c r0, ra_load_idx
     shl.unpack8b r1, ra_load_idx, 8
-    shl.unpack8a r1, ra_load_idx, rb_0x10; v8adds r0, r0, r1
+    shl.unpack8a r1, ra_load_idx, -16; v8adds r0, r0, r1
     mv8adds r0, r0, r1;
 .if stride != 0
     # (MM) Optimized: join stride with v8adds
