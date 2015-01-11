@@ -54,7 +54,7 @@
 .set ra_save_ptr,       ra1
 .set rb_vdw_32,         rb1
 .set ra_temp,           ra2
-.set rb_vpm_lo,         rb2
+.set rb_vpm,            rb2
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
 .set ra_save_32,        ra4
@@ -64,7 +64,7 @@
 .set ra_sync,           ra6
 #
 .set ra_points,         ra7
-.set rb_vpm_hi,         rb7
+#                       rb7
 .set ra_link_1,         ra8
 #                       rb8
 .set ra_32_re,          ra9
@@ -73,8 +73,8 @@
 .set ra_tw_re,          ra10 # 11
 .set rb_tw_im,          rb10 # 11
 
-.set ra_vpm_lo,         ra27
-.set ra_vpm_hi,         ra28
+.set ra_vpm,            ra27
+#                       ra28
 .set ra_vdw_32,         ra29
 
 #                       rb27
@@ -118,7 +118,8 @@ load_tw r3, TW_SHARED, TW_UNIQUE, unif
     add.ifnz ra_sync, r1, r0;
     ;mov rx_inst, r3
 
-inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
+# (MM) Optimized: reduced VPM registers
+inst_vpm r3, 32, ra_vpm, rb_vpm
 
 ##############################################################################
 # Macros

@@ -62,19 +62,14 @@
 ##############################################################################
 # VPM pointers
 
-.macro inst_vpm, in_inst, out_0, out_1, out_2, out_3
+# (MM) Optimized: reduced VPM registers
+.macro inst_vpm, in_inst, offset, out_0, out_1
     mov r0, vpm_setup(1, 1, v32( 0,0))
     # (MM) Optimized: instruction packing
     .assert vpm_setup(1, 1, v32(0,2)) - vpm_setup(1, 1, v32(0,0)) == 2
-    add r2, in_inst, in_inst; mov r1, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
-
+    mov r1, vpm_setup(1, 1, v32(offset,0)) - vpm_setup(1, 1, v32(0,0)); v8adds r2, in_inst, in_inst
     add out_0, r0, r2; v8adds r0, r0, r1
-    add out_1, r0, r2; v8adds r0, r0, r1
-    # (MM) Optimized: do not assign to r39 (nop)
-    .if out_2 != nop
-    add out_2, r0, r2; v8adds r0, r0, r1
-    add out_3, r0, r2
-    .endif
+    add out_1, r0, r2;
 .endm
 
 ##############################################################################
@@ -97,40 +92,50 @@
 
 ##############################################################################
 
-.macro write_vpm_16, arg
-    mov vw_setup, arg
+.macro write_vpm_16
+    mov vw_setup, ra_vpm
     mov vpm, r0
     mov vpm, r1
 .endm
 
 .macro write_vpm_32
-    mov vw_setup, ra_vpm_lo
+    # (MM) Optimized: no need for 2 VPM registers anymore, less memory I/O
+    mov vw_setup, ra_vpm;  mov r2, ra_vpm
     fadd vpm, ra_32_re, r0
     fadd vpm, rb_32_im, r1
-    mov vw_setup, ra_vpm_hi
+    add vw_setup, r2, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
     fsub vpm, ra_32_re, r0
     fsub vpm, rb_32_im, r1
 .endm
 
 .macro write_vpm_64
-    mov vw_setup, rb_vpm
+    # (MM) Optimized: no need for 4 VPM registers anymore
+    .if isRegfileB(rx_vpm)
+    mov vw_setup, rx_vpm; mov r0, rx_vpm
+    .else
+    add r0, rx_vpm, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, rx_vpm
+    .endif
     fadd vpm, ra_64+0, rb_64+0
-    fadd vpm, ra_64+1, rb_64+1
-    mov vw_setup, rb_vpm_16
+    fadd vpm, ra_64+1, rb_64+1 
+    .if isRegfileB(rx_vpm)
+    add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
+    .endif
+    add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
     fadd vpm, ra_64+2, rb_64+2
     fadd vpm, ra_64+3, rb_64+3
-    mov vw_setup, rb_vpm_32
+    add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
     fsub vpm, ra_64+0, rb_64+0
     fsub vpm, ra_64+1, rb_64+1
-    mov vw_setup, rb_vpm_48
+    mov vw_setup, r0
     fsub vpm, ra_64+2, rb_64+2
     fsub vpm, ra_64+3, rb_64+3
 .endm
 
 ##############################################################################
 
-.macro body_ra_save_16, arg_vpm, arg_vdw
-    write_vpm_16 arg_vpm
+# (MM) Unified vpm register names
+.macro body_ra_save_16, arg_vdw
+    write_vpm_16
 
     mov -, vw_wait
 
@@ -148,12 +153,13 @@
 
 ##############################################################################
 
-.macro body_rx_save_slave_16, arg_vpm
-    write_vpm_16 arg_vpm
+# (MM) Unified vpm register names
+.macro body_rx_save_slave_16
+    write_vpm_16
 
     # (MM) Optimized: increase distance between vr_setup and vpm read
     .back 2
-    mov vr_setup, arg_vpm
+    mov vr_setup, ra_vpm
     # (MM) Optimized: easier procedure chains
     brr -, r:sync, ra_sync
     .endb
@@ -187,7 +193,7 @@
     # (MM) Optimized: scheduled instructions of write_vpm_32 with vpm read code
     # to reduce QPU stalls because of fifo dependencies at vpm access.
     .back 2
-    mov vr_setup, ra_vpm_lo
+    mov vr_setup, ra_vpm
     # (MM) Optimized: easier procedure chains
     brr -, r:sync, ra_sync
     .endb
@@ -229,29 +235,38 @@
     .rep i, 7
         brr ra_temp, r:2f
         mov -, sacq(i+1) # Slave waits for master
-        mov vw_setup, rb_vpm # start with write_vpm_64 here
+        # start with write_vpm_64 here
+        # (MM) Optimized: no need for 4 VPM registers anymore, less memory I/O
+        .if isRegfileB(rx_vpm)
+        mov vw_setup, rx_vpm;   mov r0, rx_vpm
+        .else
+        add r0, rx_vpm, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, rx_vpm
+        .endif
         fadd vpm, ra_64+0, rb_64+0
     .endr
 :2
     # write_vpm_64
     fadd vpm, ra_64+1, rb_64+1
-    mov vw_setup, rb_vpm_16
+    .if isRegfileB(rx_vpm)
+    add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
+    .endif
+    add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
     fadd vpm, ra_64+2, rb_64+2
     fadd vpm, ra_64+3, rb_64+3
-    mov vw_setup, rb_vpm_32
+    add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
     fsub vpm, ra_64+0, rb_64+0
     fsub vpm, ra_64+1, rb_64+1
 
     # (MM) Optimized: Take the return address from above as base of the branch target.
     bra -, ra_temp, :3f - :2 - 4*8
 
-    mov vw_setup, rb_vpm_48
+    mov vw_setup, r0
     fsub vpm, ra_64+2, rb_64+2
     fsub vpm, ra_64+3, rb_64+3
 
     .rep i, 7
         bra -, ra_link_1
-        mov vr_setup, rb_vpm
+        mov vr_setup, rx_vpm
         mov -, vpm
         mov -, srel(i+9) # Slave releases master
     .endr
@@ -289,10 +304,10 @@
 .macro fft_twiddles_32
     # (MM) Optimized: less memory I/O
     ;                fmul r3, r0, ra_tw_re+TW32_ACTIVE # rr
-                     fmul r2, r1, rb_tw_im+TW32_ACTIVE # ii
-    fsub r2, r3, r2; fmul r3, r1, ra_tw_re+TW32_ACTIVE # ir
-                     fmul r1, r0, rb_tw_im+TW32_ACTIVE;# ri
-    fadd r1, r1, r3; mov r0, r2;
+    mov r2, r0;      fmul r0, r1, rb_tw_im+TW32_ACTIVE # ii
+    fsub r0, r3, r0; fmul r3, r1, ra_tw_re+TW32_ACTIVE # ir
+                     fmul r1, r2, rb_tw_im+TW32_ACTIVE;# ri
+    fadd r1, r1, r3;
 .endm
 
 ##############################################################################
@@ -546,7 +561,7 @@
     loader_16 rb_0x80, mode, 0
     # (MM) Optimized: easier procedure chains
     # place branch from outside individually
-    mov ra_vpm_lo, rb_vpm_lo; mov rb_vpm_lo, ra_vpm_lo
+    mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
     mov ra_vdw_16, rb_vdw_16; mov rb_vdw_16, ra_vdw_16
 .endm
 
@@ -557,8 +572,8 @@
     fft_twiddles_32
     # (MM) Optimized: easier procedure chains
     # place branch from outside individually
-    mov ra_vpm_lo, rb_vpm_lo; mov rb_vpm_lo, ra_vpm_lo
-    mov ra_vpm_hi, rb_vpm_hi; mov rb_vpm_hi, ra_vpm_hi
+    # (MM) Optimized: no need for 2 VPM registers anymore
+    mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
     mov ra_vdw_32, rb_vdw_32; mov rb_vdw_32, ra_vdw_32
 .endm
 
@@ -568,10 +583,11 @@
     loader_16 0x10, mode, 2
     fft_twiddles_32
 
-    fadd ra_64+0, ra_32_re, r0
-    fadd ra_64+1, rb_32_im, r1
-    fsub ra_64+2, ra_32_re, r0
-    fsub ra_64+3, rb_32_im, r1;
+    # (MM) Optimized: less memory I/O
+    fadd ra_64+0, ra_32_re, r0; mov r2, ra_32_re
+    fsub ra_64+2, r2, r0
+    fadd ra_64+1, rb_32_im, r1; mov r2, rb_32_im
+    fsub ra_64+3, r2, r1;
 
     loader_16 step, mode, 3
     mov ra_32_re, r0; mov rb_32_im, r1

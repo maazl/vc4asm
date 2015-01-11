@@ -121,7 +121,7 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
     add.ifnz ra_sync, r1, r0;
     ;mov rx_inst, r3
 
-inst_vpm r3, ra_vpm, rb_vpm, -, -
+inst_vpm r3, 16, ra_vpm, rb_vpm
 
 ##############################################################################
 # Macros
@@ -274,10 +274,10 @@ inst_vpm r3, ra_vpm, rb_vpm, -, -
 # Master/slave procedures
 
 :save_16
-    body_ra_save_16 ra_vpm, ra_vdw
+    body_ra_save_16 ra_vdw
 
 :save_slave_16
-    body_rx_save_slave_16 ra_vpm
+    body_rx_save_slave_16
 
 :sync
     body_ra_sync

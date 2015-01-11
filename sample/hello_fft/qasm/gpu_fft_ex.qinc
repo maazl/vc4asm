@@ -67,8 +67,8 @@
 .endif
 
 .if STAGES>17
-.macro body_ra_save_16, arg_vpm, arg_vdw
-    write_vpm_16 arg_vpm
+.macro body_ra_save_16, arg_vdw
+    write_vpm_16
 
     mov -, vw_wait
 

@@ -56,9 +56,9 @@
 # Registers
 
 .set ra_link_0,         ra0
-.set rb_vpm,            rb0
+.set rx_vpm,            rb0
 .set ra_save_ptr,       ra1
-.set rb_vpm_16,         rb1
+.set rb_vpm,            rb1
 .set ra_temp,           ra2
 .set rb_vpm_32,         rb2
 .set ra_addr_x,         ra3
@@ -70,7 +70,7 @@
 .set ra_sync,           ra6
 #    rb_stages,         rb6  # dual use
 .set ra_points,         ra7
-.set rb_vpm_48,         rb7
+#                       rb7
 .set ra_link_1,         ra8
 .set rb_link_1,         rb8
 .set ra_32_re,          ra9
@@ -98,10 +98,7 @@
 .set rb_0xF0,           rb_64+1
 .set rb_0x40,           rb_64+2
 
-.set ra_vpm_lo,         ra_64+0
-.set ra_vpm_hi,         ra_64+1
-.set rb_vpm_lo,         rb_vpm_32
-.set rb_vpm_hi,         rb_vpm_48
+.set ra_vpm,            ra_64+0
 .set ra_vdw_32,         ra_64+3
 .set rb_vdw_32,         rb_64+3
 
@@ -131,7 +128,8 @@ load_tw r3, TW_SHARED, TW_UNIQUE, unif
     mov r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     add.ifnz ra_sync, r1, r0
 
-inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
+# (MM) Optimized: reduced VPM registers
+inst_vpm r3, 32, rx_vpm, rb_vpm
 
 ##############################################################################
 # Macros
@@ -187,14 +185,13 @@ inst_vpm r3, rb_vpm, rb_vpm_16, rb_vpm_32, rb_vpm_48
 ##############################################################################
 # Dual-use registers
 
-    mov ra_vpm_lo, rb_vpm
-    mov ra_vpm_hi, rb_vpm_16
-
     mov ra_vdw_32, vdw_setup_0(32, 16, dma_h32( 0,0))
     mov rb_vdw_32, vdw_setup_0(32, 16, dma_h32(32,0))
 
+    mov ra_vpm, rx_vpm;
+
+    ;mov rb_0x40, 0x40
     mov rb_0xF0, 0xF0
-    mov rb_0x40, 0x40
 
 ##############################################################################
 # Pass 2
@@ -310,8 +307,8 @@ bodies_fft_16
     brr.allnz -, ra_temp, r:1f - 4*8 # + (rx_inst-1) * 4*8
     .endb
 
-    mov r0, 0x40
-    body_ra_save_64 r0
+    mov r3, 0x40  # (MM) avoid collision with r0
+    body_ra_save_64 r3
 
 :1
     body_rx_save_slave_64

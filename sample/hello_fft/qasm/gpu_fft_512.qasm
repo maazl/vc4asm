@@ -52,7 +52,7 @@
 .set ra_save_ptr,       ra1
 .set rb_vdw_32,         rb1
 .set ra_temp,           ra2
-.set rb_vpm_lo,         rb2
+.set rb_vpm,            rb2
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
 .set rx_inst,           ra4
@@ -62,7 +62,7 @@
 .set ra_sync,           ra6
 #                       rb6
 .set ra_points,         ra7
-.set rb_vpm_hi,         rb7
+#                       rb7
 .set ra_link_1,         ra8
 #                       rb8
 .set ra_32_re,          ra9
@@ -73,8 +73,8 @@
 .set ra_tw_re,          ra11 # 9
 .set rb_tw_im,          rb11 # 9
 
-.set ra_vpm_lo,         ra24
-.set ra_vpm_hi,         ra25
+.set ra_vpm,            ra24
+#                       ra25
 .set ra_vdw_16,         ra26
 .set ra_vdw_32,         ra27
 
@@ -120,7 +120,8 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
     mov r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     add.ifnz ra_sync, r1, r0
     
-inst_vpm r3, ra_vpm_lo, ra_vpm_hi, rb_vpm_lo, rb_vpm_hi
+# (MM) Optimized: reduced VPM registers
+inst_vpm r3, 32, ra_vpm, rb_vpm
 
 ##############################################################################
 # Macros
@@ -244,8 +245,8 @@ bodies_fft_16
     .endb
     nop
 
-    body_ra_save_16 ra_vpm_lo, ra_vdw_16
+    body_ra_save_16 ra_vdw_16
 
 :1
-    body_rx_save_slave_16 ra_vpm_lo
+    body_rx_save_slave_16
 
