@@ -784,7 +784,15 @@ void Parser::assembleMOV(int mode)
 	 case V_FLOAT:
 		// try small immediate first
 		if (!isLDI && mode < 0)
-		{	for (const smiEntry* si = getSmallImmediateALU(param.uValue); si->Value == param.uValue; ++si)
+		{	switch (Instruct.Sig)
+			{default:
+				Fail ("Immediate values cannot be used together with signals.");
+			 case Inst::S_NONE:
+				if (Instruct.RAddrB != Inst::R_NOP)
+					Fail ("Immediate value collides with read from register file B.");
+			 case Inst::S_SMI:;
+			}
+			for (const smiEntry* si = getSmallImmediateALU(param.uValue); si->Value == param.uValue; ++si)
 			{	if ( (!si->OpCode.isMul() ^ useMUL)
 					&& (Extensions || !si->OpCode.isExt())
 					&& ( param.uValue == 0 || Instruct.Sig == Inst::S_NONE
