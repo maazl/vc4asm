@@ -146,9 +146,10 @@
 
     bra -, ra_link_1
 
-    mov vw_setup, arg_vdw
+    # (MM) Optimized: less memory I/O, no need for rb_0x40
+    mov r0, 0x40; mov vw_setup, arg_vdw
     mov vw_setup, vdw_setup_1(0) + PASS16_STRIDE-16*4
-    add ra_save_ptr, ra_save_ptr, rb_0x40; mov vw_addr, ra_save_ptr
+    add ra_save_ptr, ra_save_ptr, r0; mov vw_addr, ra_save_ptr
 .endm
 
 ##############################################################################
@@ -181,9 +182,10 @@
 
     bra -, ra_link_1
 
-    mov vw_setup, ra_vdw_32
+    # (MM) Optimized: less memory I/O, no need for rb_0x40
+    mov r0, 0x40; mov vw_setup, ra_vdw_32
     mov vw_setup, vdw_setup_1(0) + PASS32_STRIDE-16*4
-    add ra_save_ptr, ra_save_ptr, rb_0x40; mov vw_addr, ra_save_ptr
+    add ra_save_ptr, ra_save_ptr, r0; mov vw_addr, ra_save_ptr
 .endm
 
 ##############################################################################

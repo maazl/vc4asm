@@ -87,7 +87,7 @@
 .set ra_0x1F,           ra31
 
 #                       rb26
-.set rb_0x40,           rb27
+#                       rb27
 .set rb_0x80,           rb28
 .set rb_0xF0,           rb29
 #                       rb30
@@ -97,8 +97,6 @@
 # Constants
 
 mov ra_0x1F,    0x1F
-
-mov rb_0x40,    0x40
 mov rb_0x80,    0x80
 mov rb_0xF0,    0xF0
 

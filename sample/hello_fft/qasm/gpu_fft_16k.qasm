@@ -88,7 +88,7 @@
 
 #                       rb26
 #                       rb27
-.set rb_0x40,           rb28
+#                       rb28
 .set rb_0x80,           rb29
 .set rb_0xF0,           rb30
 .set rb_pass2_link,     rb31
@@ -96,7 +96,6 @@
 ##############################################################################
 # Constants
 
-mov rb_0x40,    0x40
 mov rb_0x80,    0x80
 mov rb_0xF0,    0xF0
 

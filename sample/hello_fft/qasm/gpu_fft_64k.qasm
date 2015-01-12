@@ -87,7 +87,7 @@
 .set rx_0x5555,         ra30
 .set rx_0x3333,         rb30
 .set rx_0x0F0F,         ra31
-#                       rb31
+.set rb_0x40,           rb31
 
 ##############################################################################
 # Dual-use registers
@@ -96,7 +96,6 @@
 
 .set rb_pass2_link,     rb_64+0
 .set rb_0xF0,           rb_64+1
-.set rb_0x40,           rb_64+2
 
 .set ra_vpm,            ra_64+0
 .set ra_vdw_32,         ra_64+3
@@ -110,6 +109,8 @@ mov r5rep,      0x1D0
 mov rx_0x5555,  0x5555
 mov rx_0x3333,  0x3333
 mov rx_0x0F0F,  0x0F0F
+
+mov rb_0x40,    0x40
 
 ##############################################################################
 # Load twiddle factors
@@ -188,9 +189,8 @@ inst_vpm r3, 32, rx_vpm, rb_vpm
     mov ra_vdw_32, vdw_setup_0(32, 16, dma_h32( 0,0))
     mov rb_vdw_32, vdw_setup_0(32, 16, dma_h32(32,0))
 
-    mov ra_vpm, rx_vpm;
+    mov ra_vpm, rx_vpm
 
-    ;mov rb_0x40, 0x40
     mov rb_0xF0, 0xF0
 
 ##############################################################################
@@ -307,8 +307,8 @@ bodies_fft_16
     brr.allnz -, ra_temp, r:1f - 4*8 # + (rx_inst-1) * 4*8
     .endb
 
-    mov r3, 0x40  # (MM) avoid collision with r0
-    body_ra_save_64 r3
+    # (MM) Optimized: avoid repeated ldi
+    body_ra_save_64 rb_0x40
 
 :1
     body_rx_save_slave_64
