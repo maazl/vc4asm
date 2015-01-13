@@ -248,10 +248,10 @@ bodies_fft_16
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 5
-    mov ra_temp, rx_inst
+    ;mov ra_temp, rx_inst;
     .endb
     .back 4
-    shl.setf ra_temp, ra_temp, 5  # 4 instructions per instance
+    ;shl.setf ra_temp, ra_temp, 5;   # 4 instructions per instance
     .endb
     .back 3
     brr.allnz -, ra_temp, r:1f - 4*8 # + (rx_inst-1) * 4*8
@@ -268,7 +268,7 @@ bodies_fft_16
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 3
-    mov.setf -, rx_inst
+    ;mov.setf -, rx_inst
     brr.allnz -, r:1f
     .endb
 

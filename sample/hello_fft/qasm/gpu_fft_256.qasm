@@ -170,9 +170,9 @@ inst_vpm r3, 16, ra_vpm, rb_vpm
     brr ra_link_1, r:pass_1
     .endb
 
-    brr ra_link_1, r:pass_1
-    nop
+    brr ra_link_1, r:pass_1 + 8
     swap_vpm_vdw
+    .clone :pass_1, 1
     
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync

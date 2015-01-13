@@ -225,7 +225,7 @@ bodies_fft_16
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 3
-    mov.setf -, rx_inst
+    ;mov.setf -, rx_inst
     brr.allnz -, r:1f
     .endb
 
@@ -239,7 +239,7 @@ bodies_fft_16
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 2 # cannot go back more than 2 instructions into body_pass_16
-    mov.setf -, rx_inst
+    ;mov.setf -, rx_inst
     brr.allnz -, r:1f
     .endb
     nop

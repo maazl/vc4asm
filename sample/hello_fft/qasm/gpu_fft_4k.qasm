@@ -196,12 +196,11 @@ inst_vpm r3, 16, ra_vpm, rb_vpm
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
     mov ra_points, (1<<STAGES) / 0x80 - 1
     swap_vpm_vdw
-    .back 2
+    .back 3
     # (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
     # This is basically the concept of the 4k FFT, so we call the FFT procedure directly.
     brr ra_link_1, rb_link_1, -, r:load_fft_16_lin
     .endb
-    mov rb_pass2_link, :3f - :2f
 
 :   # start of hidden loop
     swap_vpm_vdw
@@ -209,17 +208,17 @@ inst_vpm r3, 16, ra_vpm, rb_vpm
     # (MM) Optimized: patch the return address for the last turn to save the
     # conditional branch and the unecessary twiddle load after the last turn.
     .back 1
-    brr ra_link_1, r0, -, r:load_fft_16_lin
+    brr ra_link_1, r:load_fft_16_lin
     .endb
     sub.setf ra_points, ra_points, 2
-    add.ifn ra_link_1, r0, rb_pass2_link
+    mov.ifn ra_link_1, rb_pass2_link
 :2
     next_twiddles TW16_P2_STEP
 
     ;mov ra_link_1, rb_link_1
     swap_vpm_vdw
     .back 3
-    brr -, r:load_fft_16_lin
+    brr rb_pass2_link, r:load_fft_16_lin
     .endb
 :3
     # (MM) Optimized: easier procedure chains

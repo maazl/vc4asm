@@ -189,25 +189,24 @@ inst_vpm r3, 32, ra_vpm, rb_vpm
 
     # (MM) Optimized: place branch before the last instruction of read_lin
     # and keep return address additionally in rb_link_1 for loop.
-    .back 1
+    .back 2
     brr ra_link_1, rb_link_1, -, r:pass_2
     .endb
     mov ra_points, (1<<STAGES) / 0x100 - 1
-    mov rb_pass2_link, :3f - :2f
 
 :   # start of hidden loop
     # (MM) Optimized: patch the return address for the last turn to save the
     # conditional branch and the unecessary twiddle load after the last turn.
-    brr ra_link_1, r0, -, r:pass_2
+    brr ra_link_1, r:pass_2
     sub.setf ra_points, ra_points, 2
-    add.ifn ra_link_1, r0, rb_pass2_link
+    mov.ifn ra_link_1, rb_pass2_link
     nop
 :2
     next_twiddles TW16_P2_STEP, TW32_P2_STEP
 
     # (MM) Optimized: place branch before the last two instructions of next_twiddles
     .back 2
-    brr -, r:pass_2
+    brr rb_pass2_link, r:pass_2
     .endb
     mov ra_link_1, rb_link_1
 :3
@@ -298,7 +297,7 @@ bodies_fft_16
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 2 # cannot go back more than 2 instructions into body_pass_16
-    mov.setf -, rx_inst
+    ;mov.setf -, rx_inst
     brr.allnz -, r:1f
     .endb
     nop

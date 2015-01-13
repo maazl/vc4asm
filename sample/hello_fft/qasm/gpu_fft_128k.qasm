@@ -183,9 +183,9 @@ inst_vpm r3, 32, ra_vpm, rb_vpm
 
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
     # and setup for loop below
+    .back 2
     brr ra_link_1, rb_link_1, -, r:pass_2
-    mov r0, :3f - :1f
-    add rb_pass2_link, r0, ra_link_1
+    .endb
     mov ra_points, (1<<STAGES) / 0x80 - 2
 :1
     brr r0, r:pass_2
@@ -196,14 +196,14 @@ inst_vpm r3, 32, ra_vpm, rb_vpm
     # else => ra_link_1 = :1 = rb_link_1 = unchanged
     sub.setf ra_points, ra_points, 1; mov r1, ra_points
     and.setf -, r1, ra_0x1F;          mov.ifn r0, rb_pass2_link
-                                      mov.ifz ra_link_1, r0;
+                                      mov.ifz ra_link_1, r0
 :2
     next_twiddles_16 TW16_P2_STEP
 
     # (MM) Optimized: place branch before the last instruction of next_twiddles
     # and link directly to :1.
     .back 1
-    brr -, r:pass_2
+    brr rb_pass2_link, r:pass_2
     .endb
     mov ra_link_1, rb_link_1
     sub ra_points, ra_points, 1
@@ -324,7 +324,7 @@ bodies_fft_16
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 3
-    mov.setf -, rx_inst
+    ;mov.setf -, rx_inst
     brr.allnz -, r:1f
     .endb
 
@@ -340,7 +340,7 @@ bodies_fft_16
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 2 # cannot go back more than 2 instructions into body_pass_16
-    mov.setf -, rx_inst
+    ;mov.setf -, rx_inst
     brr.allnz -, r:1f
     .endb
     nop

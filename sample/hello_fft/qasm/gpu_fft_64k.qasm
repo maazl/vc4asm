@@ -319,7 +319,7 @@ bodies_fft_16
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 3
-    mov.setf -, rx_inst
+    ;mov.setf -, rx_inst
     brr.allnz -, r:1f
     .endb
 
