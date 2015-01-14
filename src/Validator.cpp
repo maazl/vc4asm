@@ -11,7 +11,9 @@
 #include <cstdarg>
 
 
-Validator::state::state()
+Validator::state::state(int start)
+: From(start)
+, Start(start)
 {	fill_n(LastRreg[0], 128, NEVER);
 	fill_n(LastWreg[0], 128, NEVER);
 }
@@ -56,7 +58,8 @@ int Validator::FromMux(Inst::mux m)
 }
 
 void Validator::TerminateRq(int after)
-{	after += At;
+{	printf("TerminateRq %u, %x\n", after, after + At);
+	after += At;
 	if (after < To)
 		To = after;
 }
@@ -67,6 +70,7 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 	Start = st.Start;
 	At = st.Start;
 	To = instructions.size();
+	printf("Fragment %x, %x\n", From, Start);
 	Pass2 = false;
 	int target = -1;
 	for (At = st.Start; At < To; ++At)
@@ -87,7 +91,10 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 			if (Instruct.Reg)
 				regRA = Instruct.RAddrA;
 			if (Instruct.CondBr == Inst::B_AL)
-				TerminateRq(4);
+			{	TerminateRq(4);
+				if (Instruct.WAddrA != Inst::R_NOP || Instruct.WAddrM != Inst::R_NOP)
+					WorkItems.emplace_back(new state(At + 4));
+			}
 			if (At - st.LastBRANCH < 4)
 				Message(st.LastBRANCH, "Two branch instructions within less than 4 instructions.");
 			else if (!Instruct.Reg)
@@ -179,7 +186,10 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 				|| (Instruct.Sig == Inst::S_LDI && (Instruct.LdMode & Inst::L_SEMA)) )
 			+ (regWA == 45 || regWA == 46 || regWB == 45 || regWB == 46 || Instruct.Sig == Inst::S_LOADC || Instruct.Sig == Inst::S_LDCEND) ) > 1 )
 			Message(At, "More than one access to TMU, TLB or mutex/semaphore within one instruction.");
-
+		if ( Instruct.Sig != Inst::S_BRANCH
+			&& ( ((0x1100000000000000ULL & (1ULL << Instruct.WAddrA)) && Instruct.CondA != Inst::C_AL)
+				|| ((0x1100000000000000ULL & (1ULL << Instruct.WAddrM)) && Instruct.CondM != Inst::C_AL) ))
+			Message(At, "Conditional write to t*s does not work.");
 		// Update last used fields
 		st.LastRreg[0][regRA] = At;
 		st.LastRreg[!Inst::isRRegAB(regRB)][regRB] = At;
@@ -222,7 +232,7 @@ void Validator::Validate(const vector<uint64_t>& instructions)
 {
 	Done.clear();
 	Done.resize(instructions.size());
-	WorkItems.emplace_back(new state);
+	WorkItems.emplace_back(new state(0));
 	while (!WorkItems.empty())
 	{	unique_ptr<state> item = move(WorkItems.back());
 		WorkItems.pop_back();

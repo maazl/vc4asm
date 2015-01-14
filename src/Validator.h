@@ -25,9 +25,9 @@ class Validator
 	struct state
 	{	/// This work item is invoked from a branch from this location.
 		/// 0 in case of the initial start address.
-		const int From = 0;
+		const int From;
 		/// Start instruction where the parsing started.
-		const int Start = 0;
+		const int Start;
 		int LastRotReg = -1;
 		int LastLDr4 = NEVER;
 		int LastBRANCH = NEVER;
@@ -40,7 +40,7 @@ class Validator
 		/// For peripherals registers that are mapped to both register files
 		/// the entries for register file A also track register file B access.
 		int LastWreg[2][64];
-		state();
+		state(int start);
 		state(const state& r) = delete;
 		state(const state& r, int at, int target);
 	};
