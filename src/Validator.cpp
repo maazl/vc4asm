@@ -58,7 +58,7 @@ int Validator::FromMux(Inst::mux m)
 }
 
 void Validator::TerminateRq(int after)
-{	printf("TerminateRq %u, %x\n", after, after + At);
+{	//printf("TerminateRq %u, %x\n", after, after + At);
 	after += At;
 	if (after < To)
 		To = after;
@@ -70,7 +70,7 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 	Start = st.Start;
 	At = st.Start;
 	To = instructions.size();
-	printf("Fragment %x, %x\n", From, Start);
+	//printf("Fragment %x, %x\n", From, Start);
 	Pass2 = false;
 	int target = -1;
 	for (At = st.Start; At < To; ++At)
