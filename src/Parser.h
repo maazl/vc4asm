@@ -218,6 +218,16 @@ class Parser
 	,	IF_BRANCH_TARGET = 4        ///< This instruction is a branch target
 	};
 
+	template <typename T, T def>
+	class vector_safe : public vector<T>
+	{public:
+		typename vector<T>::reference operator[](typename vector<T>::size_type n)
+		{	if (n >= vector<T>::size())
+				vector<T>::resize(n+1, def);
+			return vector<T>::operator[](n);
+		}
+	};
+
 	// parser working set
 	bool             Pass2 = false;
 	vector<string>   Filenames;
@@ -225,7 +235,8 @@ class Parser
 	char             Line[1024];  ///< Buffer for line input. Well, static size...
 	char*            At = NULL;   ///< Current location within Line
 	string           Token;       ///< Current token
-	Inst             Instruct;    ///< current instruction
+	Inst             Instruct;    ///< Current instruction
+	unsigned         PC;          ///< Current program counter
 	// context
 	macro*           AtMacro = NULL;///< Currently at a macro definition
 	unsigned         Back = 0;    ///< Insert # instructions in the past
@@ -239,8 +250,8 @@ class Parser
 	macros_t         MacroFuncs;  ///< Multi line function definitions
 	macros_t         Macros;      ///< Macros
 	// instruction
-	vector<uint64_t> Instructions;
-	vector<uint8_t>  InstFlags;
+	vector_safe<uint64_t,0> Instructions;
+	vector_safe<uint8_t,IF_NONE> InstFlags;
  private:
 	string           enrichMsg(string msg);
 	void             Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR;
@@ -248,7 +259,9 @@ class Parser
 
 	/// Ensure minimum size of InstFlags array.
 	void             FlagsSize(size_t min);
-	uint8_t&         Flags() { return InstFlags[Instructions.size() - Back]; }
+	uint8_t&         Flags() { return InstFlags[PC]; }
+
+	void             StoreInstruction(uint64_t value);
 
 	token_t          NextToken();
 	/// Work around for gcc on 32 bit Linux that can't read "0x80000000" with sscanf anymore.

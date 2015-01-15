@@ -160,9 +160,9 @@
       starting at <var><tt>label</tt></var> and inserts them at the current
       location. It is intended to optimize branch instructions that cannot be
       placed earlier. The concept is to copy the first few instruction of a
-      branch target instead of using <tt>nop</tt>. Currently the label must
-      already been defined, i.e .clone cannot work forward because the code has
-      not yet been generated.</p>
+      branch target instead of using <tt>nop</tt>.</p>
+    <p>You should not clone branch instructions or immediate values from label
+      differences. This is not reliable with a 2 pass assembler.</p>
     <h3>Example</h3>
     <pre>brr -, r:target + 3*8<br>.clone :target, 3</pre>
     <p>This copies the first 3 instructions of <tt>:target</tt> after the

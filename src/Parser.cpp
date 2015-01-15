@@ -96,6 +96,13 @@ void Parser::FlagsSize(size_t min)
 		InstFlags.resize(min, IF_NONE);
 }
 
+void Parser::StoreInstruction(uint64_t inst)
+{
+	for (unsigned i = Back; i--;)
+		Instructions[PC+i+1] = Instructions[PC+i];
+	Instructions[PC++] = inst;
+}
+
 Parser::token_t Parser::NextToken()
 {
 	At += strspn(At, " \t\r\n");
@@ -425,7 +432,7 @@ Inst::mux Parser::muxReg(reg_t reg)
 uint8_t Parser::getSmallImmediate(uint32_t i)
 {	if (i + 16 <= 0x1f)
 		return (uint8_t)(i & 0x1f);
-	if ((i & 0x807fffff) == 0 && i - 0x3b800000U <= 0x7800000U)
+	if (!((i - 0x3b800000) & 0xf87fffff))
 		return (uint8_t)(((i >> 23) - 0x77) ^ 0x28);
 	return 0xff; // failed
 }
@@ -626,7 +633,7 @@ void Parser::doBRASource(exprValue param)
 		Fail("Data type is not allowed as branch target.");
 	 case V_LABEL:
 		if (Instruct.Rel)
-			param.uValue -= (Instructions.size() - Back + 4) * sizeof(uint64_t);
+			param.uValue -= (PC + 4) * sizeof(uint64_t);
 		else
 			Msg(WARNING, "Using value of label as target of a absolute branch instruction.");
 	 case V_INT:
@@ -877,7 +884,7 @@ void Parser::assembleBRANCH(int relative)
 
 	// add branch target flag for the branch point unless the target is 0
 	if (Instruct.Reg || Instruct.Immd.uValue != 0)
-	{	size_t pos = Instructions.size() - Back + 4;
+	{	size_t pos = PC + 4;
 		FlagsSize(pos + 1);
 		InstFlags[pos] |= IF_BRANCH_TARGET;
 	}
@@ -981,8 +988,8 @@ void Parser::defineLabel()
 		}
 	}
 	if (!Pass2)
-		lp->Value = (Instructions.size() - Back) * sizeof(uint64_t);
-	else if (lp->Name != Token || lp->Value != (Instructions.size() - Back) * sizeof(uint64_t))
+		lp->Value = PC * sizeof(uint64_t);
+	else if (lp->Name != Token || lp->Value != PC * sizeof(uint64_t))
 		Fail("Inconsistent Label definition during Pass 2.");
 	lp->Definition = *Context.back();
 
@@ -1031,7 +1038,7 @@ void Parser::parseDATA(int type)
 	// store value
 	target |= (uint64_t)value.uValue << count;
 	if ((count += (type << 3)) >= 64)
-	{	Instructions.push_back(target);
+	{	StoreInstruction(target);
 		count = 0;
 		target = 0;
 	}
@@ -1044,10 +1051,10 @@ void Parser::parseDATA(int type)
 	}
 	if (count & 63)
 	{	Msg(INFO, "Used padding to enforce 64 bit alignment of immediate data.");
-		Instructions.push_back(target);
+		StoreInstruction(target);
 	}
 	// Prevent optimizer across .data segment
-	FlagsSize(Instructions.size() - Back + 1);
+	FlagsSize(PC + 1);
 	Flags() |= IF_BRANCH_TARGET;
 	Instruct.reset();
 }
@@ -1120,18 +1127,18 @@ void Parser::beginBACK(int)
 		Fail("Expected integer constant after .back.");
 	if (param.uValue > 5)
 		Fail("Cannot move instructions more than 5 slots back.");
-	if (param.uValue > Instructions.size())
+	if (param.uValue > PC)
 		Fail("Cannot move instructions back before the start of the code.");
 	if (NextToken() != END)
 		Fail("Expected end of line, found '%s'.", Token.c_str());
 	Back = param.uValue;
-	size_t pos = Instructions.size() - Back;
+	size_t pos = PC -= Back;
 	// Load last instruction before .back to provide combine support
 	if (pos)
 		Instruct.decode(Instructions[pos-1]);
 
 	if (Pass2)
-		while (++pos < Instructions.size())
+		while (++pos < PC + Back)
 			if (InstFlags[pos] & IF_BRANCH_TARGET)
 				Msg(WARNING, ".back crosses branch target at address 0x%x. Code might not work.", pos*8);
 }
@@ -1145,10 +1152,11 @@ void Parser::endBACK(int)
 		Fail(".endb without .back.");*/
 	if (NextToken() != END)
 		Fail("Expected end of line, found '%s'.", Token.c_str());
+	PC += Back;
 	Back = 0;
 	// Restore last instruction to provide combine support
-	if (!Instructions.empty())
-		Instruct.decode(Instructions.back());
+	if (PC)
+		Instruct.decode(Instructions[PC-1]);
 }
 
 void Parser::parseCLONE(int)
@@ -1165,18 +1173,20 @@ void Parser::parseCLONE(int)
 	exprValue param2 = ParseExpression();
 	if (param2.Type != V_INT || param2.uValue > 3)
 		Fail("Expected integer constant in the range [0,3].");
-	FlagsSize(Instructions.size() - Back + param2.uValue);
+	FlagsSize(PC + param2.uValue);
 	param2.uValue += param1.uValue; // end offset rather than count
+	if (Pass2 && param2.uValue >= Instructions.size())
+		Fail("TODO: Cannot clone behind the end of the code.");
 
-	if (param2.uValue >= Instructions.size())
-		Fail("TODO: Cannot clone forward.");
-	size_t pos = Instructions.size() - Back;
 	for (size_t src = param1.uValue; src < param2.uValue; ++src)
-		InstFlags[pos++] |= InstFlags[src] & ~IF_BRANCH_TARGET;
-	Instructions.insert(Instructions.end() - Back, Instructions.begin() + param1.uValue, Instructions.begin() + param2.uValue);
+	{	InstFlags[PC] |= InstFlags[src] & ~IF_BRANCH_TARGET;
+		if ((Instructions[src] & 0xF000000000000000ULL) == 0xF000000000000000ULL)
+			Msg(WARNING, "You should not clone branch instructions. (#%u)", src - param1.uValue);
+		StoreInstruction(Instructions[src]);
+	}
 	// Restore last instruction to provide combine support
-	if (pos)
-		Instruct.decode(Instructions[pos-1]);
+	if (PC)
+		Instruct.decode(Instructions[PC-1]);
 }
 
 void Parser::parseSET(int flags)
@@ -1617,7 +1627,7 @@ void Parser::ParseLine()
 	At = Line;
 	bool trycombine = false;
 	bool isinst = false;
-	size_t pos = Instructions.size() - Back;
+	size_t pos = PC;
 	FlagsSize(pos + 1);
 
  next:
@@ -1693,7 +1703,7 @@ void Parser::ParseLine()
 		Instruct.reset();
 
 		ParseInstruction();
-		Instructions.insert(Instructions.end() - Back, Instruct.encode());
+		StoreInstruction(Instruct.encode());
 		return;
 	}
 }
@@ -1748,8 +1758,9 @@ void Parser::ResetPass()
 	Macros.clear();
 	LabelsByName.clear();
 	LabelCount = 0;
-	Instructions.clear();
 	InstFlags.clear();
+	PC = 0;
+	Instruct.reset();
 }
 
 void Parser::EnsurePass2()
