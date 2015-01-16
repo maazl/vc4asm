@@ -53,3 +53,4 @@
 .set isRotate(x)    (x & :[0,0,-1]) != :[0,0,0]
 .set isSemaphore(x) x >= :[0,16,0] && x <= :[-1,-1,-1]
 .set isLabel(x)     x > :[-1,-1,-1]
+.set isSmallImmd(x) isConstant(x) && (!(x+16 & ~0x1f) || !(i-0x3b800000 & 0xf87fffff))
