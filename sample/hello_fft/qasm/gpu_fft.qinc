@@ -102,11 +102,12 @@
 .macro write_vpm_32
     # (MM) Optimized: no need for 2 VPM registers anymore, less memory I/O
     mov vw_setup, ra_vpm;  mov r2, ra_vpm
+    # (MM) Optimized: less memory I/O and prepare for better instruction packing
     fadd vpm, ra_32_re, r0
-    fadd vpm, rb_32_im, r1
+    fadd vpm, rb_32_im, r1; mov r3, rb_32_im
     add vw_setup, r2, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
     fsub vpm, ra_32_re, r0
-    fsub vpm, rb_32_im, r1;
+    fsub vpm, r3,       r1;
 .endm
 
 .macro write_vpm_64
@@ -116,20 +117,22 @@
     .else
     add r0, rx_vpm, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, rx_vpm
     .endif
+    # (MM) Optimized: less memory I/O and prepare for better instruction packing
     fadd vpm, ra_64+0, rb_64+0
-    fadd vpm, ra_64+1, rb_64+1 
+    fadd vpm, ra_64+1, rb_64+1; mov r1, rb_64+1 
     .if isRegfileB(rx_vpm)
     add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
     .endif
     add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
-    fadd vpm, ra_64+2, rb_64+2
-    fadd vpm, ra_64+3, rb_64+3
+    fadd vpm, ra_64+2, rb_64+2; mov r2, rb_64+2
+    fadd vpm, ra_64+3, rb_64+3; mov r3, rb_64+3
     add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
     fsub vpm, ra_64+0, rb_64+0
-    fsub vpm, ra_64+1, rb_64+1
+    fsub vpm, ra_64+1, r1
+    mov vr_setup, rx_vpm
     mov vw_setup, r0
-    fsub vpm, ra_64+2, rb_64+2
-    fsub vpm, ra_64+3, rb_64+3
+    fsub vpm, ra_64+2, r2
+    fsub vpm, ra_64+3, r3; mov -, vpm
 .endm
 
 ##############################################################################
@@ -249,20 +252,21 @@
     .endr
 :2
     # write_vpm_64
-    fadd vpm, ra_64+1, rb_64+1
+    # (MM) Optimized: less memory I/O and prepare for better instruction packing
+    fadd vpm, ra_64+1, rb_64+1; mov r1, rb_64+1
 
     .if isRegfileB(rx_vpm)
     add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
     .endif
     add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
-    fadd vpm, ra_64+2, rb_64+2
-    fadd vpm, ra_64+3, rb_64+3
+    fadd vpm, ra_64+2, rb_64+2; mov r2, rb_64+2
+    fadd vpm, ra_64+3, rb_64+3; mov r3, rb_64+3
 
     add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
     fsub vpm, ra_64+0, rb_64+0
-    fsub vpm, ra_64+1, rb_64+1
+    fsub vpm, ra_64+1, r1
+    mov vr_setup, rx_vpm
     mov vw_setup, r0
-    # (MM) Optimized: vpm read has no effect
 
     .back 3
        # (MM) Optimized: Take the return address from above as base of the branch target.
@@ -271,8 +275,8 @@
 
     .rep i, 7
         bra -, ra_link_1
-        fsub vpm, ra_64+2, rb_64+2
-        fsub vpm, ra_64+3, rb_64+3
+        fsub vpm, ra_64+2, r2
+        fsub vpm, ra_64+3, r3; mov -, vpm
         mov -, srel(i+9) # Slave releases master
     .endr
 :3
