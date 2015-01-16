@@ -609,15 +609,27 @@ Inst::mux Parser::doALUExpr(InstContext ctx)
 		}
 	 case V_FLOAT:
 	 case V_INT:
-		{	uint8_t si = getSmallImmediate(param.uValue);
-			if (si == 0xff)
-			{	// special hack for add ,,16 or sub ,,16
-				if (param.uValue == 16 && ctx == IC_SRCB && (Instruct.OpA == Inst::A_ADD || Instruct.OpA == Inst::A_SUB))
-				{	(uint8_t&)Instruct.OpA ^= Inst::A_ADD ^ Inst::A_SUB; // swap add <-> sub
-					si = 16; // -16
-				} else
-					Fail("Value 0x%x does not fit into the small immediate field.", param.uValue);
+		{	// some special hacks for ADD ALU
+			if (ctx == IC_SRCB)
+			{	switch (Instruct.OpA)
+				{case Inst::A_ADD: // swap ADD and SUB in case of constant 16
+				 case Inst::A_SUB:
+					if (param.uValue == 16)
+					{	(uint8_t&)Instruct.OpA ^= Inst::A_ADD ^ Inst::A_SUB; // swap add <-> sub
+						param.iValue = -16;
+					}
+					break;
+				 case Inst::A_ASR: // shift instructions ignore all bit except for the last 5
+				 case Inst::A_SHL:
+				 case Inst::A_SHR:
+				 case Inst::A_ROR:
+					param.iValue = (param.iValue << 27) >> 27; // sign extend
+				 default:;
+				}
 			}
+			uint8_t si = getSmallImmediate(param.uValue);
+			if (si == 0xff)
+				Fail("Value 0x%x does not fit into the small immediate field.", param.uValue);
 			doSMI(si);
 			return Inst::X_RB;
 		}
