@@ -74,6 +74,7 @@
 
 ##############################################################################
 
+# (MM) Optimized: no longer used
 .macro proc, rx_ptr, label
     brr rx_ptr, label
     nop
@@ -93,7 +94,7 @@
 ##############################################################################
 
 .macro write_vpm_16
-    mov vw_setup, ra_vpm
+    ;mov vw_setup, ra_vpm
     mov vpm, r0
     mov vpm, r1
 .endm
@@ -105,7 +106,7 @@
     fadd vpm, rb_32_im, r1
     add vw_setup, r2, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
     fsub vpm, ra_32_re, r0
-    fsub vpm, rb_32_im, r1
+    fsub vpm, rb_32_im, r1;
 .endm
 
 .macro write_vpm_64
@@ -135,7 +136,7 @@
 
 # (MM) Unified vpm register names
 .macro body_ra_save_16, arg_vdw
-    write_vpm_16
+    # (MM) Optimized: move write_vpm_16 to body_pass_16
 
     mov -, vw_wait
 
@@ -154,24 +155,23 @@
 
 ##############################################################################
 
+# (MM) Optimized: no longer used
 # (MM) Unified vpm register names
 .macro body_rx_save_slave_16
-    write_vpm_16
+    # (MM) Optimized: move write_vpm_16 to body_pass_16
+    # => makes body_rx_save_slave_16 meaningless
 
-    # (MM) Optimized: increase distance between vr_setup and vpm read
-    .back 2
-    mov vr_setup, ra_vpm
     # (MM) Optimized: easier procedure chains
     brr -, r:sync, ra_sync
-    .endb
-
+    mov vr_setup, ra_vpm
+    nop
     mov -, vpm
 .endm
 
 ##############################################################################
 
 .macro body_ra_save_32
-    write_vpm_32
+    # (MM) Optimized: move write_vpm_32 to body_pass_32
 
     mov -, vw_wait
 
@@ -190,15 +190,15 @@
 
 ##############################################################################
 
+# (MM) Optimized: no longer used
 .macro body_rx_save_slave_32
-    write_vpm_32
-    # (MM) Optimized: scheduled instructions of write_vpm_32 with vpm read code
-    # to reduce QPU stalls because of fifo dependencies at vpm access.
-    .back 2
-    mov vr_setup, ra_vpm
+    # (MM) Optimized: move write_vpm_32 to body_pass_32
+    # => makes body_rx_save_slave_32 meaningless
+
     # (MM) Optimized: easier procedure chains
     brr -, r:sync, ra_sync
-    .endb
+    mov vr_setup, ra_vpm
+    nop
     mov -, vpm
 .endm
 
@@ -237,6 +237,7 @@
     .rep i, 7
         brr ra_temp, r:2f
         mov -, sacq(i+1) # Slave waits for master
+
         # start with write_vpm_64 here
         # (MM) Optimized: no need for 4 VPM registers anymore, less memory I/O
         .if isRegfileB(rx_vpm)
@@ -249,27 +250,29 @@
 :2
     # write_vpm_64
     fadd vpm, ra_64+1, rb_64+1
+
     .if isRegfileB(rx_vpm)
     add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
     .endif
     add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
     fadd vpm, ra_64+2, rb_64+2
     fadd vpm, ra_64+3, rb_64+3
+
     add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
     fsub vpm, ra_64+0, rb_64+0
     fsub vpm, ra_64+1, rb_64+1
-
-    # (MM) Optimized: Take the return address from above as base of the branch target.
-    bra -, ra_temp, :3f - :2 - 4*8
-
     mov vw_setup, r0
-    fsub vpm, ra_64+2, rb_64+2
-    fsub vpm, ra_64+3, rb_64+3
+    # (MM) Optimized: vpm read has no effect
+
+    .back 3
+       # (MM) Optimized: Take the return address from above as base of the branch target.
+       bra -, ra_temp, :3f - :2 - 4*8
+    .endb
 
     .rep i, 7
         bra -, ra_link_1
-        mov vr_setup, rx_vpm
-        mov -, vpm
+        fsub vpm, ra_64+2, rb_64+2
+        fsub vpm, ra_64+3, rb_64+3
         mov -, srel(i+9) # Slave releases master
     .endr
 :3
@@ -565,6 +568,9 @@
     # place branch from outside individually
     mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
     mov ra_vdw_16, rb_vdw_16; mov rb_vdw_16, ra_vdw_16
+
+    # (MM) Optimized: move write_vpm_16 to body_pass_16
+    write_vpm_16
 .endm
 
 .macro body_pass_32, mode
@@ -577,6 +583,9 @@
     # (MM) Optimized: no need for 2 VPM registers anymore
     mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
     mov ra_vdw_32, rb_vdw_32; mov rb_vdw_32, ra_vdw_32
+
+    # (MM) Optimized: move write_vpm_32 to body_pass_32
+    write_vpm_32
 .endm
 
 .macro body_pass_64, mode, step

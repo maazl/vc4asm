@@ -116,8 +116,10 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
     mov r3, unif;         mov ra_save_16, 0
     shl.setf r0, r3, 5;   mov ra_sync, 0
     mov.ifnz r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
-    mov.ifnz ra_save_16,  :save_slave_16 - :save_16
-    add.ifnz ra_sync, r1, r0;
+    add.ifnz ra_sync, r1, r0
+    # (MM) Optimized: body_rx_save_slave_16 is now empty => link to sync directly
+    mov.ifnz r1, :sync_slave - :save_16 - 4*8 # -> rx_inst-1
+    add.ifnz ra_save_16, r1, r0;
     ;mov rx_inst, r3
 
 inst_vpm r3, 16, ra_vpm, rb_vpm
@@ -274,9 +276,6 @@ inst_vpm r3, 16, ra_vpm, rb_vpm
 :save_16
     body_ra_save_16 ra_vdw
 
-:save_slave_16
-    body_rx_save_slave_16
-
 :sync
     body_ra_sync
 
@@ -288,6 +287,10 @@ inst_vpm r3, 16, ra_vpm, rb_vpm
 
 # (MM) Optimized: joined load_xxx and ldtmu in FFT-16 codelet
 bodies_fft_16
+
+    # (MM) Optimized: move write_vpm_16 to body_pass_16
+    write_vpm_16
+
     # (MM) Optimized: link directly to save_16
     .back 3
     brr -, ra_save_16, r:save_16

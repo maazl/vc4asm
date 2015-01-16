@@ -357,12 +357,9 @@ bodies_fft_16
     ;mov.setf -, rx_inst
     .endb
     .back 3
-    brr.allnz -, r:save_slave_32
+    # (MM) Optimized: body_rx_save_slave_32 is now empty => link to sync directly
+    brr.allnz -, r:sync, ra_sync
     .endb
 
 # save_master_32
     body_ra_save_32
-
-:save_slave_32
-    body_rx_save_slave_32
-

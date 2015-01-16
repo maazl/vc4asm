@@ -68,7 +68,7 @@
 
 .if STAGES>17
 .macro body_ra_save_16, arg_vdw
-    write_vpm_16
+    # (MM) Optimized: move write_vpm_16 to body_pass_16
 
     mov -, vw_wait
 
@@ -96,7 +96,7 @@
 
 .if STAGES>18
 .macro body_ra_save_32
-    write_vpm_32
+    # (MM) Optimized: move write_vpm_32 to body_pass_32
 
     mov -, vw_wait
 

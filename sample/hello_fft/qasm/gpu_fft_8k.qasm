@@ -269,13 +269,11 @@ bodies_fft_16
     # (MM) Optimized: link to slave procedure without need for a register
     .back 3
     ;mov.setf -, rx_inst
-    brr.allnz -, r:1f
+    # (MM) Optimized: body_rx_save_slave_32 is now empty => link to sync directly
+    brr.allnz -, r:sync, ra_sync
     .endb
 
     body_ra_save_32
-
-:1
-    body_rx_save_slave_32
 
 :pass_2
 :pass_3
@@ -284,12 +282,10 @@ bodies_fft_16
     # (MM) Optimized: link to slave procedure without need for a register
     .back 2 # cannot go back more than 2 instructions into body_pass_16
     ;mov.setf -, rx_inst
-    brr.allnz -, r:1f
+    # (MM) Optimized: body_rx_save_slave_16 is now empty => link to sync directly
+    brr.allnz -, r:sync, ra_sync
     .endb
     nop
 
     body_ra_save_16 ra_vdw_16
-
-:1
-    body_rx_save_slave_16
 

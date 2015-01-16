@@ -119,8 +119,10 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
     mov r3, unif;         mov ra_save_32, 0
     shl.setf r0, r3, 5;   mov ra_sync, 0
     mov.ifnz r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
-    mov.ifnz ra_save_32,  :save_slave_32 - :save_32
-    add.ifnz ra_sync, r1, r0;
+    add.ifnz ra_sync, r1, r0
+    # (MM) Optimized: body_rx_save_slave_32 is now empty => link to sync directly
+    mov.ifnz r1, :sync_slave - :save_32 - 4*8 # -> rx_inst-1
+    add.ifnz ra_save_32, r1, r0;
     ;mov rx_inst, r3
 
 # (MM) Optimized: reduced VPM registers
@@ -264,9 +266,6 @@ inst_vpm r3, 32, ra_vpm, rb_vpm
 
 :save_32
     body_ra_save_32
-
-:save_slave_32
-    body_rx_save_slave_32
 
 :sync
     body_ra_sync
