@@ -47,7 +47,7 @@
 .set isRegister(x)  x >= :[0,0,0] && x < :[0,16,0]
 .set isRegfileA(x)  (x & :[0,1,0]) == :[0,1,0]
 .set isRegfileB(x)  (x & :[0,2,0]) == :[0,2,0]
-.set isAccu(x)      (x & :[-4,0x3c,0]) == :[0,8,0]
+.set isAccu(x)      (x & :[-8,0x34,0]) == :[32,0,0] && (x & :[-2,0,0]) != :[38,0,0] 
 .set isReadable(x)  (x & :[0,4,0]) == :[0,4,0] || x == r5
 .set isWritable(x)  (x & :[0,8,0]) == :[0,8,0]
 .set isRotate(x)    (x & :[0,0,-1]) != :[0,0,0]
