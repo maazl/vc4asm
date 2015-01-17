@@ -156,235 +156,198 @@
     <h3><tt>hello_fft</tt></h3>
     <p>This is the well known hello_fft sample available. The only difference is
       that it is faster because the shader code has been optimized. The gain is
-      about 25% of code size and 3% to 18% of the run time. The code will no
+      about 25% of code size and 3% to 20% of the run time. The code will no
       longer compile with another assembler since it uses some special features
       for instruction packing and scheduling.</p>
     <table border="1" cellpadding="2" cellspacing="0">
       <thead>
         <tr>
-          <th>Batch&rarr;</th>
-          <th colspan="2" rowspan="1">Original</th>
-          <th colspan="2" rowspan="1">Optimized</th>
-          <th colspan="2" rowspan="1">Gain</th>
+          <th>batch&rarr;</th>
+          <th style="text-align: center;" colspan="3" rowspan="1">1</th>
+          <th style="text-align: center;" colspan="3" rowspan="1">10</th>
         </tr>
         <tr>
-          <th>&darr;Points</th>
-          <th>1</th>
-          <th>10</th>
-          <th>1</th>
-          <th>10</th>
-          <th>1</th>
-          <th>10</th>
+          <th>&darr;points</th>
+          <th>original</th>
+          <th>optimized</th>
+          <th>gain</th>
+          <th>original</th>
+          <th>optimized</th>
+          <th>gain</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td class="th">2<sup>8</sup></td>
-          <td>30.4 &micro;s</td>
-          <td>15.3 &micro;s</td>
-          <td>25.4 &micro;s</td>
-          <td>13.8 &micro;s</td>
-          <td>16%</td>
-          <td>10%</td>
+          <td>30 &micro;s</td>
+          <td>25 &micro;s*</td>
+          <td>-17%</td>
+          <td>15.1 &micro;s*</td>
+          <td>13.7 &micro;s*</td>
+          <td>-9%</td>
         </tr>
         <tr>
           <td class="th">2<sup>9</sup></td>
-          <td>46.0 &micro;s<br>
+          <td>44 &micro;s*<br>
           </td>
-          <td>26.4 &micro;s<br>
+          <td>35 &micro;s*</td>
+          <td>-20%</td>
+          <td>25.3 &micro;s</td>
+          <td>22.0 &micro;s<br>
           </td>
-          <td>37.8 &micro;s<br>
-          </td>
-          <td>22.8 &micro;s<br>
-          </td>
-          <td>18%<br>
-          </td>
-          <td>14%<br>
+          <td>-9%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>10</sup></td>
-          <td>63.6 &micro;s<br>
+          <td>64 &micro;s*<br>
           </td>
-          <td>44.5 &micro;s<br>
+          <td>54 &micro;s*</td>
+          <td>-16%</td>
+          <td>42 &micro;s</td>
+          <td>38.8 &micro;s<br>
           </td>
-          <td>55.0 &micro;s<br>
-          </td>
-          <td>39.5 &micro;s<br>
-          </td>
-          <td>13%<br>
-          </td>
-          <td>11%<br>
+          <td>-8%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>11</sup></td>
-          <td>105.6 &micro;s<br>
+          <td>106 &micro;s*<br>
           </td>
-          <td>95.5 &micro;s<br>
+          <td>94 &micro;s* </td>
+          <td>-11%</td>
+          <td>89.8 &micro;s</td>
+          <td>81 &micro;s<br>
           </td>
-          <td>96 &micro;s*<br>
-          </td>
-          <td>82 &micro;s<br>
-          </td>
-          <td>9%<br>
-          </td>
-          <td>14%<br>
+          <td>-10%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>12</sup></td>
-          <td>224 &micro;s<br>
+          <td>24x &micro;s<br>
           </td>
-          <td>257 &micro;s<br>
+          <td>21x &micro;s</td>
+          <td>-12%</td>
+          <td>256 &micro;s</td>
+          <td>237 &micro;s<br>
           </td>
-          <td>209 &micro;s<br>
-          </td>
-          <td>235 &micro;s<br>
-          </td>
-          <td>7%<br>
-          </td>
-          <td>9%<br>
+          <td>-7%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>13</sup></td>
-          <td>565 &micro;s<br>
+          <td>57x &micro;s<br>
           </td>
-          <td>624 &micro;s<br>
+          <td>53x &micro;s</td>
+          <td>-7%</td>
+          <td>624 &micro;s</td>
+          <td>582 &micro;s<br>
           </td>
-          <td>540 &micro;s<br>
-          </td>
-          <td>578 &micro;s<br>
-          </td>
-          <td>4%<br>
-          </td>
-          <td>7%<br>
+          <td>-7%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>14</sup></td>
           <td>1.17 ms<br>
           </td>
-          <td>1.18 ms<br>
+          <td>1.13 ms</td>
+          <td>-3%</td>
+          <td>1.18 ms</td>
+          <td>1.10 ms<br>
           </td>
-          <td>1.11 ms<br>
-          </td>
-          <td>1.11 ms<br>
-          </td>
-          <td>5%<br>
-          </td>
-          <td>6%<br>
+          <td>-7%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>15</sup></td>
-          <td>3.29 ms<br>
+          <td>3.21 ms<br>
           </td>
-          <td>3.063 ms<br>
+          <td>3.12 ms</td>
+          <td>-3%</td>
+          <td>3.056 ms</td>
+          <td>2.92 ms<br>
           </td>
-          <td>3.15 ms<br>
-          </td>
-          <td>2.943 ms<br>
-          </td>
-          <td>4%<br>
-          </td>
-          <td>4%<br>
+          <td>-4%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>16</sup></td>
-          <td>6.36 ms<br>
+          <td>6.31 ms<br>
           </td>
-          <td>6.146 ms<br>
+          <td>6.14 ms</td>
+          <td>-3%</td>
+          <td>6.146 ms</td>
+          <td>5.87 ms<br>
           </td>
-          <td>6.18 ms<br>
-          </td>
-          <td>5.958 ms<br>
-          </td>
-          <td>3%<br>
-          </td>
-          <td>3%<br>
+          <td>-4%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>17</sup></td>
-          <td>15.75 ms<br>
+          <td>15.8 ms<br>
           </td>
-          <td>15.50 ms<br>
+          <td>15.1 ms</td>
+          <td>-4%</td>
+          <td>15.50 ms</td>
+          <td>14.70 ms<br>
           </td>
-          <td>15.3 ms<br>
-          </td>
-          <td>14.84 ms<br>
-          </td>
-          <td>3%<br>
-          </td>
-          <td>4%<br>
+          <td>-5%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>18</sup></td>
           <td>42.9 ms<br>
           </td>
-          <td>42.96 ms<br>
+          <td>40.7 ms</td>
+          <td>-5%</td>
+          <td>43.0 ms</td>
+          <td>40.60 ms<br>
           </td>
-          <td>41.3 ms<br>
-          </td>
-          <td>41.19 ms<br>
-          </td>
-          <td>3%<br>
-          </td>
-          <td>4%<br>
+          <td>-6%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>19</sup></td>
-          <td>97.7xx<br>
+          <td>97.7 ms<br>
           </td>
-          <td>97.6 ms<br>
+          <td>92.4 ms</td>
+          <td>-5%</td>
+          <td>97.6 ms</td>
+          <td>92.3 ms<br>
           </td>
-          <td>93.6 ms<br>
-          </td>
-          <td>93.5 ms<br>
-          </td>
-          <td>4%<br>
-          </td>
-          <td>4%<br>
+          <td>-5%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>20</sup></td>
-          <td>197 ms<br>
+          <td>197.0 ms<br>
           </td>
+          <td>187.5 ms</td>
+          <td>-5%</td>
           <td><br>
           </td>
-          <td>190 ms<br>
-          </td>
           <td><br>
-          </td>
-          <td>4%<br>
           </td>
           <td><br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>21</sup></td>
-          <td>394 ms<br>
+          <td>394.4 ms<br>
           </td>
+          <td>374.7 ms</td>
+          <td>-5%</td>
           <td><br>
           </td>
-          <td>379 ms<br>
-          </td>
           <td><br>
-          </td>
-          <td>4%<br>
           </td>
           <td><br>
           </td>
         </tr>
       </tbody>
     </table>
-    The Raspi was slightly overclocked. (*) Timing is unstable, reason unknown.<br>
+    All timings are from repeated executions. The Raspi was slightly
+    overclocked. (*) Timing is unstable, reason unknown.<br>
     <h2><a id="contact" name="contact"></a>Contact</h2>
     <p>Comments, ideas, bugs, improvements to <i>raspi at maazl dot de</i>.</p>
   </body>
