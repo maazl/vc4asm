@@ -498,9 +498,9 @@ void Parser::addSetF(int, InstContext ctx)
 {
 	if (Instruct.Sig == Inst::S_BRANCH)
 		Fail("Cannot apply .setf to branch instruction.");
-	if ( Instruct.Sig != Inst::S_LDI
-		&& (Instruct.CondA == Inst::C_NEVER && Instruct.OpA == Inst::A_NOP) != (ctx & IC_MUL) )
-		Fail("Cannot apply .setf because the flags of the other ALU will be used.");
+	if ( Instruct.Sig != Inst::S_LDI && (ctx & IC_MUL)
+		&& (Instruct.WAddrA != Inst::R_NOP || Instruct.OpA != Inst::A_NOP) )
+		Fail("Cannot apply .setf because the flags of the ADD ALU will be used.");
 	if (Instruct.SF)
 		Fail("Don't use .setf twice.");
 	Instruct.SF = true;
