@@ -1137,8 +1137,8 @@ void Parser::beginBACK(int)
 	exprValue param = ParseExpression();
 	if (param.Type != V_INT)
 		Fail("Expected integer constant after .back.");
-	if (param.uValue > 5)
-		Fail("Cannot move instructions more than 5 slots back.");
+	if (param.uValue > 10)
+		Fail("Cannot move instructions more than 10 slots back.");
 	if (param.uValue > PC)
 		Fail("Cannot move instructions back before the start of the code.");
 	if (NextToken() != END)
