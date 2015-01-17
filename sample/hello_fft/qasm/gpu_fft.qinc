@@ -62,14 +62,13 @@
 ##############################################################################
 # VPM pointers
 
-# (MM) Optimized: reduced VPM registers
-.macro inst_vpm, in_inst, offset, out_0, out_1
-    mov r0, vpm_setup(1, 1, v32( 0,0))
+# (MM) Optimized: reduced VPM registers to 1
+.macro inst_vpm, in_inst, out_vpm
     # (MM) Optimized: instruction packing
     .assert vpm_setup(1, 1, v32(0,2)) - vpm_setup(1, 1, v32(0,0)) == 2
-    mov r1, vpm_setup(1, 1, v32(offset,0)) - vpm_setup(1, 1, v32(0,0)); v8adds r2, in_inst, in_inst
-    add out_0, r0, r2; v8adds r0, r0, r1
-    add out_1, r0, r2;
+    ;v8adds r1, in_inst, in_inst
+    mov r0, vpm_setup(1, 1, v32( 0,0))
+    add out_vpm, r0, r1;
 .endm
 
 ##############################################################################
@@ -94,14 +93,16 @@
 ##############################################################################
 
 .macro write_vpm_16
-    ;mov vw_setup, ra_vpm
+    # (MM) Optimized: allow rb register for vpm setup
+    ;mov vw_setup, rx_vpm
     mov vpm, r0
-    mov vpm, r1
+    mov vpm, r1;
 .endm
 
 .macro write_vpm_32
     # (MM) Optimized: no need for 2 VPM registers anymore, less memory I/O
-    mov vw_setup, ra_vpm;  mov r2, ra_vpm
+    # allow rb register for vpm setup
+    mov vw_setup, rx_vpm;   mov r2, rx_vpm
     # (MM) Optimized: less memory I/O and prepare for better instruction packing
     fadd vpm, ra_32_re, r0
     fadd vpm, rb_32_im, r1; mov r3, rb_32_im
@@ -129,10 +130,9 @@
     add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
     fsub vpm, ra_64+0, rb_64+0
     fsub vpm, ra_64+1, r1
-    mov vr_setup, rx_vpm
     mov vw_setup, r0
     fsub vpm, ra_64+2, r2
-    fsub vpm, ra_64+3, r3; mov -, vpm
+    fsub vpm, ra_64+3, r3
 .endm
 
 ##############################################################################
@@ -166,7 +166,7 @@
 
     # (MM) Optimized: easier procedure chains
     brr -, r:sync, ra_sync
-    mov vr_setup, ra_vpm
+    mov vr_setup, rx_vpm
     nop
     mov -, vpm
 .endm
@@ -200,7 +200,7 @@
 
     # (MM) Optimized: easier procedure chains
     brr -, r:sync, ra_sync
-    mov vr_setup, ra_vpm
+    mov vr_setup, rx_vpm
     nop
     mov -, vpm
 .endm
@@ -265,8 +265,9 @@
     add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
     fsub vpm, ra_64+0, rb_64+0
     fsub vpm, ra_64+1, r1
-    mov vr_setup, rx_vpm
     mov vw_setup, r0
+    fsub vpm, ra_64+2, r2
+    fsub vpm, ra_64+3, r3
 
     .back 3
        # (MM) Optimized: Take the return address from above as base of the branch target.
@@ -275,8 +276,8 @@
 
     .rep i, 7
         bra -, ra_link_1
-        fsub vpm, ra_64+2, r2
-        fsub vpm, ra_64+3, r3; mov -, vpm
+        mov vr_setup, rx_vpm
+        mov -, vpm
         mov -, srel(i+9) # Slave releases master
     .endr
 :3
@@ -568,13 +569,22 @@
 
 .macro body_pass_16, mode
     loader_16 rb_0x80, mode, 0
-    # (MM) Optimized: easier procedure chains
-    # place branch from outside individually
-    mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
-    mov ra_vdw_16, rb_vdw_16; mov rb_vdw_16, ra_vdw_16
+
+    # (MM) Optimized: use xor for vpm swap (less memory I/O)
+    # and save a A register and a B register
+    .assert vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)) == 16
+    .assert vdw_setup_0(32, 16, dma_h32(16,0)) - vdw_setup_0(32, 16, dma_h32(0,0)) == 0x800
+    ;mov r3, rb_0x80
+    mul24 r2, 4, 4;                                  # r2 = 16
 
     # (MM) Optimized: move write_vpm_16 to body_pass_16
-    write_vpm_16
+    # and expand inline to pack with VPM swap code, saves 3 instructions
+    xor vw_setup,  rx_vpm, r2;     mul24 r3, r2, r3  # r3 = 0x800
+    xor rx_vpm,    rx_vpm, r2;     mov vpm, r0;
+    xor ra_vdw_16, ra_vdw_16, r3;  mov vpm, r1
+
+    # (MM) Optimized: easier procedure chains
+    # place branch from outside individually
 .endm
 
 .macro body_pass_32, mode
@@ -582,14 +592,28 @@
     mov ra_32_re, r0; mov rb_32_im, r1
     loader_16 0x10, mode, 2
     fft_twiddles_32
-    # (MM) Optimized: easier procedure chains
-    # place branch from outside individually
-    # (MM) Optimized: no need for 2 VPM registers anymore
-    mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
-    mov ra_vdw_32, rb_vdw_32; mov rb_vdw_32, ra_vdw_32
+
+    # (MM) Optimized: no need for 2 VPM register sets anymore
+    # (MM) Optimized: use xor for vpm swap (less memory I/O)
+    # and save a A register and a B register
+    .assert vpm_setup(1, 1, v32(32,0)) - vpm_setup(1, 1, v32(0,0)) == 32
+    .assert vdw_setup_0(32, 16, dma_h32(32,0)) - vdw_setup_0(32, 16, dma_h32(0,0)) == 0x1000
+    ;mov r2, 16
+    shl r3, r2, 8;                 v8adds r2, r2, r2  # r3 = 0x1000; r2 = 32
+    xor r2, rx_vpm, r2
 
     # (MM) Optimized: move write_vpm_32 to body_pass_32
-    write_vpm_32
+    # and expand inline to join with VPM swap code
+    xor ra_vdw_32, ra_vdw_32, r3;  mov vw_setup, r2
+    fadd vpm, ra_32_re, r0;        mov rx_vpm, r2
+    # (MM) Optimized: less memory I/O and prepare for better instruction packing
+    fadd vpm, rb_32_im, r1;        mov r3, rb_32_im
+    add vw_setup, r2, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
+    fsub vpm, ra_32_re, r0
+    fsub vpm, r3,       r1;
+
+    # (MM) Optimized: easier procedure chains
+    # place branch from outside individually
 .endm
 
 .macro body_pass_64, mode, step

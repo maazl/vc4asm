@@ -56,11 +56,11 @@
 # Registers
 
 .set ra_link_0,         ra0
-.set rx_vpm,            rb0
+.set rb_0xF0,           rb0
 .set ra_save_ptr,       ra1
-.set rb_vpm,            rb1
+.set rx_vpm,            rb1
 .set ra_temp,           ra2
-.set rb_vpm_32,         rb2
+#                       rb2
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
 .set rx_inst,           ra4
@@ -68,14 +68,14 @@
 .set ra_load_idx,       ra5
 #                       rb5
 .set ra_sync,           ra6
-#    rb_stages,         rb6  # dual use
+#                       rb6
 .set ra_points,         ra7
 #                       rb7
 .set ra_link_1,         ra8
 .set rb_link_1,         rb8
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
-#                       ra10
+.set ra_vdw_32,         ra10
 #
 
 .set ra_64,             ra11 # 4
@@ -92,14 +92,8 @@
 ##############################################################################
 # Dual-use registers
 
-.set rb_STAGES,         rb6
-
 .set rb_pass2_link,     rb_64+0
-.set rb_0xF0,           rb_64+1
-
-.set ra_vpm,            ra_64+0
-.set ra_vdw_32,         ra_64+3
-.set rb_vdw_32,         rb_64+3
+.set rb_STAGES,         rb_64+1
 
 ##############################################################################
 # Constants
@@ -111,6 +105,9 @@ mov rx_0x3333,  0x3333
 mov rx_0x0F0F,  0x0F0F
 
 mov rb_0x40,    0x40
+mov rb_0xF0,    0xF0
+
+mov ra_vdw_32, vdw_setup_0(32, 16, dma_h32( 0,0))
 
 ##############################################################################
 # Load twiddle factors
@@ -129,8 +126,8 @@ load_tw r3, TW_SHARED, TW_UNIQUE, unif
     mov r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     add.ifnz ra_sync, r1, r0
 
-# (MM) Optimized: reduced VPM registers
-inst_vpm r3, 32, rx_vpm, rb_vpm
+# (MM) Optimized: reduced VPM registers to 1
+inst_vpm r3, rx_vpm
 
 ##############################################################################
 # Macros
@@ -182,16 +179,6 @@ inst_vpm r3, 32, rx_vpm, rb_vpm
     ldtmu0
     nop
     ldtmu0
-
-##############################################################################
-# Dual-use registers
-
-    mov ra_vdw_32, vdw_setup_0(32, 16, dma_h32( 0,0))
-    mov rb_vdw_32, vdw_setup_0(32, 16, dma_h32(32,0))
-
-    mov ra_vpm, rx_vpm
-
-    mov rb_0xF0, 0xF0
 
 ##############################################################################
 # Pass 2
@@ -297,11 +284,8 @@ bodies_fft_16
     body_pass_64 LOAD_REVERSED, r5
 
     # (MM) Optimized: link to slave procedure without need for a register
-    .back 5
-    ;mov ra_temp, rx_inst
-    .endb
     .back 4
-    shl.setf ra_temp, ra_temp, 5  # 4 instructions per instance
+    ;shl.setf ra_temp, rx_inst, 5    # 4 instructions per instance
     .endb
     .back 3
     brr.allnz -, ra_temp, r:1f - 4*8 # + (rx_inst-1) * 4*8
@@ -318,8 +302,10 @@ bodies_fft_16
     body_pass_32 LOAD_STRAIGHT
 
     # (MM) Optimized: link to slave procedure without need for a register
+    .back 9  # place deep inside fft_twiddles
+    ;mov.setf -, rx_inst;
+    .endb
     .back 3
-    ;mov.setf -, rx_inst
     # (MM) Optimized: body_rx_save_slave_32 is now empty => link to sync directly
     brr.allnz -, r:sync, ra_sync
     .endb

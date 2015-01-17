@@ -52,11 +52,11 @@
 # Registers
 
 .set ra_link_0,         ra0
-.set rb_vdw_16,         rb0
+#                       rb0
 .set ra_save_ptr,       ra1
-.set rb_vdw_32,         rb1
+#                       rb1
 .set ra_temp,           ra2
-.set rb_vpm,            rb2
+.set rx_vpm,            rb2
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
 .set rx_inst,           ra4
@@ -77,7 +77,7 @@
 .set ra_tw_re,          ra11 # 11
 .set rb_tw_im,          rb11 # 11
 
-.set ra_vpm,            ra25
+#                       ra25
 #                       ra26
 .set ra_vdw_16,         ra27
 .set ra_vdw_32,         ra28
@@ -105,9 +105,7 @@ mov rx_0x33333333, 0x33333333
 mov rx_0x0F0F0F0F, 0x0F0F0F0F
 
 mov ra_vdw_16, vdw_setup_0(16, 16, dma_h32( 0,0))
-mov rb_vdw_16, vdw_setup_0(16, 16, dma_h32(32,0))
 mov ra_vdw_32, vdw_setup_0(32, 16, dma_h32( 0,0))
-mov rb_vdw_32, vdw_setup_0(32, 16, dma_h32(32,0))
 
 ##############################################################################
 # Load twiddle factors
@@ -125,8 +123,8 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
     mov r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     add.ifnz ra_sync, r1, r0
     
-# (MM) Optimized: reduced VPM registers
-inst_vpm r3, 32, ra_vpm, rb_vpm
+# (MM) Optimized: reduced VPM registers to 1
+inst_vpm r3, rx_vpm
 
 ##############################################################################
 # Macros
@@ -311,8 +309,10 @@ bodies_fft_16
     body_pass_32 LOAD_REVERSED
 
     # (MM) Optimized: link to slave procedure without need for a register
+    .back 9  # place deep inside fft_twiddles
+    ;mov.setf -, rx_inst;
+    .endb
     .back 3
-    ;mov.setf -, rx_inst
     # (MM) Optimized: body_rx_save_slave_32 is now empty => link to sync directly
     brr.allnz -, r:sync, ra_sync
     .endb
@@ -325,12 +325,11 @@ bodies_fft_16
     body_pass_16 LOAD_STRAIGHT
 
     # (MM) Optimized: link to slave procedure without need for a register
-    .back 2 # cannot go back more than 2 instructions into body_pass_16
+    .back 3
     ;mov.setf -, rx_inst
     # (MM) Optimized: body_rx_save_slave_16 is now empty => link to sync directly
     brr.allnz -, r:sync, ra_sync
     .endb
-    nop
 
     body_ra_save_16 ra_vdw_16
 

@@ -50,7 +50,7 @@
 .set ra_save_ptr,       ra1
 #                       rb1
 .set ra_temp,           ra2
-#
+.set rx_vpm,            rb2
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
 .set ra_save_16,        ra4
@@ -66,8 +66,8 @@
 .set ra_tw_re,          ra9
 .set rb_tw_im,          rb9
 
-.set ra_vpm,            ra27
-.set rb_vpm,            rb27
+#                       ra27
+#                       rb27
 .set ra_vdw,            ra28
 .set rb_vdw,            rb28
 
@@ -88,7 +88,8 @@ mov rx_0x3333,  0x3333
 mov rx_0x0F0F,  0x0F0F
 
 mov ra_vdw, vdw_setup_0(16, 16, dma_h32( 0,0))
-mov rb_vdw, vdw_setup_0(16, 16, dma_h32(16,0))
+# (MM) Optimized: use xor for vpm swap (less memory I/O, save A register)
+mov rb_vdw, vdw_setup_0(16, 16, dma_h32(16,0)) - vdw_setup_0(16, 16, dma_h32( 0,0))
 
 ##############################################################################
 # Load twiddle factors
@@ -101,24 +102,27 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 2 registers
-    mov r3, unif;         mov ra_save_16, 0
-    shl.setf r0, r3, 5;   mov ra_sync, 0
+    mov r3, unif;              mov ra_save_16, 0
+    shl.setf r0, r3, 5;        mov ra_sync, 0
     mov.ifnz r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
-    add.ifnz ra_sync, r1, r0;
+    add.ifnz ra_sync, r1, r0
     # (MM) Optimized: body_rx_save_slave_16 is now empty => link to sync directly
     mov.ifnz r1, :sync_slave - :save_16 - 4*8 # -> rx_inst-1
     add.ifnz ra_save_16, r1, r0;
-    ;mov rx_inst, r3
+    
+# (MM) Optimized: reduced VPM registers to 1
+inst_vpm r3, rx_vpm
 
-# (MM) Optimized: reduced VPM registers
-inst_vpm r3, 16, ra_vpm, rb_vpm
+    ;mov rx_inst, r3
 
 ##############################################################################
 # Macros
 
+# (MM) no longer used
 .macro swap_vpm_vdw
-    mov ra_vpm, rb_vpm; mov rb_vpm, ra_vpm
-    mov ra_vdw, rb_vdw; mov rb_vdw, ra_vdw
+    # (MM) Optimized: use xor for vpm swap (less memory I/O) and save A register
+    xor ra_vdw, ra_vdw, rb_vdw;  mov r2, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
+    xor ra_vpm, ra_vpm, r2;
 .endm
 
 .macro next_twiddles, tw16
@@ -165,16 +169,16 @@ inst_vpm r3, 16, ra_vpm, rb_vpm
     init_stage TW16_P1_BASE
     read_rev rb_0x80
     read_rev 0
-    swap_vpm_vdw
+    # (MM) Optimized: move swap_vpm_vdw to pass1/2
 
     # (MM) Optimized: move branch before the last instruction of read_rev
     .back 3
     brr ra_link_1, r:pass_1
     .endb
 
-    brr ra_link_1, r:pass_1 + 8
-    swap_vpm_vdw
-    .clone :pass_1, 1
+    brr ra_link_1, r:pass_1 + 8 * 3
+    # (MM) Optimized: move swap_vpm_vdw to pass1/2
+    .clone :pass_1, 3
     
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
@@ -189,15 +193,15 @@ inst_vpm r3, 16, ra_vpm, rb_vpm
     init_stage TW16_P2_BASE
     read_lin rb_0x80
     read_lin 0
-    swap_vpm_vdw
-    # (MM) Optimized: move branch before the last instruction of read_lin
+    # (MM) Optimized: move swap_vpm_vdw to pass1/2
+    # (MM) Optimized: move branch before the last instructions of read_lin
     .back 3
     brr ra_link_1, r:pass_2
     .endb
 
     next_twiddles TW16_P2_STEP
-    swap_vpm_vdw
-    # (MM) Optimized: move branch before the last instruction of next_twiddles
+    # (MM) Optimized: move swap_vpm_vdw to pass1/2
+    # (MM) Optimized: move branch before the last instructions of next_twiddles
     .back 3
     brr ra_link_1, r:pass_2
     .endb
@@ -235,8 +239,15 @@ inst_vpm r3, 16, ra_vpm, rb_vpm
 :pass_2
     body_fft_16_lin
 
+    # (MM) Optimized: move swap_vpm_vdw to pass1/2
+    # (MM) Optimized: use xor for vpm swap (less memory I/O, save A register)
+    ;mov r2, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
+   
     # (MM) Optimized: move write_vpm_16 to body_pass_16
-    write_vpm_16
+    # and expand inline to pack with VPM swap code, saves 2 instructions
+    xor vw_setup, rx_vpm, r2;      mov r3, rx_vpm
+    xor rx_vpm,   r3,     r2;      mov vpm, r0
+    xor ra_vdw,   ra_vdw, rb_vdw;  mov vpm, r1
 
     # (MM) Optimized: link directly to save_16
     .back 3

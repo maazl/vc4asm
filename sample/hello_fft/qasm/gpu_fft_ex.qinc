@@ -110,14 +110,23 @@
     mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0)); mov r0, ra_vdw_32
     mov r3, PASS32_STRIDE
 
-    .rep i, 32
+    # (MM) Optimized: shorter code, slightly faster because of cache efficiency
+    mov.setf ra_temp, 14
+:0  .rep i, 2
         add r0, r0, r2; mov vw_setup, r0
         add r1, r1, r3; mov vw_addr,  r1
     .endr
-
+    .back 2
+        brr.allnz -, r:0
+        sub.setf ra_temp, ra_temp, 1
+    .endb
+    .rep i, 2
+        add r0, r0, r2; mov vw_setup, r0
+        add r1, r1, r3; mov vw_addr,  r1
+    .endr
     # (MM) Optimized: scheduling of branch instruction
     .back 3
-    bra -, ra_link_1
+        bra -, ra_link_1
     .endb
 .endm
 .endif

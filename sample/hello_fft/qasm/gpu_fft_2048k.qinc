@@ -48,6 +48,7 @@
     add ra_save_ptr, ra_save_ptr, r1; mov r1, ra_save_ptr
     mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0))
     mov r3, PASS64_STRIDE
+
     # (MM) Optimized: shorter code, slightly faster because of cache efficiency
     mov.setf ra_temp, 30
 
