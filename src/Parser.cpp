@@ -120,8 +120,8 @@ Parser::token_t Parser::NextToken()
 	 case '|':
 		if (At[1] == At[0])
 		{	if (At[2] == At[1])
-			{	Token.assign(At, 2);
-				At += 2;
+			{	Token.assign(At, 3);
+				At += 3;
 				return OP;
 			}
 		 op2:
@@ -1649,6 +1649,8 @@ void Parser::ParseLine()
 			goto def;
 		// directives
 		ParseDirective();
+		return;
+
 	 case END:
 		*Line = 0;
 		doPreprocessor(PP_MACRO);
