@@ -54,3 +54,39 @@
 .set isSemaphore(x) x >= :[0,16,0] && x <= :[-1,-1,-1]
 .set isLabel(x)     x > :[-1,-1,-1]
 .set isSmallImmd(x) isConstant(x) && (!(x+16 & ~0x1f) || !(i-0x3b800000 & 0xf87fffff))
+
+# mathematics
+.func min(x,y)
+  .if x < y
+    y
+  .else
+    x
+  .endif
+.endf
+.func min(x,y)
+  .if x > y
+    x
+  .else
+    y
+  .endif
+.endf
+.func log2(x) # unsigned!
+  .if !(x & ~0x3)
+    x - 1 - (x == 3) 
+  .elseif !(x & ~0xf)
+    log2(x >>> 2) + 2
+  .elseif !(x & ~0xff)
+    log2(x >>> 4) + 4
+  .elseif !(x & ~0xffff)
+    log2(x >>> 8) + 8
+  .else
+    log2(x >>> 16) + 16
+  .endif
+.endf
+.func countBits(x)
+  .lset x, x                - ((x >>> 1) & 0x55555555)
+  .lset x, (x & 0x33333333) + ((x >>> 2) & 0x33333333)
+  .lset x, (x & 0x0f0f0f0f) + ((x >>> 4) & 0x0f0f0f0f)
+  .lset x, (x & 0x00ff00ff) + ((x >>> 8) & 0x00ff00ff)
+  (x & 0x0000ffff) + (x >>> 16)
+.endf
