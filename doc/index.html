@@ -42,6 +42,16 @@
         Added <tt>.clone</tt> directive (experimental).<br>
         Further optimizations to hello_fft example.<br>
         Several smaller bugfixes.</dd>
+      <dt>V0.1.4</dt>
+      <dd>Support all shift values with small immediates.<br>
+        Fixed .setf for MUL ALU.<br>
+        Fixed operator <tt>&gt;&gt;&gt;</tt> and <tt>&lt;&lt;&lt;</tt>.<br>
+        Support forward <tt>.clone</tt>.<br>
+        Fixed validation of branch return targets.<br>
+        Check for conditional TMU access.<br>
+        Do not overwrite read address B with small immediate value.<br>
+        Support equivalence of <tt>add</tt> ... <tt>16</tt> and <tt>sub</tt>
+        ... <tt>-16</tt> in conjunction with small immediates.</dd>
     </dl>
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
     <p>The heart of the software. It assembles QPU code to binary or C
@@ -156,7 +166,7 @@
     <h3><tt>hello_fft</tt></h3>
     <p>This is the well known hello_fft sample available. The only difference is
       that it is faster because the shader code has been optimized. The gain is
-      about 25% of code size and 3% to 20% of the run time. The code will no
+      about 32% of code size and 3% to 20% of the run time. The code will no
       longer compile with another assembler since it uses some special features
       for instruction packing and scheduling.</p>
     <table border="1" cellpadding="2" cellspacing="0">
@@ -179,151 +189,151 @@
       <tbody>
         <tr>
           <td class="th">2<sup>8</sup></td>
-          <td>30 &micro;s</td>
-          <td>25 &micro;s*</td>
-          <td>-17%</td>
-          <td>15.1 &micro;s*</td>
-          <td>13.7 &micro;s*</td>
-          <td>-9%</td>
+          <td>25 &micro;s</td>
+          <td>21 &micro;s*</td>
+          <td>-16%</td>
+          <td>16.3 &micro;s</td>
+          <td>15.1 &micro;s</td>
+          <td>-7%</td>
         </tr>
         <tr>
           <td class="th">2<sup>9</sup></td>
-          <td>44 &micro;s*<br>
+          <td>39 &micro;s<br>
           </td>
-          <td>35 &micro;s*</td>
-          <td>-20%</td>
-          <td>25.3 &micro;s</td>
-          <td>22.0 &micro;s<br>
-          </td>
-          <td>-9%<br>
-          </td>
-        </tr>
-        <tr>
-          <td class="th">2<sup>10</sup></td>
-          <td>64 &micro;s*<br>
-          </td>
-          <td>54 &micro;s*</td>
-          <td>-16%</td>
-          <td>42 &micro;s</td>
-          <td>38.8 &micro;s<br>
-          </td>
-          <td>-8%<br>
-          </td>
-        </tr>
-        <tr>
-          <td class="th">2<sup>11</sup></td>
-          <td>106 &micro;s*<br>
-          </td>
-          <td>94 &micro;s* </td>
-          <td>-11%</td>
-          <td>89.8 &micro;s</td>
-          <td>81 &micro;s<br>
+          <td>32 &micro;s</td>
+          <td>-18%</td>
+          <td>29.1 &micro;s</td>
+          <td>26.1 &micro;s<br>
           </td>
           <td>-10%<br>
           </td>
         </tr>
         <tr>
-          <td class="th">2<sup>12</sup></td>
-          <td>24x &micro;s<br>
+          <td class="th">2<sup>10</sup></td>
+          <td>55 &micro;s<br>
           </td>
-          <td>21x &micro;s</td>
+          <td>49 &micro;s</td>
+          <td>-11%</td>
+          <td>48.8 &micro;s</td>
+          <td>46.2 &micro;s<br>
+          </td>
+          <td>-5%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>11</sup></td>
+          <td>99 &micro;s<br>
+          </td>
+          <td>87 &micro;s</td>
           <td>-12%</td>
-          <td>256 &micro;s</td>
-          <td>237 &micro;s<br>
+          <td>102.5 &micro;s</td>
+          <td>94.0 &micro;s<br>
           </td>
-          <td>-7%<br>
+          <td>-8%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>12</sup></td>
+          <td>226 &micro;s<br>
+          </td>
+          <td>213 &micro;s</td>
+          <td>-6%</td>
+          <td>258 &micro;s</td>
+          <td>244 &micro;s<br>
+          </td>
+          <td>-5%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>13</sup></td>
-          <td>57x &micro;s<br>
+          <td>622 &micro;s<br>
           </td>
-          <td>53x &micro;s</td>
-          <td>-7%</td>
-          <td>624 &micro;s</td>
-          <td>582 &micro;s<br>
+          <td>584 &micro;s</td>
+          <td>-6%</td>
+          <td>630 &micro;s</td>
+          <td>596 &micro;s<br>
           </td>
-          <td>-7%<br>
+          <td>-5%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>14</sup></td>
-          <td>1.17 ms<br>
+          <td>1.164 ms*<br>
           </td>
-          <td>1.13 ms</td>
-          <td>-3%</td>
-          <td>1.18 ms</td>
-          <td>1.10 ms<br>
+          <td>1.155 ms*</td>
+          <td>-1%</td>
+          <td>1.178 ms*</td>
+          <td>1.122 ms*<br>
           </td>
-          <td>-7%<br>
+          <td>-5%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>15</sup></td>
-          <td>3.21 ms<br>
+          <td>3.164 ms<br>
           </td>
-          <td>3.12 ms</td>
-          <td>-3%</td>
+          <td>3.053 ms</td>
+          <td>-4%</td>
           <td>3.056 ms</td>
-          <td>2.92 ms<br>
+          <td>2.952 ms<br>
           </td>
-          <td>-4%<br>
+          <td>-3%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>16</sup></td>
-          <td>6.31 ms<br>
+          <td>6.27 ms<br>
           </td>
-          <td>6.14 ms</td>
-          <td>-3%</td>
-          <td>6.146 ms</td>
-          <td>5.87 ms<br>
+          <td>6.04 ms</td>
+          <td>-4%</td>
+          <td>6.147 ms</td>
+          <td>5.965 ms<br>
+          </td>
+          <td>-3%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>17</sup></td>
+          <td>15.66 ms<br>
+          </td>
+          <td>15.05 ms</td>
+          <td>-4%</td>
+          <td>15.50 ms</td>
+          <td>14.89 ms<br>
           </td>
           <td>-4%<br>
           </td>
         </tr>
         <tr>
-          <td class="th">2<sup>17</sup></td>
-          <td>15.8 ms<br>
-          </td>
-          <td>15.1 ms</td>
-          <td>-4%</td>
-          <td>15.50 ms</td>
-          <td>14.70 ms<br>
-          </td>
-          <td>-5%<br>
-          </td>
-        </tr>
-        <tr>
           <td class="th">2<sup>18</sup></td>
-          <td>42.9 ms<br>
+          <td>43.09 ms<br>
           </td>
-          <td>40.7 ms</td>
-          <td>-5%</td>
-          <td>43.0 ms</td>
-          <td>40.60 ms<br>
+          <td>41.21 ms</td>
+          <td>-4%</td>
+          <td>42.96 ms</td>
+          <td>41.08 ms<br>
           </td>
-          <td>-6%<br>
+          <td>-4%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>19</sup></td>
-          <td>97.7 ms<br>
+          <td>97.8 ms<br>
           </td>
-          <td>92.4 ms</td>
-          <td>-5%</td>
-          <td>97.6 ms</td>
-          <td>92.3 ms<br>
+          <td>93.7 ms</td>
+          <td>-4%</td>
+          <td>97.63 ms</td>
+          <td>93.68 ms<br>
           </td>
-          <td>-5%<br>
+          <td>-4%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>20</sup></td>
           <td>197.0 ms<br>
           </td>
-          <td>187.5 ms</td>
-          <td>-5%</td>
+          <td>190.7 ms</td>
+          <td>-3%</td>
           <td><br>
           </td>
           <td><br>
@@ -335,8 +345,8 @@
           <td class="th">2<sup>21</sup></td>
           <td>394.4 ms<br>
           </td>
-          <td>374.7 ms</td>
-          <td>-5%</td>
+          <td>380.9 ms</td>
+          <td>-3%</td>
           <td><br>
           </td>
           <td><br>
@@ -349,6 +359,6 @@
     All timings are from repeated executions. The Raspi was slightly
     overclocked. (*) Timing is unstable, reason unknown.<br>
     <h2><a id="contact" name="contact"></a>Contact</h2>
-    <p>Comments, ideas, bugs, improvements to <i>raspi at maazl dot de</i>.</p>
+    <p>Comments, ideas, bugs, improvements to <i>raspi at maazl dot de</i>.7</p>
   </body>
 </html>
