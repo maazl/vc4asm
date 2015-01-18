@@ -77,7 +77,7 @@
 .set ra_tw_re,          ra11 # 11
 .set rb_tw_im,          rb11 # 11
 
-.set ra_save_16,        ra25
+#                       ra25
 #                       ra26
 .set ra_vdw_16,         ra27
 .set ra_vdw_32,         ra28
@@ -118,16 +118,12 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 5 registers
     mov.setf r3, unif;  mov ra_sync, 0
-    shl r0, r3, 5;      mov ra_save_16, 0
+    shl r0, r3, 5;      mov rx_inst, r3
     mov r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
-    add.ifnz ra_sync, r1, r0
-    mov.ifnz r1, :save_slave - :save_16
-    mov.ifnz ra_save_16, r1;
+    add.ifnz ra_sync, r1, r0;
     
 # (MM) Optimized: reduced VPM registers to 1
 inst_vpm r3, rx_vpm
-
-    ;mov rx_inst, r3
 
 ##############################################################################
 # Macros
@@ -329,10 +325,11 @@ bodies_fft_16
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 3
-    brr -, ra_save_16, r:save_16
+    ;mov.setf -, rx_inst
+    brr.allnz -, r:save_slave
     .endb
 
-:save_16
+#:save_16
     body_ra_save_16 ra_vdw_16
 
 

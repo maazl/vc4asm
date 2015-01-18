@@ -67,7 +67,7 @@
 #                       rb8
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
-.set ra_save_16,        ra10
+#                       ra10
 #                       rb10
 
 .set ra_tw_re,          ra11 # 9
@@ -113,16 +113,12 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 5 registers
     mov.setf r3, unif;  mov ra_sync, 0
-    shl r0, r3, 5;      mov ra_save_16, 0
+    shl r0, r3, 5;      mov rx_inst, r3
     mov r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     add.ifnz ra_sync, r1, r0;
-    mov.ifnz r1, :save_slave - :save_16
-    mov.ifnz ra_save_16, r1;
     
 # (MM) Optimized: reduced VPM registers to 1
 inst_vpm r3, rx_vpm
-
-    ;mov rx_inst, r3
 
 ##############################################################################
 # Macros
@@ -218,7 +214,7 @@ bodies_fft_16
 
     # (MM) Optimized: link to slave procedure without need for a register
     .back 9  # place deep inside fft_twiddles
-    ;mov.setf -, rx_inst;
+    ;mov.setf -, rx_inst
     .endb
     .back 3
     brr.allnz -, r:save_slave
@@ -239,10 +235,12 @@ bodies_fft_16
 :pass_2
     body_pass_16 LOAD_STRAIGHT
 
+    # (MM) Optimized: link to slave procedure without need for a register
     .back 3
-    brr -, ra_save_16, r:save_16
+    ;mov.setf -, rx_inst
+    brr.allnz -, r:save_slave
     .endb
 
-:save_16
+#:save_16
     body_ra_save_16 ra_vdw_16
 
