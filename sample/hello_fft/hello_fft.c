@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        printf("rel_rms_err = %0.2g, usecs = %f, k = %d\n",
+        printf("rel_rms_err = %.5e, usecs = %f, k = %d\n",
             sqrt(tsq[1]/tsq[0]), (double)(t[1]-t[0])/jobs, k);
     }
 

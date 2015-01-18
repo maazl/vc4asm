@@ -33,6 +33,12 @@ all: hello_fft.bin hello_fft_2d.bin
 
 shader: $(S)
 
+test: hello_fft.bin
+	./test.pl
+
+profile: hello_fft.bin
+	./profile.pl
+
 hex/shader_2048.hex:	qasm/gpu_fft_2048.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc qasm/gpu_fft_2048.qinc
 
 hello_fft.bin:	$(O1D)
