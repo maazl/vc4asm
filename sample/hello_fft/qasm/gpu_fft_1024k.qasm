@@ -91,7 +91,7 @@
 .set ra_0x7F,           ra31
 
 #                       rb27
-.set rb_0x40,           rb28
+#                       rb28
 .set rb_0x80,           rb29
 .set rb_0xF0,           rb30
 .set rx_0x0F0F0F0F,     rb31
@@ -99,16 +99,15 @@
 ##############################################################################
 # Constants
 
-mov rb_0x40,    0x40
-mov rb_0x80,    0x80
-mov rb_0xF0,    0xF0
-mov ra_0x7F,    0x7F
-
 mov rx_0x55555555, 0x55555555
 mov rx_0x33333333, 0x33333333
 mov rx_0x0F0F0F0F, 0x0F0F0F0F
 
 mov ra_vdw_32, vdw_setup_0(1, 16, dma_h32( 0,0))
+
+mov rb_0x80,    0x80
+mov rb_0xF0,    0xF0
+mov ra_0x7F,    0x7F;
 
 ##############################################################################
 # Load twiddle factors
@@ -121,13 +120,12 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 2 rb registers
-    mov r3, unif;         mov ra_save_32, 0
-    shl.setf r0, r3, 5;   mov ra_sync, 0
+    mov r3, unif;              mov ra_save_32, 0
+    shl.setf r0, r3, 5;        mov ra_sync, 0
     mov.ifnz r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     add.ifnz ra_sync, r1, r0
-    # (MM) Optimized: body_rx_save_slave_32 is now empty => link to sync directly
-    mov.ifnz r1, :sync_slave - :save_32 - 4*8 # -> rx_inst-1
-    add.ifnz ra_save_32, r1, r0;
+    mov.ifnz r1, :save_slave - :save_32
+    mov.ifnz ra_save_32, r1;
 
 # (MM) Optimized: reduced VPM registers to 1
 inst_vpm r3, rx_vpm
@@ -306,18 +304,7 @@ inst_vpm r3, rx_vpm
 :end
     exit rb_addr_y
 
-##############################################################################
-# Master/slave procedures
-
-:save_32
-    body_ra_save_32
-
-:sync
-    body_ra_sync
-
-:sync_slave
-    body_rx_sync_slave
-
+# (MM) Optimized: easier procedure chains
 ##############################################################################
 # Subroutines
 
@@ -333,6 +320,18 @@ bodies_fft_16
     .back 3
     brr -, ra_save_32, r:save_32
     .endb
+
+:save_32
+    body_ra_save_32
+
+:save_slave
+    body_rx_save_slave
+
+:sync_slave
+    body_rx_sync_slave
+
+:sync
+    body_ra_sync
 
 :pass_2
 :pass_3

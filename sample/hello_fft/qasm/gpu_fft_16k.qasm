@@ -71,24 +71,20 @@
 .set rb_link_1,         rb8
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
-.set ra_save_32,        ra10
-#
+#                       ra10
+#                       rb10
 
 .set ra_tw_re,          ra11 # 11
 .set rb_tw_im,          rb11 # 11
 
-#                       ra25
-#                       ra26
+.set ra_save_16,        ra25
+.set ra_save_32,        ra26
 .set ra_vdw_16,         ra27
 .set ra_vdw_32,         ra28
 
-.set rx_0x5555,         ra29
-.set rx_0x3333,         ra30
-.set rx_0x0F0F,         ra31
-
-#                       rb26
-#                       rb27
-#                       rb28
+.set rx_0x5555,         rb26
+.set rx_0x3333,         rb27
+.set rx_0x0F0F,         rb28
 .set rb_0x80,           rb29
 .set rb_0xF0,           rb30
 .set rb_pass2_link,     rb31
@@ -117,13 +113,15 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
 
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 4 registers
-    mov r3, unif;         mov ra_save_32, 0
-    shl.setf r0, r3, 5;   mov ra_sync, 0
+    ;                     mov ra_sync, 0
+    mov r3, unif;         mov ra_save_16, 0
+    shl.setf r0, r3, 5;   mov ra_save_32, 0
     mov.ifnz r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     add.ifnz ra_sync, r1, r0
-    # (MM) Optimized: body_rx_save_slave_32 is now empty => link to sync directly
-    mov.ifnz r1, :sync_slave - :save_32 - 4*8 # -> rx_inst-1
-    add.ifnz ra_save_32, r1, r0;
+    mov.ifnz r1, :save_slave - :save_16
+    mov.ifnz ra_save_16, r1
+    mov.ifnz r1, :save_slave - :save_32
+    mov.ifnz ra_save_32, r1;
 
 # (MM) Optimized: reduced VPM registers to 1
 inst_vpm r3, rx_vpm
@@ -256,18 +254,6 @@ inst_vpm r3, rx_vpm
 
 # (MM) Optimized: easier procedure chains
 ##############################################################################
-# Master/slave procedures
-
-:save_32
-    body_ra_save_32
-
-:sync
-    body_ra_sync
-
-:sync_slave
-    body_rx_sync_slave
-
-##############################################################################
 # Subroutines
 
 # (MM) Optimized: joined load_xxx and ldtmu in FFT-16 codelet
@@ -283,6 +269,18 @@ bodies_fft_16
     brr -, ra_save_32, r:save_32
     .endb
 
+:save_32
+    body_ra_save_32
+
+:save_slave
+    body_rx_save_slave
+
+:sync_slave
+    body_rx_sync_slave
+
+:sync
+    body_ra_sync
+
 :pass_2
     body_pass_32 LOAD_STRAIGHT
 
@@ -293,13 +291,10 @@ bodies_fft_16
 :pass_3
     body_pass_16 LOAD_STRAIGHT
 
-    # (MM) Optimized: link to slave procedure without need for a register
-    .back 2 # cannot go back more than 2 instructions into body_pass_16
-    ;mov.setf -, rx_inst
-    # (MM) Optimized: body_rx_save_slave_16 is now empty => link to sync directly
-    brr.allnz -, r:sync, ra_sync
+    .back 3
+    brr -, ra_save_16, r:save_16
     .endb
-    nop
 
+:save_16
     body_ra_save_16 ra_vdw_16
 

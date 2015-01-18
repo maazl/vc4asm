@@ -70,16 +70,17 @@
 .macro body_ra_save_16, arg_vdw
     # (MM) Optimized: move write_vpm_16 to body_pass_16
 
-    mov -, vw_wait
+    # (MM) Optimized: less memory I/O, no need for rb_0x40, better use of both ALUs
+    mov -, vw_wait;            mov r0, arg_vdw
 
     .rep i, 7
         mov -, sacq(i+9) # Master waits for slave
         mov -, srel(i+1) # Master releases slave
     .endr
 
-    add ra_save_ptr, ra_save_ptr, rb_0x40; mov r1, ra_save_ptr
-    # (MM) Optimized: better use of both ALUs
-    mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0)); mov r0, arg_vdw
+    mov.setf r2, 0x40;         mov r1, ra_save_ptr
+    add ra_save_ptr, r1, r2;   mov r3, 6
+    mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0)); mov ra_temp, r3
     mov r3, PASS16_STRIDE
 
     .rep i, 16
@@ -98,20 +99,20 @@
 .macro body_ra_save_32
     # (MM) Optimized: move write_vpm_32 to body_pass_32
 
-    mov -, vw_wait
+    # (MM) Optimized: less memory I/O, no need for rb_0x40, better use of both ALUs
+    mov -, vw_wait;            mov r0, ra_vdw_32
 
     .rep i, 7
         mov -, sacq(i+9) # Master waits for slave
         mov -, srel(i+1) # Master releases slave
     .endr
 
-    add ra_save_ptr, ra_save_ptr, rb_0x40; mov r1, ra_save_ptr
-    # (MM) Optimized: better use of both ALUs
-    mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0)); mov r0, ra_vdw_32
-    mov r3, PASS32_STRIDE
+    mov r2, 0x40;              mov r1, ra_save_ptr
+    add ra_save_ptr, r1, r2;   mov r3, 14
+    mov r2, vdw_setup_0(1, 16, dma_h32(1,0)) - vdw_setup_0(1, 16, dma_h32(0,0)); mov ra_temp, r3
+    mov.setf r3, PASS32_STRIDE
 
     # (MM) Optimized: shorter code, slightly faster because of cache efficiency
-    mov.setf ra_temp, 14
 :0  .rep i, 2
         add r0, r0, r2; mov vw_setup, r0
         add r1, r1, r3; mov vw_addr,  r1

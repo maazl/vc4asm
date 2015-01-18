@@ -86,14 +86,13 @@
 #                       ra31
 
 #                       rb28
-.set rb_0x40,           rb29
+#                       rb29
 .set rb_0xF0,           rb30
 .set rb_0x1D0,          rb31
 
 ##############################################################################
 # Constants
 
-mov rb_0x40,    0x40
 mov rb_0xF0,    0xF0
 mov rb_0x1D0,   0x1D0
 
@@ -213,15 +212,6 @@ inst_vpm r3, rx_vpm
 
 # (MM) Optimized: easier procedure chains
 ##############################################################################
-# Master/slave procedures
-
-:sync
-    body_ra_sync
-
-:sync_slave
-    body_rx_sync_slave
-
-##############################################################################
 # Subroutines
 
 # (MM) Optimized: joined load_xxx and ldtmu in FFT-16 codelet
@@ -238,14 +228,19 @@ bodies_fft_16
     ;shl.setf ra_temp, rx_inst, 5    # 4 instructions per instance
     .endb
     .back 3
-    brr.allnz -, ra_temp, r:1f - 4*8 # + (rx_inst-1) * 4*8
+    brr.allnz -, ra_temp, r:save_slave_64 - 4*8 # + (rx_inst-1) * 4*8
     .endb
 
-    body_ra_save_64 rb_0x40
+    body_ra_save_64
 
-:1
+:save_slave_64
     body_rx_save_slave_64
 
+:sync_slave
+    body_rx_sync_slave
+
+:sync
+    body_ra_sync
 
 :pass_2
     body_pass_32 LOAD_STRAIGHT
@@ -255,9 +250,11 @@ bodies_fft_16
     ;mov.setf -, rx_inst;
     .endb
     .back 3
-    # (MM) Optimized: body_rx_save_slave_32 is now empty => link to sync directly
-    brr.allnz -, r:sync, ra_sync
+    brr.allnz -, r:save_slave
     .endb
 
     body_ra_save_32
+
+:save_slave
+    body_rx_save_slave
 

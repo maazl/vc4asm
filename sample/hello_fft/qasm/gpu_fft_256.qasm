@@ -106,9 +106,8 @@ load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
     shl.setf r0, r3, 5;        mov ra_sync, 0
     mov.ifnz r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     add.ifnz ra_sync, r1, r0
-    # (MM) Optimized: body_rx_save_slave_16 is now empty => link to sync directly
-    mov.ifnz r1, :sync_slave - :save_16 - 4*8 # -> rx_inst-1
-    add.ifnz ra_save_16, r1, r0;
+    mov.ifnz r1, :save_slave - :save_16
+    mov.ifnz ra_save_16, r1;
     
 # (MM) Optimized: reduced VPM registers to 1
 inst_vpm r3, rx_vpm
@@ -221,18 +220,6 @@ inst_vpm r3, rx_vpm
 
 # (MM) Optimized: easier procedure chains
 ##############################################################################
-# Master/slave procedures
-
-:save_16
-    body_ra_save_16 ra_vdw
-
-:sync
-    body_ra_sync
-
-:sync_slave
-    body_rx_sync_slave
-
-##############################################################################
 # Subroutines
 
 :pass_1
@@ -253,4 +240,16 @@ inst_vpm r3, rx_vpm
     .back 3
     brr -, ra_save_16, r:save_16
     .endb
+
+:save_16
+    body_ra_save_16 ra_vdw
+
+:save_slave
+    body_rx_save_slave
+
+:sync_slave
+    body_rx_sync_slave
+
+:sync
+    body_ra_sync
 

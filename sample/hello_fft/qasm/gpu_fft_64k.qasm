@@ -87,7 +87,7 @@
 .set rx_0x5555,         ra30
 .set rx_0x3333,         rb30
 .set rx_0x0F0F,         ra31
-.set rb_0x40,           rb31
+#                       rb31
 
 ##############################################################################
 # Dual-use registers
@@ -104,7 +104,6 @@ mov rx_0x5555,  0x5555
 mov rx_0x3333,  0x3333
 mov rx_0x0F0F,  0x0F0F
 
-mov rb_0x40,    0x40
 mov rb_0xF0,    0xF0
 
 mov ra_vdw_32, vdw_setup_0(32, 16, dma_h32( 0,0))
@@ -124,7 +123,7 @@ load_tw r3, TW_SHARED, TW_UNIQUE, unif
     mov.setf r3, unif;  mov ra_sync, 0
     shl r0, r3, 5;      mov rx_inst, r3
     mov r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
-    add.ifnz ra_sync, r1, r0
+    add.ifnz ra_sync, r1, r0;
 
 # (MM) Optimized: reduced VPM registers to 1
 inst_vpm r3, rx_vpm
@@ -263,15 +262,6 @@ inst_vpm r3, rx_vpm
 
 # (MM) Optimized: easier procedure chains
 ##############################################################################
-# Master/slave procedures
-
-:sync
-    body_ra_sync
-
-:sync_slave
-    body_rx_sync_slave
-
-##############################################################################
 # Subroutines
 
 # (MM) Optimized: joined load_xxx and ldtmu in FFT-16 codelet
@@ -288,13 +278,13 @@ bodies_fft_16
     ;shl.setf ra_temp, rx_inst, 5    # 4 instructions per instance
     .endb
     .back 3
-    brr.allnz -, ra_temp, r:1f - 4*8 # + (rx_inst-1) * 4*8
+    brr.allnz -, ra_temp, r:save_slave_64 - 4*8 # + (rx_inst-1) * 4*8
     .endb
 
-    # (MM) Optimized: avoid repeated ldi
-    body_ra_save_64 rb_0x40
+#:save_64
+    body_ra_save_64
 
-:1
+:save_slave_64
     body_rx_save_slave_64
 
 :pass_2
@@ -306,10 +296,18 @@ bodies_fft_16
     ;mov.setf -, rx_inst;
     .endb
     .back 3
-    # (MM) Optimized: body_rx_save_slave_32 is now empty => link to sync directly
-    brr.allnz -, r:sync, ra_sync
+    brr.allnz -, r:save_slave
     .endb
 
+#:save_32
     body_ra_save_32
 
+:save_slave
+    body_rx_save_slave
+
+:sync_slave
+    body_rx_sync_slave
+
+:sync
+    body_ra_sync
 

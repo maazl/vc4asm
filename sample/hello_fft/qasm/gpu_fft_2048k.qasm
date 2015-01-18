@@ -80,7 +80,7 @@
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
 .set rx_inst,           ra10
-#                       rb10
+.set rb_40,             rb10
 
 .set ra_64,             ra11 # 4
 .set rb_64,             rb11 # 4
@@ -93,7 +93,6 @@
 
 .set rb_pass2_link,     rb_64+0
 .set rb_0xF0,           rb_64+1
-.set rb_0x40,           rb_64+2
 
 .set ra_vdw_32,         ra_64+3
 
@@ -105,6 +104,7 @@ mov rx_0x33333333, 0x33333333
 mov rx_0x0F0F0F0F, 0x0F0F0F0F
 mov r5rep,      0x1D0
 mov ra_0x7F,    0x7F
+mov rb_40,      40
 
 ##############################################################################
 # Load twiddle factors
@@ -121,7 +121,7 @@ load_tw r3, TW_SHARED, TW_UNIQUE, unif
     mov.setf r3, unif;  mov ra_sync, 0
     shl r0, r3, 5;      mov rx_inst, r3
     mov r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
-    add.ifnz ra_sync, r1, r0
+    add.ifnz ra_sync, r1, r0;
 
 # (MM) Optimized: reduced VPM registers to 1
 inst_vpm r3, rx_vpm
@@ -182,7 +182,6 @@ inst_vpm r3, rx_vpm
 
     mov ra_vdw_32, vdw_setup_0(1, 16, dma_h32( 0,0))
 
-    mov rb_0x40, 0x40
     mov rb_0xF0, 0xF0
 
 ##############################################################################
@@ -306,15 +305,7 @@ inst_vpm r3, rx_vpm
 :end
     exit rb_addr_y
 
-##############################################################################
-# Master/slave procedures
-
-:sync
-    body_ra_sync
-
-:sync_slave
-    body_rx_sync_slave
-
+# (MM) Optimized: easier procedure chains
 ##############################################################################
 # Subroutines
 
@@ -353,9 +344,18 @@ bodies_fft_16
     ;mov.setf -, rx_inst;
     .endb
     .back 3
-    # (MM) Optimized: body_rx_save_slave_32 is now empty => link to sync directly
-    brr.allnz -, r:sync, ra_sync
+    brr.allnz -, r:save_slave
     .endb
 
 # save_master_32
     body_ra_save_32
+
+:save_slave
+    body_rx_save_slave
+
+:sync_slave
+    body_rx_sync_slave
+
+:sync
+    body_ra_sync
+
