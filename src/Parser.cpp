@@ -1789,8 +1789,12 @@ void Parser::EnsurePass2()
 	// Check all labels
 	for (auto& label : Labels)
 	{	if (!label.Definition)
-			Fail("Label '%s' is undefined. Referenced from %s.\n",
+			Msg(ERROR, "Label '%s' is undefined. Referenced from %s.\n",
 				label.Name.c_str(), label.Reference.toString().c_str());
+		if (!label.Reference)
+			Msg(INFO, "Label '%s' defined at %s is not used.\n",
+				label.Name.c_str(), label.Definition.toString().c_str());
+		// prepare for next pass
 		label.Definition.Line = 0;
 	}
 
