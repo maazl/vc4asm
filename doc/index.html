@@ -23,11 +23,11 @@
       to keep it downwardly compatible to the Broadcom tools.</p>
     <p><a href="#vc4asm">&rarr; Assembler</a>, <a href="#vc4dis">&rarr;
         Disassembler</a>, <a href="#bugs">&rarr; Known problems</a> <a href="#build">&rarr;
-        Build instructions</a>, <a href="#sample">&rarr;Samples</a> <a href="#contact">&rarr;
+        Build instructions</a>, <a href="#sample">&rarr; Samples</a>, <a href="#contact">&rarr;
         Contact</a></p>
     <h2>Download &amp; history</h2>
     <p>Download <a href="../vc4asm.tar.bz2">Source code, Raspberry Pi binary,
-        examples and this documentation</a> (100k)</p>
+        examples and this documentation</a> (700k)</p>
     <dl>
       <dt>V0.1</dt>
       <dd>First public release.</dd>
@@ -44,7 +44,7 @@
         Several smaller bugfixes.</dd>
       <dt>V0.1.4</dt>
       <dd>Support all shift values with small immediates.<br>
-        Fixed .setf for MUL ALU.<br>
+        Fixed <tt>.setf</tt> for MUL ALU.<br>
         Fixed operator <tt>&gt;&gt;&gt;</tt> and <tt>&lt;&lt;&lt;</tt>.<br>
         Support forward <tt>.clone</tt>.<br>
         Fixed validation of branch return targets.<br>
@@ -151,8 +151,9 @@
       <li>Now <tt>vc4asm</tt> and <tt>vc4dis</tt> executables should build.</li>
     </ul>
     <h2><a id="sample" name="sample"></a>Sample programs</h2>
-    <p>All sample programs require <i>root access</i> to run. This is because
-      of the need to call <tt>mmap</tt>.</p>
+    <p>All sample programs require <em>root access</em> to run. This is because
+      of the need to call <tt>mmap</tt>. See <a href="http://www.maazl.de/project/vcio2/doc/index.html">vcio2
+        driver</a> for an alternative without root privileges.</p>
     <p>Furthermore you need to create a local character device named <tt>char_dev</tt>
       to access the vcio driver of the Raspi kernel: <tt>sudo mknod char_dev c
         100 0</tt><br>
@@ -166,7 +167,7 @@
     <h3><tt>hello_fft</tt></h3>
     <p>This is the well known hello_fft sample available. The only difference is
       that it is faster because the shader code has been optimized. The gain is
-      about 32% of code size and 3% to 20% of the run time. The code will no
+      about 32% of code size and 3% to 18% of the run time. The code will no
       longer compile with another assembler since it uses some special features
       for instruction packing and scheduling.</p>
     <table border="1" cellpadding="2" cellspacing="0">
@@ -359,6 +360,6 @@
     All timings are from repeated executions. The Raspi was slightly
     overclocked. (*) Timing is unstable, reason unknown.<br>
     <h2><a id="contact" name="contact"></a>Contact</h2>
-    <p>Comments, ideas, bugs, improvements to <i>raspi at maazl dot de</i>.7</p>
+    <p>Comments, ideas, bugs, improvements to <i>raspi at maazl dot de</i>.</p>
   </body>
 </html>

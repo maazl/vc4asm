@@ -1,46 +1,59 @@
-h1 {  
-  text-align: center;  
-  font-family: Arial, Helvetica, sans-serif;  
-  color: #ff0000;
-}
-
-.abstract {  
-  font-style: italic;  
+.abstract {
+  font-style: italic;
   text-align: center;
 }
 
-h2 {  
-  font-family: Arial, Helvetica, sans-serif;  
+.nobr {
+  white-space: nowrap;
+}
+
+.A {
+  color: #0000cc;
+}
+.M {
+  color: #cc0000;
+}
+
+h1 {
+  text-align: center;
+  color: #ff0000;
+}
+
+h2 {
   background-color: #eeeeee;
 }
 
-h3 {  
+h1,h2,h3 {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-th,.th {  
-  background-color: #eeeeee;  
-  text-align: left;  
+th,.th {
+  background-color: #eeeeee;
+  text-align: left;
   vertical-align: bottom;
   font-weight: bold;
 }
 
-td {  
+td {
   vertical-align: baseline;
 }
 
-pre {  
+pre {
   margin-left: 40px;
-}
-
-.A {  
-  color: #0000cc;
-}
-
-.M {  
-  color: #cc0000;
 }
 
 sup,sub {
   font-size: smaller;
+}
+
+em {
+  color: blue;
+}
+
+strong {
+  color: red;
+}
+
+a {
+  color: darkblue;
 }
