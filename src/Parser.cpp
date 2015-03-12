@@ -1299,6 +1299,32 @@ void Parser::parseIF(int)
 	AtIf.emplace_back(Context.back()->Line, isDisabled() ? 4 : doCondition());
 }
 
+void Parser::parseIFSET(int)
+{
+	if (doPreprocessor(PP_MACRO))
+		return;
+
+	if (NextToken() != WORD)
+		Fail("Expected identifier after .ifset, found '%s'.", Token.c_str());
+
+	int state = 4;
+	if (!isDisabled())
+	{	state = 0;
+		for (auto i = Context.end(); i != Context.begin(); )
+		{	auto c = (*--i)->Consts.find(Token);
+			if (c != (*i)->Consts.end())
+			{	state = 1;
+				break;
+			}
+		}
+	}
+
+	if (NextToken() != END)
+		Fail("Expected end of line, found '%s'.", Token.c_str());
+
+	AtIf.emplace_back(Context.back()->Line, state);
+}
+
 void Parser::parseELSEIF(int)
 {
 	if (doPreprocessor(PP_MACRO))

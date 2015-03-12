@@ -1081,6 +1081,7 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "float",   &Parser::parseDATA,  -4 }
 ,	{ "func",    &Parser::beginMACRO, M_FUNC }
 ,	{ "if",      &Parser::parseIF }
+,	{ "ifset",   &Parser::parseIFSET, C_NONE }
 ,	{ "include", &Parser::doINCLUDE }
 ,	{ "int",     &Parser::parseDATA,  4 }
 ,	{ "lconst",  &Parser::parseSET,   C_LOCAL|C_CONST }

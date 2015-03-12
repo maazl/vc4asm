@@ -15,8 +15,9 @@
           href="#.elseif">.elseif</a> <a href="#.back">.endb</a></tt><tt><tt> <a
             href="#.func">.endf</a> </tt> <a href="#.endif">.endif</a> <a href="#.macro">.endm</a>
         <a href="#.rep">.endr</a> <a href="#.equ">.equ</a></tt><tt><tt> <a href="#.float">.float</a>
-        </tt> <a href="#.func">.func</a> <a href="#.if">.if</a> <a href="#.include">.include</a>
-      </tt><tt><tt><a href="#.int">.int</a></tt></tt><tt><tt><tt> <a href="#.const">.lconst</a>
+        </tt> <a href="#.func">.func</a> <a href="#.if">.if</a> </tt><tt><tt><a
+            href="#.ifset">.ifset</a></tt> <a href="#.include">.include</a> </tt><tt><tt><a
+            href="#.int">.int</a></tt></tt><tt><tt><tt> <a href="#.const">.lconst</a>
           </tt> </tt></tt><tt><tt><tt><a href="#.long">.long</a></tt></tt></tt><tt><tt><tt><tt>
               <a href="#.set">.lset</a></tt></tt></tt></tt><tt><tt><tt><tt><tt>
                 <a href="#.unset">.lunset</a> </tt> </tt> </tt> </tt> <a href="#.macro">.macro</a>
@@ -175,6 +176,16 @@
       <dt><tt><var>condition</var></tt></dt>
       <dd>Expression to check. The expression must be constant and of type
         integer or float and is checked to be non-zero.</dd>
+    </dl>
+    <h2><a id=".ifset" name=".ifset"></a><tt>.ifset</tt> - check whether a
+      constant is defined</h2>
+    <pre>.if <var>identifier<br>    your code</var><br><var>    </var>...<br>.else<br>    <var>alternate code</var><br><var>    </var>...<br>.endif</pre>
+    <dl>
+      <dt><tt><var>identifier</var></tt></dt>
+      <dd>Check whether an identifier is defined within the current context.
+        This will also check for macro arguments.</dd>
+    </dl>
+    <dl>
     </dl>
     <h2><a id=".assert" name=".assert"></a><tt>.assert</tt> - check for static
       condition</h2>

@@ -53,7 +53,8 @@
         Support equivalence of <tt>add</tt> ... <tt>16</tt> and <tt>sub</tt>
         ... <tt>-16</tt> in conjunction with small immediates.</dd>
       <dt>V0.1.5</dt>
-      <dd>Merge with hello_fft 3.0, 4Mi FFT, should fix RPi 2 compatibility.</dd>
+      <dd>Merge with hello_fft 3.0, 4Mi FFT, should fix RPi 2 compatibility.<br>
+        Support for <tt>.ifset</tt> directive.</dd>
     </dl>
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
     <p>The heart of the software. It assembles QPU code to binary or C
@@ -157,9 +158,9 @@
     <p>All sample programs require <em>root access</em> to run. This is because
       of the need to call <tt>mmap</tt>. See <a href="http://www.maazl.de/project/vcio2/doc/index.html">vcio2
         driver</a> for an alternative without root privileges.</p>
-    <p>Furthermore you need a recent Raspbian kernel or create a local character
-      device named <tt>/dev/vcio</tt> to access the vcio driver of the Raspi
-      kernel: <tt>sudo mknod /dev/vcio c 100 0</tt></p>
+    <p>Furthermore you need a recent Raspbian kernel (use <tt>rpi-update</tt>)
+      or create a local character device named <tt>/dev/vcio</tt> to access the
+      vcio driver of the Raspi kernel: <tt>sudo mknod /dev/vcio c 100 0</tt></p>
     <p>All these restrictions apply to the original <tt>hello_fft</tt> as well.</p>
     <h3><tt>simple</tt></h3>
     <p>This is a very simple program that demonstrates the use of all available

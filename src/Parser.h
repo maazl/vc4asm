@@ -311,6 +311,7 @@ class Parser
 	void             parseUNSET(int flags);
 	bool             doCondition();
 	void             parseIF(int);
+	void             parseIFSET(int flags);
 	void             parseELSE(int);
 	void             parseELSEIF(int);
 	void             parseENDIF(int);
