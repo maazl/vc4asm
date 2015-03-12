@@ -52,6 +52,8 @@
         Do not overwrite read address B with small immediate value.<br>
         Support equivalence of <tt>add</tt> ... <tt>16</tt> and <tt>sub</tt>
         ... <tt>-16</tt> in conjunction with small immediates.</dd>
+      <dt>V0.1.5</dt>
+      <dd>Merge with hello_fft 3.0, 4Mi FFT, should fix RPi 2 compatibility.</dd>
     </dl>
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
     <p>The heart of the software. It assembles QPU code to binary or C
@@ -98,9 +100,7 @@
     <h3>Options</h3>
     <dl>
       <dt><tt>-o &lt;qasm-output&gt; </tt></dt>
-      <dd>Assembler output file, <tt>stdout</tt> by default.<br>
-        Note that <tt>vc4asm</tt> always writes <em>little endian</em>
-        binaries.</dd>
+      <dd>Assembler output file, <tt>stdout</tt> by default.</dd>
       <dt><tt>-x&lt;input-format&gt;</tt></dt>
       <dd><tt>32</tt> - 32 bit hexadecimal input, .e. 2 qwords per instruction,
         default if <tt>&lt;input-format&gt;</tt> is missing.<br>
@@ -117,8 +117,11 @@
         writes immediate values that are likely to be a floating point number as
         float. This may not always hit the nail on the head.</dd>
       <dt><tt>-v</tt></dt>
-      <dd>Write QPU instruction set bit fields as comment right to each
-        instruction. This is mainly for debugging purposes.</dd>
+      <dd>Write binary code and offset as comment right to each instruction.</dd>
+      <dt><tt>-v2</tt></dt>
+      <dd>As <tt>-v</tt> but also write QPU instruction set bit fields as
+        comment right to each instruction. This is mainly for debugging
+        purposes.</dd>
       <dt><tt>-V</tt></dt>
       <dd>Check for Videocore IV constraints, e.g. reading a register file
         address immediately after writing it.</dd>
@@ -154,12 +157,9 @@
     <p>All sample programs require <em>root access</em> to run. This is because
       of the need to call <tt>mmap</tt>. See <a href="http://www.maazl.de/project/vcio2/doc/index.html">vcio2
         driver</a> for an alternative without root privileges.</p>
-    <p>Furthermore you need to create a local character device named <tt>char_dev</tt>
-      to access the vcio driver of the Raspi kernel: <tt>sudo mknod char_dev c
-        100 0</tt><br>
-      The latter won't work if you are at an nfs share or something like that.
-      In this case create the device in the root file system e.g. <tt>/dev/vcio</tt>
-      and place a symbolic link to the device with <tt>ln -s /dev/vcio char_dev</tt>.</p>
+    <p>Furthermore you need a recent Raspbian kernel or create a local character
+      device named <tt>/dev/vcio</tt> to access the vcio driver of the Raspi
+      kernel: <tt>sudo mknod /dev/vcio c 100 0</tt></p>
     <p>All these restrictions apply to the original <tt>hello_fft</tt> as well.</p>
     <h3><tt>simple</tt></h3>
     <p>This is a very simple program that demonstrates the use of all available
