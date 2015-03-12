@@ -1,6 +1,6 @@
-# BCM2835 "GPU_FFT" release 2.0
+# BCM2835 "GPU_FFT" release 3.0
 #
-# Copyright (c) 2014, Andrew Holme.
+# Copyright (c) 2015, Andrew Holme.
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -30,19 +30,12 @@
 .include "gpu_fft_2048k.qinc"
 
 ##############################################################################
-# Twiddles
+# Twiddles: src
 
-.set TW_SHARED,    10
-.set TW_UNIQUE,     2
-
-.set TW64_P1_BASE0, 0
-.set TW64_P1_BASE1, 1
-.set TW32_P1_BASE,  2
-.set TW32_P2_BASE,  TW32_P1_BASE
-.set TW32_P3_BASE,  TW32_P1_BASE
-.set TW16_P1_BASE,  3
-.set TW16_P2_BASE,  TW16_P1_BASE
-.set TW16_P3_BASE,  TW16_P1_BASE
+.set TW64_BASE0,    0   # rx_tw_shared
+.set TW64_BASE1,    1
+.set TW32_BASE,     2
+.set TW16_BASE,     3
 .set TW32_P2_STEP,  4
 .set TW16_P2_STEP,  5
 .set TW32_P3_STEP,  6
@@ -50,11 +43,18 @@
 .set TW32_P4_STEP,  8
 .set TW16_P4_STEP,  9
 
-.set TW32_P4_BASE, 10
-.set TW16_P4_BASE, 11
+.set TW32_P4_BASE,  0   # rx_tw_unique
+.set TW16_P4_BASE,  1
 
-.set TW32_ACTIVE,   TW_SHARED+TW_UNIQUE
-.set TW16_ACTIVE,   TW_SHARED+TW_UNIQUE+1
+##############################################################################
+# Twiddles: dst
+
+.set TW16_STEP, 0  # 1
+.set TW32_STEP, 1  # 1
+.set TW16,      2  # 5
+.set TW32,      7  # 2
+.set TW48,      9  # 1
+.set TW64,      10 # 1
 
 ##############################################################################
 # Registers
@@ -80,13 +80,16 @@
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
 .set rx_inst,           ra10
-.set rb_40,             rb10
+#                       rb10
 
 .set ra_64,             ra11 # 4
 .set rb_64,             rb11 # 4
 
-.set ra_tw_re,          ra15 # 17
-.set rb_tw_im,          rb15 # 17
+.set rx_tw_shared,      ra15
+.set rx_tw_unique,      rb15
+
+.set ra_tw_re,          ra16 # 11
+.set rb_tw_im,          rb16 # 11
 
 ##############################################################################
 # Dual-use registers
@@ -104,14 +107,12 @@ mov rx_0x33333333, 0x33333333
 mov rx_0x0F0F0F0F, 0x0F0F0F0F
 mov r5rep,      0x1D0
 mov ra_0x7F,    0x7F
-mov rb_40,      40
 
 ##############################################################################
-# Load twiddle factors
+# Twiddles: ptr
 
-mov r3, 0x80
-load_tw r3,         0, TW_SHARED, unif
-load_tw r3, TW_SHARED, TW_UNIQUE, unif
+mov rx_tw_shared, unif
+mov rx_tw_unique, unif
 
 ##############################################################################
 # Instance
@@ -127,22 +128,6 @@ load_tw r3, TW_SHARED, TW_UNIQUE, unif
 inst_vpm r3, rx_vpm
 
 ##############################################################################
-# Macros
-
-.macro swizzle
-.endm
-
-.macro next_twiddles, tw16, tw32
-    next_twiddles_32 tw32
-    next_twiddles_16 tw16
-.endm
-
-.macro init_stage, m, tw16, tw32
-    init_stage_32 tw32
-    init_stage_16 tw16, m
-.endm
-
-##############################################################################
 # Top level
 
 :loop
@@ -154,7 +139,11 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 1
 
-    init_stage 6, TW16_P1_BASE, TW32_P1_BASE
+    load_tw rx_tw_shared, TW16+3, TW16_BASE
+    load_tw rx_tw_shared, TW32+0, TW32_BASE
+    load_tw rx_tw_shared, TW48, TW64_BASE0
+    load_tw rx_tw_shared, TW64, TW64_BASE1
+    init_stage 6
     read_rev 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_rev
@@ -188,7 +177,11 @@ inst_vpm r3, rx_vpm
 # Pass 2
 
     swap_buffers
-    init_stage 5, TW16_P2_BASE, TW32_P2_BASE
+    load_tw rx_tw_shared, TW16+3, TW16_BASE
+    load_tw rx_tw_shared, TW32+0, TW32_BASE
+    load_tw rx_tw_shared, TW16_STEP, TW16_P2_STEP
+    load_tw rx_tw_shared, TW32_STEP, TW32_P2_STEP
+    init_stage 5
     read_lin 0x10
 
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
@@ -208,7 +201,8 @@ inst_vpm r3, rx_vpm
     and.setf -, r1, ra_0x7F;   mov.ifn r0, rb_pass2_link
     mov.ifz ra_link_1, r0
 :2
-    next_twiddles TW16_P2_STEP, TW32_P2_STEP
+    next_twiddles_32
+    next_twiddles_16
 
     # (MM) Optimized: place branch before the last instruction of next_twiddles
     # and link directly to :1.
@@ -228,7 +222,11 @@ inst_vpm r3, rx_vpm
 # Pass 3
 
     swap_buffers
-    init_stage 5, TW16_P3_BASE, TW32_P3_BASE
+    load_tw rx_tw_shared, TW16+3, TW16_BASE
+    load_tw rx_tw_shared, TW32+0, TW32_BASE
+    load_tw rx_tw_shared, TW16_STEP, TW16_P3_STEP
+    load_tw rx_tw_shared, TW32_STEP, TW32_P3_STEP
+    init_stage 5
     read_lin 0x10
 
     # (MM) Optimized: place branch before the last instruction of read_lin
@@ -253,14 +251,15 @@ inst_vpm r3, rx_vpm
     mov.ifn ra_link_1, rb_pass2_link
     nop
 :2
-    next_twiddles TW16_P3_STEP, TW32_P3_STEP
+    next_twiddles_32
+    next_twiddles_16
 
     # (MM) Optimized: place branch before the last two instructions of next_twiddles
     # and patch return adress to :1.
     .back 2
     brr rb_pass2_link, r:pass_3
     .endb
-    ;mov ra_link_1, rb_link_1
+    mov ra_link_1, rb_link_1
 :3
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
@@ -272,7 +271,11 @@ inst_vpm r3, rx_vpm
 # Pass 4
 
     swap_buffers
-    init_stage 5, TW16_P4_BASE, TW32_P4_BASE
+    load_tw rx_tw_unique, TW16+3, TW16_P4_BASE
+    load_tw rx_tw_unique, TW32+0, TW32_P4_BASE
+    load_tw rx_tw_shared, TW16_STEP, TW16_P4_STEP
+    load_tw rx_tw_shared, TW32_STEP, TW32_P4_STEP
+    init_stage 5
     read_lin 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_lin
@@ -282,7 +285,8 @@ inst_vpm r3, rx_vpm
     mov ra_points, (1<<STAGES) / 0x100 - 1
 
 :   # start of hidden loop
-    next_twiddles TW16_P4_STEP, TW32_P4_STEP
+    next_twiddles_32
+    next_twiddles_16
 
     # (MM) Optimized: place the branch before the last instruction of next_twiddles
     # and branch unconditional and patch the return address of the last turn.

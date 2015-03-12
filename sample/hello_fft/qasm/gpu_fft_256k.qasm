@@ -1,6 +1,6 @@
-# BCM2835 "GPU_FFT" release 2.0 BETA
+# BCM2835 "GPU_FFT" release 3.0
 #
-# Copyright (c) 2014, Andrew Holme.
+# Copyright (c) 2015, Andrew Holme.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,25 +30,25 @@
 .include "gpu_fft_ex.qinc"
 
 ##############################################################################
-# Twiddles
+# Twiddles: src
 
-.set TW_SHARED,     6
-.set TW_UNIQUE,     2
-
-.set TW32_P1_BASE,  0
-.set TW16_P1_BASE,  1
-.set TW16_P2_BASE,  TW16_P1_BASE
-.set TW16_P3_BASE,  TW16_P1_BASE
+.set TW32_BASE,     0   # rx_tw_shared
+.set TW16_BASE,     1
 .set TW16_P2_STEP,  2
 .set TW16_P3_STEP,  3
 .set TW32_P4_STEP,  4
 .set TW16_P4_STEP,  5
 
-.set TW32_P4_BASE,  6
-.set TW16_P4_BASE,  7
+.set TW32_P4_BASE,  0   # rx_tw_unique
+.set TW16_P4_BASE,  1
 
-.set TW32_ACTIVE,   TW_SHARED+TW_UNIQUE
-.set TW16_ACTIVE,   TW_SHARED+TW_UNIQUE+1
+##############################################################################
+# Twiddles: dst
+
+.set TW16_STEP, 0  # 1
+.set TW32_STEP, 1  # 1
+.set TW16,      2  # 5
+.set TW32,      7  # 2
 
 ##############################################################################
 # Registers
@@ -66,30 +66,28 @@
 .set ra_load_idx,       ra5
 #                       rb5
 .set ra_sync,           ra6
-.set rb_STAGES,         rb6
+#                       rb6
 .set ra_points,         ra7
 #                       rb7
 .set ra_link_1,         ra8
 .set rb_link_1,         rb8
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
-#                       ra10
+.set ra_save_32,        ra10
 #
 
-.set ra_tw_re,          ra11 # 13
-.set rb_tw_im,          rb11 # 13
+.set rx_tw_shared,      ra11
+.set rx_tw_unique,      rb11
 
-#                       ra24
-#                       ra25
-.set ra_save_32,        ra26
+.set ra_tw_re,          ra12 # 9
+.set rb_tw_im,          rb12 # 9
+
 .set ra_vdw_16,         ra27
 .set ra_vdw_32,         ra28
 .set ra_0x3F,           ra29
 #                       ra30
 #                       ra31
 
-#                       rb24
-#                       rb25
 .set rx_0x55555555,     rb26
 .set rx_0x33333333,     rb27
 .set rx_0x0F0F0F0F,     rb28
@@ -99,8 +97,6 @@
 
 ##############################################################################
 # Constants
-
-mov rb_STAGES,  STAGES
 
 mov rx_0x55555555, 0x55555555
 mov rx_0x33333333, 0x33333333
@@ -114,10 +110,10 @@ mov rb_0xF0,    0xF0
 mov ra_0x3F,    0x3F;
 
 ##############################################################################
-# Load twiddle factors
+# Twiddles: ptr
 
-load_tw rb_0x80,         0, TW_SHARED, unif
-load_tw rb_0x80, TW_SHARED, TW_UNIQUE, unif
+mov rx_tw_shared, unif
+mov rx_tw_unique, unif
 
 ##############################################################################
 # Instance
@@ -137,22 +133,6 @@ inst_vpm r3, rx_vpm
     ;mov rx_inst, r3
 
 ##############################################################################
-# Macros
-
-.macro swizzle
-.endm
-
-.macro next_twiddles, tw16, tw32
-    next_twiddles_32 tw32
-    next_twiddles_16 tw16
-.endm
-
-.macro init_stage, tw16, tw32
-    init_stage_32 tw32
-    init_stage_16 tw16, 5
-.endm
-
-##############################################################################
 # Top level
 
 :loop
@@ -164,7 +144,9 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 1
 
-    init_stage TW16_P1_BASE, TW32_P1_BASE
+    load_tw rx_tw_shared, TW16+3, TW16_BASE
+    load_tw rx_tw_shared, TW32+0, TW32_BASE
+    init_stage 5
     read_rev 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_rev
@@ -191,7 +173,9 @@ inst_vpm r3, rx_vpm
 # Pass 2
 
     swap_buffers
-    init_stage_16 TW16_P2_BASE, 4
+    load_tw rx_tw_shared, TW16+3, TW16_BASE
+    load_tw rx_tw_shared, TW16_STEP, TW16_P2_STEP
+    init_stage 4
     read_lin rb_0x80
 
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
@@ -211,7 +195,7 @@ inst_vpm r3, rx_vpm
     and.setf -, r1, ra_0x3F;   mov.ifn r0, rb_pass2_link
     mov.ifz ra_link_1, r0
 :2
-    next_twiddles_16 TW16_P2_STEP
+    next_twiddles_16
 
     # (MM) Optimized: place branch before the last instruction of next_twiddles
     # and link directly to :1.
@@ -231,7 +215,9 @@ inst_vpm r3, rx_vpm
 # Pass 3
 
     swap_buffers
-    init_stage_16 TW16_P3_BASE, 4
+    load_tw rx_tw_shared, TW16+3, TW16_BASE
+    load_tw rx_tw_shared, TW16_STEP, TW16_P3_STEP
+    init_stage 4
     read_lin rb_0x80
 
     # (MM) Optimized: place branch before the last instruction of read_lin
@@ -256,7 +242,7 @@ inst_vpm r3, rx_vpm
     mov.ifn ra_link_1, rb_pass2_link
     nop
 :2
-    next_twiddles_16 TW16_P3_STEP
+    next_twiddles_16
 
     # (MM) Optimized: place branch before the last two instructions of next_twiddles
     # and patch return adress to :1.
@@ -275,7 +261,11 @@ inst_vpm r3, rx_vpm
 # Pass 4
 
     swap_buffers
-    init_stage TW16_P4_BASE, TW32_P4_BASE
+    load_tw rx_tw_unique, TW16+3, TW16_P4_BASE
+    load_tw rx_tw_unique, TW32+0, TW32_P4_BASE
+    load_tw rx_tw_shared, TW16_STEP, TW16_P4_STEP
+    load_tw rx_tw_shared, TW32_STEP, TW32_P4_STEP
+    init_stage 5
     read_lin 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_lin
@@ -285,7 +275,8 @@ inst_vpm r3, rx_vpm
     mov ra_points, (1<<STAGES) / 0x100 - 1
 
 :   # start of hidden loop
-    next_twiddles TW16_P4_STEP, TW32_P4_STEP
+    next_twiddles_32
+    next_twiddles_16
 
     # (MM) Optimized: place the branch before the last instruction of next_twiddles
     # and branch unconditional and patch the return address of the last turn.

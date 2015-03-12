@@ -14,6 +14,7 @@ S = hex/shader_256.hex \
     hex/shader_512k.hex \
     hex/shader_1024k.hex \
     hex/shader_2048k.hex \
+    hex/shader_4096k.hex \
     hex/shader_trans.hex
 
 O = mailbox.o gpu_fft.o gpu_fft_base.o gpu_fft_twiddles.o gpu_fft_shaders.o
@@ -21,10 +22,13 @@ O = mailbox.o gpu_fft.o gpu_fft_base.o gpu_fft_twiddles.o gpu_fft_shaders.o
 O1D = $(O) hello_fft.o
 O2D = $(O) hello_fft_2d.o gpu_fft_trans.o
 
-F = -lrt -lm
+F = -lrt -lm -ldl
 
 hex/shader_%.hex:	qasm/gpu_fft_%.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc
 	../../bin/vc4asm -V -c $@ ../../share/vc4.qinc $<
+
+hex/shader_%.dis:       hex/shader_%.hex
+	../../bin/vc4dis -x -v -o $@ $<
 
 %.o : %.c
 	gcc $(CFLAGS) -o $@ -c $<
@@ -40,6 +44,7 @@ profile: hello_fft.bin
 	./profile.pl
 
 hex/shader_2048.hex:	qasm/gpu_fft_2048.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc qasm/gpu_fft_2048.qinc
+hex/shader_4096.hex:	qasm/gpu_fft_2048.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc qasm/gpu_fft_4096.qinc
 
 hello_fft.bin:	$(O1D)
 	gcc $(CFLAGS) -o hello_fft.bin $(F) $(O1D)
@@ -57,4 +62,4 @@ mailbox.o:	mailbox.c mailbox.h
 gpu_fft_shaders.o:	gpu_fft_shaders.c $(S)
 
 clean:
-	rm -f *.bin hex/*.hex
+	rm -f *.bin *.o hex/*.hex
