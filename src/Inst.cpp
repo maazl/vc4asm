@@ -150,6 +150,64 @@ void Inst::reset()
 	SF = false;
 }
 
+bool Inst::trySwap(bool mul)
+{
+	if ( SF             // can't swap with set flags
+		|| (PM && Pack) ) // can't swap with MUL ALU pack
+		return false;
+	if (mul)
+	{	if (OpA != A_NOP)
+			return false;
+		switch (OpM)
+		{default:
+			return false;
+		 case M_NOP:
+			return true;
+		 case M_V8ADDS:
+			OpA = A_V8ADDS; break;
+		 case M_V8SUBS:
+			OpA = A_V8SUBS; break;
+		 case M_V8MIN:
+		 case M_V8MAX:
+			if (MuxMA != MuxMB)
+				return false;
+			OpA = A_OR;    break;
+		}                OpM = M_NOP;
+		MuxAA = MuxMA;   MuxMA = X_R0;
+		MuxAB = MuxMB;   MuxMB = X_R0;
+	} else
+	{	if (OpM != M_NOP)
+			return false;
+		switch (OpA)
+		{default:
+			return false;
+		 case A_NOP:
+			return true;
+		 case A_V8ADDS:
+			OpM = M_V8ADDS; break;
+		 case A_XOR:
+		 case A_SUB:
+			if (MuxMA != MuxMB)
+				return false;
+		 case A_V8SUBS:
+			OpM = M_V8SUBS; break;
+		 case A_OR:
+		 case A_AND:
+		 case A_MIN:
+		 case A_MAX:
+			if (MuxMA != MuxMB)
+				return false;
+			OpM = M_V8MIN;  break;
+		}
+		MuxMA = MuxAA;   MuxAA = X_R0;
+		MuxMB = MuxAB;   MuxAB = X_R0;
+	}
+	swap(CondA, CondM);
+	swap(WAddrA, WAddrM);
+	WS = !WS;
+	return true;
+}
+
 void Inst::optimize()
 {	value_t val;
 	switch (Sig)
@@ -198,6 +256,8 @@ void Inst::optimize()
 		}
 		break;
 	 mkLDI0:
+		if (Sig != S_NONE)
+			break;
 		val.uValue = 0;
 	 mkLDI:
 		Sig = S_LDI;

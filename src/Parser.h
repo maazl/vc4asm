@@ -273,6 +273,8 @@ class Parser
 	static uint8_t   getSmallImmediate(uint32_t i);
 	static const smiEntry* getSmallImmediateALU(uint32_t i);
 	Inst::mux        muxReg(reg_t reg);
+	/// Set small immediate value. Fail if impossible.
+	/// @param si desired value.
 	void             doSMI(uint8_t si);
 
 	// OP code extensions

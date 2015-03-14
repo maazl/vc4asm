@@ -207,7 +207,9 @@ struct Inst
 	/// Check whether this instruction instance is not in use.
 	bool       isVirgin() const;
 	/// Check whether ADD ALU is in use
-	//bool       isADD() const { return WAddrA != R_NOP || ; }
+	bool       isADD() const { return WAddrA != R_NOP || OpA != Inst::A_NOP; }
+	/// Check whether MUL ALU is in use
+	bool       isMUL() const { return WAddrM != R_NOP || OpM != Inst::M_NOP; }
 
 	/// Semaphore access type
 	/// @return true: release, false: acquire
@@ -228,7 +230,13 @@ struct Inst
 	/// @pre Sig != S_BRA
 	bool       isSFMUL() const { return SF && !(OpA != A_NOP && CondA != C_NEVER); }
 		/// Check whether an ADD operator is an unary operator.
-	bool isUnary() const { return (0x01800180 & (1<<OpA)) != 0; }
+	bool       isUnary() const { return (0x01800180 & (1<<OpA)) != 0; }
+
+	/// Try to swap ADD and MUL ALU of the current instruction
+	/// @param mul true: move MUL instruction to ADD ALU,
+	///            false: move ADD instruction to MUL ALU
+	/// @return true: swap succeeded
+	bool       trySwap(bool mul);
 
 	/// Some optimizations to save ALU power
 	void       optimize();

@@ -676,9 +676,11 @@ void Parser::assembleADD(int add_op)
 {
 	if (Instruct.Sig >= Inst::S_LDI)
 		Fail("Cannot use ADD ALU in load immediate or branch instruction.");
-	if (Instruct.WAddrA != Inst::R_NOP || Instruct.OpA != Inst::A_NOP)
+	if (Instruct.isADD())
 	{	switch (add_op)
 		{default:
+			if (Instruct.trySwap(false))
+				goto cont;
 			Fail("The ADD ALU has already been used in this instruction.");
 		 case Inst::A_NOP:
 			add_op = Inst::M_NOP; break;
@@ -690,7 +692,7 @@ void Parser::assembleADD(int add_op)
 		// retry with MUL ALU
 		return assembleMUL(add_op | 0x100); // The added numbed is discarded at the cast but avoids recursive retry.
 	}
-
+ cont:
 	Instruct.OpA = (Inst::opadd)add_op;
 	if (add_op == Inst::A_NOP)
 	{	Flags() |= IF_HAVE_NOP;
@@ -711,9 +713,11 @@ void Parser::assembleMUL(int mul_op)
 {
 	if (Instruct.Sig >= Inst::S_LDI)
 		Fail("Cannot use MUL ALU in load immediate or branch instruction.");
-	if (Instruct.WAddrM != Inst::R_NOP || Instruct.OpM != Inst::M_NOP)
+	if (Instruct.isMUL())
 	{	switch (mul_op)
 		{default:
+			if (Instruct.trySwap(true))
+				goto cont;
 			Fail("The MUL ALU has already been used by the current instruction.");
 		 case Inst::M_NOP:
 			mul_op = Inst::A_NOP; break;
@@ -725,7 +729,7 @@ void Parser::assembleMUL(int mul_op)
 		// retry with MUL ALU
 		return assembleADD(mul_op | 0x100); // The added numbed is discarded at the cast but avoids recursive retry.
 	}
-
+ cont:
 	Instruct.OpM = (Inst::opmul)mul_op;
 	if (mul_op == Inst::M_NOP)
 		return;
@@ -812,10 +816,10 @@ void Parser::assembleMOV(int mode)
 			 case Inst::S_SMI:;
 			}
 			for (const smiEntry* si = getSmallImmediateALU(param.uValue); si->Value == param.uValue; ++si)
-			{	if ( (!si->OpCode.isMul() ^ useMUL)
-					&& (Extensions || !si->OpCode.isExt())
+			{	if ( (Extensions || !si->OpCode.isExt())
 					&& ( param.uValue == 0 || Instruct.Sig == Inst::S_NONE
-						|| (Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd) ))
+						|| (Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd) )
+					&& ((!si->OpCode.isMul() ^ useMUL) || (param.uValue && Instruct.trySwap(si->OpCode.isMul()))) )
 				{	if (param.uValue != 0) // zero value does not require SMI
 					{	Instruct.Sig   = Inst::S_SMI;
 						Instruct.SImmd = si->SImmd;
@@ -1730,6 +1734,18 @@ void Parser::ParseLine()
 			try
 			{	// Try to parse into existing instruction.
 				ParseInstruction();
+				// Do not combine TMU instructions
+				if ( Instruct.Sig < Inst::S_LDI
+					&& ( ((0xfff09e0000000000ULL & (1ULL << Instruct.WAddrA)) != 0)
+					+ ((0xfff09e0000000000ULL & (1ULL << Instruct.WAddrM)) != 0)
+					+ ((0x0008060000000000ULL & (1ULL << Instruct.RAddrA)) != 0)
+					+ (Instruct.Sig != Inst::S_SMI && (0x0008060000000000ULL & (1ULL << Instruct.RAddrB)) != 0)
+					+ ( Instruct.Sig == Inst::S_LDTMU0 || Instruct.Sig == Inst::S_LDTMU1
+						|| Instruct.Sig == Inst::S_LOADCV || Instruct.Sig == Inst::S_LOADAM
+						|| (Instruct.Sig == Inst::S_LDI && (Instruct.LdMode & Inst::L_SEMA)) )
+					+ (Instruct.WAddrA == 45 || Instruct.WAddrA == 46 || Instruct.WAddrM == 45 || Instruct.WAddrM == 46 || Instruct.Sig == Inst::S_LOADC || Instruct.Sig == Inst::S_LDCEND) ) > 1 )
+					throw string();
+				// Combine succeeded
 				Instructions[pos-1] = Instruct.encode();
 				return;
 			} catch (const string& msg)

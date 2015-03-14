@@ -54,7 +54,12 @@
         ... <tt>-16</tt> in conjunction with small immediates.</dd>
       <dt>V0.1.5</dt>
       <dd>Merge with hello_fft 3.0, 4Mi FFT, should fix RPi 2 compatibility.<br>
-        Support for <tt>.ifset</tt> directive.</dd>
+        Support for <tt>.ifset</tt> directive.<br>
+        Support for ALU swap when combining instructions. Can e.g. handle <tt>mov
+          ra16, r1; mov r1, 0x180</tt> (The constant 0x180 can only be loaded by
+        the ADD ALU.)<br>
+        Fix: do not auto combine TMU instructions.<br>
+        Fix: do not erroneously convert signalling instructions to <tt>ldi</tt>.</dd>
     </dl>
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
     <p>The heart of the software. It assembles QPU code to binary or C

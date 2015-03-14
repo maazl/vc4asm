@@ -88,7 +88,7 @@ void Disassembler::DoADD()
 	bool isUnary = Instruct.isUnary();
 
 	if ( UseMOV
-		&& ( (Instruct.MuxAA == Instruct.MuxAB && (0x803c2000 & (1<<opa))) // Both inputs equal and instruction that returns identity or 0
+		&& ( (Instruct.MuxAA == Instruct.MuxAB && (0x807c2000 & (1<<opa))) // Both inputs equal and instruction that returns identity or 0
 			|| ( Instruct.Sig == Inst::S_SMI &&
 					(Instruct.MuxAA == Inst::X_RB || (Instruct.MuxAB == Inst::X_RB && isUnary)) ))) // unary or binary operator on constant
 		opa = 32;
@@ -112,7 +112,6 @@ void Disassembler::DoADD()
 		if (opa == 32)
 		{	switch (Instruct.OpA)
 			{case Inst::A_SUB:
-			 case Inst::A_FSUB:
 			 case Inst::A_XOR:
 			 case Inst::A_V8SUBS:
 				return append(", 0");

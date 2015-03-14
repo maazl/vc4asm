@@ -189,7 +189,7 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 		if ( Instruct.Sig != Inst::S_BRANCH
 			&& ( ((0x1100000000000000ULL & (1ULL << Instruct.WAddrA)) && Instruct.CondA != Inst::C_AL)
 				|| ((0x1100000000000000ULL & (1ULL << Instruct.WAddrM)) && Instruct.CondM != Inst::C_AL) ))
-			Message(At, "Conditional write to t*s does not work.");
+			Message(At, "Conditional write to TMU does not work.");
 		// Update last used fields
 		st.LastRreg[0][regRA] = At;
 		st.LastRreg[!Inst::isRRegAB(regRB)][regRB] = At;
