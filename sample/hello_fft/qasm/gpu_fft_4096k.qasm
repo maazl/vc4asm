@@ -116,8 +116,7 @@ mov r5rep,         0x1D0
 ##############################################################################
 # Twiddles: ptr
 
-mov rx_tw_shared, unif
-mov rx_tw_unique, unif
+init_tw
 
 ##############################################################################
 # Instance
@@ -142,16 +141,13 @@ inst_vpm r3, rx_vpm
     mov.setf ra_addr_x, unif # Ping buffer or null
     # (MM) Optimized: branch sooner
     brr.allz -, r:end
-    mov      rb_addr_y, unif # Pong buffer or IRQ enable
+    mov      rb_addr_y, unif; # Pong buffer or IRQ enable
 
 ##############################################################################
 # Pass 1
 
-    load_tw rx_tw_shared, TW16+3, TW16_BASE
-    load_tw rx_tw_shared, TW32+0, TW32_BASE
-    load_tw rx_tw_shared, TW48+0, TW64_BASE0
-    load_tw rx_tw_shared, TW64+0, TW64_BASE1
-    init_stage 6
+    # (MM) More powerful init macros to simplify code
+    init_base_64 TW16_BASE, TW32_BASE, TW64_BASE0, TW64_BASE1
     read_rev 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_rev
@@ -178,18 +174,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 2
 
-    swap_buffers
-    load_tw rx_tw_shared, TW16+3, TW16_BASE
-    load_tw rx_tw_shared, TW32+0, TW32_BASE
-    load_tw rx_tw_shared, TW48+0, TW64_BASE0
-    load_tw rx_tw_shared, TW64+0, TW64_BASE1
-    mov ra_tw_re+TW48+1, 0; mov rb_tw_im+TW48+1, 0
-    mov ra_tw_re+TW64+1, 0; mov rb_tw_im+TW64+1, 0
-    load_tw rx_tw_shared, TW16_STEP, TW16_P2_STEP
-    load_tw rx_tw_shared, TW32_STEP, TW32_P2_STEP
-    load_tw rx_tw_shared, TW48_STEP, TW48_P2_STEP
-    load_tw rx_tw_shared, TW64_STEP, TW64_P2_STEP
-    init_stage 6
+    # (MM) More powerful init macros to simplify code
+    init_step_64 TW16_BASE, TW32_BASE, TW64_BASE0, TW64_BASE1, TW16_P2_STEP, TW32_P2_STEP, TW48_P2_STEP, TW64_P2_STEP
     read_lin 0x10
 
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
@@ -238,12 +224,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 3
 
-    swap_buffers
-    load_tw rx_tw_shared, TW16+3, TW16_BASE
-    load_tw rx_tw_shared, TW32+0, TW32_BASE
-    load_tw rx_tw_shared, TW16_STEP, TW16_P3_STEP
-    load_tw rx_tw_shared, TW32_STEP, TW32_P3_STEP
-    init_stage 5
+    # (MM) More powerful init macros to simplify code
+    init_step_32 TW16_BASE, TW32_BASE, TW16_P3_STEP, TW32_P3_STEP
     read_lin 0x10
 
     # (MM) Optimized: place branch before the last instructions of read_lin
@@ -287,12 +269,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 4
 
-    swap_buffers
-    load_tw rx_tw_unique, TW16+3, TW16_P4_BASE
-    load_tw rx_tw_unique, TW32+0, TW32_P4_BASE
-    load_tw rx_tw_shared, TW16_STEP, TW16_P4_STEP
-    load_tw rx_tw_shared, TW32_STEP, TW32_P4_STEP
-    init_stage 5
+    # (MM) More powerful init macros to simplify code
+    init_last_32 TW16_P4_BASE, TW32_P4_BASE, TW16_P4_STEP, TW32_P4_STEP
     read_lin 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_lin

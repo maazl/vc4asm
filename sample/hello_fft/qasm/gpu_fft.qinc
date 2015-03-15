@@ -35,18 +35,46 @@
 ##############################################################################
 # Load twiddle factors
 
-.macro load_tw, ptr, dst, src
+# (MM) Optimized: calculate twiddle offsets for each element once at startup
+.macro init_tw
     shl r0, elem_num, 3
-    mov r1, src
-    shl r1, r1, 7
-    add r0, r0, r1
-    add r1, r0, 4
-    add t0s, ptr, r0
-    add t0s, ptr, r1
-    ldtmu0
-    mov ra_tw_re+dst, r4
-    ldtmu0
-    mov rb_tw_im+dst, r4
+    add rx_tw_shared, unif, r0
+    add rx_tw_unique, unif, r0
+.endm
+
+# (MM) Optimized seperate preparation of TMU from ldtmu for better pipeline processing.
+# prepare twiddle load
+#   ptr : twiddle base pointer
+#   src : twiddle offset (logical)
+.macro read_tw, ptr, src
+    # (MM) Optimized: do not calculate compile time constant at run time
+    # and calculate twiddle offsets for each element once at startup
+.if src != 0
+    ;mov r0, src << 7
+    add t0s, ptr, r0;  v8adds r0, r0, 4
+    add t0s, ptr, r0;
+.elseif isAccu(ptr)
+    mov t0s, ptr; add r0, ptr, 4
+    mov t0s, r0;
+.else
+    mov t0s, ptr; mov r0, ptr
+    add t0s, r0, 4;
+.endif
+.endm
+
+# store prepared twiddles into register
+#   ra_tw_re, rb_tw_im : real and imaginary register set start
+#   dst : register offset
+#   clr_res : clear residual accumulators at dst+1
+.macro store_tw, dst, clr_res
+.if clr_res
+                        ;  mov ra_tw_re+dst+1, 0;  ldtmu0
+    mov ra_tw_re+dst, r4;  mov rb_tw_im+dst+1, 0;  ldtmu0
+.else
+                        ;  ldtmu0
+    mov ra_tw_re+dst, r4;  ldtmu0
+.endif
+    mov rb_tw_im+dst, r4;
 .endm
 
 ##############################################################################
@@ -388,8 +416,8 @@
         and r0, r0, mask
         shl r1, r1, shift
     .endif
-    # (MM) Optimized: mv8adds can be combined easier; cannot overflow
-    mv8adds  r0, r0, r1;
+    # (MM) Optimized: v8adds can be combined easier; cannot overflow
+    v8adds  r0, r0, r1;
 .endm
 
 ##############################################################################
@@ -415,7 +443,7 @@
 .macro read_rev, stride
     # (MM) Optimized bit swap using regfile A unpack
     # Saves a B register and 3 instruction but no speed.
-    shl.unpack8a r0, ra_load_idx, 8
+    ;shl.unpack8a r0, ra_load_idx, 8
     or.unpack8b r0, ra_load_idx, r0
 
     bit_rev 1, rx_0x5555    # 16 SIMD
@@ -433,7 +461,7 @@
 .if STAGES<13
     shr r0, r0, 13-STAGES
 .endif
-    mv8adds r2, r0, r3; # r3 = 4
+    v8adds r2, r0, r3; # r3 = 4
 
     # (MM) Optimizes: allow alternate source registers for interleave
     interleave r0, r2
@@ -477,7 +505,7 @@
 # Unpack twiddles
 
 .macro unpack_twiddles
-    mov r2, ra_tw_re+TW16+3; mov r3, rb_tw_im+TW16+3
+    # (MM) Optimized: moved r2/r3 load to next_twiddles_16
 # (MM) Optimized: do not rotate r2/r3 unnecessarily at the last turn
 .rep i, 3
     ;and.setf -, elem_num, (8>>i)
@@ -505,20 +533,21 @@
     fsub r1, r1, r2
     fsub r2,  a, r2
     fsub r0, r0, r2
-    fadd a+1, r0, r1
+    fadd a+1, r0, r1;
 .endm
+
 ##############################################################################
 # Rotate twiddles using enhanced-precision trig recurrence
 
 .macro rotate, base, step
-    mov r2, ra_tw_re+base; mov r3, rb_tw_im+base
-    nop;             fmul r0, r2, ra_tw_re+step # a.cos
-    nop;             fmul r1, r2, rb_tw_im+step # b.cos
-    nop;             fmul r2, r3, rb_tw_im+step # b.sin
-    fadd r2, r0, r2; fmul r3, r3, ra_tw_re+step # a.sin
-    fsub r3, r3, r1
+    # (MM) Optimized: better use of both ALUs
+    mov r2, ra_tw_re+base;  fmul r1, ra_tw_re+base, rb_tw_im+step # b.cos
+    mov r3, rb_tw_im+base;  fmul r0, rb_tw_im+base, ra_tw_re+step # a.sin
+    fsub r2, r0, r1;        fmul ra_temp, r2, ra_tw_re+step # a.cos
+    df64_sub32 rb_tw_im+base, r2
+    ;                       fmul r3, r3, rb_tw_im+step # b.sin
+    fadd r2, ra_temp, r3
     df64_sub32 ra_tw_re+base, r2
-    df64_sub32 rb_tw_im+base, r3
 .endm
 
 .macro next_twiddles_32
@@ -527,6 +556,8 @@
 
 .macro next_twiddles_16
     rotate TW16+3, TW16_STEP
+    # (MM) Optimized: moved r2/r3 load from unpack_twiddles
+    mov r2, ra_tw_re+TW16+3; mov r3, rb_tw_im+TW16+3
     unpack_twiddles
 .endm
 
@@ -534,22 +565,123 @@
 # Alternate input/output buffers between stages
 
 .macro swap_buffers
-    mov rb_addr_y, ra_addr_x; mov ra_addr_x, rb_addr_y
+    mov rb_addr_y, ra_addr_x; mov ra_addr_x, rb_addr_y;
 .endm
 
 ##############################################################################
 # Reset counters and twiddles
 
+# (MM) requires TW16 factors in TMU queue
 .macro init_stage, m
-    mov ra_tw_re+TW16+4, 0; mov rb_tw_im+TW16+4, 0
-.ifset TW32
-    mov ra_tw_re+TW32+1, 0; mov rb_tw_im+TW32+1, 0
-.endif
-    unpack_twiddles
-    mov r0, rx_inst
+    # (MM) Optimized: clear residual registers for >16 in store_tw
+    # (MM) Optimized: instruction packing
+.if isRegfileB(rx_inst)
+    ;mov r0, rx_inst
     shl r0, r0, m
-    add ra_load_idx, r0, elem_num
-    mov ra_save_ptr, rb_addr_y
+.else
+    ;shl r0, rx_inst, m
+.endif
+    # (MM) Optimized: moved r2/r3 load from unpack_twiddles
+    # and avoid intermediate step in TW16+3 registers
+    add ra_load_idx, r0, elem_num;  mov rb_tw_im+TW16+4, 0;  ldtmu0
+    mov r2, r4;                     mov ra_tw_re+TW16+4, 0;  ldtmu0
+    mov r3, r4;
+    unpack_twiddles
+    mov ra_save_ptr, rb_addr_y;
+.endm
+
+# (MM) More powerful and optimized init macros to simplify code
+
+.macro init_base_32, tw16, tw32
+    .if tw32
+    ;mov r3, rx_tw_shared;
+    read_tw r3, tw32
+    .else # vc4asm instruction join does not check for register dependencies
+    mov t0s, rx_tw_shared;  mov r3, rx_tw_shared
+    add t0s, r3, 4
+    .endif
+    read_tw r3, tw16
+    store_tw TW32+0, 0
+    init_stage 5
+.endm
+
+.macro init_base_64, tw16, tw32, tw48, tw64
+    ;mov r3, rx_tw_shared;
+    read_tw r3, tw64
+    read_tw r3, tw48
+    read_tw r3, tw32
+    read_tw r3, tw16
+    store_tw TW64, 0
+    store_tw TW48, 0
+    store_tw TW32+0, 0
+    init_stage 6
+.endm
+
+.macro init_step_16, tw16, st16
+    # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
+    mov r3, rx_tw_shared;
+    read_tw r3, st16
+    read_tw r3, tw16
+    swap_buffers
+    store_tw TW16_STEP, 0
+    init_stage 4
+.endm
+
+.macro init_step_32, tw16, tw32, st16, st32
+    # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
+    mov r3, rx_tw_shared;
+    read_tw r3, st32
+    read_tw r3, st16
+    read_tw r3, tw32
+    read_tw r3, tw16
+    swap_buffers
+    store_tw TW32_STEP, 0
+    store_tw TW16_STEP, 0
+    store_tw TW32+0, 1
+    init_stage 5
+.endm
+
+.macro init_step_64, tw16, tw32, tw48, tw64, st16, st32, st48, st64
+    # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
+    mov r3, rx_tw_shared;
+    read_tw r3, st64
+    read_tw r3, st48
+    read_tw r3, tw64
+    read_tw r3, tw48
+    swap_buffers
+    store_tw TW64_STEP, 0
+    store_tw TW48_STEP, 0
+    store_tw TW64+0, 1
+    store_tw TW48+0, 1
+    read_tw r3, st32
+    read_tw r3, st16
+    read_tw r3, tw32
+    read_tw r3, tw16
+    store_tw TW32_STEP, 0
+    store_tw TW16_STEP, 0
+    store_tw TW32+0, 1
+    init_stage 6
+.endm
+
+.macro init_last_16, tw16, st16
+    read_tw rx_tw_shared, st16
+    read_tw rx_tw_unique, tw16
+    swap_buffers
+    store_tw TW16_STEP, 0
+    init_stage 4
+.endm
+
+.macro init_last_32, tw16, tw32, st16, st32
+    read_tw rx_tw_shared, st32
+    read_tw rx_tw_shared, st16
+    ;mov r3, rx_tw_unique;
+    read_tw r3, tw32
+    read_tw r3, tw16
+    swap_buffers
+    store_tw TW32_STEP, 0
+    store_tw TW16_STEP, 0
+    store_tw TW32+0, 1
+    init_stage 5
 .endm
 
 ##############################################################################

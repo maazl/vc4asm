@@ -106,8 +106,7 @@ mov rb_vdw, vdw_setup_0(16, 16, dma_h32(16,0)) - vdw_setup_0(16, 16, dma_h32( 0,
 ##############################################################################
 # Twiddles: ptr
 
-mov rx_tw_shared, unif
-mov rx_tw_unique, unif
+init_tw
 
 ##############################################################################
 # Instance
@@ -157,7 +156,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 1
 
-    load_tw rx_tw_shared, TW16+3, TW16_BASE
+    # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
+    read_tw rx_tw_shared, TW16_BASE
     init_stage 4
     read_rev rb_0x80
 
@@ -188,10 +188,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 2
 
-    swap_buffers
-    load_tw rx_tw_shared, TW16+3, TW16_BASE
-    load_tw rx_tw_shared, TW16_STEP, TW16_P2_STEP
-    init_stage 4
+    # (MM) More powerful init macros to simplify code
+    init_step_16 TW16_BASE, TW16_P2_STEP
     read_lin rb_0x80
 
     # (MM) Optimized: move swap_vpm_vdw to pass1/2/3
@@ -231,10 +229,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 3
 
-    swap_buffers
-    load_tw rx_tw_unique, TW16+3, TW16_P3_BASE
-    load_tw rx_tw_shared, TW16_STEP, TW16_P3_STEP
-    init_stage 4
+    # (MM) More powerful init macros to simplify code
+    init_last_16 TW16_P3_BASE, TW16_P3_STEP
     read_lin rb_0x80
 
     # (MM) Optimized: move swap_vpm_vdw to pass1/2/3

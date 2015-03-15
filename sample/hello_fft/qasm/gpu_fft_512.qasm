@@ -107,8 +107,7 @@ mov ra_vdw_32, vdw_setup_0(32, 16, dma_h32( 0,0))
 ##############################################################################
 # Twiddles: ptr
 
-mov rx_tw_shared, unif
-mov rx_tw_unique, unif
+init_tw
 
 ##############################################################################
 # Instance
@@ -136,9 +135,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 1
 
-    load_tw rx_tw_shared, TW16+3, TW16_P1_BASE
-    load_tw rx_tw_shared, TW32+0, TW32_P1_BASE
-    init_stage 5
+    # (MM) More powerful init macros to simplify code
+    init_base_32 TW16_P1_BASE, TW32_P1_BASE
     read_rev 0x10
     # (MM) Optimized: move branch into the read_rev code
     .back 3
@@ -159,10 +157,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 2
 
-    swap_buffers
-    load_tw rx_tw_unique, TW16+3, TW16_P2_BASE
-    load_tw rx_tw_shared, TW16_STEP, TW16_P2_STEP
-    init_stage 4
+    # (MM) More powerful init macros to simplify code
+    init_last_16 TW16_P2_BASE, TW16_P2_STEP
     read_lin rb_0x80
 
     ;mov ra_points, (1<<STAGES) / 0x80 - 1

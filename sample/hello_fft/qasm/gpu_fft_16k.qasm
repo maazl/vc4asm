@@ -105,8 +105,7 @@ mov ra_vdw_32, vdw_setup_0(32, 16, dma_h32( 0,0))
 ##############################################################################
 # Twiddles: ptr
 
-mov rx_tw_shared, unif
-mov rx_tw_unique, unif
+init_tw
 
 ##############################################################################
 # Instance
@@ -137,9 +136,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 1
 
-    load_tw rx_tw_shared, TW16+3, TW16_BASE
-    load_tw rx_tw_shared, TW32+0, TW32_BASE
-    init_stage 5
+    # (MM) More powerful init macros to simplify code
+    init_base_32 TW16_BASE, TW32_BASE
     read_rev 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_rev
@@ -165,12 +163,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 2
 
-    swap_buffers
-    load_tw rx_tw_shared, TW16+3, TW16_BASE
-    load_tw rx_tw_shared, TW32+0, TW32_BASE
-    load_tw rx_tw_shared, TW16_STEP, TW16_P2_STEP
-    load_tw rx_tw_shared, TW32_STEP, TW32_P2_STEP
-    init_stage 5
+    # (MM) More powerful init macros to simplify code
+    init_step_32 TW16_BASE, TW32_BASE, TW16_P2_STEP, TW32_P2_STEP
     read_lin 0x10
 
     # (MM) Optimized: place branch before the last instruction of read_lin
@@ -206,10 +200,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 3
 
-    swap_buffers
-    load_tw rx_tw_unique, TW16+3, TW16_P3_BASE
-    load_tw rx_tw_shared, TW16_STEP, TW16_P3_STEP
-    init_stage 4
+    # (MM) More powerful init macros to simplify code
+    init_last_16 TW16_P3_BASE, TW16_P3_STEP
     read_lin rb_0x80
 
     # (MM) Optimized: place branch before the last two instructions of read_lin

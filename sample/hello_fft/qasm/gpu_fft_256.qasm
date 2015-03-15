@@ -46,7 +46,7 @@
 ##############################################################################
 # Registers
 
-.set rx_inst,           ra0
+.set ra_link_1,         ra0
 #                       rb0
 .set ra_save_ptr,       ra1
 #                       rb1
@@ -59,23 +59,24 @@
 .set ra_load_idx,       ra5
 #                       rb5
 .set ra_sync,           ra6
-#
+#                       rb6
 .set ra_points,         ra7
-.set ra_link_1,         ra8
-
-.set rx_tw_shared,      rb7
+#                       rb7
+.set rx_tw_shared,      ra8
 .set rx_tw_unique,      rb8
 
 .set ra_tw_re,          ra9 # 6
 .set rb_tw_im,          rb9 # 6
+
 .set ra_vdw,            ra28
 .set rb_vdw,            rb28
 
+.set rx_inst,           ra29
+
 .set rb_0x5555,         rb29
-.set rx_0x3333,         ra30
+.set rx_0x3333,         rb30
 .set rx_0x0F0F,         ra31
 
-#                       rb30
 .set rb_0x80,           rb31
 
 ##############################################################################
@@ -94,8 +95,7 @@ mov rb_vdw, vdw_setup_0(16, 16, dma_h32(16,0)) - vdw_setup_0(16, 16, dma_h32( 0,
 ##############################################################################
 # Twiddles: ptr
 
-mov rx_tw_shared, unif
-mov rx_tw_unique, unif
+init_tw
 
 ##############################################################################
 # Instance
@@ -114,25 +114,15 @@ inst_vpm r3, rx_vpm
 
     ;mov rx_inst, r3
 
-##############################################################################
-# Macros
-
-# (MM) no longer used
-.macro swap_vpm_vdw
-    # (MM) Optimized: use xor for vpm swap (less memory I/O) and save A register
-    xor ra_vdw, ra_vdw, rb_vdw;  mov r2, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
-    xor ra_vpm, ra_vpm, r2;
-.endm
-
 
 ##############################################################################
-# Redefining this macro
+# Redefining macros
 
 .macro read_rev, stride
     and r1, ra_load_idx, rb_0x5555; mov r2, ra_load_idx
     shr r0, r2, 1
     and r0, r0, rb_0x5555; v8adds r1, r1, r1 # can't overflow because of mask
-    mv8adds r0, r0, r1;                      # can't overflow because of mask
+    v8adds r0, r0, r1;                       # can't overflow because of mask
     .if stride != 0
     # (MM) Optimized: join stride with v8adds
     ;add ra_load_idx, r2, stride
@@ -144,6 +134,18 @@ inst_vpm r3, rx_vpm
     shl r0, r0, 3
     add t0s, r0, ra_addr_x; v8adds r1, ra_addr_x, 4 # {idx[0:7], 1'b0, 2'b0}
     add t0s, r0, r1                                 # {idx[0:7], 1'b1, 2'b0}
+.endm
+
+# (MM) Optimized: avoid time consuming high accouracy for small FFTs
+.macro next_twiddles_16
+    mov r2, ra_tw_re+TW16+3;  fmul r1, ra_tw_re+TW16+3, rb_tw_im+TW16_STEP # b.cos
+    mov r3, rb_tw_im+TW16+3;  fmul r0, rb_tw_im+TW16+3, ra_tw_re+TW16_STEP # a.sin
+    fsub r0, r0, r1;          fmul r1, r2, ra_tw_re+TW16_STEP # a.cos
+    fsub r3, r3, r0;          fmul r0, r3, rb_tw_im+TW16_STEP # b.sin
+    fadd r0, r0, r1
+    fsub r2, r2, r0
+    
+    unpack_twiddles
 .endm
 
 ##############################################################################
@@ -158,9 +160,11 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 1
 
-    load_tw rx_tw_shared, TW16+3, TW16_P1_BASE
+    # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
+    read_tw rx_tw_shared, TW16_P1_BASE
     init_stage 4
     read_rev rb_0x80
+    # (MM) Optimized: do not unnecessarily advance ra_load_idx at the last turn
     read_rev 0
     # (MM) Optimized: move swap_vpm_vdw to pass1/2
 
@@ -182,11 +186,10 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Pass 2
 
-    swap_buffers
-    load_tw rx_tw_unique, TW16+3, TW16_P2_BASE
-    load_tw rx_tw_shared, TW16_STEP, TW16_P2_STEP
-    init_stage 4
+    # (MM) More powerful init macros to simplify code
+    init_last_16 TW16_P2_BASE, TW16_P2_STEP
     read_lin rb_0x80
+    # (MM) Optimized: do not unnecessarily advance ra_load_idx at the last turn
     read_lin 0
     # (MM) Optimized: move swap_vpm_vdw to pass1/2
     # (MM) Optimized: move branch before the last instructions of read_lin

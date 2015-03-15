@@ -40,7 +40,7 @@
     ;mov.unpack8c r0, ra_load_idx
     shl.unpack8b r1, ra_load_idx, 8
     shl.unpack8a r1, ra_load_idx, -16; v8adds r0, r0, r1
-    mv8adds r0, r0, r1;
+    v8adds r0, r0, r1;
 .if stride != 0
     # (MM) Optimized: join stride with v8adds
     ;add ra_load_idx, ra_load_idx, stride
@@ -57,7 +57,7 @@
 .if STAGES<21
     shr r0, r0, 21-STAGES
 .endif
-    mv8adds r2, r0, r2; # r2 = 4
+    v8adds r2, r0, r2; # r2 = 4
 
     interleave r0, r2
 
