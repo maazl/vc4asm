@@ -36,7 +36,7 @@ sub do_profile($)
   print "\n";
 }
 
-@ARGV = (map("$_ 1 20", (8..21)), map ("$_ 10 15", (8..19))) unless @ARGV;
+@ARGV = (map("$_ 1 20", (8..22)), map ("$_ 10 15", (8..19))) unless @ARGV;
 
 do_profile $_ foreach @ARGV;
 
