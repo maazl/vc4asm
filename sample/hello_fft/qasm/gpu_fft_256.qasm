@@ -156,6 +156,9 @@ inst_vpm r3, rx_vpm
     # (MM) Optimized: branch earlier
     brr.allz -, r:end
     mov      rb_addr_y, unif; # Pong buffer or IRQ enable
+    # (MM) Avoid TMU access at exit
+    nop
+    nop
 
 ##############################################################################
 # Pass 1
