@@ -140,7 +140,6 @@ inst_vpm r3, rx_vpm
     mov      rb_addr_y, unif; # Pong buffer or IRQ enable
     # (MM) Avoid TMU access at exit
     nop
-    nop
 
 ##############################################################################
 # Pass 1
@@ -200,8 +199,12 @@ inst_vpm r3, rx_vpm
     nop
 :2
     # (MM) Optimized: moved common next_twiddles code to subroutine
+    # causes secret data race for 64k FFT => undo
+    next_twiddles_32
+    next_twiddles_16
+
     mov ra_link_1, rb_link_1
-    brr_opt -, r:pass_2_tw, 1
+    brr_opt -, r:pass_2, 3
 :3
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
@@ -224,11 +227,14 @@ inst_vpm r3, rx_vpm
 
 :   # start of hidden loop
     # (MM) Optimized: moved common next_twiddles code to subroutine
+    # causes secret data race for 64k FFT => undo
+    next_twiddles_32
+    next_twiddles_16
 
     # (MM) Optimized: branch unconditional and patch the return address of the last turn.
     sub.setf ra_points, ra_points, 1
     mov.ifz ra_link_1, r0
-    brr_opt r0, r:pass_3_tw, 2
+    brr_opt r0, r:pass_3, 3
 
     # (MM) Optimized: easier procedure chains
     brr r0, r:sync, ra_sync
@@ -271,10 +277,11 @@ bodies_fft_16
     body_rx_save_slave_64
 
 # (MM) Optimized: moved common code to subroutine
-:pass_2_tw
-:pass_3_tw
-    next_twiddles_32
-    next_twiddles_16
+# causes secret data race for 64k FFT => undo
+#:pass_2_tw
+#:pass_3_tw
+#    next_twiddles_32
+#    next_twiddles_16
 :pass_2
 :pass_3
     body_pass_32 LOAD_STRAIGHT
