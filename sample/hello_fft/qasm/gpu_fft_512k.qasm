@@ -237,15 +237,11 @@ inst_vpm r3, rx_vpm
     mov.ifn ra_link_1, rb_pass2_link
     nop
 :2
-    next_twiddles_32
-    next_twiddles_16
+    # (MM) Optimized: moved common next_twiddles code to subroutine
 
-    # (MM) Optimized: place branch before the last two instructions of next_twiddles
-    # and patch return adress to :1.
-    .back 2
-    brr rb_pass2_link, r:pass_3
-    .endb
+    # (MM) Optimized: patch return adress to :1.
     mov ra_link_1, rb_link_1
+    brr_opt rb_pass2_link, r:pass_3_tw, 1
 :3
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
@@ -267,16 +263,12 @@ inst_vpm r3, rx_vpm
     mov ra_points, (1<<STAGES) / 0x100 - 1
 
 :   # start of hidden loop
-    next_twiddles_32
-    next_twiddles_16
+    # (MM) Optimized: moved common next_twiddles code to subroutine
 
-    # (MM) Optimized: place the branch before the last instruction of next_twiddles
-    # and branch unconditional and patch the return address of the last turn.
-    .back 1
-    brr r0, r:pass_4
-    .endb
+    # (MM) Optimized: branch unconditional and patch the return address of the last turn.
     sub.setf ra_points, ra_points, 1
     mov.ifz ra_link_1, r0
+    brr_opt r0, r:pass_4_tw, 2
 
     # (MM) Optimized: easier procedure chains
     brr r0, r:sync, ra_sync
@@ -332,6 +324,11 @@ bodies_fft_16
 #:save_16
     body_ra_save_16 ra_vdw_16
 
+# (MM) Optimized: moved common code to subroutine
+:pass_3_tw
+:pass_4_tw
+    next_twiddles_32
+    next_twiddles_16
 :pass_3
 :pass_4
     body_pass_32 LOAD_STRAIGHT
