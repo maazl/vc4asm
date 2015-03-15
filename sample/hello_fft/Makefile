@@ -43,8 +43,8 @@ test: hello_fft.bin
 profile: hello_fft.bin
 	./profile.pl
 
-hex/shader_2048.hex:	qasm/gpu_fft_2048.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc qasm/gpu_fft_2048.qinc
-hex/shader_4096.hex:	qasm/gpu_fft_2048.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc qasm/gpu_fft_4096.qinc
+hex/shader_2048k.hex:	qasm/gpu_fft_2048k.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc qasm/gpu_fft_2048k.qinc
+hex/shader_4096k.hex:	qasm/gpu_fft_4096k.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc qasm/gpu_fft_2048k.qinc
 
 hello_fft.bin:	$(O1D)
 	gcc $(CFLAGS) -o hello_fft.bin $(F) $(O1D)
