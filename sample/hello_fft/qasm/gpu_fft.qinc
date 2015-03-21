@@ -53,7 +53,7 @@
     ;mov r0, src << 7
     add t0s, ptr, r0;  v8adds r0, r0, 4
     add t0s, ptr, r0;
-.elseif isAccu(ptr)
+.elseif !isRegfileB(ptr)
     mov t0s, ptr; add r0, ptr, 4
     mov t0s, r0;
 .else

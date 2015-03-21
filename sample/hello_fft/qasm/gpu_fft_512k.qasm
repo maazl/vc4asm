@@ -135,14 +135,10 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Top level
 
+    mov ra_addr_x, unif  # Ping buffer or null
+    mov rb_addr_y, unif  # Pong buffer or IRQ enable
+    # (MM) Optimized: check loop condition below
 :loop
-    mov.setf ra_addr_x, unif  # Ping buffer or null
-    # (MM) Optimized: branch sooner
-    brr.allz -, r:end
-    mov      rb_addr_y, unif; # Pong buffer or IRQ enable
-    # (MM) Avoid TMU access at exit
-    nop
-    nop
 
 ##############################################################################
 # Pass 1
@@ -273,17 +269,18 @@ inst_vpm r3, rx_vpm
     mov.ifz ra_link_1, r0
     brr_opt r0, r:pass_4_tw, 2
 
-    # (MM) Optimized: easier procedure chains
-    brr r0, r:sync, ra_sync
     # (MM) Optimized: redirect ra_link_1 to :loop to save branch and 3 nop.
-    mov r1, :loop - :1f
-    add ra_link_1, r0, r1; ldtmu0
-    nop;                   ldtmu0
+    # Also check loop condition immediately.
+    mov.setf ra_addr_x, unif;  ldtmu0  # Ping buffer or null
+    # (MM) Optimized: easier procedure chains
+    brr r0, ra_link_1, r:sync, ra_sync
+    mov r1, r:loop - r:1f
+    add.ifnz ra_link_1, r0, r1
+    mov      rb_addr_y, unif;  ldtmu0  # Pong buffer or IRQ enable
 :1
 
 ##############################################################################
 
-:end
     exit rb_addr_y
 
 # (MM) Optimized: easier procedure chains
