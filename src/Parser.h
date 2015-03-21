@@ -306,6 +306,8 @@ class Parser
 	void             parseDATA(int type);
 	void             beginREP(int);
 	void             endREP(int);
+	void             beginFOREACH(int);
+	void             endFOR(int);
 	void             beginBACK(int);
 	void             endBACK(int);
 	void             parseCLONE(int);

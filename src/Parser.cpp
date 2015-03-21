@@ -299,8 +299,17 @@ exprValue Parser::ParseExpression()
 				switch (NextToken())
 				{default:
 					Fail("Expected Label after ':'.");
-				 case SQBRC1:
-					// Internal register constant
+
+				 case BRACE1: // Internal label constant
+					value = ParseExpression();
+					if (value.Type != V_INT)
+						Fail("Expecting integer constant, found %s.", type2string(value.Type));
+					if (NextToken() != BRACE2)
+						Fail("Expected ')', found '%s'.", Token.c_str());
+					value.Type = V_LABEL;
+					goto have_value;
+
+				 case SQBRC1: // Internal register constant
 					{	reg_t reg;
 						value = ParseExpression();
 						if (value.Type != V_INT)
@@ -807,7 +816,13 @@ void Parser::assembleMOV(int mode)
 	 case V_FLOAT:
 		// try small immediate first
 		if (!isLDI && mode < 0)
-		{	switch (Instruct.Sig)
+		{	const smiEntry* si;
+			if (!param.uValue)
+			{	// mov ... ,0 does not require small immediate value
+				si = smiMap + useMUL;
+				goto mov0;
+			}
+			switch (Instruct.Sig)
 			{default:
 				Fail ("Immediate values cannot be used together with signals.");
 			 case Inst::S_NONE:
@@ -815,15 +830,14 @@ void Parser::assembleMOV(int mode)
 					Fail ("Immediate value collides with read from register file B.");
 			 case Inst::S_SMI:;
 			}
-			for (const smiEntry* si = getSmallImmediateALU(param.uValue); si->Value == param.uValue; ++si)
+			for (si = getSmallImmediateALU(param.uValue); si->Value == param.uValue; ++si)
 			{	if ( (Extensions || !si->OpCode.isExt())
-					&& ( param.uValue == 0 || Instruct.Sig == Inst::S_NONE
+					&& ( Instruct.Sig == Inst::S_NONE
 						|| (Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd) )
-					&& ((!si->OpCode.isMul() ^ useMUL) || (param.uValue && Instruct.trySwap(si->OpCode.isMul()))) )
-				{	if (param.uValue != 0) // zero value does not require SMI
-					{	Instruct.Sig   = Inst::S_SMI;
-						Instruct.SImmd = si->SImmd;
-					}
+					&& ((!si->OpCode.isMul() ^ useMUL) || Instruct.trySwap(si->OpCode.isMul())) )
+				{	Instruct.Sig   = Inst::S_SMI;
+					Instruct.SImmd = si->SImmd;
+				 mov0:
 					if (si->OpCode.isMul())
 					{	Instruct.MuxMA = Instruct.MuxMB = Inst::X_RB;
 						Instruct.OpM   = si->OpCode.asMul();
@@ -1123,6 +1137,71 @@ void Parser::endREP(int)
 	for (uint32_t& i = current.Consts.emplace(m.Args.front(), constDef(exprValue(0), current)).first->second.Value.uValue;
 		i < count; ++i)
 	{	// Invoke rep
+		for (const string& line : m.Content)
+		{	++Context.back()->Line;
+			strncpy(Line, line.c_str(), sizeof(Line));
+			ParseLine();
+		}
+	}
+}
+
+void Parser::beginFOREACH(int)
+{
+	if (doPreprocessor())
+		return;
+
+	AtMacro = &Macros[".foreach"];
+	AtMacro->Definition = *Context.back();
+
+	if (NextToken() != WORD)
+		Fail("Expected loop variable name after .foreach.");
+
+	AtMacro->Args.push_back(Token);
+	if (NextToken() != COMMA)
+		Fail("Expected ', <parameters>' at .foreach.");
+	{nextpar:
+		const auto& expr = ParseExpression();
+		if (expr.Type != V_INT)
+			Fail("Second argument to .rep must be an integral number. Found %s", expr.toString().c_str());
+		AtMacro->Args.push_back(expr.toString());
+
+		switch (NextToken())
+		{default:
+			Fail("Expected ',' or end of line.");
+		 case COMMA:
+			goto nextpar;
+		 case END:;
+		}
+	}
+}
+
+void Parser::endFOR(int)
+{
+	auto iter = Macros.find(".foreach");
+	if (AtMacro != &iter->second)
+	{	if (doPreprocessor())
+			return;
+		Fail(".endfor without .foreach");
+	}
+
+	const macro m = *AtMacro;
+	AtMacro = NULL;
+	Macros.erase(iter);
+
+	if (m.Args.size() != 2)
+		return; // no loop count => 0
+
+	// Setup invocation context
+	saveContext ctx(*this, new fileContext(CTX_MACRO, m.Definition.File, m.Definition.Line));
+
+	// loop
+	auto& current = *Context.back();
+	auto& value = current.Consts.emplace(m.Args.front(), constDef(exprValue(), current)).first->second.Value;
+	for (size_t i = 1; i < m.Args.size(); ++i)
+	{	strncpy(Line, m.Args[i].c_str(), sizeof(Line));
+		At = 0;
+		value = ParseExpression();
+		// invoke body
 		for (const string& line : m.Content)
 		{	++Context.back()->Line;
 			strncpy(Line, line.c_str(), sizeof(Line));
@@ -1776,6 +1855,7 @@ void Parser::ParseFile()
 			{	ParseLine();
 			} catch (const string& msg)
 			{	// recover from errors
+				Success = false;
 				fputs(msgpfx[ERROR], stderr);
 				fputs(msg.c_str(), stderr);
 				fputc('\n', stderr);
@@ -1799,6 +1879,7 @@ void Parser::ParseFile(const string& file)
 		Filenames.emplace_back(file);
 	} catch (const string& msg)
 	{	// recover from errors
+		Success = false;
 		fputs(msgpfx[ERROR], stderr);
 		fputs(msg.c_str(), stderr);
 		fputc('\n', stderr);

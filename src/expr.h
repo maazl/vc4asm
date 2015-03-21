@@ -63,12 +63,14 @@ struct value_t
 };
 struct exprValue : value_t
 {	valueType   Type;
-	exprValue()        : Type(V_NONE) { uValue = 0; }
+	exprValue()        : Type(V_NONE)  { uValue = 0; }
 	exprValue(uint32_t i, valueType type) : Type(type) { uValue = i; }
 	exprValue(int32_t i) : Type(V_INT) { iValue = i; }
 	exprValue(float f) : Type(V_FLOAT) { fValue = f; }
-	exprValue(reg_t r) : Type(V_REG) { rValue = r; }
+	exprValue(reg_t r) : Type(V_REG)   { rValue = r; }
 	string      toString() const;
+ private:
+	static string toPE(unsigned value, bool sign);
 };
 bool operator==(exprValue l, exprValue r);
 

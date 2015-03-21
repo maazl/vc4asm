@@ -1072,6 +1072,7 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "endb",    &Parser::endBACK }
 ,	{ "endback", &Parser::endBACK }
 ,	{ "endf",    &Parser::endMACRO,   M_FUNC }
+,	{ "endfor",  &Parser::endFOR }
 ,	{ "endfunc", &Parser::endMACRO,   M_FUNC }
 ,	{ "endif",   &Parser::parseENDIF }
 ,	{ "endm",    &Parser::endMACRO,   M_NONE }
@@ -1079,6 +1080,7 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "endrep",  &Parser::endREP }
 ,	{ "equ",     &Parser::parseSET,   C_NONE }
 ,	{ "float",   &Parser::parseDATA,  -4 }
+,	{ "foreach", &Parser::beginFOREACH }
 ,	{ "func",    &Parser::beginMACRO, M_FUNC }
 ,	{ "if",      &Parser::parseIF }
 ,	{ "ifset",   &Parser::parseIFSET, C_NONE }

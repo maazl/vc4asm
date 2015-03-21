@@ -8,22 +8,34 @@
 #include "expr.h"
 #include "utils.h"
 
+string exprValue::toPE(unsigned val, bool sign)
+{	string r;
+	for (int i = 32; i; --i)
+	{	r += stringf(",%i", sign && (val & 0x10000) ? (val & 1) - 2 : (val & 0x10001) / 0x8001);
+		val >>= 1;
+	}
+	r[0] = '[';
+	r += ']';
+	return r;
+}
 
 string exprValue::toString() const
 {switch (Type)
 	{default:
 		return string();
 	 case V_INT:
+		return stringf("0x%x", uValue);
 	 case V_LDPES:
+		return toPE(uValue, true);
 	 case V_LDPE:
 	 case V_LDPEU:
+		return toPE(uValue, false);
 	 case V_LABEL:
-		return stringf("0x%x", uValue);
+		return stringf(":(0x%x)", uValue);
 	 case V_FLOAT:
 		return stringf("%g", fValue);
 	 case V_REG:
-		// TODO
-		return string();
+		return stringf(rValue.Rotate ? ":[%i,%i,%i]" : ":[%i,%i]", rValue.Num, rValue.Type, rValue.Rotate);
 	}
 }
 

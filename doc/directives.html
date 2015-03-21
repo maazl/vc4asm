@@ -13,12 +13,13 @@
         <a href="#.back">.back</a> </tt><tt> <a href="#.byte">.byte</a> <a href="#.clone">.clone</a>
       </tt><tt><a href="#.const">.const</a>&nbsp;<a href="#.else">.else</a> <a
           href="#.elseif">.elseif</a> <a href="#.back">.endb</a></tt><tt><tt> <a
-            href="#.func">.endf</a> </tt> <a href="#.endif">.endif</a> <a href="#.macro">.endm</a>
-        <a href="#.rep">.endr</a> <a href="#.equ">.equ</a></tt><tt><tt> <a href="#.float">.float</a>
-        </tt> <a href="#.func">.func</a> <a href="#.if">.if</a> </tt><tt><tt><a
-            href="#.ifset">.ifset</a></tt> <a href="#.include">.include</a> </tt><tt><tt><a
-            href="#.int">.int</a></tt></tt><tt><tt><tt> <a href="#.const">.lconst</a>
-          </tt> </tt></tt><tt><tt><tt><a href="#.long">.long</a></tt></tt></tt><tt><tt><tt><tt>
+            href="#.func">.endf</a> </tt></tt><tt><tt><tt><tt><a href="#.foreach">.endfor</a></tt></tt></tt>
+        <a href="#.endif">.endif</a> <a href="#.macro">.endm</a> <a href="#.rep">.endr</a>
+        <a href="#.equ">.equ</a></tt><tt><tt> <a href="#.float">.float</a> </tt></tt><tt><tt><tt><a
+              href="#.foreach">.foreach</a>&nbsp;</tt></tt><a href="#.func">.func</a>
+        <a href="#.if">.if</a> </tt><tt><tt><a href="#.ifset">.ifset</a></tt> <a
+          href="#.include">.include</a> </tt><tt><tt><a href="#.int">.int</a></tt></tt><tt><tt><tt>
+            <a href="#.const">.lconst</a> </tt> </tt></tt><tt><tt><tt><a href="#.long">.long</a></tt></tt></tt><tt><tt><tt><tt>
               <a href="#.set">.lset</a></tt></tt></tt></tt><tt><tt><tt><tt><tt>
                 <a href="#.unset">.lunset</a> </tt> </tt> </tt> </tt> <a href="#.macro">.macro</a>
         <a href="#.rep">.rep</a> <a href="#.set">.set</a>&nbsp;</tt><tt><tt><a
@@ -123,7 +124,8 @@
       <dt><var><tt>identifier</tt></var></dt>
       <dd>This identifier receives the loop count starting at <tt>0</tt> and up
         to <tt><var>count</var>-1</tt> for the last loop cycle.<br>
-        At the end of <tt>.endr</tt> the identifier returns to undefined state.</dd>
+        At the end of <tt>.endr</tt> the identifier returns to to its previous
+        value.</dd>
       <dt><tt><var>count</var></tt></dt>
       <dd>Number of loop cycles. <tt><var>count</var></tt> must be <tt>&ge; 0</tt>
         and evaluate at the time <tt>.rep</tt> is parsed.</dd>
@@ -131,6 +133,21 @@
     <h3> Example</h3>
     <p>Acquire all 15 QPU semaphores.</p>
     <pre>.rep i 15<br>    sacq i<br>.endr</pre>
+    <h2><tt><a id=".foreach" name=".foreach"></a>.foreach</tt> - repeat code for
+      a set of expressions</h2>
+    <pre>.foreach <var>identifier</var>, <var>expr1, expr2, ...<br>    your_code</var><br>    ...<br>.endfor</pre>
+    <dl>
+      <dt><var><tt>identifier</tt></var></dt>
+      <dd>This identifier receives the expressions.<br>
+        At the end of <tt>.endfor</tt> the identifier returns to its previous
+        value.</dd>
+      <dt><tt><var>expr...</var></tt></dt>
+      <dd>Expressions to assign to <var><tt>identifier</tt></var>. The loop is
+        assembled once for each expression.</dd>
+    </dl>
+    <h3> Example</h3>
+    <p>Clear a bunch of registers.</p>
+    <pre>.foreach reg ra0, rb1, ra2, rb2, ra4, rb4<br>   &nbsp;;mov reg, 0;<br>.endr</pre>
     <h2><a id=".back" name=".back"></a><tt>.back</tt> - emit code before the
       last few instructions</h2>
     <pre>.back <var>count<br>    your_code</var><br>    ...<br>.endb<var></var></pre>
