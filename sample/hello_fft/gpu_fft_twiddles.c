@@ -63,10 +63,10 @@ static float *twiddles_base_64(double two_pi, float *out, double theta) {
     int i;
     const double f = two_pi / 64;
     for (i=0; i<32; i++) {
-        *out++ = cos(f*i);
-        *out++ = sin(f*i);
+        *out++ = cos(f*i + theta);
+        *out++ = sin(f*i + theta);
     }
-    return twiddles_base_32(two_pi, out, 0);
+    return twiddles_base_32(two_pi, out, 2*theta);
 }
 
 /****************************************************************************/
@@ -106,13 +106,13 @@ static const int stages[][5] = {
 	{5,4},
 	{5,5},
 	{6,5},
-	{4,4,4},
+	{6,6},
 	{5,4,4},
 	{5,5,4},
 	{5,5,5},
 	{6,5,5},
-	{5,4,4,4},
-	{5,4,4,5},
+	{6,6,5},
+	{6,6,6},
 	{5,4,5,5},
 	{5,5,5,5},
 	{6,5,5,5},

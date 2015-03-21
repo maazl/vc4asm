@@ -182,7 +182,6 @@ inst_vpm r3, rx_vpm
 
 :   # start of hidden loop
     next_twiddles_32
-    next_twiddles_16
 
     # (MM) Optimized: branch unconditional and patch the return address for
     # the last turn, move the branch before the last instruction of next_twiddles.

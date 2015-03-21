@@ -173,7 +173,6 @@ inst_vpm r3, rx_vpm
     nop
     ldtmu0
 
-
 ##############################################################################
 # Pass 2
 
@@ -198,10 +197,7 @@ inst_vpm r3, rx_vpm
     and.setf -, r1, ra_0x7F;   mov.ifn r0, rb_pass2_link
     mov.ifz ra_link_1, r0
 :2
-    rotate TW64, TW64_STEP
-    rotate TW48, TW48_STEP
-    next_twiddles_32
-    next_twiddles_16
+    next_twiddles_64
 
     # (MM) Optimized: place branch before the last instruction of next_twiddles
     # and link directly to :1.
@@ -334,7 +330,6 @@ bodies_fft_16
 :pass_3_tw
 :pass_4_tw
     next_twiddles_32
-    next_twiddles_16
 :pass_3
 :pass_4
     body_pass_32 LOAD_STRAIGHT

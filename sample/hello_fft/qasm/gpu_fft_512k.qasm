@@ -331,7 +331,6 @@ bodies_fft_16
 :pass_3_tw
 :pass_4_tw
     next_twiddles_32
-    next_twiddles_16
 :pass_3
 :pass_4
     body_pass_32 LOAD_STRAIGHT

@@ -27,20 +27,28 @@
 
 .set STAGES, 18
 
-.include "gpu_fft_ex.qinc"
+.include "gpu_fft_2048k.qinc"
 
 ##############################################################################
 # Twiddles: src
 
-.set TW32_BASE,     0   # rx_tw_shared
-.set TW16_BASE,     1
-.set TW16_P2_STEP,  2
-.set TW16_P3_STEP,  3
-.set TW32_P4_STEP,  4
-.set TW16_P4_STEP,  5
+.set TW64_BASE0,    0 # rx_tw_shared
+.set TW64_BASE1,    1
+.set TW32_BASE,     2
+.set TW16_BASE,     3
+.set TW48_P2_STEP,  4
+.set TW64_P2_STEP,  5
+.set TW32_P2_STEP,  6
+.set TW16_P2_STEP,  7
+.set TW48_P3_STEP,  8
+.set TW64_P3_STEP,  9
+.set TW32_P3_STEP,  10
+.set TW16_P3_STEP,  11
 
-.set TW32_P4_BASE,  0   # rx_tw_unique
-.set TW16_P4_BASE,  1
+.set TW64_P3_BASE0, 0   # rx_tw_unique
+.set TW64_P3_BASE1, 1
+.set TW32_P3_BASE,  2
+.set TW16_P3_BASE,  3
 
 ##############################################################################
 # Twiddles: dst
@@ -49,12 +57,16 @@
 .set TW32_STEP, 1  # 1
 .set TW16,      2  # 5
 .set TW32,      7  # 2
+.set TW48,      9  # 2
+.set TW64,      11 # 2
+.set TW48_STEP, 13 # 1
+.set TW64_STEP, 14 # 1
 
 ##############################################################################
 # Registers
 
 .set ra_link_0,         ra0
-#                       rb0
+.set rb_pass2_link,     rb0
 .set ra_save_ptr,       ra1
 #                       rb1
 .set ra_temp,           ra2
@@ -62,52 +74,37 @@
 .set ra_addr_x,         ra3
 .set rb_addr_y,         rb3
 .set rx_inst,           ra4
-#                       rb4
+.set rx_0x55555555,     rb4
 .set ra_load_idx,       ra5
-#                       rb5
+.set rx_0x33333333,     rb5
 .set ra_sync,           ra6
-#                       rb6
+.set rx_0x0F0F0F0F,     rb6
 .set ra_points,         ra7
-#                       rb7
+.set rb_0x1D0,          rb7
 .set ra_link_1,         ra8
 .set rb_link_1,         rb8
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
-.set ra_save_32,        ra10
-#
+.set ra_save_64,        ra10
+.set rb_0xF0,           rb10
 
-.set rx_tw_shared,      ra11
-.set rx_tw_unique,      rb11
+.set ra_64,             ra11 # 4
+.set rb_64,             rb11 # 4
 
-.set ra_tw_re,          ra12 # 9
-.set rb_tw_im,          rb12 # 9
+.set rx_tw_shared,      ra15
+.set rx_tw_unique,      rb15
 
-.set ra_vdw_16,         ra27
-.set ra_vdw_32,         ra28
-.set ra_0x3F,           ra29
-#                       ra30
-#                       ra31
-
-.set rx_0x55555555,     rb26
-.set rx_0x33333333,     rb27
-.set rx_0x0F0F0F0F,     rb28
-.set rb_0x80,           rb29
-.set rb_0xF0,           rb30
-.set rb_pass2_link,     rb31
+.set ra_tw_re,          ra16 # 15
+.set rb_tw_im,          rb16 # 15
 
 ##############################################################################
 # Constants
 
+mov rb_0xF0,       0xF0
+mov rb_0x1D0,      0x1D0
 mov rx_0x55555555, 0x55555555
 mov rx_0x33333333, 0x33333333
 mov rx_0x0F0F0F0F, 0x0F0F0F0F
-
-mov ra_vdw_16, vdw_setup_0( 1, 16, dma_h32( 0,0))
-mov ra_vdw_32, vdw_setup_0(32, 16, dma_h32( 0,0))
-
-mov rb_0x80,    0x80
-mov rb_0xF0,    0xF0
-mov ra_0x3F,    0x3F;
 
 ##############################################################################
 # Twiddles: ptr
@@ -120,11 +117,11 @@ init_tw
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 3 registers
     mov r3, unif;              mov ra_sync, 0
-    shl.setf r0, r3, 5;        mov ra_save_32, 0
+    shl.setf r0, r3, 5;        mov ra_save_64, 0
     mov.ifnz r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     add.ifnz ra_sync, r1, r0
-    mov.ifnz r1, :save_slave - :save_32
-    mov.ifnz ra_save_32, r1;
+    mov.ifnz r1, :save_slave_64 - :save_64 - 4*8 # -> rx_inst-1
+    add.ifnz ra_save_64, r1, r0;
 
 # (MM) Optimized: reduced VPM registers to 1
 inst_vpm r3, rx_vpm
@@ -147,14 +144,14 @@ inst_vpm r3, rx_vpm
 # Pass 1
 
     # (MM) More powerful init macros to simplify code
-    init_base_32 TW16_BASE, TW32_BASE
+    init_base_64 TW16_BASE, TW32_BASE, TW64_BASE0, TW64_BASE1
     read_rev 0x10
 
     # (MM) Optimized: place branch before the last two instructions of read_rev
     .back 2
     brr ra_link_1, r:pass_1
     .endb
-    mov ra_points, (1<<STAGES) / 0x100 - 1
+    mov ra_points, (1<<STAGES) / 0x200 - 1
 
 :   # start of hidden loop
     # (MM) Optimized: branch unconditional and patch the return address
@@ -174,24 +171,25 @@ inst_vpm r3, rx_vpm
 # Pass 2
 
     # (MM) More powerful init macros to simplify code
-    init_step_16 TW16_BASE, TW16_P2_STEP
-    read_lin rb_0x80
+    init_step_64 TW16_BASE, TW32_BASE, TW64_BASE0, TW64_BASE1, TW16_P2_STEP, TW32_P2_STEP, TW48_P2_STEP, TW64_P2_STEP
+    read_lin 0x10
 
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
     # and setup for loop below
     .back 2
     brr ra_link_1, rb_link_1, -, r:pass_2
     .endb
-    mov ra_points, (1<<STAGES) / 0x80 - 2
+    mov ra_points, (1<<STAGES) / 0x200 - 2
+    mov r5rep, 7
 :1
     brr r0, r:pass_2
     # (MM) Optimized: patch the return address for the last turn to save the
     # conditional branches.
     # if ra_points == 0 => ra_link_1 = :3 = rb_pass2_link
-    # else if ra_points % 32 == 0 => ra_link_1 = :2 = r0
+    # else if ra_points % 8 == 0 => ra_link_1 = :2 = r0
     # else => ra_link_1 = :1 = rb_link_1 = unchanged
-    sub.setf ra_points, ra_points, 1; mov r1, ra_points
-    and.setf -, r1, ra_0x3F;   mov.ifn r0, rb_pass2_link
+    sub.setf ra_points, ra_points, 1;  mov r1, ra_points
+    and.setf -, r1, r5;   mov.ifn r0, rb_pass2_link
     mov.ifz ra_link_1, r0
 :2
     # (MM) Optimized: moved common next_twiddles code to subroutine
@@ -211,67 +209,21 @@ inst_vpm r3, rx_vpm
 # Pass 3
 
     # (MM) More powerful init macros to simplify code
-    init_step_16 TW16_BASE, TW16_P3_STEP
-    read_lin rb_0x80
-
-    # (MM) Optimized: place branch before the last instruction of read_lin
-    # and keep return address additionally in rb_link_1 for loop.
+    init_last_64 TW16_P3_BASE, TW32_P3_BASE, TW64_P3_BASE0, TW64_P3_BASE1, TW16_P3_STEP, TW32_P3_STEP, TW48_P3_STEP, TW64_P3_STEP
+    read_lin 0x10
     .back 2
-    brr ra_link_1, rb_link_1, -, r:pass_3
+    brr ra_link_1, r:pass_3
     .endb
-    mov ra_points, (1<<STAGES) / 0x80 - 1
+    mov ra_points, (1<<STAGES) / 0x200 - 1
 
 :   # start of hidden loop
-    .rep i, 2
-    brr ra_link_1, r:pass_3
-    nop
-    nop
-    nop
-    .endr
-
-    # (MM) Optimized: patch the return address for the last turn to save the
-    # conditional branch and the unecessary twiddle load after the last turn.
-    brr ra_link_1, r0, -, r:pass_3
-    sub.setf ra_points, ra_points, 4
-    mov.ifn ra_link_1, rb_pass2_link
-    nop
-:2
     # (MM) Optimized: moved common next_twiddles code to subroutine
 
-    # (MM) Optimized: patch return adress to :1.
-    mov ra_link_1, rb_link_1
-    brr_opt rb_pass2_link, r:pass_3_tw, 1
-:3
-    # (MM) Optimized: easier procedure chains
-    brr ra_link_1, r:sync, ra_sync
-    ldtmu0
-    nop
-    ldtmu0
-
-##############################################################################
-# Pass 4
-
-    # (MM) More powerful init macros to simplify code
-    init_last_32 TW16_P4_BASE, TW32_P4_BASE, TW16_P4_STEP, TW32_P4_STEP
-    read_lin 0x10
-
-    # (MM) Optimized: place branch before the last two instructions of read_lin
-    .back 2
-    brr ra_link_1, r:pass_4
-    .endb
-    mov ra_points, (1<<STAGES) / 0x100 - 1
-
-:   # start of hidden loop
-    next_twiddles_32
-    next_twiddles_16
-
-    # (MM) Optimized: place the branch before the last instruction of next_twiddles
-    # and branch unconditional and patch the return address of the last turn.
-    .back 1
-    brr r0, r:pass_4
-    .endb
+    # (MM) Optimized: branch unconditional and patch the return address for
+    # the last turn
     sub.setf ra_points, ra_points, 1
     mov.ifz ra_link_1, r0
+    brr_opt r0, r:pass_3_tw, 2
 
     # (MM) Optimized: easier procedure chains
     brr r0, r:sync, ra_sync
@@ -297,45 +249,34 @@ bodies_fft_16
     .endb
 
 :pass_1
-    body_pass_32 LOAD_REVERSED
+    body_pass_64 LOAD_REVERSED, rb_0x1D0
 
+    # (MM) Optimized procedure chains
     .back 3
-    brr -, ra_save_32, r:save_32
+    brr -, ra_save_64, r:save_64
     .endb
 
-:save_32
-    body_ra_save_32
+:save_64
+    body_ra_save_64
 
-:save_slave
-    body_rx_save_slave
+:save_slave_64
+    body_rx_save_slave_64
+
+:pass_2_tw
+:pass_3_tw
+    next_twiddles_64
+:pass_2
+:pass_3
+    body_pass_64 LOAD_STRAIGHT, rb_0x1D0
+
+    # (MM) Optimized procedure chains
+    .back 3
+    brr -, ra_save_64, r:save_64
+    .endb
 
 :sync_slave
     body_rx_sync_slave
 
 :sync
     body_ra_sync
-
-# (MM) Optimized: moved common code to subroutine
-:pass_2_tw
-:pass_3_tw
-    next_twiddles_16
-:pass_2
-:pass_3
-    body_pass_16 LOAD_STRAIGHT
-
-    # (MM) Optimized: link to slave procedure without need for a register
-    .back 3
-    ;mov.setf -, rx_inst
-    brr.allnz -, r:save_slave
-    .endb
-
-#:save_16
-    body_ra_save_16 ra_vdw_16
-
-:pass_4
-    body_pass_32 LOAD_STRAIGHT
-
-    .back 3
-    brr -, ra_save_32, r:save_32
-    .endb
 

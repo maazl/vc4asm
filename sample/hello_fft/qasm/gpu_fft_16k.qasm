@@ -186,7 +186,6 @@ inst_vpm r3, rx_vpm
     nop
 :2
     next_twiddles_32
-    next_twiddles_16
 
     # (MM) Optimized: place branch before the last two instructions of next_twiddles
     .back 2

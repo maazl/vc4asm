@@ -85,7 +85,7 @@
     # (MM) Optimized: instruction packing
     .assert vpm_setup(1, 1, v32(0,2)) - vpm_setup(1, 1, v32(0,0)) == 2
     ;v8adds r1, in_inst, in_inst
-    mov r0, vpm_setup(1, 1, v32( 0,0))
+    mov r0, vpm_setup(1, 1, v32(0,0))
     add out_vpm, r0, r1;
 .endm
 
@@ -176,8 +176,9 @@
     # => now the same as save_slave_32
 
     # (MM) Optimized: easier procedure chains
-    brr -, r:sync, ra_sync
     mov vr_setup, rx_vpm
+    brr -, r:sync, ra_sync
+    nop
     nop
     mov -, vpm
 .endm
@@ -197,7 +198,7 @@
     bra -, ra_link_1
 
     # (MM) Optimized: no need for rb_0x40
-    mov r0, 0x40; mov vw_setup, ra_vdw_32
+    mov r0, 0x40;                     mov vw_setup, ra_vdw_32
     mov vw_setup, vdw_setup_1(0) + PASS32_STRIDE-16*4
     add ra_save_ptr, ra_save_ptr, r0; mov vw_addr, ra_save_ptr
 .endm
@@ -205,16 +206,7 @@
 ##############################################################################
 
 # (MM) no longer used
-.macro body_rx_save_slave_32
-    # (MM) Optimized: move write_vpm_32 to body_pass_32
-    # => makes body_rx_save_slave_32 meaningless because identical to save_slave_16
-
-    # (MM) Optimized: easier procedure chains
-    brr -, r:sync, ra_sync
-    mov vr_setup, rx_vpm
-    nop
-    mov -, vpm
-.endm
+#.macro body_rx_save_slave_32
 
 ##############################################################################
 
@@ -234,11 +226,12 @@
         mov -, sacq(i+9) # Master waits for slaves
     .endr
 
-    bra -, ra_link_1
-
     mov vw_setup, vdw_setup_0(64, 16, dma_h32(0,0))
-    mov vw_setup, vdw_setup_1(PASS64_STRIDE-16*4)
+    mov vw_setup, vdw_setup_1(0) + PASS64_STRIDE-16*4
     add ra_save_ptr, ra_save_ptr, r0; mov vw_addr, ra_save_ptr
+    .back 3
+    bra -, ra_link_1
+    .endb
 .endm
 
 ##############################################################################
@@ -252,37 +245,14 @@
     # - Removed unnecessary code for semaphore 0 (8 instructions dead code).
     # - Furthermore store the return address as offset for the second branch to srel.
     .rep i, 7
-        brr ra_temp, r:2f
         mov -, sacq(i+1) # Slave waits for master
-
-        # start with write_vpm_64 here
-        # (MM) Optimized: no need for 4 VPM registers anymore, less memory I/O
-        .if isRegfileB(rx_vpm)
-        mov vw_setup, rx_vpm;   mov r0, rx_vpm
-        .else
-        add r0, rx_vpm, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, rx_vpm
-        .endif
-        fadd vpm, ra_64+0, rb_64+0
+        brr_opt ra_temp, r:2f, 1
     .endr
 :2
-    # write_vpm_64
-    # (MM) Optimized: less memory I/O and prepare for better instruction packing
-    fadd vpm, ra_64+1, rb_64+1; mov r1, rb_64+1
+    write_vpm_64
 
-    .if isRegfileB(rx_vpm)
-    add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
-    .endif
-    add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
-    fadd vpm, ra_64+2, rb_64+2; mov r2, rb_64+2
-    fadd vpm, ra_64+3, rb_64+3; mov r3, rb_64+3
-
-    add r0, r0, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0)); mov vw_setup, r0
-    fsub vpm, ra_64+0, rb_64+0
-    fsub vpm, ra_64+1, r1
-    mov vw_setup, r0
-    fsub vpm, ra_64+2, r2
-    fsub vpm, ra_64+3, r3
-
+    mov vr_setup, r0
+    nop
     .back 3
        # (MM) Optimized: Take the return address from above as base of the branch target.
        bra -, ra_temp, :3f - :2 - 4*8
@@ -290,7 +260,7 @@
 
     .rep i, 7
         bra -, ra_link_1
-        mov vr_setup, rx_vpm
+        nop
         mov -, vpm
         mov -, srel(i+9) # Slave releases master
     .endr
@@ -550,15 +520,22 @@
     df64_sub32 ra_tw_re+base, r2
 .endm
 
-.macro next_twiddles_32
-    rotate TW32, TW32_STEP
-.endm
-
 .macro next_twiddles_16
     rotate TW16+3, TW16_STEP
     # (MM) Optimized: moved r2/r3 load from unpack_twiddles
     mov r2, ra_tw_re+TW16+3; mov r3, rb_tw_im+TW16+3
     unpack_twiddles
+.endm
+
+.macro next_twiddles_32
+    rotate TW32, TW32_STEP
+    next_twiddles_16
+.endm
+
+.macro next_twiddles_64
+    rotate TW64, TW64_STEP
+    rotate TW48, TW48_STEP
+    next_twiddles_32
 .endm
 
 ##############################################################################
@@ -682,6 +659,29 @@
     store_tw TW16_STEP, 0
     store_tw TW32+0, 1
     init_stage 5
+.endm
+
+.macro init_last_64, tw16, tw32, tw48, tw64, st16, st32, st48, st64
+    # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
+    mov r3, rx_tw_shared;
+    read_tw r3, st64
+    read_tw r3, st48
+    read_tw r3, st32
+    read_tw r3, st16
+    swap_buffers
+    store_tw TW64_STEP, 0
+    store_tw TW48_STEP, 0
+    store_tw TW32_STEP, 0
+    store_tw TW16_STEP, 0
+    ;mov r3, rx_tw_unique;
+    read_tw r3, tw64
+    read_tw r3, tw48
+    read_tw r3, tw32
+    read_tw r3, tw16
+    store_tw TW64+0, 1
+    store_tw TW48+0, 1
+    store_tw TW32+0, 1
+    init_stage 6
 .endm
 
 ##############################################################################
