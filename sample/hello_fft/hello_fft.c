@@ -100,6 +100,7 @@ int main(int argc, char *argv[]) {
                 double re = cos(2*GPU_FFT_PI*freq*i/N);
                 tsq[0] += pow(re, 2);
                 tsq[1] += pow(re - base[i].re, 2) + pow(base[i].im, 2);
+                //printf("%g\t%g\n", base[i].re, base[i].im);
             }
         }
 

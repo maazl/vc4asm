@@ -27,6 +27,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <string.h>
+#include <stdio.h>
 
 #include "gpu_fft.h"
 
@@ -41,7 +42,7 @@ int gpu_fft_prepare(
     int jobs,       // number of transforms in batch
     struct GPU_FFT **fft) {
 
-    unsigned info_bytes, twid_bytes, data_bytes, code_bytes, unif_bytes, mail_bytes;
+    unsigned info_bytes, twid_bytes, data_bytes, total_data_bytes, code_bytes, unif_bytes, mail_bytes;
     unsigned size, *uptr, vc_tw, vc_data;
     int i, q, shared, unique, passes, ret;
 
@@ -52,14 +53,18 @@ int gpu_fft_prepare(
     if (gpu_fft_twiddle_size(log2_N, &shared, &unique, &passes)) return -2;
 
     info_bytes = 4096;
-    data_bytes = (1+((sizeof(COMPLEX)<<log2_N)|4095));
+    // (MM) Alignment superfluous because always powers of 2
+    //data_bytes = (1+((sizeof(COMPLEX)<<log2_N)|4095));
+    data_bytes = sizeof(COMPLEX)<<log2_N;
     code_bytes = gpu_fft_shader_size(log2_N);
     twid_bytes = sizeof(COMPLEX)*16*(shared+GPU_FFT_QPUS*unique);
     unif_bytes = sizeof(int)*GPU_FFT_QPUS*(5+jobs*2);
     mail_bytes = sizeof(int)*GPU_FFT_QPUS*2;
 
+    total_data_bytes = data_bytes * (jobs + 1);
+
     size  = info_bytes +        // header
-            data_bytes*jobs*2 + // ping-pong data, aligned
+            total_data_bytes +  // ping-pong data, aligned
             code_bytes +        // shader, aligned
             twid_bytes +        // twiddles
             unif_bytes +        // uniforms
@@ -78,10 +83,13 @@ int gpu_fft_prepare(
     info->y = jobs;
 
     // Ping-pong buffers leave results in or out of place
-    info->in = info->out = ptr.arm.cptr;
+    // (MM) Use overlapping in and out buffer
+    info->out = ptr.arm.cptr;
     info->step = data_bytes / sizeof(COMPLEX);
-    if (passes&1) info->out += info->step * jobs; // odd => out of place
-    vc_data = gpu_fft_ptr_inc(&ptr, data_bytes*jobs*2);
+    info->in = info->out + info->step;
+    // even => in place
+    if (!(passes&1)) info->out = info->in;
+    vc_data = gpu_fft_ptr_inc(&ptr, total_data_bytes);
 
     // Shader code
     memcpy(ptr.arm.vptr, gpu_fft_shader_code(log2_N), code_bytes);
@@ -99,8 +107,8 @@ int gpu_fft_prepare(
         *uptr++ = vc_tw + sizeof(COMPLEX)*16*(shared + q*unique);
         *uptr++ = q;
         for (i=0; i<jobs; i++) {
-            *uptr++ = vc_data + data_bytes*i;
-            *uptr++ = vc_data + data_bytes*i + data_bytes*jobs;
+            *uptr++ = vc_data + data_bytes*(i+1);
+            *uptr++ = vc_data + data_bytes*i*(passes&1);
         }
         *uptr++ = 0;
         *uptr++ = (q==0); // For mailbox: IRQ enable, master only
