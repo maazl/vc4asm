@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unistd.h>
 #include <assert.h>
 #include <stdint.h>
+#include <errno.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 
@@ -60,7 +61,7 @@ void *mapmem(unsigned base, unsigned size)
    printf("base=0x%x, mem=%p\n", base, mem);
 #endif
    if (mem == MAP_FAILED) {
-      printf("mmap error %d\n", (int)mem);
+      printf("mmap error %d\n", errno);
       exit (-1);
    }
    close(mem_fd);
