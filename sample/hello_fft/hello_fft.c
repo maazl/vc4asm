@@ -48,7 +48,7 @@ unsigned Microseconds(void) {
 }
 
 int main(int argc, char *argv[]) {
-    int i, j, k, ret, loops, freq, log2_N, jobs, N, mb = mbox_open();
+    int i, j, k, ret, loops, fbias, freq, log2_N, jobs, N, mb = mbox_open();
     unsigned t[3];
     double tsq[2];
 
@@ -58,6 +58,7 @@ int main(int argc, char *argv[]) {
     log2_N = argc>1? atoi(argv[1]) : 12; // 8 <= log2_N <= 22
     jobs   = argc>2? atoi(argv[2]) : 1;  // transforms per batch
     loops  = argc>3? atoi(argv[3]) : 1;  // test repetitions
+    fbias  = argc>4? atoi(argv[4]) : 1;  // frequency bias
 
     if (argc<2 || jobs<1 || loops<1) {
         printf(Usage);
@@ -81,8 +82,8 @@ int main(int argc, char *argv[]) {
         for (j=0; j<jobs; j++) {
             base = fft->in + j*fft->step; // input buffer
             for (i=0; i<N; i++) base[i].re = base[i].im = 0;
-            freq = j+1;
-            base[freq].re = base[N-freq].re = 0.5;
+            freq = j+fbias & N/2-1;
+            base[N-freq & N-1].re += base[freq].re = 0.5;
         }
 
         usleep(1); // Yield to OS
@@ -95,12 +96,12 @@ int main(int argc, char *argv[]) {
         tsq[0]=tsq[1]=0;
         for (j=0; j<jobs; j++) {
             base = fft->out + j*fft->step; // output buffer
-            freq = j+1;
+            freq = j+fbias & N/2-1;
             for (i=0; i<N; i++) {
                 double re = cos(2*GPU_FFT_PI*freq*i/N);
                 tsq[0] += pow(re, 2);
                 tsq[1] += pow(re - base[i].re, 2) + pow(base[i].im, 2);
-                //printf("%g\t%g\n", base[i].re, base[i].im);
+                //printf("%g\t%g\t%g\t%g\n", base[i].re, base[i].im, base[i-fft->step].re, base[i-fft->step].im);
             }
         }
 
