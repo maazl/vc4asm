@@ -53,7 +53,8 @@
         Support equivalence of <tt>add</tt> ... <tt>16</tt> and <tt>sub</tt>
         ... <tt>-16</tt> in conjunction with small immediates.</dd>
       <dt>V0.1.5</dt>
-      <dd>Merge with hello_fft 3.0, 4Mi FFT, should fix RPi 2 compatibility.<br>
+      <dd>Merge with hello_fft 3.0, 4Mi FFT, should fix RPi 2 compatibility.</dd>
+      <dd>Use overlapping buffers for hello_fft, saves much memory.<br>
         Support for <tt>.ifset</tt> directive.<br>
         Support for ALU swap when combining instructions. Can e.g. handle <tt>mov
           ra16, r1; mov r1, 0x180</tt> (The constant 0x180 can only be loaded by
@@ -172,7 +173,7 @@
     <p>This is a very simple program that demonstrates the use of all available
       operators with small immediate values. It is not optimized in any way.</p>
     <h3><tt>hello_fft</tt></h3>
-    <p>This is the well known hello_fft sample available. The only difference is
+    <p>This is the well known hello_fft sample available. The main difference is
       that it is faster because the shader code has been optimized. The gain is
       about 39% of code size and 3% to 21% of the run time. The code will no
       longer build with another assembler since it uses some special features
