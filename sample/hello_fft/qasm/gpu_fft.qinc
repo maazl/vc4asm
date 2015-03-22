@@ -316,41 +316,41 @@
 
 .macro body_fft_16_rev
     ldtmu0
-    mov r0, r4; ldtmu0
+    mov r0, r4; ldtmu0;
     interleave r0, r4
 # (MM) Optimized: better use of both ALUs, no need for ra_temp
-                               fmul      r2, ra_tw_re+TW16+0, r0
-                               fmul      r3, rb_tw_im+TW16+0, r1
+                              fmul      r2, ra_tw_re+TW16+0, r0
+                              fmul      r3, rb_tw_im+TW16+0, r1
     .back 3
     brr -, r:fft_16_cont
     .endb
 .endm
 
 .macro body_fft_16_lin
-    and.setf -, elem_num, 1<<0
-    ldtmu0
+    ;mov r0, 1<<0
+    and.setf -, elem_num, r0;                                    ldtmu0
     # (MM) Optimized: better use of both ALUs, no need for ra_temp
-    mov r0, r4;                fmul      r2, ra_tw_re+TW16+0, r4; ldtmu0
-    mov r1, r4;                fmul      r3, rb_tw_im+TW16+0, r4
+    mov r0, r4;               fmul      r2, ra_tw_re+TW16+0, r4; ldtmu0
+    mov r1, r4;               fmul      r3, rb_tw_im+TW16+0, r4
 :fft_16_cont
-    .rep i, 3
-        fsub.ifnz r0, r2, r3;      fmul.ifnz r2, rb_tw_im+TW16+i, r0
-        mov r3, 1<<(i+1);          fmul.ifnz r1, ra_tw_re+TW16+i, r1
-        fadd.ifnz r1, r1, r2;      mov.ifz  r2, r0 << (1<<i)
-        fadd.ifz  r0, r2, r0;      mov.ifnz r2, r0 >> (1<<i)
-        fsub.ifnz r0, r2, r0;      mov.ifz  r2, r1 << (1<<i)
-        fadd.ifz  r1, r2, r1;      mov.ifnz r2, r1 >> (1<<i)
-        fsub.ifnz r1, r2, r1;      fmul      r2, ra_tw_re+TW16+i+1, r0
-        and.setf -, elem_num, r3;  fmul      r3, rb_tw_im+TW16+i+1, r1
-    .endr
+.rep i, 3
+    fsub.ifnz r0, r2, r3;     fmul.ifnz r2, rb_tw_im+TW16+i, r0
+    mov r3, 1<<(i+1);         fmul.ifnz r1, ra_tw_re+TW16+i, r1
+    fadd.ifnz r1, r1, r2;     mov.ifz   r2, r0 << (1<<i)
+    fadd.ifz  r0, r2, r0;     mov.ifnz  r2, r0 >> (1<<i)
+    fsub.ifnz r0, r2, r0;     mov.ifz   r2, r1 << (1<<i)
+    fadd.ifz  r1, r2, r1;     mov.ifnz  r2, r1 >> (1<<i)
+    fsub.ifnz r1, r2, r1;     fmul      r2, ra_tw_re+TW16+i+1, r0
+    and.setf -, elem_num, r3; fmul      r3, rb_tw_im+TW16+i+1, r1
+.endr
     # (MM) rotation by 8 left and right is identical => no if required
     # and use -(0-r1) instead of +r1 to make the last instruction unconditional
     # Saves another instruction.
-    fsub.ifnz r0, r2, r3;      fmul.ifnz r2, rb_tw_im+TW16+3, r0
-    fsub.ifz  r3, 0., r1;      fmul.ifnz r1, ra_tw_re+TW16+3, r1
-    fadd.ifnz r1, r1, r2;      mov       r2, r0 << 8
-    fadd.ifz  r0, r2, r0;      mov.ifnz  r3, r1
-    fsub.ifnz r0, r2, r0;      mov       r2, r1 << 8
+    fsub.ifnz r0, r2, r3;     fmul.ifnz r2, rb_tw_im+TW16+3, r0
+    fsub.ifz  r3, 0., r1;     fmul.ifnz r1, ra_tw_re+TW16+3, r1
+    fadd.ifnz r1, r1, r2;     mov       r2, r0 << 8
+    fadd.ifz  r0, r2, r0;     mov.ifnz  r3, r1
+    fsub.ifnz r0, r2, r0;     mov       r2, r1 << 8
     fsub      r1, r2, r3;
     # (MM) Optimized: easier procedure chains
     # place branch from outside individually
@@ -437,8 +437,8 @@
     interleave r0, r2
     swizzle
 
-    add t0s, ra_addr_x, r0  # r0 = re = {idx[0:STAGES-1], 1'b0, 2'b0}
-    add t0s, ra_addr_x, r1  # r1 = im = {idx[0:STAGES-1], 1'b1, 2'b0}
+    ;add t0s, ra_addr_x, r0  # r0 = re = {idx[0:STAGES-1], 1'b0, 2'b0}
+    add t0s, ra_addr_x, r1;  # r1 = im = {idx[0:STAGES-1], 1'b1, 2'b0}
 .endm
 
 # (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
@@ -541,30 +541,34 @@
 ##############################################################################
 # Alternate input/output buffers between stages
 
-.macro swap_buffers
-    mov rb_addr_y, ra_addr_x; mov ra_addr_x, rb_addr_y;
-.endm
+# (MM) no longer needed
+#.macro swap_buffers
 
 ##############################################################################
 # Reset counters and twiddles
 
 # (MM) requires TW16 factors in TMU queue
-.macro init_stage, m
+.macro init_stage, m, clr
     # (MM) Optimized: clear residual registers for >16 in store_tw
     # (MM) Optimized: instruction packing
 .if isRegfileB(rx_inst)
     ;mov r0, rx_inst
-    shl r0, r0, m
-.else
-    ;shl r0, rx_inst, m
+    .lset rx_inst, r0
 .endif
+.if clr
+    shl r0, rx_inst, m;             mov ra_tw_re+TW16+4, 0
     # (MM) Optimized: moved r2/r3 load from unpack_twiddles
     # and avoid intermediate step in TW16+3 registers
     add ra_load_idx, r0, elem_num;  mov rb_tw_im+TW16+4, 0;  ldtmu0
-    mov r2, r4;                     mov ra_tw_re+TW16+4, 0;  ldtmu0
+ .else
+    ;shl r0, rx_inst, m
+    # (MM) Optimized: moved r2/r3 load from unpack_twiddles
+    # and avoid intermediate step in TW16+3 registers
+    add ra_load_idx, r0, elem_num;                           ldtmu0
+.endif
+    mov r2, r4;                     mov ra_save_ptr, unif;   ldtmu0
     mov r3, r4;
     unpack_twiddles
-    mov ra_save_ptr, rb_addr_y;
 .endm
 
 # (MM) More powerful and optimized init macros to simplify code
@@ -579,7 +583,7 @@
     .endif
     read_tw r3, tw16
     store_tw TW32+0, 0
-    init_stage 5
+    init_stage 5, 0
 .endm
 
 .macro init_base_64, tw16, tw32, tw48, tw64
@@ -591,7 +595,7 @@
     store_tw TW64, 0
     store_tw TW48, 0
     store_tw TW32+0, 0
-    init_stage 6
+    init_stage 6, 0
 .endm
 
 .macro init_step_16, tw16, st16
@@ -599,9 +603,10 @@
     mov r3, rx_tw_shared;
     read_tw r3, st16
     read_tw r3, tw16
-    swap_buffers
+    # (MM) Load target buffer per stage, saves another register
+    ;mov ra_addr_x, unif;
     store_tw TW16_STEP, 0
-    init_stage 4
+    init_stage 4, 1
 .endm
 
 .macro init_step_32, tw16, tw32, st16, st32
@@ -611,11 +616,12 @@
     read_tw r3, st16
     read_tw r3, tw32
     read_tw r3, tw16
-    swap_buffers
+    # (MM) Load target buffer per stage, saves another register
+    ;mov ra_addr_x, unif;
     store_tw TW32_STEP, 0
     store_tw TW16_STEP, 0
     store_tw TW32+0, 1
-    init_stage 5
+    init_stage 5, 1
 .endm
 
 .macro init_step_64, tw16, tw32, tw48, tw64, st16, st32, st48, st64
@@ -625,7 +631,8 @@
     read_tw r3, st48
     read_tw r3, tw64
     read_tw r3, tw48
-    swap_buffers
+    # (MM) Load target buffer per stage, saves another register
+    ;mov ra_addr_x, unif;
     store_tw TW64_STEP, 0
     store_tw TW48_STEP, 0
     store_tw TW64+0, 1
@@ -637,15 +644,16 @@
     store_tw TW32_STEP, 0
     store_tw TW16_STEP, 0
     store_tw TW32+0, 1
-    init_stage 6
+    init_stage 6, 1
 .endm
 
 .macro init_last_16, tw16, st16
     read_tw rx_tw_shared, st16
     read_tw rx_tw_unique, tw16
-    swap_buffers
+    # (MM) Load target buffer per stage, saves another register
+    ;mov ra_addr_x, unif;
     store_tw TW16_STEP, 0
-    init_stage 4
+    init_stage 4, 1
 .endm
 
 .macro init_last_32, tw16, tw32, st16, st32
@@ -654,11 +662,12 @@
     ;mov r3, rx_tw_unique;
     read_tw r3, tw32
     read_tw r3, tw16
-    swap_buffers
+    # (MM) Load target buffer per stage, saves another register
+    ;mov ra_addr_x, unif;
     store_tw TW32_STEP, 0
     store_tw TW16_STEP, 0
     store_tw TW32+0, 1
-    init_stage 5
+    init_stage 5, 1
 .endm
 
 .macro init_last_64, tw16, tw32, tw48, tw64, st16, st32, st48, st64
@@ -668,7 +677,8 @@
     read_tw r3, st48
     read_tw r3, st32
     read_tw r3, st16
-    swap_buffers
+    # (MM) Load target buffer per stage, saves another register
+    ;mov ra_addr_x, unif;
     store_tw TW64_STEP, 0
     store_tw TW48_STEP, 0
     store_tw TW32_STEP, 0
@@ -681,7 +691,7 @@
     store_tw TW64+0, 1
     store_tw TW48+0, 1
     store_tw TW32+0, 1
-    init_stage 6
+    init_stage 6, 1
 .endm
 
 ##############################################################################
@@ -784,10 +794,11 @@
 
 ##############################################################################
 
-.macro exit, flag
+# (MM) flag obsolete
+.macro exit
     # (MM) Optimized: no need to wait with thrend
-    mov interrupt, flag; thrend
-    nop
+    ;mov.setf -, rx_inst; thrend
+    mov.ifz interrupt, 1
     nop
 .endm
 

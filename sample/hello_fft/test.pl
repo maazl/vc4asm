@@ -1,19 +1,22 @@
 #!/usr/bin/perl
 use strict;
 
+my $ret = 0;
 sub do_test($$)
 { my ($cmd, $rms) = @_;
   my @result = `./hello_fft.bin $cmd` or die "Failed to execute hello_fft: $?\n";
   print "$cmd ... ";
   my $count;
+  my $rmsret;
   foreach (@result)
   { #print "$_\n";
     /rel_rms_err\s*=\s*(\S+),/ or next;
-    $1 <= $rms or die "FFT returned wrong RMS error $1, expected $rms\n";
+    $rmsret = $1;
+    $rmsret <= $rms or $ret |= 1, warn "FFT returned wrong RMS error $1, expected $rms\n";
     ++$count;
   }
-  $count or die "No reasonable result retunred by execution of FFT.\n";
-  print "OK\n";
+  $count or $ret |= 2, warn "No reasonable result retunred by execution of FFT.\n";
+  print "$rmsret - OK\n";
 }
 
 do_test "8 2 2", 3.05839e-7;
@@ -30,4 +33,6 @@ do_test "18 2 2", 1.13211e-6;
 do_test "19 2 2", 1.38829e-6;
 do_test "20 2 2", 1.44965e-6;
 do_test "21 2 2", 1.48539e-6;
-do_test "22 1 2", 1.53800e-6;
+do_test "22 2 2", 1.50553e-6;
+
+exit $ret;

@@ -53,7 +53,7 @@
 .set ra_temp,           ra2
 .set rx_vpm,            rb2
 .set ra_addr_x,         ra3
-.set rb_addr_y,         rb3
+#                       rb3
 .set ra_save_16,        ra4
 #
 .set ra_load_idx,       ra5
@@ -151,9 +151,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Top level
 
-    mov ra_addr_x, unif  # Ping buffer or null
-    mov rb_addr_y, unif  # Pong buffer or IRQ enable
-    # (MM) Optimized: check loop condition below
+    ;mov ra_addr_x, unif  # Ping buffer or null
+    # (MM) Optimized: check loop condition below, load target buffer in init_stage
 :loop
 
 ##############################################################################
@@ -161,7 +160,8 @@ inst_vpm r3, rx_vpm
 
     # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
     read_tw rx_tw_shared, TW16_P1_BASE
-    init_stage 4
+    init_stage 4, 0
+
     read_rev rb_0x80
     # (MM) Optimized: do not unnecessarily advance ra_load_idx at the last turn
     read_rev 0
@@ -186,7 +186,13 @@ inst_vpm r3, rx_vpm
 # Pass 2
 
     # (MM) More powerful init macros to simplify code
-    init_last_16 TW16_P2_BASE, TW16_P2_STEP
+    read_tw rx_tw_shared, TW16_P2_STEP
+    read_tw rx_tw_unique, TW16_P2_BASE
+    # (MM) Load source buffer per stage, saves another register
+    ;mov ra_addr_x, unif;  # Ping buffer
+    store_tw TW16_STEP, 0
+    init_stage 4, 0
+
     read_lin rb_0x80
     # (MM) Optimized: do not unnecessarily advance ra_load_idx at the last turn
     read_lin 0
@@ -210,12 +216,13 @@ inst_vpm r3, rx_vpm
     brr r0, ra_link_1, r:sync, ra_sync
     mov r1, r:loop - r:1f
     add.ifnz ra_link_1, r0, r1
-    mov      rb_addr_y, unif  # Pong buffer or IRQ enable
+    nop
 :1
 
 ##############################################################################
 
-    exit rb_addr_y
+    # (MM) flag obsolete
+    exit
 
 # (MM) Optimized: easier procedure chains
 ##############################################################################

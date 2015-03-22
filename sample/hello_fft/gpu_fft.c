@@ -42,9 +42,9 @@ int gpu_fft_prepare(
     int jobs,       // number of transforms in batch
     struct GPU_FFT **fft) {
 
-    unsigned info_bytes, twid_bytes, data_bytes, total_data_bytes, code_bytes, unif_bytes, mail_bytes;
+    unsigned info_bytes, twid_bytes, data_bytes, buff_bytes, total_data_bytes, code_bytes, unif_bytes, mail_bytes;
     unsigned size, *uptr, vc_tw, vc_data;
-    int i, q, shared, unique, passes, ret;
+    int i, j, q, shared, unique, passes, ret;
 
     struct GPU_FFT_BASE *base;
     struct GPU_FFT_PTR ptr;
@@ -53,15 +53,17 @@ int gpu_fft_prepare(
     if (gpu_fft_twiddle_size(log2_N, &shared, &unique, &passes)) return -2;
 
     info_bytes = 4096;
-    // (MM) Alignment superfluous because always powers of 2
-    //data_bytes = (1+((sizeof(COMPLEX)<<log2_N)|4095));
-    data_bytes = sizeof(COMPLEX)<<log2_N;
+    data_bytes = 1+((sizeof(COMPLEX)<<log2_N)|4095);
     code_bytes = gpu_fft_shader_size(log2_N);
     twid_bytes = sizeof(COMPLEX)*16*(shared+GPU_FFT_QPUS*unique);
-    unif_bytes = sizeof(int)*GPU_FFT_QPUS*(5+jobs*2);
+    unif_bytes = sizeof(int)*GPU_FFT_QPUS*(4+2*jobs*passes);
     mail_bytes = sizeof(int)*GPU_FFT_QPUS*2;
 
-    total_data_bytes = data_bytes * (jobs + 1);
+    // (MM) Use overlapping in and out buffer
+    // But only for 2k FFT and up because the TMU cache will not take care
+    // of the VPM writes.
+    buff_bytes = (log2_N<=10 ? data_bytes * jobs : data_bytes);
+    total_data_bytes = buff_bytes + data_bytes * jobs;
 
     size  = info_bytes +        // header
             total_data_bytes +  // ping-pong data, aligned
@@ -86,7 +88,7 @@ int gpu_fft_prepare(
     // (MM) Use overlapping in and out buffer
     info->out = ptr.arm.cptr;
     info->step = data_bytes / sizeof(COMPLEX);
-    info->in = info->out + info->step;
+    info->in = info->out + (buff_bytes / sizeof(COMPLEX));
     // even => in place
     if (!(passes&1)) info->out = info->in;
     vc_data = gpu_fft_ptr_inc(&ptr, total_data_bytes);
@@ -107,13 +109,21 @@ int gpu_fft_prepare(
         *uptr++ = vc_tw + sizeof(COMPLEX)*16*(shared + q*unique);
         *uptr++ = q;
         for (i=0; i<jobs; i++) {
-            *uptr++ = vc_data + data_bytes*(i+1);
-            *uptr++ = vc_data + data_bytes*i*(passes&1);
+            unsigned X = vc_data + data_bytes*i + buff_bytes;
+            unsigned Y = vc_data + data_bytes*i*((passes&1)|(log2_N<=10));
+            *uptr++ = X;
+            for (j = 1; j < passes; j++)
+            {   *uptr++ = Y;
+                *uptr = Y;
+                Y = X;
+                X = *uptr++;
+            }
+            *uptr++ = Y;
         }
         *uptr++ = 0;
-        *uptr++ = (q==0); // For mailbox: IRQ enable, master only
-
-        base->vc_unifs[q] = gpu_fft_ptr_inc(&ptr, sizeof(int)*(5+jobs*2));
+        //for (i = -(4+2*jobs*passes); i < 0; ++i)
+        //    printf("%x\n", uptr[i]);
+        base->vc_unifs[q] = gpu_fft_ptr_inc(&ptr, sizeof(int)*(4+2*jobs*passes));
     }
 
     if ((jobs<<log2_N) <= GPU_FFT_BUSY_WAIT_LIMIT) {

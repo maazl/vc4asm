@@ -68,7 +68,7 @@
 .set ra_temp,           ra2
 .set rx_vpm,            rb2
 .set ra_addr_x,         ra3
-.set rb_addr_y,         rb3
+#                       rb3
 .set ra_save_64,        ra4
 .set rx_0x55555555,     rb4
 .set ra_load_idx,       ra5
@@ -127,9 +127,8 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Top level
 
-    mov ra_addr_x, unif  # Ping buffer or null
-    mov rb_addr_y, unif  # Pong buffer or IRQ enable
-    # (MM) Optimized: check loop condition below
+    ;mov ra_addr_x, unif  # Ping buffer or null
+    # (MM) Optimized: check loop condition below, load target buffer in init_stage
 :loop
 
 ##############################################################################
@@ -221,28 +220,20 @@ inst_vpm r3, rx_vpm
     mov.ifz ra_link_1, r0
     brr_opt r0, r:pass_3, 3
 
-.if 0
-mov -, vw_wait
-mov vr_setup, rx_vpm
-nop
-nop
-nop
-mov -, vpm
-.endif
-
     # (MM) Optimized: redirect ra_link_1 to :loop to save branch and 3 nop.
     # Also check loop condition immediately.
     mov.setf ra_addr_x, unif;  ldtmu0  # Ping buffer or null
     # (MM) Optimized: easier procedure chains
-    brr r0, ra_link_1, r:synca, ra_sync
+    brr r0, ra_link_1, r:sync, ra_sync
     mov r1, r:loop - r:1f
     add.ifnz ra_link_1, r0, r1
-    mov      rb_addr_y, unif;  ldtmu0  # Pong buffer or IRQ enable
+    ldtmu0
 :1
 
 ##############################################################################
 
-    exit rb_addr_y
+    # (MM) flag obsolete
+    exit
 
 # (MM) Optimized: easier procedure chains
 ##############################################################################
@@ -296,20 +287,4 @@ bodies_fft_16
 
 :sync_slave
     body_rx_sync_slave
-
-.if 1
-# TODO: Work around for some wired race condition
-:synca
-    body_ra_sync
-
-:sync_slavea
-    body_rx_sync_slave
-    .rep i, 7
-        bra -, ra_link_1
-        mov -, srel(i+9) # Slave releases master
-        nop
-        mov -, sacq(i+1) # Slave waits for master
-    .endr
-
-.endif
 

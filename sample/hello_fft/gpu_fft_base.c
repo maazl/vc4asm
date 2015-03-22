@@ -47,9 +47,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Setting this define to zero on Pi 1 allows GPU_FFT and Open GL
 // to co-exist and also improves performance of longer transforms:
-#define GPU_FFT_USE_VC4_L2_CACHE 1 // Pi 1 only: cached=1; direct=0
+#define GPU_FFT_USE_VC4_L2_CACHE 0 // Pi 1 only: cached=1; direct=0
 
-#define GPU_FFT_NO_FLUSH 1
+#define GPU_FFT_NO_FLUSH 0
 #define GPU_FFT_TIMEOUT 2000 // ms
 
 struct GPU_FFT_HOST {
