@@ -441,14 +441,8 @@
     add t0s, ra_addr_x, r1;  # r1 = im = {idx[0:STAGES-1], 1'b1, 2'b0}
 .endm
 
-# (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
-.macro load_rev
-    read_rev 0
-    # (MM) Optimized: joined ldtmu in FFT-16 codelet
-    .back 3
-    brr ra_link_0, r:fft_16_rev
-    .endb
-.endm
+# (MM) Optimized: no longer used
+#.macro load_rev
 
 ##############################################################################
 
@@ -462,14 +456,8 @@
     add t0s, r0, r2;
 .endm
 
-# (MM) Optimized: extracted stride from load_xxx to make read part of a procedure
-.macro load_lin
-    read_lin 0
-    # (MM) Optimized: joined ldtmu in FFT-16 codelet
-    .back 3
-    brr ra_link_0, r:fft_16_lin
-    .endb
-.endm
+# (MM) Optimized: no longer used
+#.macro load_lin
 
 ##############################################################################
 # Unpack twiddles

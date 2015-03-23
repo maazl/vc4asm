@@ -132,7 +132,7 @@ inst_vpm r3, rx_vpm
     mov r3, r1; mov.ifnz r1, r1 << 6
     mov.setf  -, [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0]
     nop; mov.ifnz r0, r2 >> 6
-    nop; mov.ifnz r1, r3 >> 6
+    nop; mov.ifnz r1, r3 >> 6;
 .endm
 
 ##############################################################################
@@ -149,11 +149,11 @@ inst_vpm r3, rx_vpm
     init_base_64 TW16_BASE, TW32_BASE, TW64_BASE0, TW64_BASE1
     read_rev 0x10
 
+    ;mov ra_points, (1<<STAGES) / 0x200 - 1
     # (MM) Optimized: place branch before the last two instructions of read_rev
-    .back 2
+    .back 3
     brr ra_link_1, r:pass_1
     .endb
-    mov ra_points, (1<<STAGES) / 0x200 - 1
 
 :   # start of hidden loop
     # (MM) Optimized: branch unconditional and patch the return address
@@ -175,10 +175,12 @@ inst_vpm r3, rx_vpm
     # (MM) More powerful init macros to simplify code
     init_last_64 TW16_P2_BASE, TW32_P2_BASE, TW64_P2_BASE0, TW64_P2_BASE1, TW16_P2_STEP, TW32_P2_STEP, TW48_P2_STEP, TW64_P2_STEP
     read_lin 0x10
-    .back 2
+
+    ;mov ra_points, (1<<STAGES) / 0x200 - 1
+    # (MM) Optimized: place branch before the last two instructions of read_rev
+    .back 3
     brr ra_link_1, r:pass_2
     .endb
-    mov ra_points, (1<<STAGES) / 0x200 - 1
 
 :   # start of hidden loop
     next_twiddles_64

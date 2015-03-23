@@ -140,11 +140,11 @@ inst_vpm r3, rx_vpm
     init_base_64 TW16_BASE, TW32_BASE, TW64_BASE0, TW64_BASE1
     read_rev 0x10
 
+    mov ra_points, (1<<STAGES) / 0x200 - 1
     # (MM) Optimized: place branch before the last two instructions of read_rev
-    .back 2
+    .back 3
     brr ra_link_1, r:pass_1
     .endb
-    mov ra_points, (1<<STAGES) / 0x200 - 1
 
 :   # start of hidden loop
     # (MM) Optimized: branch unconditional and patch the return address
@@ -176,10 +176,10 @@ inst_vpm r3, rx_vpm
 
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
     # and setup for loop below
-    .back 2
+    ;mov ra_points, (1<<STAGES) / 0x100 - 2
+    .back 3
     brr ra_link_1, rb_link_1, -, r:pass_2
     .endb
-    mov ra_points, (1<<STAGES) / 0x100 - 2
 :1
     brr r0, r:pass_2
     # (MM) Optimized: patch the return address for the last turn to save the
@@ -211,12 +211,12 @@ inst_vpm r3, rx_vpm
     init_step_32 TW16_BASE, TW32_BASE, TW16_P3_STEP, TW32_P3_STEP
     read_lin 0x10
 
+    ;mov ra_points, (1<<STAGES) / 0x100 / 4 - 1
     # (MM) Optimized: place branch before the last instruction of read_lin
     # and keep return address additionally in rb_link_1 for loop.
-    .back 2
+    .back 3
     brr ra_link_1, rb_link_1, -, r:pass_3
     .endb
-    mov ra_points, (1<<STAGES) / 0x100 - 1
 
 :   # start of hidden loop
     .rep i, 2
@@ -229,7 +229,7 @@ inst_vpm r3, rx_vpm
     # (MM) Optimized: patch the return address for the last turn to save the
     # conditional branch and the unecessary twiddle load after the last turn.
     brr ra_link_1, r:pass_3
-    sub.setf ra_points, ra_points, 4
+    sub.setf ra_points, ra_points, 1
     mov.ifn ra_link_1, rb_pass2_link
     nop
 :2
@@ -252,11 +252,11 @@ inst_vpm r3, rx_vpm
     init_last_32 TW16_P4_BASE, TW32_P4_BASE, TW16_P4_STEP, TW32_P4_STEP
     read_lin 0x10
 
+    ;mov ra_points, (1<<STAGES) / 0x100 - 1
     # (MM) Optimized: place branch before the last two instructions of read_lin
-    .back 2
+    .back 3
     brr ra_link_1, r:pass_4
     .endb
-    mov ra_points, (1<<STAGES) / 0x100 - 1
 
 :   # start of hidden loop
     # (MM) Optimized: moved common next_twiddles code to subroutine

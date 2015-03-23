@@ -142,11 +142,11 @@ inst_vpm r3, rx_vpm
     init_base_64 TW16_P1_BASE, TW32_P1_BASE, TW64_P1_BASE0, TW64_P1_BASE1
     read_rev 0x10
     
+    ;mov ra_points, (1<<STAGES) / 0x200 - 1
     # (MM) Optimized: place branch before the last two instructions of read_rev
-    .back 2
+    .back 3
     brr ra_link_1, r:pass_1
     .endb
-    mov ra_points, (1<<STAGES) / 0x200 - 1
 
 :   # start of hidden loop
     # (MM) Optimized: branch unconditional and patch the return address
@@ -169,11 +169,11 @@ inst_vpm r3, rx_vpm
     init_last_32 TW16_P2_BASE, TW32_P2_BASE, TW16_P2_STEP, TW32_P2_STEP
     read_lin 0x10
 
+    ;mov ra_points, (1<<STAGES) / 0x100 - 1
     # (MM) Optimized: place branch before the last two instructions of read_lin
-    .back 2
+    .back 3
     brr ra_link_1, r:pass_2
     .endb
-    mov ra_points, (1<<STAGES) / 0x100 - 1
 
 :   # start of hidden loop
     next_twiddles_32
