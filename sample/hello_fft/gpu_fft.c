@@ -32,6 +32,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gpu_fft.h"
 
 #define GPU_FFT_BUSY_WAIT_LIMIT (5<<12) // ~1ms
+/* Parameters to force V3D L2C invalidation by forcing collisions.
+ * GPU_FFT_NUM_TEMP_BUFF need to match the associativity of the cache
+ * GPU_FFT_ALIGN_TEMP_BUFF need to match the aliasing size of the cache. */
+#define GPU_FFT_NUM_TEMP_BUFF 2
+#define GPU_FFT_ALIGN_TEMP_BUFF 4*1024
 
 typedef struct GPU_FFT_COMPLEX COMPLEX;
 
@@ -42,8 +47,10 @@ int gpu_fft_prepare(
     int jobs,       // number of transforms in batch
     struct GPU_FFT **fft) {
 
-    unsigned info_bytes, twid_bytes, data_bytes, buff_bytes, total_data_bytes, code_bytes, unif_bytes, mail_bytes;
-    unsigned size, *uptr, vc_tw, vc_data;
+    unsigned info_bytes, twid_bytes, data_bytes, total_data_bytes,
+             buff_bytes, total_buff_bytes,
+             code_bytes, unif_bytes, mail_bytes;
+    unsigned size, *uptr, vc_tw, vc_buff, vc_data;
     int i, j, q, shared, unique, passes, ret;
 
     struct GPU_FFT_BASE *base;
@@ -53,7 +60,9 @@ int gpu_fft_prepare(
     if (gpu_fft_twiddle_size(log2_N, &shared, &unique, &passes)) return -2;
 
     info_bytes = 4096;
-    data_bytes = 1+((sizeof(COMPLEX)<<log2_N)|4095);
+    data_bytes = sizeof(COMPLEX)<<log2_N;
+    //buff_bytes = ((data_bytes-1)|(GPU_FFT_ALIGN_TEMP_BUFF-1))+1;
+    buff_bytes = ((data_bytes)|(GPU_FFT_ALIGN_TEMP_BUFF-1))+1;
     code_bytes = gpu_fft_shader_size(log2_N);
     twid_bytes = sizeof(COMPLEX)*16*(shared+GPU_FFT_QPUS*unique);
     unif_bytes = sizeof(int)*GPU_FFT_QPUS*(4+2*jobs*passes);
@@ -62,11 +71,14 @@ int gpu_fft_prepare(
     // (MM) Use overlapping in and out buffer
     // But only for 2k FFT and up because the TMU cache will not take care
     // of the VPM writes.
-    buff_bytes = (log2_N<=10 ? data_bytes * jobs : data_bytes);
-    total_data_bytes = buff_bytes + data_bytes * jobs;
+    data_bytes = buff_bytes;
+    //total_buff_bytes = buff_bytes * GPU_FFT_NUM_TEMP_BUFF;
+    total_buff_bytes = buff_bytes * (GPU_FFT_NUM_TEMP_BUFF-1) + data_bytes;
+    total_data_bytes = data_bytes * jobs;
 
     size  = info_bytes +        // header
-            total_data_bytes +  // ping-pong data, aligned
+            total_buff_bytes +  // additional buffers
+            total_data_bytes +  // source data
             code_bytes +        // shader, aligned
             twid_bytes +        // twiddles
             unif_bytes +        // uniforms
@@ -84,13 +96,10 @@ int gpu_fft_prepare(
     info->x = 1<<log2_N;
     info->y = jobs;
 
-    // Ping-pong buffers leave results in or out of place
-    // (MM) Use overlapping in and out buffer
-    info->out = ptr.arm.cptr;
+    // (MM) Use dedicated temporary buffers, so all transforms can operate in place.
+    vc_buff = gpu_fft_ptr_inc(&ptr, total_buff_bytes);
     info->step = data_bytes / sizeof(COMPLEX);
-    info->in = info->out + (buff_bytes / sizeof(COMPLEX));
-    // even => in place
-    if (!(passes&1)) info->out = info->in;
+    info->out = info->in = ptr.arm.cptr;
     vc_data = gpu_fft_ptr_inc(&ptr, total_data_bytes);
 
     // Shader code
@@ -105,24 +114,23 @@ int gpu_fft_prepare(
 
     // Uniforms
     for (q=0; q<GPU_FFT_QPUS; q++) {
+        unsigned data = vc_data;
+        int current_buff = GPU_FFT_NUM_TEMP_BUFF-1;
         *uptr++ = vc_tw;
         *uptr++ = vc_tw + sizeof(COMPLEX)*16*(shared + q*unique);
         *uptr++ = q;
         for (i=0; i<jobs; i++) {
-            unsigned X = vc_data + data_bytes*i + buff_bytes;
-            unsigned Y = vc_data + data_bytes*i*((passes&1)|(log2_N<=10));
-            *uptr++ = X;
+            *uptr++ = data;
             for (j = 1; j < passes; j++)
-            {   *uptr++ = Y;
-                *uptr = Y;
-                Y = X;
-                X = *uptr++;
+            {   uptr[0] = uptr[1] = vc_buff + current_buff * buff_bytes;
+                uptr += 2;
+                current_buff = (current_buff+GPU_FFT_NUM_TEMP_BUFF-1) % GPU_FFT_NUM_TEMP_BUFF;
             }
-            *uptr++ = Y;
+            *uptr++ = data;
+            data += data_bytes;
         }
         *uptr++ = 0;
-        //for (i = -(4+2*jobs*passes); i < 0; ++i)
-        //    printf("%x\n", uptr[i]);
+        //for (i = -(4+2*jobs*passes); i < 0; ++i) printf("%x\n", uptr[i]);
         base->vc_unifs[q] = gpu_fft_ptr_inc(&ptr, sizeof(int)*(4+2*jobs*passes));
     }
 
