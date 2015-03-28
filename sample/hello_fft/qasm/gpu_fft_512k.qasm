@@ -27,7 +27,7 @@
 
 .set STAGES, 19
 
-.include "gpu_fft_ex.qinc"
+.include "gpu_fft.qinc"
 
 ##############################################################################
 # Twiddles: src
@@ -62,12 +62,12 @@
 .set rx_vpm,            rb2
 .set ra_addr_x,         ra3
 #                       rb3
-#                       ra4
-.set rb_pass2_link,     rb4
+.set rx_inst,           ra4
+# spare                 rb4
 .set ra_load_idx,       ra5
 #                       rb5
 .set ra_sync,           ra6
-#                       rb6
+.set rb_pass2_link,     rb6
 .set ra_points,         ra7
 #                       rb7
 .set ra_link_1,         ra8
@@ -75,17 +75,16 @@
 .set ra_32_re,          ra9
 .set rb_32_im,          rb9
 .set ra_save_32,        ra10
-#
+#                       rb10
 
 .set rx_tw_shared,      ra11
 .set rx_tw_unique,      rb11
 
 .set ra_tw_re,          ra12 # 9
 .set rb_tw_im,          rb12 # 9
-.set ra_vdw_16,         ra27
-.set ra_vdw_32,         ra28
+.set ra_vdw,            ra27
+#                       ra28
 #
-.set rx_inst,           ra30
 .set ra_0x7F,           ra31
 
 .set rx_0x55555555,     rb25
@@ -103,8 +102,10 @@ mov rx_0x55555555, 0x55555555
 mov rx_0x33333333, 0x33333333
 mov rx_0x0F0F0F0F, 0x0F0F0F0F
 
-mov ra_vdw_16, vdw_setup_0(1, 16, dma_h32( 0,0))
-mov ra_vdw_32, vdw_setup_0(1, 16, dma_h32( 0,0))
+# (MM) Optimized: both vdw registers are identical
+mov ra_vdw, vdw_setup_0(1, 16, dma_h32( 0,0))
+.set ra_vdw_16, ra_vdw
+.set ra_vdw_32, ra_vdw
 
 mov rb_0x80,    0x80
 mov rb_0xF0,    0xF0
@@ -214,13 +215,13 @@ inst_vpm r3, rx_vpm
     read_lin 0x10
 
     ;mov ra_points, (1<<STAGES) / 0x100 / 4 - 1
-    # (MM) Optimized: place branch before the last instruction of read_lin
+    # (MM) Optimized: place branch before the last instructions of read_lin
     # and keep return address additionally in rb_link_1 for loop.
     .back 3
     brr ra_link_1, rb_link_1, -, r:pass_3
     .endb
 
-:1  # start of hidden loop
+:   # start of hidden loop
     .rep i, 2
     brr ra_link_1, r:pass_3
     nop
@@ -234,13 +235,13 @@ inst_vpm r3, rx_vpm
     sub.setf ra_points, ra_points, 1
     mov.ifn ra_link_1, rb_pass2_link
     nop
-:2
+:
     # (MM) Optimized: moved common next_twiddles code to subroutine
 
     # (MM) Optimized: patch return adress to :1.
     mov ra_link_1, rb_link_1
     brr_opt rb_pass2_link, r:pass_3_tw, 1
-:3
+:
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
     ldtmu0

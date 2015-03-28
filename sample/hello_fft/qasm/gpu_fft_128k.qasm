@@ -27,7 +27,7 @@
 
 .set STAGES, 17
 
-.include "gpu_fft_ex.qinc"
+.include "gpu_fft.qinc"
 
 ##############################################################################
 # Twiddles: src
@@ -130,6 +130,34 @@ inst_vpm r3, rx_vpm
     ;mov ra_addr_x, unif  # Ping buffer or null
     # (MM) Optimized: check loop condition below, load target buffer in init_stage
 :loop
+
+.if 0
+    or.setf -, elem_num, rx_inst
+    brr.allnz -, r:1f
+    mov vw_setup, vpm_setup(1, 1, h32(0,0))
+    mov vpm, 0x2 # L2 Cache clear
+    #mov vpm, 0x0f0f0000 # TMU Cache clear
+    nop
+    mov vw_setup, vdw_setup_0(1, 1, dma_h32(0,0))
+    mov vw_addr, 0x7ec00000 + 0x20
+    mov -, vw_wait
+:1
+    
+.elseif 1
+.rep i, 200
+nop
+.endr
+.else
+    mov.setf r0, 4-1
+:1
+    .rep i, 128
+    nop
+    .endr
+    brr.allnz -, r:1
+    sub.setf r0, r0, 1
+    nop
+    nop
+.endif
 
 ##############################################################################
 # Pass 1

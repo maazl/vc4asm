@@ -24,7 +24,7 @@ O2D = $(O) hello_fft_2d.o gpu_fft_trans.o
 
 F = -lrt -lm -ldl
 
-hex/shader_%.hex:	qasm/gpu_fft_%.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc
+hex/shader_%.hex:	qasm/gpu_fft_%.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc
 	../../bin/vc4asm -V -c $@ ../../share/vc4.qinc $<
 
 hex/shader_%.dis:       hex/shader_%.hex
@@ -42,9 +42,6 @@ test: hello_fft.bin
 
 profile: hello_fft.bin
 	./profile.pl
-
-hex/shader_2048k.hex:	qasm/gpu_fft_2048k.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc qasm/gpu_fft_2048k.qinc
-hex/shader_4096k.hex:	qasm/gpu_fft_4096k.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc qasm/gpu_fft_ex.qinc qasm/gpu_fft_2048k.qinc
 
 hello_fft.bin:	$(O1D)
 	gcc $(CFLAGS) -o hello_fft.bin $(F) $(O1D)

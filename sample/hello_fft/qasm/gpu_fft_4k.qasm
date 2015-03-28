@@ -126,14 +126,15 @@ inst_vpm r3, rx_vpm
 ##############################################################################
 # Macros
 
-.macro swizzle
-    mov.setf  -, [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
-    mov r2, r0; mov.ifnz r0, r0 << 6
-    mov r3, r1; mov.ifnz r1, r1 << 6
-    mov.setf  -, [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0]
-    nop; mov.ifnz r0, r2 >> 6
-    nop; mov.ifnz r1, r3 >> 6;
-.endm
+# Does not work for 6+6 stages
+#.macro swizzle
+#    mov.setf  -, [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+#    mov r2, r0; mov.ifnz r0, r0 << 6
+#    mov r3, r1; mov.ifnz r1, r1 << 6
+#    mov.setf  -, [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0]
+#    nop; mov.ifnz r0, r2 >> 6
+#    nop; mov.ifnz r1, r3 >> 6;
+#.endm
 
 ##############################################################################
 # Top level

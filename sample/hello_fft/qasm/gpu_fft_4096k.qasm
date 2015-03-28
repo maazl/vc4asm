@@ -27,7 +27,7 @@
 
 .set STAGES, 22
 
-.include "gpu_fft_2048k.qinc"
+.include "gpu_fft.qinc"
 
 ##############################################################################
 # Twiddles: src

@@ -27,7 +27,7 @@
 
 .set STAGES, 20
 
-.include "gpu_fft_ex.qinc"
+.include "gpu_fft.qinc"
 
 ##############################################################################
 # Twiddles: src
@@ -56,6 +56,7 @@
 # Registers
 
 .set ra_link_0,         ra0
+#                       rb0
 .set ra_save_ptr,       ra1
 #                       rb1
 .set ra_temp,           ra2
@@ -84,15 +85,15 @@
 .set rb_tw_im,          rb12 # 9
 .set ra_vdw_32,         ra28
 
-.set rx_0x55555555,     ra29
-.set rx_0x33333333,     ra30
 .set ra_0x7F,           ra31
 
-#                       rb27
+.set rx_0x55555555,     rb25
+.set rx_0x33333333,     rb26
+.set rx_0x0F0F0F0F,     rb27
 #                       rb28
-.set rb_0x80,           rb29
-.set rb_0xF0,           rb30
-.set rx_0x0F0F0F0F,     rb31
+#                       rb29
+.set rb_0x80,           rb30
+.set rb_0xF0,           rb31
 
 ##############################################################################
 # Constants
@@ -117,8 +118,8 @@ init_tw
 
 # (MM) Optimized: better procedure chains
 # Saves several branch instructions and 2 rb registers
-    mov r3, unif;              mov ra_save_32, 0
-    shl.setf r0, r3, 5;        mov ra_sync, 0
+    mov r3, unif;              mov ra_sync, 0
+    shl.setf r0, r3, 5;        mov ra_save_32, 0
     mov.ifnz r1, :sync_slave - :sync - 4*8 # -> rx_inst-1
     add.ifnz ra_sync, r1, r0
     mov.ifnz r1, :save_slave - :save_32
@@ -228,13 +229,13 @@ inst_vpm r3, rx_vpm
     sub.setf ra_points, ra_points, 1
     mov.ifn ra_link_1, rb_pass2_link
     nop
-:2
+:
     # (MM) Optimized: moved common next_twiddles code to subroutine
 
     # (MM) Optimized: patch return adress to :1.
     mov ra_link_1, rb_link_1
     brr_opt rb_pass2_link, r:pass_3_tw, 1
-:3
+:
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
     ldtmu0
