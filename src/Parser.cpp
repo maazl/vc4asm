@@ -1043,7 +1043,9 @@ void Parser::parseLabel()
 }
 
 void Parser::parseDATA(int type)
-{ int count = 0;
+{	if (doPreprocessor())
+		return;
+ int count = 0;
 	uint64_t target = 0;
  next:
 	exprValue value = ParseExpression();
@@ -1105,7 +1107,7 @@ void Parser::beginREP(int)
 		Fail("Expected ', <count>' at .rep.");
 	const auto& expr = ParseExpression();
 	if (expr.Type != V_INT)
-		Fail("Second argument to .rep must be an integral number. Found %s", expr.toString().c_str());
+		Fail("Second argument to .rep must be a non-negative integral number. Found %s", expr.toString().c_str());
 	if (NextToken() != END)
 		Fail("Expected end of line.");
 	AtMacro->Args.push_back(expr.toString());
