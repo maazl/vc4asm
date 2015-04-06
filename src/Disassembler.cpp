@@ -90,7 +90,7 @@ void Disassembler::DoADD()
 	if ( UseMOV
 		&& ( (Instruct.MuxAA == Instruct.MuxAB && (0x807c2000 & (1<<opa))) // Both inputs equal and instruction that returns identity or 0
 			|| ( Instruct.Sig == Inst::S_SMI && Instruct.MuxAB == Inst::X_RB
-				&& (isUnary || Instruct.MuxAA == Inst::X_RA) ))) // unary or binary operator on constant
+				&& (isUnary || Instruct.MuxAA == Inst::X_RB) ))) // unary or binary operator on constant
 		opa = 32;
 
 	append(cOpA[opa]);
