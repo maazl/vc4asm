@@ -95,8 +95,8 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 				if (Instruct.WAddrA != Inst::R_NOP || Instruct.WAddrM != Inst::R_NOP)
 					WorkItems.emplace_back(new state(At + 4));
 			}
-			if (At - st.LastBRANCH < 4)
-				Message(st.LastBRANCH, "Two branch instructions within less than 4 instructions.");
+			if (At - st.LastBRANCH < 3)
+				Message(st.LastBRANCH, "Two branch instructions within less than 3 instructions.");
 			else if (!Instruct.Reg)
 			{	target = Instruct.Rel
 					?	Instruct.Immd.iValue / sizeof(uint64_t) + At + 4
