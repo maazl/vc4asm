@@ -135,6 +135,7 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_base_32 TW16_P1_BASE, TW32_P1_BASE
+    ;mov ra_points, 0;
     read_rev 0x10
     # (MM) Optimized: move branch into the read_rev code
     .back 3
@@ -142,15 +143,16 @@ inst_vpm r3, rx_vpm
     .endb
 
     brr ra_link_1, r:pass_1
-    nop
+    mov ra_points, -1
     nop
     nop
 
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
-    ldtmu0
+    # (MM) Do not load more data than needed, so don't discard it
     nop
-    ldtmu0
+    nop
+    nop
 
 ##############################################################################
 # Pass 2
@@ -159,7 +161,7 @@ inst_vpm r3, rx_vpm
     init_last_16 TW16_P2_BASE, TW16_P2_STEP
     read_lin rb_0x80
 
-    ;mov ra_points, (1<<STAGES) / 0x80 - 1
+    ;mov ra_points, (1<<STAGES) / 0x80 - 2
     # (MM) Optimized: move branch into the read_rev code
     .back 3
     brr ra_link_1, r:pass_2
@@ -174,7 +176,7 @@ inst_vpm r3, rx_vpm
     brr r0, r:pass_2
     .endb
     sub.setf ra_points, ra_points, 1
-    mov.ifz ra_link_1, r0
+    mov.ifn ra_link_1, r0
 
     # (MM) Optimized: redirect ra_link_1 to :loop to save branch and 3 nop.
     # Also check loop condition immediately.

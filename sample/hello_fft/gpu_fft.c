@@ -32,11 +32,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "gpu_fft.h"
 
 #define GPU_FFT_BUSY_WAIT_LIMIT (5<<12) // ~1ms
-/* Parameters to force V3D L2C invalidation by forcing collisions.
- * GPU_FFT_NUM_TEMP_BUFF need to match the associativity of the cache
- * GPU_FFT_ALIGN_TEMP_BUFF need to match the aliasing size of the cache. */
-#define GPU_FFT_NUM_TEMP_BUFF 2
-#define GPU_FFT_ALIGN_TEMP_BUFF 4*1024
+/* (MM) Parameters to force V3D L2C invalidation by forcing collisions. */
+#define GPU_FFT_MIN_BUFF_SIZE (4*1024*1024)
+#define GPU_FFT_MAX_BUFF_COUNT 8
 
 typedef struct GPU_FFT_COMPLEX COMPLEX;
 
@@ -47,64 +45,89 @@ int gpu_fft_prepare(
     int jobs,       // number of transforms in batch
     struct GPU_FFT **fft) {
 
-    unsigned info_bytes, twid_bytes, data_bytes, total_data_bytes,
-             buff_bytes, total_buff_bytes,
+    unsigned info_bytes, twid_bytes, fft_bytes, data_bytes,
+             buff_bytes, num_buff,
              code_bytes, unif_bytes, mail_bytes;
     unsigned size, *uptr, vc_tw, vc_buff, vc_data;
     int i, j, q, shared, unique, passes, ret;
 
-    struct GPU_FFT_BASE *base;
     struct GPU_FFT_PTR ptr;
     struct GPU_FFT *info;
 
     if (gpu_fft_twiddle_size(log2_N, &shared, &unique, &passes)) return -2;
 
     info_bytes = 4096;
-    data_bytes = sizeof(COMPLEX)<<log2_N;
-    //buff_bytes = ((data_bytes-1)|(GPU_FFT_ALIGN_TEMP_BUFF-1))+1;
-    buff_bytes = ((data_bytes)|(GPU_FFT_ALIGN_TEMP_BUFF-1))+1;
+    fft_bytes  = sizeof(COMPLEX)<<log2_N;
     code_bytes = gpu_fft_shader_size(log2_N);
     twid_bytes = sizeof(COMPLEX)*16*(shared+GPU_FFT_QPUS*unique);
     unif_bytes = sizeof(int)*GPU_FFT_QPUS*(4+2*jobs*passes);
     mail_bytes = sizeof(int)*GPU_FFT_QPUS*2;
 
-    // (MM) Use overlapping in and out buffer
-    // But only for 2k FFT and up because the TMU cache will not take care
-    // of the VPM writes.
-    data_bytes = buff_bytes;
-    //total_buff_bytes = buff_bytes * GPU_FFT_NUM_TEMP_BUFF;
-    total_buff_bytes = buff_bytes * (GPU_FFT_NUM_TEMP_BUFF-1) + data_bytes;
-    total_data_bytes = data_bytes * jobs;
+    /* (MM) Use as few temporary buffers as possible */
+    if (fft_bytes >= GPU_FFT_MIN_BUFF_SIZE)
+        /* FFT size larger than cache => use exactly one buffer */
+        num_buff = 1;
+    else
+    {   /* use up to GPU_FFT_TEMP_BUFF_SIZE bytes buffer, but no more than needed */
+        num_buff = GPU_FFT_MIN_BUFF_SIZE / fft_bytes;
+        i = (passes-1) * jobs;
+        if (i > GPU_FFT_MAX_BUFF_COUNT)
+            i = GPU_FFT_MAX_BUFF_COUNT;
+        if (num_buff > i)
+            num_buff = i;
+    }
+    buff_bytes = fft_bytes * num_buff;
+    data_bytes = fft_bytes * jobs;
 
     size  = info_bytes +        // header
-            total_buff_bytes +  // additional buffers
-            total_data_bytes +  // source data
+            buff_bytes +  // additional buffers
+            data_bytes +  // source data
             code_bytes +        // shader, aligned
             twid_bytes +        // twiddles
             unif_bytes +        // uniforms
             mail_bytes;         // mailbox message
 
+    /*fprintf(stderr,
+        "fft_bytes = %x\n"
+        "code_bytes = %x\n"
+        "twid_bytes = %x\n"
+        "unif_bytes = %x\n"
+        "mail_bytes = %x\n"
+        "buff_bytes = %x\n"
+        "data_bytes = %x\n"
+        "num_buff = %x\n"
+        "size = %x\n",
+        fft_bytes, code_bytes, twid_bytes, unif_bytes, mail_bytes, buff_bytes, data_bytes, num_buff, size);*/
     ret = gpu_fft_alloc(mb, size, &ptr);
     if (ret) return ret;
 
     // Header
     info = (struct GPU_FFT *) ptr.arm.vptr;
-    base = (struct GPU_FFT_BASE *) info;
     gpu_fft_ptr_inc(&ptr, info_bytes);
 
     // For transpose
     info->x = 1<<log2_N;
     info->y = jobs;
 
-    // (MM) Use dedicated temporary buffers, so all transforms can operate in place.
-    vc_buff = gpu_fft_ptr_inc(&ptr, total_buff_bytes);
-    info->step = data_bytes / sizeof(COMPLEX);
-    info->out = info->in = ptr.arm.cptr;
-    vc_data = gpu_fft_ptr_inc(&ptr, total_data_bytes);
+    // (MM) Use dedicated temporary buffers so all transforms can operate in place,
+    // except if we only have 1 buffer.
+    info->out = ptr.arm.cptr;
+    vc_buff = gpu_fft_ptr_inc(&ptr, buff_bytes);
+    info->step = fft_bytes / sizeof(COMPLEX);
+    info->in = ptr.arm.cptr;
+    if (num_buff > 1 || !(passes & 1))
+        info->out = info->in;
+    vc_data = gpu_fft_ptr_inc(&ptr, data_bytes);
+    /*fprintf(stderr,
+        "vc_buff = %x\n"
+        "vc_data = %x\n"
+        "in = %x\n"
+        "out = %x\n",
+        vc_buff, vc_data, info->in, info->out);*/
 
     // Shader code
     memcpy(ptr.arm.vptr, gpu_fft_shader_code(log2_N), code_bytes);
-    base->vc_code = gpu_fft_ptr_inc(&ptr, code_bytes);
+    info->base.vc_code = gpu_fft_ptr_inc(&ptr, code_bytes);
 
     // Twiddles
     gpu_fft_twiddle_data(log2_N, direction, ptr.arm.fptr);
@@ -114,38 +137,54 @@ int gpu_fft_prepare(
 
     // Uniforms
     for (q=0; q<GPU_FFT_QPUS; q++) {
-        unsigned data = vc_data;
-        int current_buff = GPU_FFT_NUM_TEMP_BUFF-1;
+        int current_buff = jobs % num_buff;
         *uptr++ = vc_tw;
         *uptr++ = vc_tw + sizeof(COMPLEX)*16*(shared + q*unique);
         *uptr++ = q;
-        for (i=0; i<jobs; i++) {
+        for (i=jobs; i--; ) {
+            unsigned data = vc_data + i * fft_bytes;
             *uptr++ = data;
-            for (j = 1; j < passes; j++)
-            {   uptr[0] = uptr[1] = vc_buff + current_buff * buff_bytes;
-                uptr += 2;
-                current_buff = (current_buff+GPU_FFT_NUM_TEMP_BUFF-1) % GPU_FFT_NUM_TEMP_BUFF;
+            if (num_buff == 1)
+            {   /* use ping pong buffers */
+                unsigned buff = vc_buff + current_buff * fft_bytes;
+                for (j = 1; j < passes; j++)
+                {   uptr[0] = uptr[1] = buff;
+                    /* swap buffers */
+                    buff = data;
+                    data = uptr[0];
+                    uptr += 2;
+                }
+                if (passes & 1)
+                    ++current_buff;
+                *uptr++ = buff;
+            } else
+            {   /* use dedicated buffers */
+                for (j = 1; j < passes; j++)
+                {   /* round robin */
+                    current_buff = (current_buff+num_buff-1) % num_buff;
+                    uptr[0] = uptr[1] = vc_buff + current_buff * fft_bytes;
+                    uptr += 2;
+                }
+                *uptr++ = data;
             }
-            *uptr++ = data;
-            data += data_bytes;
         }
         *uptr++ = 0;
-        //for (i = -(4+2*jobs*passes); i < 0; ++i) printf("%x\n", uptr[i]);
-        base->vc_unifs[q] = gpu_fft_ptr_inc(&ptr, sizeof(int)*(4+2*jobs*passes));
+        //for (i = -(4+2*jobs*passes); i < 0; ++i) fprintf(stderr, "%x\n", uptr[i]);
+        info->base.vc_unifs[q] = gpu_fft_ptr_inc(&ptr, sizeof(int)*(4+2*jobs*passes));
     }
 
     if ((jobs<<log2_N) <= GPU_FFT_BUSY_WAIT_LIMIT) {
         // Direct register poking with busy wait
-        base->vc_msg = 0;
+        info->base.vc_msg = 0;
     }
     else {
         // Mailbox message
         for (q=0; q<GPU_FFT_QPUS; q++) {
-            *uptr++ = base->vc_unifs[q];
-            *uptr++ = base->vc_code;
+            *uptr++ = info->base.vc_unifs[q];
+            *uptr++ = info->base.vc_code;
         }
 
-        base->vc_msg = ptr.vc;
+        info->base.vc_msg = ptr.vc;
     }
 
     *fft = info;

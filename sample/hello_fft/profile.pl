@@ -11,7 +11,7 @@ sub do_profile($)
   { /usecs\s*=\s*(\S+),/ or next;
     push @time, $1;
     /rel_rms_err\s*=\s*(\S+),/ or die "No rel_rms_err found in $_.\n";
-    $1 > 0 && $1 < 1E-5 or die "RMS error out of range: $_\n";
+    $1 > 0 && $1 < 1E-5 or warn "RMS error out of range: $_\n";
   }
   @time or die "No reasonable result retunred by execution of FFT:\n", @result;
 

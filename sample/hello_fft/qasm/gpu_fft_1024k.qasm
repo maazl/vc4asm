@@ -144,7 +144,7 @@ inst_vpm r3, rx_vpm
     init_base_32 TW16_BASE, TW32_BASE
     read_rev 0x10
 
-    ;mov ra_points, (1<<STAGES) / 0x100 - 1
+    ;mov ra_points, (1<<STAGES) / 0x100 - 2
     # (MM) Optimized: place branch before the last two instructions of read_rev
     .back 3
     brr ra_link_1, r:pass_1
@@ -155,14 +155,15 @@ inst_vpm r3, rx_vpm
     # for the last turn.
     brr r0, r:pass_1
     sub.setf ra_points, ra_points, 1
-    mov.ifz ra_link_1, r0
+    mov.ifn ra_link_1, r0
     nop
 
     # (MM) Optimized: easier procedure chains
     brr ra_link_1, r:sync, ra_sync
-    ldtmu0
+    # (MM) Do not load more data than needed, so don't discard it
     nop
-    ldtmu0
+    nop
+    nop
 
 ##############################################################################
 # Pass 2
@@ -249,7 +250,7 @@ inst_vpm r3, rx_vpm
     init_last_32 TW16_P4_BASE, TW32_P4_BASE, TW16_P4_STEP, TW32_P4_STEP
     read_lin 0x10
 
-    ;mov ra_points, (1<<STAGES) / 0x100 - 1
+    ;mov ra_points, (1<<STAGES) / 0x100 - 2
     # (MM) Optimized: place branch before the last two instructions of read_lin
     .back 3
     brr ra_link_1, r:pass_4
@@ -260,7 +261,7 @@ inst_vpm r3, rx_vpm
 
     # (MM) Optimized: branch unconditional and patch the return address of the last turn.
     sub.setf ra_points, ra_points, 1
-    mov.ifz ra_link_1, r0
+    mov.ifn ra_link_1, r0
     brr_opt r0, r:pass_4_tw, 2
 
     # (MM) Optimized: redirect ra_link_1 to :loop to save branch and 3 nop.

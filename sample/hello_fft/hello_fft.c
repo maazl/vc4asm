@@ -29,6 +29,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <memory.h>
 #include <math.h>
 #include <time.h>
 
@@ -48,7 +49,7 @@ unsigned Microseconds(void) {
 }
 
 int main(int argc, char *argv[]) {
-    int i, j, k, ret, loops, fbias, freq, log2_N, jobs, N, dir, mb = mbox_open();
+    int i, j, k, ret, loops, fbias, finc, freq, log2_N, jobs, N, dir, mb = mbox_open();
     unsigned t[3];
     double tsq[2];
 
@@ -59,6 +60,7 @@ int main(int argc, char *argv[]) {
     jobs   = argc>2? atoi(argv[2]) : 1;  // transforms per batch
     loops  = argc>3? atoi(argv[3]) : 1;  // test repetitions
     fbias  = argc>4? atoi(argv[4]) : 1;  // frequency bias
+    finc   = argc>5? atoi(argv[5]) : 1;  // frequency increment
 
     dir = GPU_FFT_REV;
     if (log2_N < 0)
@@ -87,11 +89,11 @@ int main(int argc, char *argv[]) {
         for (j=0; j<jobs; j++) {
             base = fft->in + j*fft->step; // input buffer
             if (dir == GPU_FFT_REV)
-            {   freq = j+fbias & (N/2-1);
-                for (i=0; i<N; i++) base[i].re = base[i].im = 0;
+            {   freq = j*finc+fbias & (N-1);
+                memset(base, 0, N * sizeof(struct GPU_FFT_COMPLEX));
                 base[N-freq & N-1].re += base[freq].re = 0.5;
             } else
-            {   freq = j+fbias & (N-1);
+            {   freq = j*finc+fbias & (N-1);
                 for (i=0; i<N; i++) {
                     base[i].re = cos(2*GPU_FFT_PI*freq*i/N);
                     base[i].im = sin(2*GPU_FFT_PI*freq*i/N);
@@ -110,24 +112,24 @@ int main(int argc, char *argv[]) {
         for (j=0; j<jobs; j++) {
             base = fft->out + j*fft->step; // output buffer
             if (dir == GPU_FFT_REV) {
-              freq = j+fbias & (N/2-1);
+              freq = j*finc+fbias & (N-1);
               for (i=0; i<N; i++) {
                   double re = cos(2*GPU_FFT_PI*freq*i/N);
                   tsq[0] += pow(re, 2);
                   tsq[1] += pow(re - base[i].re, 2) + pow(base[i].im, 2);
-                  //printf("%g\t%g\t%g\t%g\n", base[i].re, base[i].im, base[i-fft->step].re, base[i-fft->step].im);
+                  //fprintf(stderr, "%g\t%g\t%g\t%g\n", base[i].re, base[i].im, base[i-fft->step].re, base[i-fft->step].im);
               }
             } else {
-              freq = j+fbias & (N-1);
+              freq = j*finc+fbias & (N-1);
               tsq[0] += 2*N;
               for (i=0; i<N; i++) {
                   double amp = (i == freq) * N;
                   amp = pow(amp - base[i].re, 2) + pow(base[i].im, 2);
                   tsq[1] += amp;
-                  //printf("%g\t%g\t%g\t%g\t%g\n", base[i].re, base[i].im, base[i-fft->step].re, base[i-fft->step].im, amp);
+                  //fprintf(stderr, "%g\t%g\t%g\t%g\t%g\n", base[i].re, base[i].im, base[i-fft->step].re, base[i-fft->step].im, amp);
               }
             }
-            //printf("step_rms_err = %.5e, j = %d\n", sqrt(tsq[1]/tsq[0]), j);
+            //fprintf(stderr, "step_rms_err = %.5e, j = %d\n", sqrt(tsq[1]/tsq[0]), j);
         }
 
         printf("rel_rms_err = %.5e, usecs = %f, k = %d\n",
