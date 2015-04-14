@@ -32,10 +32,10 @@ void Disassembler::appendImmd(value_t value)
 	if ( UseFloat && abs(((value.iValue >> 23) & 0xff) ^ 0x80) <= 10
 		&& (len = snprintf(CodeAt, Code + sizeof Code - CodeAt, "%g", value.fValue)) <= 6 )
 		CodeAt += len;
-	else if (abs(value.iValue) <= 256)
+	else if (abs(value.iValue) < 256)
 		appendf("%i", value.iValue);
 	else
-		appendf("0x%08x", value.uValue);
+		appendf("0x%x", value.uValue);
 }
 
 void Disassembler::appendPE(uint32_t val, bool sign)
@@ -264,17 +264,19 @@ void Disassembler::DoBranch()
 	{	append(cRreg[0][Instruct.RAddrA]);
 		if (Instruct.Immd.iValue)
 			append(", ");
-	} else // no register => try label
+	}
+	// try label
+	if (Instruct.Immd.iValue)
 	{	uint32_t target = Instruct.Immd.uValue;
 		if (Instruct.Rel)
 			target += Addr + 4*sizeof(uint64_t);
 		auto l = Labels.find(target);
 		if (l != Labels.end())
-			return appendf(":%s", l->second.c_str());
+			return appendf(Instruct.Rel ? "r:%s" : ":%s", l->second.c_str());
 		return appendf(Instruct.Rel ? "%+d # %04x" : "%d # %04x", Instruct.Immd.iValue, target);
 	}
 	if (Instruct.Immd.iValue || !Instruct.Reg)
-		appendf(Instruct.Rel ? "%+d" : "%d", Instruct.Immd.iValue);
+		appendf(Instruct.Rel ? "%+d" : "0x%x", Instruct.Immd.iValue);
 }
 
 void Disassembler::DoInstruction()
@@ -304,7 +306,7 @@ void Disassembler::ScanLabels()
 			Labels.emplace(Addr, stringf("LL%zu_%s", Labels.size(), cWreg[Instruct.WS][Instruct.WAddrA]));
 		if (Instruct.WAddrM != Inst::R_NOP)
 			Labels.emplace(Addr, stringf("LL%zu_%s", Labels.size(), cWreg[!Instruct.WS][Instruct.WAddrM]));
-		if (Instruct.Reg)
+		if (!Instruct.Immd.iValue)
 			continue;
 		if (Instruct.Rel)
 			Labels.emplace(Addr + Instruct.Immd.iValue, stringf("L%x_%x", Addr + Instruct.Immd.iValue, Addr - 4*sizeof(uint64_t)));
