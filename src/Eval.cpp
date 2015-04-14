@@ -434,7 +434,7 @@ exprValue Eval::Evaluate()
 		{	current.Type = V_REG;
 			current.rValue.Num = Inst::R_NOP;
 			current.rValue.Rotate = 0;
-			current.rValue.Type = R_WRAB;
+			current.rValue.Type = R_RWAB;
 			return current;
 		}
 		throw Fail("Incomplete expression: expected value.");
