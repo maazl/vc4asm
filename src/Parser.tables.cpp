@@ -970,10 +970,10 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "32",             &Parser::addUnpack, Inst::U_32,     E_SRC } // NOP
 ,	{ "32clamp",        &Parser::addPack,   Inst::P_32S,    E_DST }
 ,	{ "32s",            &Parser::addPack,   Inst::P_32S,    E_DST }
-,	{ "8abcd",          &Parser::addPack,   Inst::P_8abcd,  E_DST }
-,	{ "8abcds",         &Parser::addPack,   Inst::P_8abcdS, E_DST }
 ,	{ "8a",             &Parser::addPack,   Inst::P_8a,     E_DST }
 ,	{ "8a",             &Parser::addUnpack, Inst::U_8a,     E_SRC }
+,	{ "8abcd",          &Parser::addPack,   Inst::P_8abcd,  E_DST }
+,	{ "8abcds",         &Parser::addPack,   Inst::P_8abcdS, E_DST }
 ,	{ "8aclamp",        &Parser::addPack,   Inst::P_8aS,    E_DST }
 ,	{ "8as",            &Parser::addPack,   Inst::P_8aS,    E_DST }
 ,	{ "8b",             &Parser::addPack,   Inst::P_8b,     E_DST }

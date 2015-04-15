@@ -153,9 +153,7 @@ Parser::token_t Parser::NextToken()
 		return (token_t)*At++;
 	}
 
-	size_t i = isdigit(*At)
-		?	strspn(At, "0123456789abcdefABCDEFx.") // read until we don't find a hex digit, x (for hex) or .
-		:	strcspn(At, ".,;:+-*/%()&|^~!=<> \t\r\n");
+	size_t i = strcspn(At, isdigit(*At) ? ",;:+-*/%()[]&|^~!=<># \t\r\n" : ".,;:+-*/%()[]&|^~!=<># \t\r\n");
 	Token.assign(At, i);
 	At += i;
 
@@ -551,17 +549,19 @@ void Parser::addRot(int, InstContext ctx)
 void Parser::doInstrExt(InstContext ctx)
 {
 	while (NextToken() == DOT)
-	{	if (NextToken() != WORD)
+	{	switch (NextToken())
+		{default:
 			Fail("Expected instruction extension after dot.");
-
+		 case WORD:
+		 case NUM:;
+		}
 		const opExtEntry* ep = binary_search(extMap, Token.c_str());
 		if (!ep)
-		 fail:
-			Fail("Unknown instruction extension '%s' within this context.", Token.c_str());
+			Fail("Unknown instruction extension '%s'.", Token.c_str());
 		opExtFlags filter = ctx & IC_SRC ? E_SRC : ctx & IC_DST ? E_DST : E_OP;
 		while ((ep->Flags & filter) == 0)
 			if (strcmp(Token.c_str(), (++ep)->Name) != 0)
-				goto fail;
+				Fail("Invalid instruction extension '%s' within this context.", Token.c_str());
 		(this->*(ep->Func))(ep->Arg, ctx);
 	}
 	At -= Token.size();
@@ -598,13 +598,14 @@ void Parser::doALUTarget(exprValue param, bool mul)
 
 Inst::mux Parser::doALUExpr(InstContext ctx)
 {	if (NextToken() != COMMA)
-		Fail("Expected ',' before next argument to ALU instruction, found %s.", Token.c_str());
+		Fail("Expected ',' before next argument to ALU instruction, found '%s'.", Token.c_str());
 	exprValue param = ParseExpression();
+	Inst::mux ret;
 	switch (param.Type)
 	{default:
 		Fail("The second argument of a binary ALU instruction must be a register or a small immediate value.");
 	 case V_REG:
-		{	auto ret = muxReg(param.rValue);
+		{	ret = muxReg(param.rValue);
 			if (param.rValue.Rotate)
 			{	if ((ctx & IC_MUL) == 0)
 					Fail("Vector rotation is only available to the MUL ALU.");
@@ -614,7 +615,7 @@ Inst::mux Parser::doALUExpr(InstContext ctx)
 					Fail("Vector rotation is already applied to the instruction.");
 				doSMI(48 + (-param.rValue.Rotate & 0xf));
 			}
-			return ret;
+			break;
 		}
 	 case V_FLOAT:
 	 case V_INT:
@@ -640,11 +641,13 @@ Inst::mux Parser::doALUExpr(InstContext ctx)
 			if (si == 0xff)
 				Fail("Value 0x%x does not fit into the small immediate field.", param.uValue);
 			doSMI(si);
-			return Inst::X_RB;
+			ret = Inst::X_RB;
+			break;
 		}
 	}
 
 	doInstrExt(ctx);
+	return ret;
 }
 
 void Parser::doBRASource(exprValue param)
