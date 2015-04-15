@@ -140,10 +140,9 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_base_64 TW16_P1_BASE, TW32_P1_BASE, TW64_P1_BASE0, TW64_P1_BASE1
-    read_rev 0x10
     
     ;mov ra_points, (1<<STAGES) / 0x200 - 2
-    # (MM) Optimized: place branch before the last two instructions of read_rev
+    # (MM) Optimized: place branch before the last two instructions of init
     .back 3
     brr ra_link_1, r:pass_1
     .endb
@@ -168,10 +167,9 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_last_32 TW16_P2_BASE, TW32_P2_BASE, TW16_P2_STEP, TW32_P2_STEP
-    read_lin 0x10
 
     ;mov ra_points, (1<<STAGES) / 0x100 - 2
-    # (MM) Optimized: place branch before the last two instructions of read_lin
+    # (MM) Optimized: place branch before the last two instructions of init
     .back 3
     brr ra_link_1, r:pass_2
     .endb
@@ -182,10 +180,10 @@ inst_vpm r3, rx_vpm
     # (MM) Optimized: branch unconditional and patch the return address for
     # the last turn, move the branch before the last instruction of next_twiddles.
     .back 1
-    brr r0, r:pass_2
+    brr r3, r:pass_2
     .endb
     sub.setf ra_points, ra_points, 1
-    mov.ifn ra_link_1, r0
+    mov.ifn ra_link_1, r3
 
     # (MM) Optimized: redirect ra_link_1 to :loop to save branch and 3 nop.
     # Also check loop condition immediately.

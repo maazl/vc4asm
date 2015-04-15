@@ -60,6 +60,8 @@
         Support for ALU swap when combining instructions. Can e.g. handle <tt>mov
           ra16, r1; mov r1, 0x180</tt> (The constant 0x180 can only be loaded by
         the ADD ALU.)<br>
+        Fix: use of instruction extensions like <tt>.8a</tt> at ALU source
+        expressions.<br>
         Fix: do not auto combine TMU instructions.<br>
         Fix: do not erroneously convert signalling instructions to <tt>ldi</tt>.</dd>
       <dd>Fix: honor <tt>.if</tt>/<tt>.macro</tt> at <tt>.int</tt>/<tt>.long</tt>...<br>
@@ -176,10 +178,10 @@
       operators with small immediate values. It is not optimized in any way.</p>
     <h3><tt>hello_fft</tt></h3>
     <p>This is the well known hello_fft sample available. The main difference is
-      that it is faster because the shader code has been optimized. The gain is
-      about 39% of code size and 3% to 21% of the run time. The code will no
-      longer build with another assembler since it uses some special features
-      for instruction packing and scheduling.</p>
+      that it is faster compared to GPU_FFT 3.0 because the shader code has been
+      optimized. The gain is about 39% of code size and 3% to 21% of the run
+      time. The code will no longer build with another assembler since it uses
+      some special features for instruction packing and scheduling.</p>
     <table border="1" cellpadding="2" cellspacing="0">
       <thead>
         <tr>
@@ -189,10 +191,10 @@
         </tr>
         <tr>
           <th>&darr;points</th>
-          <th>original</th>
+          <th>gpu_fft 3</th>
           <th>optimized</th>
           <th>gain</th>
-          <th>original</th>
+          <th>gpu_fft 3</th>
           <th>optimized</th>
           <th>gain</th>
         </tr>
@@ -200,151 +202,151 @@
       <tbody>
         <tr>
           <td class="th">2<sup>8</sup></td>
-          <td>28 &micro;s*</td>
-          <td>22 &micro;s</td>
-          <td>-21%</td>
-          <td>18.3 &micro;s</td>
-          <td>16.2 &micro;s</td>
-          <td>-11%</td>
+          <td>25 &micro;s</td>
+          <td>20 &micro;s*</td>
+          <td>-20%</td>
+          <td>16.0 &micro;s</td>
+          <td>13.0 &micro;s</td>
+          <td>-19%</td>
         </tr>
         <tr>
           <td class="th">2<sup>9</sup></td>
-          <td>44 &micro;s<br>
+          <td>39 &micro;s<br>
           </td>
-          <td>36 &micro;s</td>
+          <td>32 &micro;s</td>
           <td>-18%</td>
-          <td>32.4 &micro;s</td>
-          <td>28.6 &micro;s<br>
+          <td>28.0 &micro;s</td>
+          <td>22.9 &micro;s<br>
           </td>
-          <td>-12%<br>
+          <td>-18%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>10</sup></td>
-          <td>65 &micro;s<br>
+          <td>57 &micro;s*<br>
           </td>
-          <td>57 &micro;s</td>
-          <td>-12%</td>
-          <td>55.1 &micro;s</td>
-          <td>50.9 &micro;s<br>
+          <td>49 &micro;s</td>
+          <td>-14%</td>
+          <td>48.0 &micro;s</td>
+          <td>39.9 &micro;s<br>
           </td>
-          <td>-8%<br>
+          <td>-17%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>11</sup></td>
-          <td>118 &micro;s<br>
+          <td>102 &micro;s<br>
           </td>
-          <td>106 &micro;s</td>
+          <td>92 &micro;s*</td>
           <td>-10%</td>
-          <td>116.5 &micro;s</td>
-          <td>101.6 &micro;s<br>
+          <td>100.6 &micro;s</td>
+          <td>82.7 &micro;s<br>
           </td>
-          <td>-13%<br>
+          <td>-18%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>12</sup></td>
-          <td>268 &micro;s<br>
+          <td>230 &micro;s<br>
           </td>
-          <td>255 &micro;s</td>
-          <td>-5%</td>
-          <td>294 &micro;s</td>
-          <td>268 &micro;s<br>
+          <td>241 &micro;s</td>
+          <td>+5%</td>
+          <td>250 &micro;s</td>
+          <td>245 &micro;s<br>
+          </td>
+          <td>-2%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>13</sup></td>
+          <td>598 &micro;s<br>
+          </td>
+          <td>649 &micro;s</td>
+          <td>+9%</td>
+          <td>612 &micro;s</td>
+          <td>655 &micro;s<br>
+          </td>
+          <td>+7%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>14</sup></td>
+          <td>1.12 ms<br>
+          </td>
+          <td>1.31 ms</td>
+          <td>+17%</td>
+          <td>1.148 ms</td>
+          <td>1.306 ms<br>
+          </td>
+          <td>+13%<br>
+          </td>
+        </tr>
+        <tr>
+          <td class="th">2<sup>15</sup></td>
+          <td>3.08 ms<br>
+          </td>
+          <td>2.82 ms</td>
+          <td>-9%</td>
+          <td>2.96 ms*</td>
+          <td>2.696 ms<br>
           </td>
           <td>-9%<br>
           </td>
         </tr>
         <tr>
-          <td class="th">2<sup>13</sup></td>
-          <td>656 &micro;s<br>
-          </td>
-          <td>625 &micro;s</td>
-          <td>-5%</td>
-          <td>687 &micro;s</td>
-          <td>644 &micro;s<br>
-          </td>
-          <td>-6%<br>
-          </td>
-        </tr>
-        <tr>
-          <td class="th">2<sup>14</sup></td>
-          <td>1.300 ms<br>
-          </td>
-          <td>1.250 ms</td>
-          <td>-4%</td>
-          <td>1.293 ms*</td>
-          <td>1.223 ms<br>
-          </td>
-          <td>-5%<br>
-          </td>
-        </tr>
-        <tr>
-          <td class="th">2<sup>15</sup></td>
-          <td>3.412 ms<br>
-          </td>
-          <td>3.225 ms</td>
-          <td>-5%</td>
-          <td>3.235 ms*</td>
-          <td>3.129 ms<br>
-          </td>
-          <td>-3%<br>
-          </td>
-        </tr>
-        <tr>
           <td class="th">2<sup>16</sup></td>
-          <td>6.65 ms<br>
+          <td>6.05 ms<br>
           </td>
-          <td>6.360 ms</td>
-          <td>-4%</td>
-          <td>6.457 ms</td>
-          <td>6.197 ms*<br>
+          <td>5.52 ms</td>
+          <td>-9%</td>
+          <td>5.93 ms</td>
+          <td>5.38 ms*<br>
           </td>
-          <td>-4%<br>
+          <td>-9%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>17</sup></td>
-          <td>16.42 ms<br>
+          <td>12.20 ms<br>
           </td>
-          <td>15.70 ms</td>
-          <td>-4%</td>
-          <td>16.26 ms</td>
-          <td>15.53 ms<br>
+          <td>11.27 ms</td>
+          <td>-8%</td>
+          <td>12.06 ms</td>
+          <td>11.07 ms<br>
           </td>
-          <td>-4%<br>
+          <td>-8%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>18</sup></td>
-          <td>44.37 ms<br>
+          <td>26.76 ms<br>
           </td>
-          <td>42.16 ms</td>
-          <td>-5%</td>
-          <td>44.21 ms</td>
-          <td>42.02 ms<br>
+          <td>24.73 ms</td>
+          <td>-8%</td>
+          <td>26.64 ms</td>
+          <td>24.59 ms<br>
           </td>
-          <td>-5%<br>
+          <td>-8%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>19</sup></td>
-          <td>100.3 ms<br>
+          <td>88.55 ms<br>
           </td>
-          <td>96.3 ms</td>
-          <td>-4%</td>
-          <td>100.1 ms</td>
-          <td>96.16 ms<br>
+          <td>81.75 ms</td>
+          <td>-8%</td>
+          <td>88.41 ms</td>
+          <td>81.60 ms<br>
           </td>
-          <td>-4%<br>
+          <td>-8%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>20</sup></td>
-          <td>202.1 ms<br>
+          <td>181.6 ms<br>
           </td>
-          <td>195.7 ms</td>
-          <td>-3%</td>
+          <td>171.8 ms</td>
+          <td>-5%</td>
           <td><br>
           </td>
           <td><br>
@@ -354,10 +356,10 @@
         </tr>
         <tr>
           <td class="th">2<sup>21</sup></td>
-          <td>404.4 ms<br>
+          <td>360.4 ms<br>
           </td>
-          <td>390.7 ms</td>
-          <td>-3%</td>
+          <td>340.8 ms</td>
+          <td>-5%</td>
           <td><br>
           </td>
           <td><br>
@@ -367,9 +369,9 @@
         </tr>
         <tr>
           <td class="th">2<sup>21</sup></td>
-          <td>819.0 ms</td>
-          <td>788.8 ms</td>
-          <td>-4%</td>
+          <td>731.8 ms</td>
+          <td>693.7 ms</td>
+          <td>-5%</td>
           <td><br>
           </td>
           <td><br>

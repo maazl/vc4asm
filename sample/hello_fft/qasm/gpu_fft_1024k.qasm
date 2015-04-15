@@ -142,10 +142,9 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_base_32 TW16_BASE, TW32_BASE
-    read_rev 0x10
 
     ;mov ra_points, (1<<STAGES) / 0x100 - 2
-    # (MM) Optimized: place branch before the last two instructions of read_rev
+    # (MM) Optimized: place branch before the last two instructions of init
     .back 3
     brr ra_link_1, r:pass_1
     .endb
@@ -170,11 +169,10 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_step_32 TW16_BASE, TW32_BASE, TW16_P2_STEP, TW32_P2_STEP
-    read_lin 0x10
 
-    ;mov ra_points, (1<<STAGES) / 0x100 - 2
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
     # and setup for loop below
+    ;mov ra_points, (1<<STAGES) / 0x100 - 2
     .back 3
     brr ra_link_1, rb_link_1, -, r:pass_2
     .endb
@@ -207,22 +205,23 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_step_32 TW16_BASE, TW32_BASE, TW16_P3_STEP, TW32_P3_STEP
-    read_lin 0x10
 
-    ;mov ra_points, (1<<STAGES) / 0x100 / 4 - 1
-    # (MM) Optimized: place branch before the last instructions of read_lin
+    ;mov ra_points, (1<<STAGES) / 0x100 / 2 - 1
+    # (MM) Optimized: place branch before the last instructions of init
     # and keep return address additionally in rb_link_1 for loop.
     .back 3
     brr ra_link_1, rb_link_1, -, r:pass_3
     .endb
 
 :   # start of hidden loop
-    .rep i, 2
     brr ra_link_1, r:pass_3
     nop
     nop
     nop
-    .endr
+    brr ra_link_1, r:pass_3
+    sub ra_points, ra_points, 1
+    nop
+    nop
 
     # (MM) Optimized: patch the return address for the last turn to save the
     # conditional branch and the unecessary twiddle load after the last turn.
@@ -248,10 +247,9 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_last_32 TW16_P4_BASE, TW32_P4_BASE, TW16_P4_STEP, TW32_P4_STEP
-    read_lin 0x10
 
     ;mov ra_points, (1<<STAGES) / 0x100 - 2
-    # (MM) Optimized: place branch before the last two instructions of read_lin
+    # (MM) Optimized: place branch before the last two instructions of init
     .back 3
     brr ra_link_1, r:pass_4
     .endb

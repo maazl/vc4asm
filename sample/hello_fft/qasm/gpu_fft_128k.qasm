@@ -131,43 +131,14 @@ inst_vpm r3, rx_vpm
     # (MM) Optimized: check loop condition below, load target buffer in init_stage
 :loop
 
-.if 0
-    or.setf -, elem_num, rx_inst
-    brr.allnz -, r:1f
-    mov vw_setup, vpm_setup(1, 1, h32(0,0))
-    mov vpm, 0x2 # L2 Cache clear
-    #mov vpm, 0x0f0f0000 # TMU Cache clear
-    nop
-    mov vw_setup, vdw_setup_0(1, 1, dma_h32(0,0))
-    mov vw_addr, 0x7ec00000 + 0x20
-    mov -, vw_wait
-:1
-    
-.elseif 1
-.rep i, 200
-nop
-.endr
-.else
-    mov.setf r0, 4-1
-:1
-    .rep i, 128
-    nop
-    .endr
-    brr.allnz -, r:1
-    sub.setf r0, r0, 1
-    nop
-    nop
-.endif
-
 ##############################################################################
 # Pass 1
 
     # (MM) More powerful init macros to simplify code
     init_base_64 TW16_BASE, TW32_BASE, TW64_BASE0, TW64_BASE1
-    read_rev 0x10
 
     ;mov ra_points, (1<<STAGES) / 0x200 - 2
-    # (MM) Optimized: place branch before the last two instructions of read_rev
+    # (MM) Optimized: place branch before the last two instructions of init
     .back 3
     brr ra_link_1, r:pass_1
     .endb
@@ -192,22 +163,23 @@ nop
 
     # (MM) More powerful init macros to simplify code
     init_step_64 TW16_BASE, TW32_BASE, TW64_BASE0, TW64_BASE1, TW16_P2_STEP, TW32_P2_STEP, TW48_P2_STEP, TW64_P2_STEP
-    read_lin 0x10
 
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
     # and setup for loop below
-    ;mov ra_points, (1<<STAGES) / 0x200 / 4 - 1
+    ;mov ra_points, (1<<STAGES) / 0x200 / 2 - 1
     .back 3
     brr ra_link_1, rb_link_1, -, r:pass_2
     .endb
 
 :   # start of hidden loop
-    .rep i, 2
     brr ra_link_1, r:pass_2
     nop
     nop
     nop
-    .endr
+    brr ra_link_1, r:pass_2
+    sub ra_points, ra_points, 1
+    nop
+    nop
 
     # (MM) Optimized: patch the return address for the last turn to save the
     # conditional branch and the unecessary twiddle load after the last turn.
@@ -232,10 +204,9 @@ nop
 
     # (MM) More powerful init macros to simplify code
     init_last_32 TW16_P3_BASE, TW32_P3_BASE, TW16_P3_STEP, TW32_P3_STEP
-    read_lin 0x10
 
     ;mov ra_points, (1<<STAGES) / 0x100 - 2
-    # (MM) Optimized: place branch before the last two instructions of read_lin
+    # (MM) Optimized: place branch before the last two instructions of init
     .back 3
     brr ra_link_1, r:pass_3
     .endb
@@ -244,9 +215,11 @@ nop
     next_twiddles_32
 
     # (MM) Optimized: branch unconditional and patch the return address of the last turn.
+    .back 1
+    brr r3, r:pass_3
+    .endb
     sub.setf ra_points, ra_points, 1
-    mov.ifn ra_link_1, r0
-    brr_opt r0, r:pass_3, 3
+    mov.ifn ra_link_1, r3
 
     # (MM) Optimized: redirect ra_link_1 to :loop to save branch and 3 nop.
     # Also check loop condition immediately.

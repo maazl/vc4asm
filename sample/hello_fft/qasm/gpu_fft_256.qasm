@@ -119,13 +119,13 @@ inst_vpm r3, rx_vpm
 # Redefining macros
 
 .macro read_rev, stride
-    and r1, ra_load_idx, rb_0x5555; mov r2, ra_load_idx
-    shr r0, r2, 1
+    ;and r1, ra_load_idx, rb_0x5555
+    shr r0, ra_load_idx, 1
     and r0, r0, rb_0x5555; v8adds r1, r1, r1 # can't overflow because of mask
     v8adds r0, r0, r1;                       # can't overflow because of mask
     .if stride != 0
     # (MM) Optimized: join stride with v8adds
-    ;add ra_load_idx, r2, stride
+    ;add ra_load_idx, ra_load_idx, stride
     .endif
 
     bit_rev 2, rx_0x3333
@@ -142,8 +142,8 @@ inst_vpm r3, rx_vpm
     mov r3, rb_tw_im+TW16+3;  fmul r0, rb_tw_im+TW16+3, ra_tw_re+TW16_STEP # a.sin
     fsub r0, r0, r1;          fmul r1, r2, ra_tw_re+TW16_STEP # a.cos
     fsub r3, r3, r0;          fmul r0, r3, rb_tw_im+TW16_STEP # b.sin
-    fadd r0, r0, r1
-    fsub r2, r2, r0
+    fadd r0, r0, r1;          mov r1, r3
+    fsub r0, r2, r0
     
     unpack_twiddles
 .endm
@@ -160,11 +160,11 @@ inst_vpm r3, rx_vpm
 
     # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
     read_tw rx_tw_shared, TW16_P1_BASE
-    init_stage 4, 0
-
+    init_stage 4, -
     read_rev rb_0x80
     # (MM) Optimized: do not unnecessarily advance ra_load_idx at the last turn
     read_rev 0
+
     # (MM) Optimized: move swap_vpm_vdw to pass1/2
 
     # (MM) Optimized: move branch before the last instruction of read_rev
@@ -185,14 +185,14 @@ inst_vpm r3, rx_vpm
 # Pass 2
 
     # (MM) More powerful init macros to simplify code
-    read_tw rx_tw_shared, TW16_P2_STEP
     read_tw rx_tw_unique, TW16_P2_BASE
     # (MM) Load source buffer per stage, saves another register
     ;mov ra_addr_x, unif;  # Ping buffer
-    store_tw TW16_STEP, 0
-    init_stage 4, 0
-
+    read_tw rx_tw_shared, TW16_P2_STEP
+    init_stage 4, -
     read_lin rb_0x80
+    store_tw TW16_STEP, -
+
     # (MM) Optimized: do not unnecessarily advance ra_load_idx at the last turn
     read_lin 0
     # (MM) Optimized: move swap_vpm_vdw to pass1/2
@@ -234,7 +234,7 @@ inst_vpm r3, rx_vpm
     # (MM) Optimized: move swap_vpm_vdw to pass1/2
     # (MM) Optimized: use xor for vpm swap (less memory I/O, save A register)
     ;mov r2, vpm_setup(1, 1, v32(16,0)) - vpm_setup(1, 1, v32(0,0))
-   
+
     # (MM) Optimized: move write_vpm_16 to body_pass_16
     # and expand inline to pack with VPM swap code, saves 2 instructions
     xor vw_setup, rx_vpm, r2;      mov r3, rx_vpm

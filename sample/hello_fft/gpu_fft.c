@@ -33,8 +33,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define GPU_FFT_BUSY_WAIT_LIMIT (5<<12) // ~1ms
 /* (MM) Parameters to force V3D L2C invalidation by forcing collisions. */
-#define GPU_FFT_MIN_BUFF_SIZE (4*1024*1024)
-#define GPU_FFT_MAX_BUFF_COUNT 8
+#define GPU_FFT_MIN_BUFF_SIZE (1<<19)
+#define GPU_FFT_MAX_BUFF_COUNT 4
 
 typedef struct GPU_FFT_COMPLEX COMPLEX;
 
@@ -46,7 +46,7 @@ int gpu_fft_prepare(
     struct GPU_FFT **fft) {
 
     unsigned info_bytes, twid_bytes, fft_bytes, data_bytes,
-             buff_bytes, num_buff,
+             fft_bytes_4k, buff_bytes, num_buff,
              code_bytes, unif_bytes, mail_bytes;
     unsigned size, *uptr, vc_tw, vc_buff, vc_data;
     int i, j, q, shared, unique, passes, ret;
@@ -63,12 +63,12 @@ int gpu_fft_prepare(
     unif_bytes = sizeof(int)*GPU_FFT_QPUS*(4+2*jobs*passes);
     mail_bytes = sizeof(int)*GPU_FFT_QPUS*2;
 
-    /* (MM) Use as few temporary buffers as possible */
+    // (MM) Use as few temporary buffers as possible
     if (fft_bytes >= GPU_FFT_MIN_BUFF_SIZE)
-        /* FFT size larger than cache => use exactly one buffer */
+        // FFT size larger than cache => use exactly one buffer
         num_buff = 1;
     else
-    {   /* use up to GPU_FFT_TEMP_BUFF_SIZE bytes buffer, but no more than needed */
+    {   // use up to GPU_FFT_TEMP_BUFF_SIZE bytes buffer, but no more than needed
         num_buff = GPU_FFT_MIN_BUFF_SIZE / fft_bytes;
         i = (passes-1) * jobs;
         if (i > GPU_FFT_MAX_BUFF_COUNT)
@@ -76,28 +76,30 @@ int gpu_fft_prepare(
         if (num_buff > i)
             num_buff = i;
     }
-    buff_bytes = fft_bytes * num_buff;
+    // Missing 4k alignment for 256 points
+    fft_bytes_4k = ((fft_bytes-1)|4095)+1;
+    buff_bytes = fft_bytes_4k * num_buff;
     data_bytes = fft_bytes * jobs;
 
-    size  = info_bytes +        // header
+    size  = info_bytes +  // header
             buff_bytes +  // additional buffers
             data_bytes +  // source data
-            code_bytes +        // shader, aligned
-            twid_bytes +        // twiddles
-            unif_bytes +        // uniforms
-            mail_bytes;         // mailbox message
+            code_bytes +  // shader, aligned
+            twid_bytes +  // twiddles
+            unif_bytes +  // uniforms
+            mail_bytes;   // mailbox message
 
-    /*fprintf(stderr,
-        "fft_bytes = %x\n"
-        "code_bytes = %x\n"
-        "twid_bytes = %x\n"
-        "unif_bytes = %x\n"
-        "mail_bytes = %x\n"
-        "buff_bytes = %x\n"
-        "data_bytes = %x\n"
-        "num_buff = %x\n"
-        "size = %x\n",
-        fft_bytes, code_bytes, twid_bytes, unif_bytes, mail_bytes, buff_bytes, data_bytes, num_buff, size);*/
+    //fprintf(stderr, \
+        "fft_bytes = %x\n" \
+        "code_bytes = %x\n" \
+        "twid_bytes = %x\n" \
+        "unif_bytes = %x\n" \
+        "mail_bytes = %x\n" \
+        "buff_bytes = %x\n" \
+        "data_bytes = %x\n" \
+        "num_buff = %x\n" \
+        "size = %x\n", \
+        fft_bytes, code_bytes, twid_bytes, unif_bytes, mail_bytes, buff_bytes, data_bytes, num_buff, size);
     ret = gpu_fft_alloc(mb, size, &ptr);
     if (ret) return ret;
 
@@ -118,12 +120,12 @@ int gpu_fft_prepare(
     if (num_buff > 1 || !(passes & 1))
         info->out = info->in;
     vc_data = gpu_fft_ptr_inc(&ptr, data_bytes);
-    /*fprintf(stderr,
-        "vc_buff = %x\n"
-        "vc_data = %x\n"
-        "in = %x\n"
-        "out = %x\n",
-        vc_buff, vc_data, info->in, info->out);*/
+    //fprintf(stderr, \
+        "vc_buff = %x\n" \
+        "vc_data = %x\n" \
+        "in = %x\n" \
+        "out = %x\n", \
+        vc_buff, vc_data, info->in, info->out);
 
     // Shader code
     memcpy(ptr.arm.vptr, gpu_fft_shader_code(log2_N), code_bytes);
@@ -137,19 +139,19 @@ int gpu_fft_prepare(
 
     // Uniforms
     for (q=0; q<GPU_FFT_QPUS; q++) {
-        int current_buff = jobs % num_buff;
+        int current_buff = num_buff-1;
         *uptr++ = vc_tw;
         *uptr++ = vc_tw + sizeof(COMPLEX)*16*(shared + q*unique);
         *uptr++ = q;
-        for (i=jobs; i--; ) {
+        for (i=0; i < jobs; ++i) {
             unsigned data = vc_data + i * fft_bytes;
             *uptr++ = data;
             if (num_buff == 1)
-            {   /* use ping pong buffers */
-                unsigned buff = vc_buff + current_buff * fft_bytes;
+            {   // use ping pong buffers
+                unsigned buff = vc_buff + current_buff * fft_bytes_4k;
                 for (j = 1; j < passes; j++)
                 {   uptr[0] = uptr[1] = buff;
-                    /* swap buffers */
+                    // swap buffers
                     buff = data;
                     data = uptr[0];
                     uptr += 2;
@@ -158,18 +160,18 @@ int gpu_fft_prepare(
                     ++current_buff;
                 *uptr++ = buff;
             } else
-            {   /* use dedicated buffers */
+            {   // use dedicated buffers
                 for (j = 1; j < passes; j++)
-                {   /* round robin */
-                    current_buff = (current_buff+num_buff-1) % num_buff;
-                    uptr[0] = uptr[1] = vc_buff + current_buff * fft_bytes;
+                {   // round robin
+                    current_buff = (current_buff+1) % num_buff;
+                    uptr[0] = uptr[1] = vc_buff + current_buff * fft_bytes_4k;
                     uptr += 2;
                 }
                 *uptr++ = data;
             }
         }
         *uptr++ = 0;
-        //for (i = -(4+2*jobs*passes); i < 0; ++i) fprintf(stderr, "%x\n", uptr[i]);
+        //if (q == 0) for (i = -(4+2*jobs*passes); i < 0; ++i) fprintf(stderr, "%x\n", uptr[i]);
         info->base.vc_unifs[q] = gpu_fft_ptr_inc(&ptr, sizeof(int)*(4+2*jobs*passes));
     }
 

@@ -140,10 +140,9 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_base_64 TW16_BASE, TW32_BASE, TW64_BASE0, TW64_BASE1
-    read_rev 0x10
 
     ;mov ra_points, (1<<STAGES) / 0x200 - 2
-    # (MM) Optimized: place branch before the last two instructions of read_rev
+    # (MM) Optimized: place branch before the last two instructions of init
     .back 3
     brr ra_link_1, r:pass_1
     .endb
@@ -157,18 +156,23 @@ inst_vpm r3, rx_vpm
     nop
 
     # (MM) Optimized: easier procedure chains
-    brr ra_link_1, r:sync, ra_sync
+    brr r0, r:sync, ra_sync
     # (MM) Do not load more data than needed, so don't discard it
-    nop
-    nop
+    mov r1, r:2f - r:1f
+    add ra_link_1, r0, r1
     nop
 
+    # (MM) If the code does not have this gap QPU 1 occasionally loads invalid values
+    # by TMU0 at pass 2. This code is never executed.
+:1  .rep i, 60
+    nop
+    .endr
+:2
 ##############################################################################
 # Pass 2
 
     # (MM) More powerful init macros to simplify code
     init_step_64 TW16_BASE, TW32_BASE, TW64_BASE0, TW64_BASE1, TW16_P2_STEP, TW32_P2_STEP, TW48_P2_STEP, TW64_P2_STEP
-    read_lin 0x10
 
     # (MM) Optimized: keep return address additionally in rb_link_1 for loop.
     # and setup for loop below
@@ -207,7 +211,6 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_last_64 TW16_P3_BASE, TW32_P3_BASE, TW64_P3_BASE0, TW64_P3_BASE1, TW16_P3_STEP, TW32_P3_STEP, TW48_P3_STEP, TW64_P3_STEP
-    read_lin 0x10
 
     ;mov ra_points, (1<<STAGES) / 0x200 - 2
     .back 3

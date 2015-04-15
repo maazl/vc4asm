@@ -136,10 +136,9 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_base_32 TW16_BASE, TW32_BASE
-    read_rev 0x10
 
     ;mov ra_points, (1<<STAGES) / 0x100 - 2
-    # (MM) Optimized: place branch before the last two instructions of read_rev
+    # (MM) Optimized: place branch before the last two instructions of init
     .back 3
     brr ra_link_1, r:pass_1
     .endb
@@ -164,10 +163,9 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_step_32 TW16_BASE, TW32_BASE, TW16_P2_STEP, TW32_P2_STEP
-    read_lin 0x10
 
-    ;mov ra_points, (1<<STAGES) / 0x100 - 1
-    # (MM) Optimized: place branch before the last instructions of read_lin
+    ;mov ra_points, (1<<STAGES) / 0x100 - 2
+    # (MM) Optimized: place branch before the last instructions of init
     # and keep return address additionally in rb_link_1 for loop.
     .back 3
     brr ra_link_1, rb_link_1, -, r:pass_2
@@ -177,14 +175,15 @@ inst_vpm r3, rx_vpm
     # (MM) Optimized: patch the return address for the last turn to save the
     # conditional branch and the unecessary twiddle load after the last turn.
     brr ra_link_1, r:pass_2
-    sub.setf ra_points, ra_points, 2
+    sub.setf ra_points, ra_points, 1
     mov.ifn ra_link_1, rb_pass2_link
     nop
 
     next_twiddles_32
 
     ;mov ra_link_1, rb_link_1
-    # (MM) Optimized: place branch before the last two instructions of next_twiddles
+    sub ra_points, ra_points, 1
+    # (MM) Optimized: place branch before the last instruction of next_twiddles
     .back 3
     brr rb_pass2_link, r:pass_2
     .endb
@@ -200,10 +199,9 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_last_16 TW16_P3_BASE, TW16_P3_STEP
-    read_lin rb_0x80
 
     ;mov ra_points, (1<<STAGES) / 0x80 - 2
-    # (MM) Optimized: place branch before the last two instructions of read_lin
+    # (MM) Optimized: place branch before the last two instructions of init
     .back 3
     brr ra_link_1, r:pass_3
     .endb
@@ -214,10 +212,10 @@ inst_vpm r3, rx_vpm
     # (MM) Optimized: place the branch before the last instruction of next_twiddles
     # and branch unconditional and patch the return address of the last turn.
     .back 1
-    brr r0, r:pass_3
+    brr r3, r:pass_3
     .endb
     sub.setf ra_points, ra_points, 1
-    mov.ifn ra_link_1, r0
+    mov.ifn ra_link_1, r3
 
     # (MM) Optimized: redirect ra_link_1 to :loop to save branch and 3 nop.
     # Also check loop condition immediately.

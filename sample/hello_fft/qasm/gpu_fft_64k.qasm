@@ -142,10 +142,9 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_base_64 TW16_BASE, TW32_BASE, TW64_BASE0, TW64_BASE1
-    read_rev 0x10
 
     ;mov ra_points, (1<<STAGES) / 0x200 - 2
-    # (MM) Optimized: place branch before the last two instructions of read_rev
+    # (MM) Optimized: place branch before the last two instructions of init
     .back 3
     brr ra_link_1, r:pass_1
     .endb
@@ -170,27 +169,28 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_step_32 TW16_BASE, TW32_BASE, TW16_P2_STEP, TW32_P2_STEP
-    read_lin 0x10
 
-    ;mov ra_points, (1<<STAGES) / 0x100 - 1
-    # (MM) Optimized: place branch before the last instructions of read_lin
+    ;mov ra_points, (1<<STAGES) / 0x100 / 2 - 1
+    # (MM) Optimized: place branch before the last instructions of init
     # and keep return address additionally in rb_link_1 for loop.
     .back 3
     brr ra_link_1, rb_link_1, -, r:pass_2
     .endb
 
 :   # start of hidden loop
-    .rep i, 2
     brr ra_link_1, r:pass_2
     nop
     nop
     nop
-    .endr
+    brr ra_link_1, r:pass_2
+    sub ra_points, ra_points, 1
+    nop
+    nop
 
     # (MM) Optimized: patch the return address for the last turn to save the
     # conditional branch and the unecessary twiddle load after the last turn.
     brr ra_link_1, r:pass_2
-    sub.setf ra_points, ra_points, 4
+    sub.setf ra_points, ra_points, 1
     mov.ifn ra_link_1, rb_pass2_link
     nop
 
@@ -210,18 +210,15 @@ inst_vpm r3, rx_vpm
 
     # (MM) More powerful init macros to simplify code
     init_last_32 TW16_P3_BASE, TW32_P3_BASE, TW16_P3_STEP, TW32_P3_STEP
-    read_lin 0x10
 
     ;mov ra_points, (1<<STAGES) / 0x100 - 2
-    # (MM) Optimized: place branch before the last two instructions of read_lin
+    # (MM) Optimized: place branch before the last two instructions of init
     .back 3
     brr ra_link_1, r:pass_3
     .endb
 
 :   # start of hidden loop
     # (MM) Optimized: moved common next_twiddles code to subroutine
-    # causes secret data race for 64k FFT => undo
-    #next_twiddles_32
 
     # (MM) Optimized: branch unconditional and patch the return address of the last turn.
     sub.setf ra_points, ra_points, 1
@@ -271,7 +268,6 @@ bodies_fft_16
     body_rx_save_slave_64
 
 # (MM) Optimized: moved common code to subroutine
-# causes secret data race for 64k FFT => undo
 :pass_2_tw
 :pass_3_tw
     next_twiddles_32

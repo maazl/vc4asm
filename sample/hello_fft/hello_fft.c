@@ -49,9 +49,9 @@ unsigned Microseconds(void) {
 }
 
 int main(int argc, char *argv[]) {
-    int i, j, k, ret, loops, fbias, finc, freq, log2_N, jobs, N, dir, mb = mbox_open();
+    int i, j, k, ret, loops, fbias, finc, freq, log2_N, jobs, N, dir, bad, mb = mbox_open();
     unsigned t[3];
-    double tsq[2];
+    double tsq[4];
 
     struct GPU_FFT_COMPLEX *base;
     struct GPU_FFT *fft;
@@ -91,7 +91,8 @@ int main(int argc, char *argv[]) {
             if (dir == GPU_FFT_REV)
             {   freq = j*finc+fbias & (N-1);
                 memset(base, 0, N * sizeof(struct GPU_FFT_COMPLEX));
-                base[N-freq & N-1].re += base[freq].re = 0.5;
+                base[freq].re = 0.5;
+                base[N-freq & N-1].re += 0.5;
             } else
             {   freq = j*finc+fbias & (N-1);
                 for (i=0; i<N; i++) {
@@ -108,8 +109,10 @@ int main(int argc, char *argv[]) {
         if (k)
             t[2] += t[1] - t[0];
 
-        tsq[0]=tsq[1]=0;
+        tsq[2]=tsq[3]=0;
+        bad = 0;
         for (j=0; j<jobs; j++) {
+            tsq[0]=tsq[1]=0;
             base = fft->out + j*fft->step; // output buffer
             if (dir == GPU_FFT_REV) {
               freq = j*finc+fbias & (N-1);
@@ -117,6 +120,7 @@ int main(int argc, char *argv[]) {
                   double re = cos(2*GPU_FFT_PI*freq*i/N);
                   tsq[0] += pow(re, 2);
                   tsq[1] += pow(re - base[i].re, 2) + pow(base[i].im, 2);
+                  //fprintf(stderr, "%10g\t%10g\t%10g\t%10g\t%10g\t%10g\n", base[i].re, base[i].im, fft->out[i-fft->step].re, fft->out[i-fft->step].im, fft->out[i-2*fft->step].re, fft->out[i-2*fft->step].im);
                   //fprintf(stderr, "%g\t%g\t%g\t%g\n", base[i].re, base[i].im, base[i-fft->step].re, base[i-fft->step].im);
               }
             } else {
@@ -126,14 +130,21 @@ int main(int argc, char *argv[]) {
                   double amp = (i == freq) * N;
                   amp = pow(amp - base[i].re, 2) + pow(base[i].im, 2);
                   tsq[1] += amp;
-                  //fprintf(stderr, "%g\t%g\t%g\t%g\t%g\n", base[i].re, base[i].im, base[i-fft->step].re, base[i-fft->step].im, amp);
+                  //fprintf(stderr, "%10g\t%10g\t%10g\t%10g\t%10g\n", base[i].re, base[i].im, fft->in[i].re, fft->in[i].im, amp);
+                  //fprintf(stderr, "%10g\t%10g\t%10g\t%10g\t%10g\t%10g\t%10g\n", base[i].re, base[i].im, fft->out[i-fft->step].re, fft->out[i-fft->step].im, fft->out[i-2*fft->step].re, fft->out[i-2*fft->step].im, amp);
               }
             }
             //fprintf(stderr, "step_rms_err = %.5e, j = %d\n", sqrt(tsq[1]/tsq[0]), j);
+            tsq[2] += tsq[0];
+            tsq[3] += tsq[1];
+            if (tsq[1]/tsq[0] > 2E-6)
+                ++bad;
         }
 
         printf("rel_rms_err = %.5e, usecs = %f, k = %d\n",
-            sqrt(tsq[1]/tsq[0]), (double)(t[1]-t[0])/jobs, k);
+            sqrt(tsq[3]/tsq[2]), (double)(t[1]-t[0])/jobs, k);
+        if (bad)
+            printf("failed: %i = %f %%\n", bad, 100.*bad/jobs);
     }
 
     gpu_fft_release(fft); // Videocore memory lost if not freed !

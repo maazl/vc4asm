@@ -53,7 +53,7 @@
     ;mov r0, src << 7
     add t0s, ptr, r0;  v8adds r0, r0, 4
     add t0s, ptr, r0;
-.elseif !isRegfileB(ptr)
+.elseif isAccu(ptr) || !isRegfileB(ptr)
     mov t0s, ptr; add r0, ptr, 4
     mov t0s, r0;
 .else
@@ -65,14 +65,13 @@
 # store prepared twiddles into register
 #   ra_tw_re, rb_tw_im : real and imaginary register set start
 #   dst : register offset
-#   clr_res : clear residual accumulators at dst+1
-.macro store_tw, dst, clr_res
-.if clr_res
-                        ;  mov ra_tw_re+dst+1, 0;  ldtmu0
-    mov ra_tw_re+dst, r4;  mov rb_tw_im+dst+1, 0;  ldtmu0
+#   clr : clear residual accumulator
+.macro store_tw, dst, clr
+                        ;                        ldtmu0
+.if clr != nop
+    mov ra_tw_re+dst, r4;  mov rb_tw_im+clr, 0;  ldtmu0
 .else
-                        ;  ldtmu0
-    mov ra_tw_re+dst, r4;  ldtmu0
+    mov ra_tw_re+dst, r4;                        ldtmu0
 .endif
     mov rb_tw_im+dst, r4;
 .endm
@@ -558,13 +557,14 @@
 ##############################################################################
 
 .macro read_lin, stride
-    shl r0, ra_load_idx, 3; mov r1, ra_load_idx
+    ;shl r0, ra_load_idx, 3
     # (MM) Optimized: write t0s earlier
-    add t0s, r0, ra_addr_x; v8adds r2, ra_addr_x, 4 # can't overflow, LSBs of ra_addr_x are 0
-.if stride != 0
-    add ra_load_idx, r1, stride
-.endif
+    add t0s, r0, ra_addr_x;  v8adds r2, ra_addr_x, 4  # can't overflow, LSBs of ra_addr_x are 0
     add t0s, r0, r2;
+.if stride != 0
+    ;mov r0, stride
+    add ra_load_idx, ra_load_idx, r0;
+.endif
 .endm
 
 # (MM) Optimized: no longer used
@@ -574,14 +574,15 @@
 # Unpack twiddles
 
 .macro unpack_twiddles
-    # (MM) Optimized: moved r2/r3 load to next_twiddles_16
-# (MM) Optimized: do not rotate r2/r3 unnecessarily at the last turn
+    # (MM) use r0/r1 instead of r2/r3
+    # (MM) Optimized: moved r0/r1 load to next_twiddles_16
 .rep i, 3
     ;and.setf -, elem_num, (8>>i)
-    mov ra_tw_re+TW16+3-i, r2; mov.ifnz r2, r2 >> (8>>i)
-    mov rb_tw_im+TW16+3-i, r3; mov.ifnz r3, r3 >> (8>>i)
+    mov ra_tw_re+TW16+3-i, r0; mov.ifnz r0, r0 >> (8>>i)
+    mov rb_tw_im+TW16+3-i, r1; mov.ifnz r1, r1 >> (8>>i)
 .endr
-    mov ra_tw_re+TW16+3-3, r2; mov rb_tw_im+TW16+3-3, r3
+    # (MM) Optimized: do not rotate unnecessarily at the last turn
+    mov ra_tw_re+TW16+3-3, r0; mov rb_tw_im+TW16+3-3, r1;
 .endm
 
 ##############################################################################
@@ -621,8 +622,9 @@
 
 .macro next_twiddles_16
     rotate TW16+3, TW16_STEP
-    # (MM) Optimized: moved r2/r3 load from unpack_twiddles
-    mov r2, ra_tw_re+TW16+3; mov r3, rb_tw_im+TW16+3
+    # (MM) use r0/r1 instead of r2/r3
+    # (MM) Optimized: moved r0/r1 load from unpack_twiddles
+    mov r0, ra_tw_re+TW16+3; mov r1, rb_tw_im+TW16+3
     unpack_twiddles
 .endm
 
@@ -648,149 +650,164 @@
 
 # (MM) requires TW16 factors in TMU queue
 .macro init_stage, m, clr
-    # (MM) Optimized: clear residual registers for >16 in store_tw
+    # (MM) Optimized: clear residual registers only optional
     # (MM) Optimized: instruction packing
 .if isRegfileB(rx_inst)
     ;mov r0, rx_inst
     .lset rx_inst, r0
 .endif
-.if clr
-    shl r0, rx_inst, m;             mov ra_tw_re+TW16+4, 0
-    # (MM) Optimized: moved r2/r3 load from unpack_twiddles
-    # and avoid intermediate step in TW16+3 registers
-    add ra_load_idx, r0, elem_num;  mov rb_tw_im+TW16+4, 0;  ldtmu0
- .else
     ;shl r0, rx_inst, m
+.if clr != nop
+    add ra_load_idx, r0, elem_num;  mov rb_tw_im+clr, 0;  ldtmu0
+.else
+    add ra_load_idx, r0, elem_num;                        ldtmu0
+.endif
     # (MM) Optimized: moved r2/r3 load from unpack_twiddles
     # and avoid intermediate step in TW16+3 registers
-    add ra_load_idx, r0, elem_num;                           ldtmu0
-.endif
-    mov r2, r4;                     mov ra_save_ptr, unif;   ldtmu0
-    mov r3, r4;
+    # (MM) use r0/r1 instead of r2/r3
+    mov r0, r4;                   mov ra_save_ptr, unif;  ldtmu0
+    mov r1, r4;
     unpack_twiddles
 .endm
 
 # (MM) More powerful and optimized init macros to simplify code
 
 .macro init_base_32, tw16, tw32
-    .if tw32
     ;mov r3, rx_tw_shared;
-    read_tw r3, tw32
-    .else # vc4asm instruction join does not check for register dependencies
-    mov t0s, rx_tw_shared;  mov r3, rx_tw_shared
-    add t0s, r3, 4
-    .endif
     read_tw r3, tw16
-    store_tw TW32+0, 0
-    init_stage 5, 0
+    read_tw r3, tw32
+    init_stage 5, -
+    read_rev 0x10
+    store_tw TW32+0, -
 .endm
 
 .macro init_base_64, tw16, tw32, tw48, tw64
     ;mov r3, rx_tw_shared;
-    read_tw r3, tw64
-    read_tw r3, tw48
-    read_tw r3, tw32
     read_tw r3, tw16
-    store_tw TW64, 0
-    store_tw TW48, 0
-    store_tw TW32+0, 0
-    init_stage 6, 0
+    read_tw r3, tw32
+    read_tw r3, tw48
+    init_stage 6, -
+    store_tw TW32+0, -
+    read_tw r3, tw64
+    read_rev 0x10
+    store_tw TW48, -
+    store_tw TW64, -
 .endm
 
 .macro init_step_16, tw16, st16
     # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
-    mov r3, rx_tw_shared;
-    read_tw r3, st16
+    ;mov r3, rx_tw_shared;
     read_tw r3, tw16
     # (MM) Load target buffer per stage, saves another register
     ;mov ra_addr_x, unif;
-    store_tw TW16_STEP, 0
-    init_stage 4, 1
+    read_tw r3, st16
+    ;mov ra_tw_re+TW16+4, 0;
+    init_stage 4, TW16+4
+    store_tw TW16_STEP, -
+    read_lin rb_0x80
 .endm
 
 .macro init_step_32, tw16, tw32, st16, st32
     # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
-    mov r3, rx_tw_shared;
-    read_tw r3, st32
-    read_tw r3, st16
-    read_tw r3, tw32
+    ;mov r3, rx_tw_shared;
     read_tw r3, tw16
     # (MM) Load target buffer per stage, saves another register
     ;mov ra_addr_x, unif;
-    store_tw TW32_STEP, 0
-    store_tw TW16_STEP, 0
-    store_tw TW32+0, 1
-    init_stage 5, 1
+    read_tw r3, tw32
+    read_tw r3, st16
+    ;mov ra_tw_re+TW16+4, 0;
+    init_stage 5, TW16+4
+    store_tw TW32+0, TW32+1
+    ;mov ra_tw_re+TW32+1, 0;
+    read_tw r3, st32
+    read_lin 0x10
+    store_tw TW16_STEP, -
+    store_tw TW32_STEP, -
 .endm
 
 .macro init_step_64, tw16, tw32, tw48, tw64, st16, st32, st48, st64
     # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
-    mov r3, rx_tw_shared;
-    read_tw r3, st64
-    read_tw r3, st48
-    read_tw r3, tw64
-    read_tw r3, tw48
+    ;mov r3, rx_tw_shared;
+    read_tw r3, tw16
     # (MM) Load target buffer per stage, saves another register
     ;mov ra_addr_x, unif;
-    store_tw TW64_STEP, 0
-    store_tw TW48_STEP, 0
-    store_tw TW64+0, 1
-    store_tw TW48+0, 1
-    read_tw r3, st32
-    read_tw r3, st16
     read_tw r3, tw32
-    read_tw r3, tw16
-    store_tw TW32_STEP, 0
-    store_tw TW16_STEP, 0
-    store_tw TW32+0, 1
-    init_stage 6, 1
+    ;mov ra_tw_re+TW16+4, 0;
+    read_tw r3, tw48
+    init_stage 6, TW16+4
+    store_tw TW32+0, TW32+1
+    read_tw r3, tw64
+    ;mov ra_tw_re+TW32+1, 0;
+    read_tw r3, st16
+    ;mov ra_tw_re+TW48+1, 0;
+    store_tw TW48+0, TW48+1
+    store_tw TW64+0, TW64+1
+    read_tw r3, st32
+    read_tw r3, st48
+    ;mov ra_tw_re+TW64+1, 0;
+    store_tw TW16_STEP, -
+    store_tw TW32_STEP, -
+    read_tw r3, st64
+    read_lin 0x10
+    store_tw TW48_STEP, -
+    store_tw TW64_STEP, -
 .endm
 
 .macro init_last_16, tw16, st16
-    read_tw rx_tw_shared, st16
     read_tw rx_tw_unique, tw16
     # (MM) Load target buffer per stage, saves another register
     ;mov ra_addr_x, unif;
-    store_tw TW16_STEP, 0
-    init_stage 4, 1
+    read_tw rx_tw_shared, st16
+    ;mov ra_tw_re+TW16+4, 0;
+    init_stage 4, TW16+4
+    store_tw TW16_STEP, -
+    read_lin rb_0x80
 .endm
 
 .macro init_last_32, tw16, tw32, st16, st32
-    read_tw rx_tw_shared, st32
-    read_tw rx_tw_shared, st16
     ;mov r3, rx_tw_unique;
-    read_tw r3, tw32
     read_tw r3, tw16
     # (MM) Load target buffer per stage, saves another register
     ;mov ra_addr_x, unif;
-    store_tw TW32_STEP, 0
-    store_tw TW16_STEP, 0
-    store_tw TW32+0, 1
-    init_stage 5, 1
+    read_tw r3, tw32
+    ;mov r3, rx_tw_shared;
+    read_tw r3, st16
+    init_stage 5, TW16+4
+    store_tw TW32+0, TW32+1
+    read_tw r3, st32
+    ;mov ra_tw_re+TW16+4, 0;
+    read_lin 0x10
+    store_tw TW16_STEP, -
+    ;mov ra_tw_re+TW32+1, 0;
+    store_tw TW32_STEP, -
 .endm
 
 .macro init_last_64, tw16, tw32, tw48, tw64, st16, st32, st48, st64
     # (MM) Optimized separate preparation of TMU from ldtmu for better pipeline processing.
-    mov r3, rx_tw_shared;
-    read_tw r3, st64
-    read_tw r3, st48
-    read_tw r3, st32
-    read_tw r3, st16
     # (MM) Load target buffer per stage, saves another register
-    ;mov ra_addr_x, unif;
-    store_tw TW64_STEP, 0
-    store_tw TW48_STEP, 0
-    store_tw TW32_STEP, 0
-    store_tw TW16_STEP, 0
-    ;mov r3, rx_tw_unique;
-    read_tw r3, tw64
-    read_tw r3, tw48
-    read_tw r3, tw32
+    mov r3, rx_tw_unique;  mov ra_addr_x, unif
     read_tw r3, tw16
-    store_tw TW64+0, 1
-    store_tw TW48+0, 1
-    store_tw TW32+0, 1
-    init_stage 6, 1
+    ;mov ra_tw_re+TW16+4, 0;
+    read_tw r3, tw32
+    ;mov ra_tw_re+TW32+1, 0;
+    read_tw r3, tw48
+    init_stage 6, TW16+4
+    store_tw TW32+0, TW32+1
+    read_tw r3, tw64
+    ;mov r3, rx_tw_shared;
+    read_tw r3, st32
+    ;mov ra_tw_re+TW48+1, 0;
+    store_tw TW48+0, TW48+1
+    store_tw TW64+0, TW64+1
+    read_tw r3, st16
+    read_tw r3, st48
+    ;mov ra_tw_re+TW64+1, 0;
+    store_tw TW32_STEP, -
+    store_tw TW16_STEP, -
+    read_tw r3, st64
+    read_lin 0x10
+    store_tw TW48_STEP, -
+    store_tw TW64_STEP, -
 .endm
 
 ##############################################################################
