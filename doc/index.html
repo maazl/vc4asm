@@ -55,7 +55,8 @@
         ... <tt>-16</tt> in conjunction with small immediates.</dd>
       <dt>V0.1.5</dt>
       <dd>Merge with hello_fft 3.0, 4 Mi FFT, should fix RPi 2 compatibility.</dd>
-      <dd>Use overlapping buffers for hello_fft, saves much memory.<br>
+      <dd>Use overlapping buffers for hello_fft, saves much memory.</dd>
+      <dd>Support for MUL ALU pack and <tt>r4</tt> unpack modes.<br>
         Support for <tt>.ifset</tt> directive.<br>
         Support for ALU swap when combining instructions. Can e.g. handle <tt>mov
           ra16, r1; mov r1, 0x180</tt> (The constant 0x180 can only be loaded by
@@ -149,8 +150,8 @@
       input files must use the same format.</p>
     <h2><a id="bugs" name="bugs"></a>Known problems</h2>
     <ul>
-      <li>The pack/unpack modes of r4/MUL ALU (pm=1) do not work. I simply had
-        no idea so far how to implement this with reasonable effort.</li>
+      <li>There are insufficient test cases so far. So likely there are still
+        bugs in the assembler.</li>
     </ul>
     <h2><a id="build" name="build"></a>Build instructions</h2>
     <p>The source code has hopefully no major platform dependencies, i.e. you
@@ -179,7 +180,7 @@
     <h3><tt>hello_fft</tt></h3>
     <p>This is the well known hello_fft sample available. The main difference is
       that it is faster compared to GPU_FFT 3.0 because the shader code has been
-      optimized. The gain is about 39% of code size and 3% to 21% of the run
+      optimized. The gain is about 40% of code size and roughly 9% of the run
       time. The code will no longer build with another assembler since it uses
       some special features for instruction packing and scheduling.</p>
     <table border="1" cellpadding="2" cellspacing="0">
@@ -383,6 +384,8 @@
     </table>
     All timings are medians from repeated executions. The Raspi was slightly
     overclocked. (*) Timing is unstable, reason unknown.<br>
+    It is not yet known, why especially the 2<sup>14</sup> FFT is significantly
+    <i>slower</i>. Maybe a bug.<br>
     <h2><a id="contact" name="contact"></a>Contact</h2>
     <p>Comments, ideas, bugs, improvements to <i>raspi at maazl dot de</i>.</p>
   </body>

@@ -93,14 +93,22 @@ class Parser
 		opAddMul    OpCode;  ///< ALU opcode to achieve this result
 	}             smiMap[];
 	enum InstContext : uint8_t
-	{	IC_NONE          = 0
-	,	IC_MUL           = 1
-	,	IC_SRC           = 2
-	,	IC_MULSRC        = 3
-	,	IC_DST           = 4
-	,	IC_MULDST        = 5
-	,	IC_SRCB          = 10
-	,	IC_MULSRCB       = 11
+	{	IC_NONE     = 0
+	,	IC_MUL      = 1
+	,	IC_SRC      = 2
+	,	IC_MULSRC   = 3
+	,	IC_DST      = 4
+	,	IC_MULDST   = 5
+	,	IC_B        = 8
+	,	IC_SRCB     = 10
+	,	IC_MULSRCB  = 11
+	};
+	enum UnpackReq
+	{	UR_NONE     = 0            ///< No unpack request by this ALU.
+	,	UR_OP       = 1 << IC_NONE ///< Unpack request at opcode level, mutual exclusive with UR_SRC*.
+	,	UR_SRCA     = 1 << IC_SRC  ///< Unpack request for first source argument.
+	,	UR_SRCB     = 1 << IC_SRCB ///< Unpack request for second source argument.
+	,	UR_NEW      = 1 << IC_MUL  ///< New unpack request => check for interaction with other ALU.
 	};
 
 	enum contextType
@@ -236,6 +244,7 @@ class Parser
 	char*            At = NULL;   ///< Current location within Line
 	string           Token;       ///< Current token
 	Inst             Instruct;    ///< Current instruction
+	int              UseUnpack;   ///< Current opcode uses unpack
 	unsigned         PC;          ///< Current program counter
 	// context
 	macro*           AtMacro = NULL;///< Currently at a macro definition
@@ -272,10 +281,14 @@ class Parser
 
 	static uint8_t   getSmallImmediate(uint32_t i);
 	static const smiEntry* getSmallImmediateALU(uint32_t i);
+	//Inst::mux&       accessMux(InstContext ctx);
 	Inst::mux        muxReg(reg_t reg);
 	/// Set small immediate value. Fail if impossible.
 	/// @param si desired value.
 	void             doSMI(uint8_t si);
+	/// Checks for r4 or ra.
+	int              isUnpackable(Inst::mux mux) { if (mux == Inst::X_R4) return true; if (mux == Inst::X_RA && Instruct.RAddrA < 32) return false; return -1; }
+	static int       toUnpackReq(InstContext ctx) { return 1 < (ctx&IC_SRCB); }
 
 	// OP code extensions
 	void             addIf(int cond, InstContext ctx);
@@ -286,7 +299,7 @@ class Parser
 	void             addRot(int, InstContext ctx);
 	void             doInstrExt(InstContext ctx);
 
-	void             doALUTarget(exprValue param, bool mul);
+	void             doALUTarget(exprValue param, InstContext mul);
 	Inst::mux        doALUExpr(InstContext ctx);
 	void             doBRASource(exprValue param);
 

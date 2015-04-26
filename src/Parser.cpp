@@ -404,6 +404,13 @@ exprValue Parser::ParseExpression()
 	}
 }
 
+/*Inst::mux& Parser::accessMux(InstContext ctx)
+{	if (ctx & IC_MUL)
+		return ctx & IC_B ? Instruct.MuxMB : Instruct.MuxMA;
+	else
+		return ctx & IC_B ? Instruct.MuxAB : Instruct.MuxAA;
+}*/
+
 Inst::mux Parser::muxReg(reg_t reg)
 {	if (reg.Type & R_SEMA)
 		Fail("Cannot use semaphore source in ALU instruction.");
@@ -487,17 +494,49 @@ void Parser::addUnpack(int mode, InstContext ctx)
 {
 	if (Instruct.Sig >= Inst::S_LDI)
 		Fail("Cannot apply .unpack to branch and load immediate instructions.");
-	if (Instruct.Unpack != Inst::U_32 && Instruct.Unpack != mode)
-		Fail("Only one distinct .unpack per instruction, please.");
-	Instruct.Unpack = (Inst::unpack)mode;
+	if (UseUnpack & (UR_OP | toUnpackReq(ctx)))
+		Fail("Only one .unpack per ALU instruction, please.");
+	if (Instruct.Unpack != mode)
+	{	if (Instruct.Unpack != Inst::U_32)
+			Fail("Cannot use different unpack modes within one instruction.");
+		Instruct.Unpack = (Inst::unpack)mode;
+		UseUnpack |= UR_NEW; // Signal
+	}
+	UseUnpack |= toUnpackReq(ctx);
+	// The check of unpack mode against used source register
+	// and the pack mode is done in doALUExpr.
 }
 
 void Parser::addPack(int mode, InstContext ctx)
 {
 	if (Instruct.Sig == Inst::S_BRANCH)
 		Fail("Cannot apply .pack to branch instruction.");
-	if (Instruct.Pack != Inst::P_32 && Instruct.Pack != mode)
-		Fail("Only one distinct .pack per instruction, please.");
+	if (Instruct.Pack != Inst::P_32)
+		Fail("Only one .pack per instruction, please.");
+	// Use intermediate pack mode matching the ALU
+	bool pm = !!(ctx & IC_MUL);
+	if (ctx & IC_DST)
+	{	if (!pm)
+		{	// At target register of ADD ALU = Target must be regfile A
+			if (Instruct.WS || Instruct.WAddrA >= 32)
+				Fail("Target of ADD ALU must be of regfile A to use pack.");
+		} else
+		{	// At target register of MUL ALU
+			// Prefer regfile A pack even for MUL ALU
+			if (Instruct.WS && Instruct.WAddrA < 32 && !Instruct.PM)
+				pm = false;
+			// Check for pack mode supported by MUL ALU
+			else if (mode < Inst::P_8abcdS)
+				Fail("MUL ALU only supports saturated pack modes with 8 bit.");
+			else
+				// Use intermediate pack mode matching the ALU
+				mode &= 7;		// Use intermediate pack mode matching the ALU
+		}
+	}
+	if (Instruct.Unpack && Instruct.PM != pm)
+		Fail("Type of pack conflicts with type of unpack in PM flag.");
+	// Commit
+	Instruct.PM = pm;
 	Instruct.Pack = (Inst::pack)mode;
 }
 
@@ -558,6 +597,9 @@ void Parser::doInstrExt(InstContext ctx)
 		const opExtEntry* ep = binary_search(extMap, Token.c_str());
 		if (!ep)
 			Fail("Unknown instruction extension '%s'.", Token.c_str());
+		/* make problems with mov
+		if ((ctx & IC_MUL) ? Instruct.OpM == Inst::M_NOP : Instruct.OpA == Inst::A_NOP)
+			Fail("Instruction extensions cannot be applied to nop instruction.");*/
 		opExtFlags filter = ctx & IC_SRC ? E_SRC : ctx & IC_DST ? E_DST : E_OP;
 		while ((ep->Flags & filter) == 0)
 			if (strcmp(Token.c_str(), (++ep)->Name) != 0)
@@ -567,15 +609,17 @@ void Parser::doInstrExt(InstContext ctx)
 	At -= Token.size();
 }
 
-void Parser::doALUTarget(exprValue param, bool mul)
+void Parser::doALUTarget(exprValue param, InstContext mul)
 {	if (param.Type != V_REG)
 		Fail("The first argument to a ALU or branch instruction must be a register or '-', found %s.", Token.c_str());
 	if (!(param.rValue.Type & R_WRITE))
 		Fail("The register is not writable.");
 	if ((param.rValue.Type & R_AB) != R_AB)
-	{	bool wsfreeze = Instruct.Pack != Inst::P_32 || mul
-			? Instruct.OpA != Inst::A_NOP && !Inst::isWRegAB(Instruct.WAddrA)
-			: Instruct.OpM != Inst::M_NOP && !Inst::isWRegAB(Instruct.WAddrM);
+	{	bool wsfreeze =
+			  !Inst::isWRegAB(mul ? Instruct.WAddrA : Instruct.WAddrM) // Can't swap the other target register, this includes any regfile A access.
+			|| ( !mul && Instruct.Sig != Inst::S_BRANCH && (           // We assemble a ADD instruction and
+			    (Instruct.Pack != Inst::P_32 && Instruct.PM)           // the MUL ALU pack or
+			  || (Instruct.Sig == Inst::S_SMI && Instruct.SImmd >= 48) ));// vector rotation is used.
 		if ((param.rValue.Type & R_A) && (!wsfreeze || Instruct.WS == mul))
 			Instruct.WS = mul;
 		else if ((param.rValue.Type & R_B) && (!wsfreeze || Instruct.WS != mul))
@@ -583,17 +627,37 @@ void Parser::doALUTarget(exprValue param, bool mul)
 		else
 			Fail("ADD ALU and MUL ALU cannot write to the same register file.");
 	}
+	// Check pack mode from /this/ opcode if any
+	if (Instruct.Pack != Inst::P_32 && Instruct.PM == mul && !(!mul && Instruct.WS)) // Pack matches my ALU and not RA pack of MUL ALU.
+	{	if (!mul)
+		{	// ADD ALU can only pack 2 RA
+			if (!Instruct.WS && Instruct.WAddrA < 32)
+				goto packOK;
+			Fail("ADD ALU can only pack with regfile A target.");
+		}
+		// MUL ALU => prefer Regfile A pack
+		if ( Instruct.WS && Instruct.WAddrA < 32 // Regfile A write and
+			&& !Instruct.Unpack )                  // pack mode not frozen.
+		{	Instruct.PM = false;
+			goto packOK;
+		}
+		if (Instruct.Pack < Inst::P_8abcdS)
+			Fail("MUL ALU only supports saturated pack modes with 8 bit.");
+		// MUL ALU encodes saturated pack modes like unsaturated
+		Instruct.Pack = (Inst::pack)(Instruct.Pack & 7);
+	}
+ packOK:
 	(mul ? Instruct.WAddrM : Instruct.WAddrA) = param.rValue.Num;
 	// vector rotation
 	if (param.rValue.Rotate)
-	{	if (!mul)
+	{	if (!(mul & IC_MUL))
 			Fail("Vector rotation is only available to the MUL ALU.");
 		if (param.rValue.Rotate == 16)
-			Fail("Can only rotate ALU target left by r5.");
+			Fail("Cannot rotate ALU target right by r5.");
 		doSMI(48 + (param.rValue.Rotate & 0xf));
 	}
 
-	doInstrExt((InstContext)(mul*IC_MUL | IC_DST));
+	doInstrExt((InstContext)(mul | IC_DST));
 }
 
 Inst::mux Parser::doALUExpr(InstContext ctx)
@@ -647,6 +711,42 @@ Inst::mux Parser::doALUExpr(InstContext ctx)
 	}
 
 	doInstrExt(ctx);
+
+	// check 4 unpack
+	if (UseUnpack & (UR_OP | toUnpackReq(ctx)))
+	{	// Current source argument should be unpacked.
+		bool pm = Instruct.PM;
+		if (ret == Inst::X_R4)
+			pm = true;
+		else if (ret == Inst::X_RA && Instruct.RAddrA < 32)
+			pm = false;
+		else if (!(UseUnpack & UR_OP))
+			Fail("Cannot unpack this source argument.");
+		else if ((ctx & IC_SRCB)
+			&& !(((ctx & IC_MUL) || !Instruct.isUnary())
+				&& isUnpackable(ctx & IC_MUL ? Instruct.MuxMA : Instruct.MuxAA) )) // Operands must contain either r4 xor regfile A
+			Fail("The unpack option works for none of the source operands of the current opcode.");
+		if ((UseUnpack & UR_NEW) && ( (ctx & IC_MUL)
+				? isUnpackable(Instruct.MuxAB) == pm || (!Instruct.isUnary() && isUnpackable(Instruct.MuxAA) == pm)
+				: isUnpackable(Instruct.MuxMB) == pm || isUnpackable(Instruct.MuxMA) == pm ))
+			Fail("Using unpack changes the semantic of the other ALU.");
+		if (pm != Instruct.PM)
+		{	if (Instruct.Pack)
+				// TODO: in a few constellations the pack mode of regfile A and the MUL ALU are interchangeable.
+				Fail("Requested unpack mode conflicts with pack mode of the current instruction.");
+			if ((ctx & IC_B) && (UseUnpack & UR_SRCA))
+				Fail("Conflicting unpack modes of first and second source operand.");
+			// Check for unpack sensitivity of second ALU instruction.
+			if ( (ctx & IC_MUL)
+				? isUnpackable(Instruct.MuxAB) >= 0 || (!Instruct.isUnary() && isUnpackable(Instruct.MuxAA) >= 0)
+				: isUnpackable(Instruct.MuxMB) >= 0 || isUnpackable(Instruct.MuxMA) >= 0 )
+				Fail("The unpack modes of ADD ALU and MUL ALU are different.");
+			Instruct.PM = pm;
+		}
+	} else if ( Instruct.Unpack != Inst::U_32 // Current source should not be unpacked
+		&& (Instruct.PM ? ret == Inst::X_R4 : ret == Inst::X_RA && Instruct.RAddrA < 32) )
+		Fail("The unpack option silently applies to source argument.");
+
 	return ret;
 }
 
@@ -702,22 +802,23 @@ void Parser::assembleADD(int add_op)
 			add_op = Inst::M_V8SUBS; break;
 		}
 		// retry with MUL ALU
-		return assembleMUL(add_op | 0x100); // The added numbed is discarded at the cast but avoids recursive retry.
+		return assembleMUL(add_op | 0x100); // The added number is discarded at the cast but avoids recursive retry.
 	}
  cont:
 	Instruct.OpA = (Inst::opadd)add_op;
+	UseUnpack = 0;
+
+	doInstrExt(IC_NONE);
+
 	if (add_op == Inst::A_NOP)
 	{	Flags() |= IF_HAVE_NOP;
 		return;
 	}
 
-	doInstrExt(IC_NONE);
-
-	doALUTarget(ParseExpression(), false);
+	doALUTarget(ParseExpression(), IC_NONE);
 
 	if (!Instruct.isUnary())
 		Instruct.MuxAA = doALUExpr(IC_SRC);
-
 	Instruct.MuxAB = doALUExpr(IC_SRCB);
 }
 
@@ -743,12 +844,14 @@ void Parser::assembleMUL(int mul_op)
 	}
  cont:
 	Instruct.OpM = (Inst::opmul)mul_op;
-	if (mul_op == Inst::M_NOP)
-		return;
+	UseUnpack = 0;
 
 	doInstrExt(IC_MUL);
 
-	doALUTarget(ParseExpression(), true);
+	if (mul_op == Inst::M_NOP)
+		return;
+
+	doALUTarget(ParseExpression(), IC_MUL);
 
 	Instruct.MuxMA = doALUExpr(IC_MULSRC);
 	Instruct.MuxMB = doALUExpr(IC_MULSRCB);
@@ -759,11 +862,11 @@ void Parser::assembleMOV(int mode)
 	if (Instruct.Sig == Inst::S_BRANCH)
 		Fail("Cannot use MOV together with branch instruction.");
 	bool isLDI = Instruct.Sig == Inst::S_LDI;
-	bool useMUL = (Flags() & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP);
+	InstContext useMUL = (InstContext)(((Flags() & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP)) * IC_MUL);
 	if (useMUL && (Instruct.WAddrM != Inst::R_NOP || (!isLDI && Instruct.OpM != Inst::M_NOP)))
 		Fail("Both ALUs are already used by the current instruction.");
 
-	doInstrExt((InstContext)(useMUL * IC_MUL));
+	doInstrExt(useMUL);
 
 	doALUTarget(ParseExpression(), useMUL);
 
@@ -886,7 +989,7 @@ void Parser::assembleBRANCH(int relative)
 
 	doInstrExt(IC_NONE);
 
-	doALUTarget(ParseExpression(), false);
+	doALUTarget(ParseExpression(), IC_NONE);
 
 	if (NextToken() != COMMA)
 		Fail("Expected ', <branch target>' after first argument to branch instruction, found %s.", Token.c_str());
@@ -907,7 +1010,7 @@ void Parser::assembleBRANCH(int relative)
 			doBRASource(param3);
 			break;
 		 case COMMA: // we have 4 arguments, so #2 is a target and #3 the first source
-			doALUTarget(param2, true);
+			doALUTarget(param2, IC_MUL);
 			doBRASource(param3);
 			doBRASource(ParseExpression());
 			if (NextToken() != END)
@@ -925,7 +1028,7 @@ void Parser::assembleBRANCH(int relative)
 
 void Parser::assembleSEMA(int type)
 {
-	doALUTarget(ParseExpression(), false);
+	doALUTarget(ParseExpression(), IC_NONE);
 	if (NextToken() != COMMA)
 		Fail("Expected ', <number>' after first argument to semaphore instruction, found %s.", Token.c_str());
 

@@ -1046,7 +1046,7 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "pack8ddupeclamp",&Parser::addPack,   Inst::P_8abcdS, E_DSTOP }
 ,	{ "pack8ds",        &Parser::addPack,   Inst::P_8dS,    E_DSTOP }
 ,	{ "rot",            &Parser::addRot,    0,              E_DSTOP }
-,	{ "setf",           &Parser::addSetF,   0,              E_OP }
+,	{ "setf",           &Parser::addSetF,   0,              E_DSTOP }
 ,	{ "unpack16a",      &Parser::addUnpack, Inst::U_16a,    E_SRCOP }
 ,	{ "unpack16b",      &Parser::addUnpack, Inst::U_16b,    E_SRCOP }
 ,	{ "unpack32",       &Parser::addUnpack, Inst::U_32,     E_SRCOP } // NOP

@@ -1,4 +1,4 @@
-../bin/vc4asm -E gpu_fft_1k.E -o gpu_fft_1k.bin -c gpu_fft_1k.c -C ../share/vc4.qinc gpu_fft_1k.qasm
-../bin/vc4dis -v -x gpu_fft_1k.c -o gpu_fft_1k.dis
-diff shader_1k.dis gpu_fft_1k.dis >diff
+../bin/vc4asm -E $1.E -o $1.bin -c $1.c -C ../share/vc4.qinc $1
+../bin/vc4dis -v -x $1.c -o $1.dis
+#diff shader_1k.dis gpu_fft_1k.dis >diff
 #less diff

@@ -33,7 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define GPU_FFT_BUSY_WAIT_LIMIT (5<<12) // ~1ms
 /* (MM) Parameters to force V3D L2C invalidation by forcing collisions. */
-#define GPU_FFT_MIN_BUFF_SIZE (1<<19)
+#define GPU_FFT_MIN_BUFF_SIZE (1<<14)
 #define GPU_FFT_MAX_BUFF_COUNT 4
 
 typedef struct GPU_FFT_COMPLEX COMPLEX;
