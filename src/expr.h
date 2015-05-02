@@ -39,7 +39,7 @@ enum regType : uint8_t
 struct reg_t
 {	uint8_t     Num;   ///< register number
 	regType     Type;  ///< register type
-	uint8_t     Rotate;///< QPU element rotation [0..15], 16: >> r5, -16: << r5
+	int8_t      Rotate;///< QPU element rotation [0..15], 16: >> r5, -16: << r5
 };
 enum valueType : char
 {	V_NONE      ///< no value

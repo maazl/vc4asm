@@ -8,15 +8,17 @@
 #include "Disassembler.h"
 #include "utils.h"
 
+#define __STDC_FORMAT_MACROS
 #include <cstdarg>
 #include <cstring>
+#include <cinttypes>
 
 #include "Disassembler.tables.cpp"
 
 
 void Disassembler::append(const char* str)
-{	int len = strlen(str);
-	memcpy(CodeAt, str, min(Code + sizeof Code - CodeAt, len));
+{	auto len = strlen(str);
+	memcpy(CodeAt, str, min((size_t)(Code + sizeof Code - CodeAt), len));
 	CodeAt += len;
 }
 void Disassembler::appendf(const char* fmt, ...)
@@ -309,9 +311,9 @@ void Disassembler::ScanLabels()
 		if (!Instruct.Immd.iValue)
 			continue;
 		if (Instruct.Rel)
-			Labels.emplace(Addr + Instruct.Immd.iValue, stringf("L%x_%x", Addr + Instruct.Immd.iValue, Addr - 4*sizeof(uint64_t)));
+			Labels.emplace(Addr + Instruct.Immd.iValue, stringf("L%x_%x", Addr + Instruct.Immd.iValue, Addr - 4*(unsigned)sizeof(uint64_t)));
 		else
-			Labels.emplace(Instruct.Immd.uValue, stringf("L%x_%x", Instruct.Immd.uValue, Addr - 4*sizeof(uint64_t)));
+			Labels.emplace(Instruct.Immd.uValue, stringf("L%x_%x", Instruct.Immd.uValue, Addr - 4*(unsigned)sizeof(uint64_t)));
 	}
 }
 
@@ -328,7 +330,7 @@ void Disassembler::Disassemble()
 		DoInstruction();
 		*CodeAt = 0;
 		if (PrintComment)
-			fprintf(Out, "\t%-48s # %04zx: %016llx %s\n", Code, Addr, i, Comment);
+			fprintf(Out, "\t%-48s # %04x: %0" PRIx64 " %s\n", Code, Addr, i, Comment);
 		else
 			fprintf(Out, "\t%s\n", Code);
 		Addr += sizeof(uint64_t);

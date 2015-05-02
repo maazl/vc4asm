@@ -41,9 +41,9 @@ void Validator::Message(int refloc, const char* fmt, ...)
 	fputs("Warning: ", stderr);
 	vfprintf(stderr, fmt, va);
 	va_end(va);
-	fprintf(stderr, "\n  instruction at 0x%x\n", BaseAddr + At * sizeof(uint64_t));
+	fprintf(stderr, "\n  instruction at 0x%x\n", BaseAddr + At * (unsigned)sizeof(uint64_t));
 	if (refloc >= 0)
-		fprintf(stderr, "  referring to instruction at 0x%x\n", BaseAddr + refloc * sizeof(uint64_t));
+		fprintf(stderr, "  referring to instruction at 0x%x\n", BaseAddr + refloc * (unsigned)sizeof(uint64_t));
 }
 
 int Validator::FromMux(Inst::mux m)

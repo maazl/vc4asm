@@ -150,7 +150,6 @@ class Parser
 	{	string         File;
 		unsigned       Line;
 		location()     : Line(0) {}
-		operator void*() const { return (void*)Line; }
 		bool operator !() const { return !Line; }
 		string         toString() const;
 	};

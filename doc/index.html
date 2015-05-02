@@ -29,30 +29,9 @@
     <p>Download <a href="../vc4asm.tar.bz2">Source code, Raspberry Pi 1 binary,
         examples and this documentation</a> (750k)</p>
     <dl>
-      <dt>V0.1</dt>
-      <dd>First public release.</dd>
-      <dt>V0.1.1</dt>
-      <dd>Added support for binary constants between the code.</dd>
-      <dt>V0.1.2</dt>
-      <dd>Added type detection macros.<br>
-        Optional automatic instruction packing.<br>
-        Merged with gpu_fft V2.0 including 2 Mi FFT, a few further
-        optimizations.</dd>
-      <dt>V0.1.3</dt>
-      <dd>Fixed pack/unpack instruction, still incomplete.<br>
-        Added <tt>.clone</tt> directive (experimental).<br>
-        Further optimizations to hello_fft example.<br>
-        Several smaller bugfixes.</dd>
-      <dt>V0.1.4</dt>
-      <dd>Support all shift values with small immediates.<br>
-        Fixed <tt>.setf</tt> for MUL ALU.<br>
-        Fixed operator <tt>&gt;&gt;&gt;</tt> and <tt>&lt;&lt;&lt;</tt>.<br>
-        Support forward <tt>.clone</tt>.<br>
-        Fixed validation of branch return targets.<br>
-        Check for conditional TMU access.<br>
-        Do not overwrite read address B with small immediate value.<br>
-        Support equivalence of <tt>add</tt> ... <tt>16</tt> and <tt>sub</tt>
-        ... <tt>-16</tt> in conjunction with small immediates.</dd>
+      <dt>V0.1.6</dt>
+      <dd>Fixed branch instructions broken by 0.1.5.</dd>
+      <dd>Fixed 64 bit compatibility for cross platform operation.</dd>
       <dt>V0.1.5</dt>
       <dd>Merge with hello_fft 3.0, 4 Mi FFT, should fix RPi 2 compatibility.</dd>
       <dd>Use overlapping buffers for hello_fft, saves much memory.</dd>
@@ -67,6 +46,30 @@
         Fix: do not erroneously convert signalling instructions to <tt>ldi</tt>.</dd>
       <dd>Fix: honor <tt>.if</tt>/<tt>.macro</tt> at <tt>.int</tt>/<tt>.long</tt>...<br>
         Added <tt>.foreach</tt> directive.</dd>
+      <dt>V0.1.4</dt>
+      <dd>Support all shift values with small immediates.<br>
+        Fixed <tt>.setf</tt> for MUL ALU.<br>
+        Fixed operator <tt>&gt;&gt;&gt;</tt> and <tt>&lt;&lt;&lt;</tt>.<br>
+        Support forward <tt>.clone</tt>.<br>
+        Fixed validation of branch return targets.<br>
+        Check for conditional TMU access.<br>
+        Do not overwrite read address B with small immediate value.<br>
+        Support equivalence of <tt>add</tt> ... <tt>16</tt> and <tt>sub</tt>
+        ... <tt>-16</tt> in conjunction with small immediates.</dd>
+      <dt>V0.1.3</dt>
+      <dd>Fixed pack/unpack instruction, still incomplete.<br>
+        Added <tt>.clone</tt> directive (experimental).<br>
+        Further optimizations to hello_fft example.<br>
+        Several smaller bugfixes.</dd>
+      <dt>V0.1.2</dt>
+      <dd>Added type detection macros.<br>
+        Optional automatic instruction packing.<br>
+        Merged with gpu_fft V2.0 including 2 Mi FFT, a few further
+        optimizations.</dd>
+      <dt>V0.1.1</dt>
+      <dd>Added support for binary constants between the code.</dd>
+      <dt>V0.1</dt>
+      <dd>First public release.</dd>
     </dl>
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
     <p>The heart of the software. It assembles QPU code to binary or C
@@ -158,7 +161,8 @@
       don't need to build it on the Raspberry. But it requires a <a href="https://en.wikipedia.org/wiki/C++11">C++11</a>
       compliant compiler to build. Current Raspiban ships with gcc 4.9 which
       works. Raspbian Wheezy seems not to be sufficient. While I succeeded with
-      gcc 4.7.3 on another platform, gcc 4.7.2 of Wheezy fails.</p>
+      gcc 4.7.3 on another platform, gcc 4.7.2 of Wheezy fails to compile the
+      disassembler.</p>
     <ul>
       <li>Download and extract the source.</li>
       <li>Go to folder <tt>src</tt>.</li>

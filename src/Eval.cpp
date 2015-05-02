@@ -17,8 +17,9 @@
 Eval::Fail::Fail(const char* format, ...)
 {	va_list va;
 	va_start(va, format);
-	static_cast<string&>(*this) = vstringf(format, va);
+	const auto&& msg = vstringf(format, va);
 	va_end(va);
+	static_cast<string&>(*this) = msg;
 }
 
 

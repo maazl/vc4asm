@@ -20,13 +20,13 @@ string vstringf(const char* format, va_list va)
 string stringf(const char* format, ...)
 {	va_list va;
 	va_start(va, format);
-	const string& ret = vstringf(format, va);
+	string&& ret = vstringf(format, va);
 	va_end(va);
 	return ret;
 }
 
 string relpath(const string& context, const string& rel)
 {	if (rel.size() && rel.front() == '/')
-		return rel;
+		return move(rel);
 	return string(context, 0, context.rfind('/')+1) + rel;
 }

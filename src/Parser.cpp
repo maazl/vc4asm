@@ -48,7 +48,7 @@ string Parser::enrichMsg(string msg)
 		if (ctx.Line)
 			switch (type)
 			{case CTX_CURRENT:
-				msg = stringf("%s (%u,%u): ", ctx.File.c_str(), ctx.Line, At - Line - Token.size() + 1) + msg;
+				msg = stringf("%s (%u,%zi): ", ctx.File.c_str(), ctx.Line, At - Line - Token.size() + 1) + msg;
 				break;
 			 case CTX_INCLUDE:
 				msg += stringf("\n  Included from %s (%u)", ctx.File.c_str(), ctx.Line);
@@ -345,7 +345,7 @@ exprValue Parser::ParseExpression()
 				 case WORD:;
 				}
 				const auto& l = LabelsByName.emplace(Token, LabelCount);
-				if (l.second || (forward && Labels[l.first->second].Definition))
+				if (!!l.second || (forward && !!Labels[l.first->second].Definition))
 				{	// new label
 					l.first->second = LabelCount;
 					if (!Pass2)
@@ -390,7 +390,7 @@ exprValue Parser::ParseExpression()
 			} else
 			{	// float number
 				size_t len;
-				if (sscanf(Token.c_str(), "%f%n", &value.fValue, &len) != 1 || len != Token.size())
+				if (sscanf(Token.c_str(), "%f%zn", &value.fValue, &len) != 1 || len != Token.size())
 					Fail("%s is no real number.", Token.c_str());
 				value.Type = V_FLOAT;
 			}
@@ -628,10 +628,9 @@ void Parser::doALUTarget(exprValue param, InstContext mul)
 			Fail("ADD ALU and MUL ALU cannot write to the same register file.");
 	}
 	// Check pack mode from /this/ opcode if any
-	if (Instruct.Pack != Inst::P_32 && Instruct.PM == mul && !(!mul && Instruct.WS)) // Pack matches my ALU and not RA pack of MUL ALU.
+	if (Instruct.Sig != Inst::S_BRANCH && Instruct.Pack != Inst::P_32 && Instruct.PM == mul && !(!mul && Instruct.WS)) // Pack matches my ALU and not RA pack of MUL ALU.
 	{	if (!mul)
-		{	// ADD ALU can only pack 2 RA
-			if (!Instruct.WS && Instruct.WAddrA < 32)
+		{	if (!Instruct.WS && Instruct.WAddrA < 32)
 				goto packOK;
 			Fail("ADD ALU can only pack with regfile A target.");
 		}
@@ -1113,7 +1112,7 @@ void Parser::defineLabel()
 	} else
 	{	// Label already in the lookup table.
 		lp = &Labels[lname.first->second];
-		if (lp->Definition)
+		if (!!lp->Definition)
 		{	// redefinition
 			if (!isdigit(lp->Name[0]))
 				Fail("Redefinition of non-local label %s, previously defined at %s.",
@@ -1343,7 +1342,7 @@ void Parser::beginBACK(int)
 	if (Pass2)
 		while (++pos < PC + Back)
 			if (InstFlags[pos] & IF_BRANCH_TARGET)
-				Msg(WARNING, ".back crosses branch target at address 0x%x. Code might not work.", pos*8);
+				Msg(WARNING, ".back crosses branch target at address 0x%zx. Code might not work.", pos*8);
 }
 
 void Parser::endBACK(int)
@@ -1381,7 +1380,7 @@ void Parser::parseCLONE(int)
 	if (Pass2 && param2.uValue >= Instructions.size())
 		Fail("TODO: Cannot clone behind the end of the code.");
 
-	for (size_t src = param1.uValue; src < param2.uValue; ++src)
+	for (auto src = param1.uValue; src < param2.uValue; ++src)
 	{	InstFlags[PC] |= InstFlags[src] & ~IF_BRANCH_TARGET;
 		if ((Instructions[src] & 0xF000000000000000ULL) == 0xF000000000000000ULL)
 			Msg(WARNING, "You should not clone branch instructions. (#%u)", src - param1.uValue);
@@ -1698,14 +1697,14 @@ exprValue Parser::doFUNCMACRO(macros_t::const_iterator m)
 		{case BRACE2:
 			// End of argument list. Are we complete?
 			if (args.size() != argnames.size())
-				Fail("Too few arguments for function %s. Expected %u, found %u.", m->first.c_str(), argnames.size(), args.size());
+				Fail("Too few arguments for function %s. Expected %zu, found %zu.", m->first.c_str(), argnames.size(), args.size());
 			break;
 		 default:
 			Fail("Unexpected '%s' in argument list of function %s.", Token.c_str(), m->first.c_str());
 		 case COMMA:
 			// next argument
 			if (args.size() == argnames.size())
-				Fail("Too much arguments for function %s. Expected %u.", m->first.c_str(), argnames.size());
+				Fail("Too much arguments for function %s. Expected %zu.", m->first.c_str(), argnames.size());
 			goto next;
 		}
 	}
@@ -1778,14 +1777,14 @@ exprValue Parser::doFUNC(funcs_t::const_iterator f)
 		{case BRACE2:
 			// End of argument list. Are we complete?
 			if (args.size() != argnames.size())
-				Fail("Too few arguments for function %s. Expected %u, found %u.", f->first.c_str(), argnames.size(), args.size());
+				Fail("Too few arguments for function %s. Expected %zu, found %zu.", f->first.c_str(), argnames.size(), args.size());
 			break;
 		 default:
 			Fail("Unexpected '%s' in argument list of function %s.", Token.c_str(), f->first.c_str());
 		 case COMMA:
 			// next argument
 			if (args.size() == argnames.size())
-				Fail("Too much arguments for function %s. Expected %u.", f->first.c_str(), argnames.size());
+				Fail("Too much arguments for function %s. Expected %zu.", f->first.c_str(), argnames.size());
 			goto next;
 		}
 	}
