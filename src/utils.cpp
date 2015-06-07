@@ -19,12 +19,15 @@ string vstringf(const char* format, va_list va)
 	// first try with small buffer
 	auto count = vsnprintf(buf, sizeof buf, format, va);
 	if (count < sizeof buf)
+	{	va_end(va2);
 		return string(buf, count);
+	}
 	// failed because of buffer overflow => retry with matching buffer
 	string ret;
 	ret.resize(count+1);
 	vsnprintf(&ret[0], count+1, format, va2);
 	ret.resize(count);
+	va_end(va2);
 	return ret;
 }
 string stringf(const char* format, ...)
