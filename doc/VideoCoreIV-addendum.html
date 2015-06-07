@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta content="text/html; charset=iso-8859-15" http-equiv="content-type">
+    <title>Addendum to in the Broadcom VideoCore IV documentation</title>
+    <meta content="Marcel M&uuml;ller" name="author">
+    <meta content="vc4asm instruction set" name="keywords">
+    <link rel="stylesheet" href="infstyle.css" type="text/css">
+  </head>
+  <body>
+    <h1>Addendum to the <a href="http://www.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf">Broadcom
+        VideoCore IV documentation</a></h1>
+    <h2>Additional features</h2>
+    <h3>Table 35: VCD DMA Write (VDW) Stride Setup Format</h3>
+    <p>Unlike the documentation suggests the <tt>STRIDE</tt> field is 16 bits
+      wide. Probably just a typo.</p>
+    <h2>Instruction constraints</h2>
+    <h3>No conditional write to <tt>t0s</tt>, <tt>t1s</tt>.</h3>
+    <p>A write to the TMU retiring register (TMU0_S, TMU1_S) must not use
+      conditional write access. Although the conditional write itself works the
+      TMU fifo is triggered unconditional to process the request with undefined
+      data in case the condition is not true.</p>
+    <p>vc4asm warns about this kind of access.</p>
+    <h3>Distance of branch instructions</h3>
+    <p>There must be at least two non branch instructions between every two
+      branch instructions. Otherwise no branch is taken or the thread will
+      crash. This also applies if the branch conditions are reverse and only one
+      of the branches can actually be taken.</p>
+    <p>However, you can enqueue the next branch just before the last one is
+      taken. Example:</p>
+    <pre># r0 contains semaphore number [0..15]<br>mul24 ra31, r0, 3*8<br>nop<br>brr ra31, ra31, r:sacq<br>nop<br>nop<br>bra -, ra31<br>...<br><br>:sacq<br>.rep i, 16<br>nop<br>nop<br>sacq -, i<br>.endr</pre>
+    <p>The above code fragment dynamically acquires a semaphore depending on the
+      number in the r0 register. This is the shortest possible code fragment to
+      do this task.</p>
+  </body>
+</html>
