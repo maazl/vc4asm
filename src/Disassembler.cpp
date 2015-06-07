@@ -11,6 +11,7 @@
 #define __STDC_FORMAT_MACROS
 #include <cstdarg>
 #include <cstring>
+#include <cstdlib>
 #include <cinttypes>
 
 #include "Disassembler.tables.cpp"

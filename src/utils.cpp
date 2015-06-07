@@ -8,19 +8,29 @@
 #include "utils.h"
 
 #include <cstdio>
+#include <cstdlib>
 
 
 string vstringf(const char* format, va_list va)
-{	int count = vsnprintf(NULL, 0, format, va);
+{	char buf[256];
+	// save va for the 2nd try
+	va_list va2;
+	va_copy(va2, va);
+	// first try with small buffer
+	auto count = vsnprintf(buf, sizeof buf, format, va);
+	if (count < sizeof buf)
+		return string(buf, count);
+	// failed because of buffer overflow => retry with matching buffer
 	string ret;
+	ret.resize(count+1);
+	vsnprintf(&ret[0], count+1, format, va2);
 	ret.resize(count);
-	vsnprintf(&ret[0], count+1, format, va);
 	return ret;
 }
 string stringf(const char* format, ...)
 {	va_list va;
 	va_start(va, format);
-	string&& ret = vstringf(format, va);
+	string ret = vstringf(format, va);
 	va_end(va);
 	return ret;
 }

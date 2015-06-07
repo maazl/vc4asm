@@ -287,7 +287,7 @@ class Parser
 	void             doSMI(uint8_t si);
 	/// Checks for r4 or ra.
 	int              isUnpackable(Inst::mux mux) { if (mux == Inst::X_R4) return true; if (mux == Inst::X_RA && Instruct.RAddrA < 32) return false; return -1; }
-	static int       toUnpackReq(InstContext ctx) { return 1 < (ctx&IC_SRCB); }
+	static int       toUnpackReq(InstContext ctx) { return 1 << (ctx&IC_SRCB); }
 
 	// OP code extensions
 	void             addIf(int cond, InstContext ctx);

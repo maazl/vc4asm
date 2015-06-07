@@ -70,8 +70,9 @@ void Parser::Fail(const char* fmt, ...)
 {	Success = false;
 	va_list va;
 	va_start(va, fmt);
-	throw enrichMsg(vstringf(fmt, va));
+	const string& msg = vstringf(fmt, va);
 	va_end(va);
+	throw enrichMsg(msg);
 }
 
 static const char msgpfx[][10]
@@ -723,7 +724,7 @@ Inst::mux Parser::doALUExpr(InstContext ctx)
 			Fail("Cannot unpack this source argument.");
 		else if ((ctx & IC_SRCB)
 			&& !(((ctx & IC_MUL) || !Instruct.isUnary())
-				&& isUnpackable(ctx & IC_MUL ? Instruct.MuxMA : Instruct.MuxAA) )) // Operands must contain either r4 xor regfile A
+				&& isUnpackable(ctx & IC_MUL ? Instruct.MuxMA : Instruct.MuxAA) >= 0 )) // Operands must contain either r4 xor regfile A
 			Fail("The unpack option works for none of the source operands of the current opcode.");
 		if ((UseUnpack & UR_NEW) && ( (ctx & IC_MUL)
 				? isUnpackable(Instruct.MuxAB) == pm || (!Instruct.isUnary() && isUnpackable(Instruct.MuxAA) == pm)
@@ -744,7 +745,7 @@ Inst::mux Parser::doALUExpr(InstContext ctx)
 		}
 	} else if ( Instruct.Unpack != Inst::U_32 // Current source should not be unpacked
 		&& (Instruct.PM ? ret == Inst::X_R4 : ret == Inst::X_RA && Instruct.RAddrA < 32) )
-		Fail("The unpack option silently applies to source argument.");
+		Fail("The unpack option silently applies to %s source argument.", ctx & IC_B ? "2nd" : "1st");
 
 	return ret;
 }
