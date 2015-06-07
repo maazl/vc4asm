@@ -6,14 +6,14 @@ But it goes further by far. First of all it supports macros and functions.
 
 Unfortunately this area is highly undocumented in the public domain. And so the work uses only the code from <a href="https://github.com/raspberrypi/userland/tree/master/host_applications/linux/apps/hello_pi/hello_fft">hello_fft</a> which is available as source and binary as Rosetta Stone. However, I try to keep it downwardly compatible to the Broadcom tools.
 
-<a href="http://www.maazl.de/project/vc4asm/index.html#download">&rarr; Homepage & Download</a>
+<a href="http://www.maazl.de/project/vc4asm/doc/index.html#download">&rarr; Homepage & Download</a>
 
-<a href="http://www.maazl.de/project/vc4asm/index.html#vc4asm">&rarr; Assembler</a>
+<a href="http://www.maazl.de/project/vc4asm/doc/index.html#vc4asm">&rarr; Assembler</a>
 
-<a href="http://www.maazl.de/project/vc4asm/index.html#vc4dis">&rarr; Disassembler</a>
+<a href="http://www.maazl.de/project/vc4asm/doc/index.html#vc4dis">&rarr; Disassembler</a>
 
-<a href="http://www.maazl.de/project/vc4asm/index.html#bugs">&rarr; Known problems</a>
+<a href="http://www.maazl.de/project/vc4asm/doc/index.html#bugs">&rarr; Known problems</a>
 
-<a href="http://www.maazl.de/project/vc4asm/index.html#build">&rarr; Build instructions</a>
+<a href="http://www.maazl.de/project/vc4asm/doc/index.html#build">&rarr; Build instructions</a>
 
-<a href="http://www.maazl.de/project/vc4asm/index.html#sample">&rarr; Examples</a>
+<a href="http://www.maazl.de/project/vc4asm/doc/index.html#sample">&rarr; Examples</a>
