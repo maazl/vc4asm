@@ -30,3 +30,7 @@
 # Files from other Rpositories
 .svn
 CVS
+
+# misc files
+diff
+log
