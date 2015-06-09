@@ -34,3 +34,7 @@ CVS
 # misc files
 diff
 log
+
+.cproject
+.project
+.settings
