@@ -8,8 +8,11 @@
 #include "utils.h"
 
 #include <cstdio>
-#include <cstdlib>
-
+#ifndef _LIBCPP_VERSION // libstdc++
+  #include <tr1/cstdint>
+#else                   // libc++
+  #include <cstdint>
+#endif
 
 string vstringf(const char* format, va_list va)
 {	char buf[256];

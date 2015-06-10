@@ -10,7 +10,12 @@
 
 #include <string>
 #include <limits>
-#include <type_traits>
+#include <ciso646>
+#ifndef _LIBCPP_VERSION // libstdc++
+  #include <tr1/type_traits>
+#else                   // libc++
+  #include <type_traits>
+#endif
 
 using namespace std;
 

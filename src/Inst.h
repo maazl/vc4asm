@@ -10,7 +10,12 @@
 
 #include "expr.h"
 
-#include <cstdint>
+#include <ciso646>
+#ifndef _LIBCPP_VERSION // libstdc++
+  #include <tr1/cstdint>
+#else                   // libc++
+  #include <cstdint>
+#endif
 using namespace std;
 
 
