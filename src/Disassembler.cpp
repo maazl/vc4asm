@@ -31,10 +31,8 @@ void Disassembler::appendf(const char* fmt, ...)
 
 void Disassembler::appendImmd(value_t value)
 {	// Check whether likely a float, just a guess
-	int len;
-	if ( UseFloat && abs(((value.iValue >> 23) & 0xff) ^ 0x80) <= 10
-		&& (len = snprintf(CodeAt, Code + sizeof Code - CodeAt, "%g", value.fValue)) <= 6 )
-		CodeAt += len;
+	if (UseFloat && abs(((value.iValue >> 23) & 0xff) ^ 0x80) <= 10)
+		CodeAt += snprintf(CodeAt, Code + sizeof Code - CodeAt, "%.6e", value.fValue);
 	else if (abs(value.iValue) < 256)
 		appendf("%i", value.iValue);
 	else
@@ -109,9 +107,6 @@ void Disassembler::DoADD()
 		if (!Instruct.PM && !Instruct.WS)
 			append(cPack[0][Instruct.Pack]);
 
-		if (opa != 32 && !isUnary)
-			appendSource(Instruct.MuxAA);
-
 		if (opa == 32)
 		{	switch (Instruct.OpA)
 			{case Inst::A_SUB:
@@ -130,7 +125,10 @@ void Disassembler::DoADD()
 			}
 		}
 
-		appendSource(Instruct.MuxAB);
+		appendSource(Instruct.MuxAA);
+
+		if (opa != 32 && !isUnary)
+			appendSource(Instruct.MuxAB);
 	}
 }
 

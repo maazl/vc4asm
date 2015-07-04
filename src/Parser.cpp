@@ -693,7 +693,7 @@ Inst::mux Parser::doALUExpr(InstContext ctx)
 						param.iValue = -16;
 					}
 					break;
-				 case Inst::A_ASR: // shift instructions ignore all bit except for the last 5
+				 case Inst::A_ASR: // shift instructions ignore all bits except for the last 5
 				 case Inst::A_SHL:
 				 case Inst::A_SHR:
 				 case Inst::A_ROR:
@@ -817,9 +817,10 @@ void Parser::assembleADD(int add_op)
 
 	doALUTarget(ParseExpression(), IC_NONE);
 
-	if (!Instruct.isUnary())
-		Instruct.MuxAA = doALUExpr(IC_SRC);
-	Instruct.MuxAB = doALUExpr(IC_SRCB);
+	Instruct.MuxAA = doALUExpr(IC_SRC);
+	Instruct.MuxAB = !Instruct.isUnary()
+		?	doALUExpr(IC_SRCB)
+		:	Instruct.MuxAA;
 }
 
 void Parser::assembleMUL(int mul_op)

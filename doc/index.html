@@ -28,9 +28,14 @@
     <h2>Download &amp; history</h2>
     <p>Download <a href="../vc4asm.tar.bz2">Source code, Raspberry Pi 1 binary,
         examples and this documentation</a> (750k)</p>
+    <p>The source code is also available at <a href="https://github.com/maazl/vc4asm/">github.com/maazl/vc4asm</a>.</p>
     <dl>
     </dl>
     <dl>
+      <dt>V0.1.8</dt>
+      <dd>Fixed unary ADD operators to use mux A rather than B.<br>
+        Fixed memory leak on platforms where <tt>va_end</tt> is not a no-op.<br>
+        Fixed disassemble of floating point numbers to be turn around stable.</dd>
       <dt>V0.1.7</dt>
       <dd>Fixed "The unpack option works for none of the source operands" error
         when regfile A unpack is used as first operand of ALU instruction.<br>
