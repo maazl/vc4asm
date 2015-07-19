@@ -578,7 +578,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x43000000, 39, Inst::A_OR }   // 128.0
 ,	{ 0x43000000, 38, Inst::A_FADD }
 ,	{ 0x43000000, 39, Inst::M_V8MIN }
-,	{ 0x42800000, 35, 0x80 } // MUL op 0
+,	{ 0x43000000, 35, 0x80 } // MUL op 0
 ,	{ 0x43000000, 43, 0x80 } // MUL op 0
 ,	{ 0x43000000, 47, 0x80 } // MUL op 0
 ,	{ 0x43800000, 39, Inst::A_FADD } // 256.0
