@@ -288,7 +288,7 @@ exprValue Parser::ParseExpression()
 			// Try label prefix
 			{	string identifier = Token;
 				if (NextToken() != COLON)
-					Fail("Invalid expression. The identifier %s did not evaluate.", identifier.c_str());
+					Fail("Invalid expression. The identifier %s is undefined.", identifier.c_str());
 				if (identifier != "r")
 					Fail("'%s:' is no valid label prefix.", identifier.c_str());
 			}
@@ -400,17 +400,10 @@ exprValue Parser::ParseExpression()
 	 have_value:
 		eval.PushValue(value);
 		goto next;
-	} catch (const string& msg)
+	} catch (const Eval::Fail& msg) // Messages from Eval are not yet enriched.
 	{	throw enrichMsg(msg);
 	}
 }
-
-/*Inst::mux& Parser::accessMux(InstContext ctx)
-{	if (ctx & IC_MUL)
-		return ctx & IC_B ? Instruct.MuxMB : Instruct.MuxMA;
-	else
-		return ctx & IC_B ? Instruct.MuxAB : Instruct.MuxAA;
-}*/
 
 Inst::mux Parser::muxReg(reg_t reg)
 {	if (reg.Type & R_SEMA)
@@ -1982,7 +1975,7 @@ void Parser::ParseFile()
 void Parser::ParseFile(const string& file)
 {	if (Pass2)
 		throw string("Cannot add another file after pass 2 has been entered.");
-	saveContext ctx(*this, new fileContext(CTX_INCLUDE, file, 0));
+	saveContext ctx(*this, new fileContext(CTX_ROOT, file, 0));
 	try
 	{	ParseFile();
 		Filenames.emplace_back(file);
@@ -1999,7 +1992,6 @@ void Parser::ResetPass()
 {	AtMacro = NULL;
 	AtIf.clear();
 	Context.clear();
-	Context.emplace_back(new fileContext(CTX_ROOT, string(), 0));
 	Functions.clear();
 	Macros.clear();
 	LabelsByName.clear();
