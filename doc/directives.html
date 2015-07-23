@@ -52,6 +52,12 @@
         expressions like bare operators.</dd>
     </dl>
     <p>Constants can be used wherever an expression is allowed.</p>
+    <p>There is an important difference between constants with arguments and
+      those without. Constants without arguments are evaluated at the time of
+      the definition, i.e. if they use other constants in the expression body
+      the values are taken at the context of definition.<br>
+      As soon as the argument braces are used this behavior changes. These
+      definitions are evaluated at the time and from the context of invocation.</p>
     <p>The assignment of <tt>.const</tt> and <tt>.lconst</tt> is final, i.e. a
       second assignment to the same identifier is an error. But final
       assignments neither prevent from shadowing in nested contexts nor from <tt>.unset</tt>.<br>
@@ -87,7 +93,9 @@
         and also <tt>.set</tt> etc. to decide what expression should evaluate.</dd>
     </dl>
     <p>Functions are similar to constants with parameters but their body is
-      multi line.</p>
+      multi line. This has the side effect that you can use <a href="#.if"><tt>.if</tt></a>
+      or <a href="#.lset"><tt>.lset</tt></a> to do the calculation of the
+      result.</p>
     <h3>Example</h3>
     <pre>.func vpm_setup(num, stride, dma)<br>  .assert num &lt;= 16 &amp;&amp; num &gt; 0<br>  .assert stride &lt;= 64 &amp;&amp; stride &gt; 0<br>  .assert (dma &amp; ~0xfff) == 0<br>  (num &amp; 0xf) &lt;&lt; 20 | (stride &amp; 0x3f) &lt;&lt; 12 | dma<br>.endf<br>.func v32(y, x)<br>  .assert (y &amp; ~0x30) == 0<br>  .assert (x &amp; ~0xf) == 0<br> &nbsp;0x200 | y | x<br>.endf<br><br>mov vw_setup, vpm_setup(1, 1, v32(0,0))</pre>
     <p>The example above provides a checked version of the example to <a href="#.set"><tt>.set</tt></a>.</p>
