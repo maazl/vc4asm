@@ -18,7 +18,9 @@ string vstringf(const char* format, va_list va)
 	va_copy(va2, va);
 	// first try with small buffer
 	auto count = vsnprintf(buf, sizeof buf, format, va);
-	if (count < sizeof buf)
+	if (count < 0)
+		return string(); // TODO: throw an exception
+	if ((size_t)count < sizeof buf)
 	{	va_end(va2);
 		return string(buf, count);
 	}
@@ -40,6 +42,6 @@ string stringf(const char* format, ...)
 
 string relpath(const string& context, const string& rel)
 {	if (rel.size() && rel.front() == '/')
-		return move(rel);
+		return rel;
 	return string(context, 0, context.rfind('/')+1) + rel;
 }
