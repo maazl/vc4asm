@@ -31,7 +31,7 @@ void Disassembler::appendf(const char* fmt, ...)
 
 void Disassembler::appendImmd(value_t value)
 {	// Check whether likely a float, just a guess
-	if (UseFloat && abs(((value.iValue >> 23) & 0xff) ^ 0x80) <= 10)
+	if (UseFloat && abs(((value.iValue >> 23) & 0xff) ^ 0x80) <= 20)
 		CodeAt += snprintf(CodeAt, Code + sizeof Code - CodeAt, "%.6e", value.fValue);
 	else if (abs(value.iValue) < 256)
 		appendf("%i", value.iValue);
@@ -39,8 +39,9 @@ void Disassembler::appendImmd(value_t value)
 		appendf("0x%x", value.uValue);
 }
 
-void Disassembler::appendPE(uint32_t val, bool sign)
-{	signed char values[16];
+void Disassembler::appendPE(bool sign)
+{	uint32_t val = Instruct.Immd.uValue;
+	signed char values[16];
 	if (sign)
 		for (int pos = 16; pos--; val <<= 1)
 			values[pos] = (((int32_t)val >> 30) & 2) | ((val >> 15) & 1);
@@ -53,8 +54,8 @@ void Disassembler::appendPE(uint32_t val, bool sign)
 	CodeAt[-1] = ']';
 }
 
-const char* Disassembler::packCode(bool mul)
-{	return cPack[mul][Instruct.Pack * (Instruct.PM == mul)];
+void Disassembler::appendPack(bool mul)
+{	append(cPack[mul][Instruct.Pack * (Instruct.PM == mul)]);
 }
 
 void Disassembler::appendSource(Inst::mux mux)
@@ -105,7 +106,7 @@ void Disassembler::DoADD()
 		// Target
 		append(cWreg[Instruct.WS][Instruct.WAddrA]);
 		if (!Instruct.PM && !Instruct.WS)
-			append(cPack[0][Instruct.Pack]);
+			appendPack(false);
 
 		if (opa == 32)
 		{	switch (Instruct.OpA)
@@ -153,7 +154,7 @@ void Disassembler::DoMUL()
 		append(" ");
 		append(cWreg[!Instruct.WS][Instruct.WAddrM]);
 		if (Instruct.PM || Instruct.WS)
-			append(cPack[0][Instruct.Pack]);
+			appendPack(true);
 
 		if (opm == 8)
 		{	if (Instruct.OpM == Inst::M_V8SUBS)
@@ -230,9 +231,17 @@ void Disassembler::DoLDI()
 	append(" ");
 
 	if (Instruct.WAddrA != Inst::R_NOP)
-		appendf("%s%s%s, ", cWreg[Instruct.WS][Instruct.WAddrA], packCode(false), cCC[Instruct.CondA]);
+	{	append(cWreg[Instruct.WS][Instruct.WAddrA]);
+		appendPack(false);
+		append(cCC[Instruct.CondA]);
+		append(", ");
+	}
 	if (Instruct.WAddrM != Inst::R_NOP)
-		appendf("%s%s%s, ", cWreg[!Instruct.WS][Instruct.WAddrM], packCode(true), cCC[Instruct.CondM]);
+	{	append(cWreg[!Instruct.WS][Instruct.WAddrM]);
+		appendPack(true);
+		append(cCC[Instruct.CondM]);
+		append(", ");
+	}
 	if (Instruct.WAddrA == Inst::R_NOP && Instruct.WAddrM == Inst::R_NOP)
 		append("-, ");
 
@@ -240,9 +249,9 @@ void Disassembler::DoLDI()
 	{default:
 		return appendImmd(Instruct.Immd);
 	 case Inst::L_PES:
-		return appendPE(Instruct.Immd.uValue, true);
+		return appendPE(true);
 	 case Inst::L_PEU:
-		return appendPE(Instruct.Immd.uValue, false);
+		return appendPE(false);
 	}
 }
 

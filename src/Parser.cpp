@@ -971,7 +971,7 @@ void Parser::assembleMOV(int mode)
 
 void Parser::assembleBRANCH(int relative)
 {
-	if (!Instruct.isVirgin())
+	if (Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP || Instruct.Sig != Inst::S_NONE)
 		Fail("A branch instruction must be the only one in a line.");
 
 	Instruct.Sig = Inst::S_BRANCH;
@@ -1518,10 +1518,10 @@ void Parser::parseELSEIF(int)
 	if (!AtIf.size())
 		Fail(".elseif without .if");
 
-	if (AtIf.back().State == 0)
+	if (AtIf.back().State == IS_FALSE)
 		AtIf.back().State = doCondition();
 	else
-		AtIf.back().State |= 2;
+		AtIf.back().State |= IS_ELSE;
 }
 
 void Parser::parseELSE(int)
@@ -1534,6 +1534,8 @@ void Parser::parseELSE(int)
 	if (NextToken() != END)
 		Msg(ERROR, "Expected end of line. .else has no arguments.");
 
+	// Hack for .else
+	// State transition from IS_FALSE to IF_TRUE and from IF_TRUE to IS_FALSE|IS_ELSE
 	++AtIf.back().State;
 }
 

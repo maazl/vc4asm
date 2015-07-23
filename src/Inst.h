@@ -14,6 +14,7 @@
 using namespace std;
 
 
+/// Worker class to assemble or disassemble QPU instruction words.
 struct Inst
 {	/// Signaling bits
 	enum sig : uint8_t
@@ -88,7 +89,7 @@ struct Inst
 	,	B_ANYCC   ///< any carry clear
 	,	B_AL = 15 ///< always (default)
 	};
-	/// LAU write condition
+	/// ALU write condition
 	enum conda : uint8_t
 	{	C_NEVER   ///< Never (NB gates ALU – useful for LDI instructions to save ALU power)
 	,	C_AL      ///< Always (default)
@@ -101,54 +102,56 @@ struct Inst
 	};
 	/// Pack mode
 	enum pack : uint8_t
-	{	P_32
-	,	P_16a
-	,	P_16b
-	,	P_8abcd
-	,	P_8a
-	,	P_8b
-	,	P_8c
-	,	P_8d
-	,	P_32S
-	,	P_16aS
-	,	P_16bS
-	,	P_8abcdS
-	,	P_8aS
-	,	P_8bS
-	,	P_8cS
-	,	P_8dS
+	{	P_32      ///< write 32 bit = no pack
+	,	P_16a     ///< write lower 16 bits only
+	,	P_16b     ///< write lower 16 bits to the upper 16 bits
+	,	P_8abcd   ///< replicate low byte over all 4 bytes
+	,	P_8a      ///< write low byte only
+	,	P_8b      ///< write low byte to bits 8 to 15
+	,	P_8c      ///< write low byte to bits 16 to 23
+	,	P_8d      ///< write low byte to bits 24 to 31
+	,	P_32S     ///< write 32 bit with saturation
+	,	P_16aS    ///< write lower 16 bits only with saturation
+	,	P_16bS    ///< write lower 16 bits to the upper 16 bits with saturation
+	,	P_8abcdS  ///< replicate low byte over all 4 bytes with saturation
+	,	P_8aS     ///< write low byte only with saturation
+	,	P_8bS     ///< write low byte to bits 8 to 15 with saturation
+	,	P_8cS     ///< write low byte to bits 16 to 23 with saturation
+	,	P_8dS     ///< write low byte to bits 24 to 31 with saturation
 	};
 	/// Unpack mode
 	enum unpack : uint8_t
-	{	U_32
-	,	U_16a
-	,	U_16b
-	,	U_8dr
-	,	U_8a
-	,	U_8b
-	,	U_8c
-	,	U_8d
+	{	U_32      ///< read 32 bit = no unpack
+	,	U_16a     ///< read lower 16 bit
+	,	U_16b     ///< read higher 16 bit
+	,	U_8dr     ///< replicate bits 24 to 31 over all 4 bytes
+	,	U_8a      ///< read low byte
+	,	U_8b      ///< read bits 8 to 15
+	,	U_8c      ///< read bits 16 to 23
+	,	U_8d      ///< read bits 24 to 31
 	};
 	/// ALU input multiplexer values
 	enum mux : uint8_t
-	{	X_R0
-	,	X_R1
-	,	X_R2
-	,	X_R3
-	,	X_R4
-	,	X_R5
-	,	X_RA     ///< Register file A
-	,	X_RB     ///< Register file B
+	{	X_R0      ///< Accumulator r0
+	,	X_R1      ///< Accumulator r1
+	,	X_R2      ///< Accumulator r2
+	,	X_R3      ///< Accumulator r3
+	,	X_R4      ///< Accumulator r4
+	,	X_R5      ///< Accumulator r5
+	,	X_RA      ///< Register file A
+	,	X_RB      ///< Register file B
 	};
 	/// Special named registers
+	/// @remarks There are many more named registers, but none of them have a special meaning in this context.
+	/// See Parser::regMap for a list of all registers.
 	enum reg : uint8_t
 	{	R_NOP = 39
 	};
 	/// ldi variant
 	enum ldmode : uint8_t
-	{	L_LDI = 0///< load
-	,	L_PES = 1///< load immediate per element signed
-	,	L_PEU = 3///< load immediate per element unsigned
+	{	L_LDI = 0 ///< load (as it is)
+	,	L_PES = 1 ///< load immediate per element signed
+	,	L_PEU = 3 ///< load immediate per element unsigned
 	,	L_SEMA = 4///< semaphore instruction
 	};
 
@@ -173,7 +176,7 @@ struct Inst
 		};
 		struct            // ldi, sema, branch
 		{	ldmode LdMode;  ///< load immediate mode
-			value_t Immd;  ///< immediate value
+			value_t Immd;   ///< immediate value
 		};
 	};
 	union
@@ -195,17 +198,26 @@ struct Inst
 	/// i.e. X_RA/RAddrA and X_RB/RAddrB are both options.
 	static bool isRRegAB(uint8_t reg) { return ((1ULL<<reg) & 0x0009008900000000ULL) != 0; }
 	/// Check whether a register write to register file A and B is interchangeable,
-	/// i.e. Instr.WS is not fixed.
+	/// i.e. \ref WS is not fixed.
 	static bool isWRegAB(uint8_t reg) { return ((1ULL<<reg) & 0xfff9f9df00000000ULL) != 0; }
 
+	/// Simulate a ADD ALU operation
+	/// @param op ADD ALU operator
+	/// @param l Left operand and result
+	/// @param r Right operand
+	/// @return false: Invalid operator
 	static bool eval(opadd op, value_t& l, value_t r);
+	/// Simulate a MUL ALU operation
+	/// @param op MUL ALU operator
+	/// @param l Left operand and result
+	/// @param r Right operand
+	/// @return false: Invalid operator
 	static bool eval(opmul op, value_t& l, value_t r);
 
-	/// Reset instruction to its initial state (nop).
+	/// Reset instruction to its initial state, i.e. \c nop.
 	void       reset();
+	/// Create initial instruction, i.e. \c nop.
 	Inst()     { reset(); }
-	/// Check whether this instruction instance is not in use.
-	bool       isVirgin() const;
 	/// Check whether ADD ALU is in use
 	bool       isADD() const { return WAddrA != R_NOP || OpA != Inst::A_NOP; }
 	/// Check whether MUL ALU is in use
@@ -224,12 +236,13 @@ struct Inst
 	value_t    SMIValue() const;
 
 	/// Flags set by ADD ALU
-	/// @pre Sig != S_BRA
+	/// @pre Sig < S_LDI
 	bool       isSFADD() const { return SF && OpA != A_NOP && CondA != C_NEVER; }
 	/// Flags set by MUL ALU
-	/// @pre Sig != S_BRA
+	/// @pre Sig < S_LDI
 	bool       isSFMUL() const { return SF && !(OpA != A_NOP && CondA != C_NEVER); }
-		/// Check whether an ADD operator is an unary operator.
+	/// Check whether an ADD operator is an unary operator.
+	/// @pre Sig < S_LDI
 	bool       isUnary() const { return (0x01800180 & (1<<OpA)) != 0; }
 
 	/// Try to swap ADD and MUL ALU of the current instruction

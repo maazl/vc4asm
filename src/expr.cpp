@@ -51,17 +51,3 @@ const char* type2string(valueType type)
 		case V_LABEL: return "label";
 	}
 }
-
-bool operator ==(exprValue l, exprValue r)
-{	if (l.Type != r.Type)
-		return false;
-	if (l.Type != V_REG)
-		return l.uValue == r.uValue;
-	if ( l.rValue.Num != r.rValue.Num
-		|| l.rValue.Rotate != r.rValue.Rotate
-		|| (((l.rValue.Type|r.rValue.Type)&R_AB  ) && !(l.rValue.Type&r.rValue.Type&R_AB  ))
-		|| (((l.rValue.Type|r.rValue.Type)&R_RDWR) && !(l.rValue.Type&r.rValue.Type&R_RDWR))
-		|| (((l.rValue.Type|r.rValue.Type)&R_SEMA) && !(l.rValue.Type&r.rValue.Type&R_SEMA)) )
-		return false;
-	return true;
-}

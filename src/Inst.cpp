@@ -198,7 +198,7 @@ bool Inst::trySwap(bool mul)
 			if (MuxMA != MuxMB)
 				return false;
 			OpM = M_V8MIN;  break;
-		}
+		}                OpA = A_NOP;
 		MuxMA = MuxAA;   MuxAA = X_R0;
 		MuxMB = MuxAB;   MuxAB = X_R0;
 	}
@@ -354,14 +354,6 @@ void Inst::decode(uint64_t code)
 	WS     = !!(code & 1ULL<<44);
 	WAddrA = (uint8_t)(code >> 38 & 0x3f);
 	WAddrM = (uint8_t)(code >> 32 & 0x3f);
-}
-
-bool Inst::isVirgin() const
-{	return Sig == S_NONE
-		&& WAddrA == R_NOP && WAddrM == R_NOP
-		&& RAddrA == R_NOP && RAddrB == R_NOP
-		&& OpA == A_NOP && OpM == M_NOP
-		&& !SF;
 }
 
 value_t Inst::SMIValue() const
