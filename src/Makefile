@@ -26,15 +26,15 @@ clean:
 	$(LD) $(FLAGS) $(LDFLAGS) -o $@ $(DISOBJECTS) $(LIBS)
 
 %.cpp : %.h
-utils$(O) : utils.cpp utils.h
-expr$(O) : expr.cpp expr.h utils.h
-Inst$(O) : Inst.cpp Inst.h expr.h
-Eval$(O) : Eval.cpp Eval.h Inst.h expr.h utils.h
-Parser$(O) : Parser.cpp Parser.h Eval.h Inst.h expr.h utils.h Parser.tables.cpp
-Validator$(O) : Validator.cpp Validator.h utils.h Inst.h expr.h
-Disassembler$(O) : Disassembler.cpp Disassembler.h Inst.h utils.h Disassembler.tables.cpp
-vc4asm$(O) : vc4asm.cpp Parser.h Eval.h Inst.h expr.h utils.h Validator.h
-vc4dis$(O) : vc4dis.cpp Disassembler.h Inst.h expr.h Validator.h utils.h
+../obj/utils$(O) : utils.cpp utils.h
+../obj/expr$(O) : expr.cpp expr.h utils.h
+../obj/Inst$(O) : Inst.cpp Inst.h expr.h
+../obj/Eval$(O) : Eval.cpp Eval.h Inst.h expr.h utils.h
+../obj/Parser$(O) : Parser.cpp Parser.h Eval.h Inst.h expr.h utils.h Parser.tables.cpp
+../obj/Validator$(O) : Validator.cpp Validator.h utils.h Inst.h expr.h
+../obj/Disassembler$(O) : Disassembler.cpp Disassembler.h Inst.h utils.h Disassembler.tables.cpp
+../obj/vc4asm$(O) : vc4asm.cpp Parser.h Eval.h Inst.h expr.h utils.h Validator.h
+../obj/vc4dis$(O) : vc4dis.cpp Disassembler.h Inst.h expr.h Validator.h utils.h
 
 Inst.h : expr.h
 Eval.h : expr.h
