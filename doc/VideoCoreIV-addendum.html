@@ -15,7 +15,7 @@
     <p>Unlike the documentation suggests the <tt>STRIDE</tt> field is 16 bits
       wide. Probably just a typo.</p>
     <h2>Instruction constraints</h2>
-    <h3>No conditional write to <tt>t0s</tt>, <tt>t1s</tt>.</h3>
+    <h3>No conditional write to <tt>t0s</tt>, <tt>t1s</tt></h3>
     <p>A write to the TMU retiring register (TMU0_S, TMU1_S) must not use
       conditional write access. Although the conditional write itself works the
       TMU fifo is triggered unconditional to process the request with undefined
@@ -32,5 +32,9 @@
     <p>The above code fragment dynamically acquires a semaphore depending on the
       number in the r0 register. This is the shortest possible code fragment to
       do this task.</p>
+    <h3>MUL ALU pack modes and I/O register targets</h3>
+    <p>The MUL ALU pack modes that write only a single byte are not available
+      for I/O register targets, i.e. <tt>waddr_mul</tt> &ge; 32. The write only
+      hardware registers cannot write slices of a word.</p>
   </body>
 </html>
