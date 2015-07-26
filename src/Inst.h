@@ -201,27 +201,23 @@ struct Inst
 	/// i.e. \ref WS is not fixed.
 	static bool isWRegAB(uint8_t reg) { return ((1ULL<<reg) & 0xfff9f9df00000000ULL) != 0; }
 
-	/// Simulate a ADD ALU operation
-	/// @param op ADD ALU operator
+	/// Simulate a ADD ALU operation of the current instruction.
 	/// @param l Left operand and result
 	/// @param r Right operand
 	/// @return false: Invalid operator
-	static bool eval(opadd op, value_t& l, value_t r);
-	/// Simulate a MUL ALU operation
-	/// @param op MUL ALU operator
+	bool       evalADD(value_t& l, value_t r);
+	/// Simulate a MUL ALU operation of the current instruction.
 	/// @param l Left operand and result
 	/// @param r Right operand
 	/// @return false: Invalid operator
-	static bool eval(opmul op, value_t& l, value_t r);
+	bool       evalMUL(value_t& l, value_t r);
+	/// Simulate pack operation of the current instruction.
+	bool       evalPack(value_t& r, value_t v, bool mul);
 
 	/// Reset instruction to its initial state, i.e. \c nop.
 	void       reset();
 	/// Create initial instruction, i.e. \c nop.
 	Inst()     { reset(); }
-	/// Check whether ADD ALU is in use
-	bool       isADD() const { return WAddrA != R_NOP || OpA != Inst::A_NOP; }
-	/// Check whether MUL ALU is in use
-	bool       isMUL() const { return WAddrM != R_NOP || OpM != Inst::M_NOP; }
 
 	/// Semaphore access type
 	/// @return true: release, false: acquire
@@ -234,6 +230,13 @@ struct Inst
 	/// @return effective value represented by SImmd
 	/// @pre Sig == S_SMI && SImmd < 48
 	value_t    SMIValue() const;
+
+	/// Check whether ADD ALU is in use
+	/// @pre Sig < S_LDI
+	bool       isADD() const { return WAddrA != R_NOP || OpA != Inst::A_NOP; }
+	/// Check whether MUL ALU is in use
+	/// @pre Sig < S_LDI
+	bool       isMUL() const { return WAddrM != R_NOP || OpM != Inst::M_NOP; }
 
 	/// Flags set by ADD ALU
 	/// @pre Sig < S_LDI

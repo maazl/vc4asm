@@ -6,6 +6,7 @@
 
 #define VEC_COUNT 3*16
 #define RES_COUNT 38
+#define RES_COUNT2 24
 #define GPU_MEM_FLG 0xC // cached=0xC; direct=0x4
 
 static const unsigned code[] =
@@ -23,18 +24,32 @@ static const unsigned input[VEC_COUNT*2] =
 	0x41800000,0x41800000, 0x42000000,0x42000000, 0x42800000,0x42800000, 0x43000000,0x43000000
 };
 
+static const unsigned input2[] =
+{
+	#include "numbers.hex"
+};
+
 static const char op[RES_COUNT][8] =
 {	"fadd", "fsub", "fmin", "fmax", "fminabs", "fmaxabs", "ftoi", "itof",
 	"add", "sub", "shr", "asr", "ror", "shl", "min", "max", "and", "or", "xor", "not", "clz",
 	"fmul", "mul24", "v8muld", "v8min", "v8max", "v8adds", "v8subs",
-	"A0", "A9", "A10", "A11", "A25", "A26", "A27", "A28", "A29", "M0"
+	"A0", "A9", "A10", "A11", "A25", "A26", "A27", "A28", "A29", "M0",
+};
+
+static const char pack[RES_COUNT2][8] =
+{	"M8abcds", "M8a", "M8b", "M8c", "M8d",
+	"A16a", "A16b", "Af16a", "Af16b", "A8abcd", "A8a", "A8b", "A8c", "A8d",
+	"A32s", "A16as", "A16bs", "Af16as", "Af16bs", "A8abcds", "A8as", "A8bs", "A8cs", "A8ds"
 };
 
 struct GPU
 {
 	unsigned code[sizeof code / sizeof *code];
-	unsigned data[VEC_COUNT*(2+RES_COUNT)]; // 2 input + output
-	unsigned unif[3];
+	unsigned input[VEC_COUNT*2];
+	unsigned output[VEC_COUNT*RES_COUNT];
+	unsigned input2[(sizeof input2/sizeof *input2 + 0xf) & ~0xf];
+	unsigned output2[((sizeof input2/sizeof *input2 + 0xf) & ~0xf) * RES_COUNT2];
+	unsigned unif[6];
 	unsigned mail[2];
 	unsigned handle;
 	int      mb;
@@ -110,22 +125,36 @@ int main()
 	memcpy((void*)gpu->code, code, sizeof gpu->code);
 
 	gpu->unif[0] = VEC_COUNT/16;
-	gpu->unif[1] = gpu->mail[1] + offsetof(struct GPU, data);
-	gpu->unif[2] = gpu->mail[1] + offsetof(struct GPU, data) + 2*VEC_COUNT*4;
+	gpu->unif[1] = gpu->mail[1] + offsetof(struct GPU, input);
+	gpu->unif[2] = gpu->mail[1] + offsetof(struct GPU, output);
+	gpu->unif[3] = (sizeof input2/sizeof *input2 + 0xf) / 16;
+	gpu->unif[4] = gpu->mail[1] + offsetof(struct GPU, input2);
+	gpu->unif[5] = gpu->mail[1] + offsetof(struct GPU, output2);
 
-	memset((void*)gpu->data, 0xbb, sizeof gpu->data);
-	memcpy((void*)gpu->data, input, sizeof input);
+	memcpy((void*)gpu->input, input, sizeof gpu->input);
+	memset((void*)gpu->output, 0xbb, sizeof gpu->output);
+	memcpy((void*)gpu->input2, input2, sizeof gpu->input2);
+	memset((void*)gpu->output2, 0xbb, sizeof gpu->output2);
 
 	printf("Exec: %x\n", gpu_execute(gpu));
 
 	for (i = 0; i < VEC_COUNT; ++i)
 	{
-		unsigned A = gpu->data[2*i];
-		unsigned B = gpu->data[2*i+1];
-		printf("\n A\t%i\t0x%08x\n B\t%i\t0x%08x\n", A, A, B, B);
-		volatile unsigned* rp = &gpu->data[2*VEC_COUNT+RES_COUNT*i];
+		unsigned A = gpu->input[2*i];
+		unsigned B = gpu->input[2*i+1];
+		printf("\n A\t%i\t0x%08x\t%g\n B\t%i\t0x%08x\t%g\n", A, A, *(float*)&A, B, B, *(float*)&B);
+		volatile unsigned* rp = &gpu->output[i*RES_COUNT];
 		for (j = 0; j < RES_COUNT; ++j)
-			printf("%s\t%i\t0x%08x\n", op[j], rp[j], rp[j]);
+			printf("%s\t%i\t0x%08x\t%g\n", op[j], rp[j], rp[j], *(float*)(rp+j));
+	}
+
+	for (i = 0; i < sizeof input2/sizeof *input2; ++i)
+	{
+		unsigned A = gpu->input2[i];
+		printf("\n A\t%i\t0x%08x\t%g\n", A, A, *(float*)&A);
+		volatile unsigned* rp = &gpu->output2[i*RES_COUNT2];
+		for (j = 0; j < RES_COUNT2; ++j)
+			printf("%s\t%i\t0x%08x\t%g\n", pack[j], rp[j], rp[j], *(float*)(rp+j));
 	}
 
 	gpu_release(gpu);

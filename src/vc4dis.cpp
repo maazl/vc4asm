@@ -108,7 +108,7 @@ static void file_load_x64(const char *filename, vector<uint64_t>& memory)
 
 int main(int argc, char * argv[]) {
 	if (argc < 2) {
-		fputs("vc4dis V0.1.8\n"
+		fputs("vc4dis V0.1.9\n"
 			"Usage: vc4dis [-x[32|64]] [-M] [-F] [-v] [-b <addr>] [-o <out_file>] [-V] <code_file(s)>\n"
 			" -x    Hexadecimal input, comma separated (rather than binary).\n"
 			" -x64  64 bit formatted hexadecimal input.\n"

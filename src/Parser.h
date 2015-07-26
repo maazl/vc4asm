@@ -96,7 +96,7 @@ class Parser
 	}             regMap[];///< Register lookup table, ordered by Name.
 	/// Reference to a ADD \e or MUL ALU operator.
 	class opAddMul
-	{	int8_t      Op;      ///< ADD or MUL ALU opcode, bit 7 set: MUL ALU, bit 6 set: undocumented opcode
+	{	const int8_t Op;     ///< ADD or MUL ALU opcode, bit 7 set: MUL ALU, bit 6 set: undocumented opcode
 	 public:
 		/// Create from ADD ALU OP code.
 		constexpr   opAddMul(Inst::opadd op) : Op(op) {}
@@ -118,11 +118,28 @@ class Parser
 		/// @return MUL ALU OP code.
 		Inst::opmul asMul() const { return (Inst::opmul)(Op & 0x7); }
 	};
+	/// Pack mode reference
+	class packRaMul
+	{	const int8_t Pack;   ///< Bit 0..3: desired pack mode, bit 7: PM.
+	 public:
+		/// Default constructor: do not require a pack mode.
+		constexpr   packRaMul() : Pack(Inst::P_32) {}
+		/// Require a pack mode.
+		/// @param pack Pack mode, see Inst::pack. If you intend PM = 1 precede the pack mode with a minus sign.
+		constexpr   packRaMul(int pack) : Pack((int8_t)(pack < 0 ? (-pack|0x80) : pack)) {}
+		/// Check whether this instance requires any pack mode.
+		bool        operator!() const { return !Pack; }
+		/// Get the required pack mode for Inst::Pack.
+		Inst::pack  pack() const { return (Inst::pack)(Pack & 0xf); }
+		/// Get the required PM flag for Inst::PM.
+		bool        mode() const { return Pack < 0; }
+	};
 	/// Entry of the immediate value lookup table, POD, compatible with binary_search().
 	static const struct smiEntry
 	{	uint32_t    Value;   ///< Desired immediate value (result)
 		uint8_t     SImmd;   ///< Small immediate required to achieve this result.
 		opAddMul    OpCode;  ///< ALU opcode to achieve this result.
+		packRaMul   Pack;    ///< Pack mode to achieve the desired result.
 	}             smiMap[];///< Immediate value lookup table used for <tt>mov rx, immd</tt>.
 	/// Context of a current expression during parse, bit vector
 	enum InstContext : uint8_t

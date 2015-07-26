@@ -19,8 +19,8 @@ static inline void muld(uint8_t& l, uint8_t r)
 	l = (uint8_t)((l * r) / 65025);
 }
 
-bool Inst::eval(opadd op, value_t& l, value_t r)
-{	switch (op)
+bool Inst::evalADD(value_t& l, value_t r)
+{	switch (OpA)
 	{default:
 		return false;
 	 case A_FADD:
@@ -86,14 +86,15 @@ bool Inst::eval(opadd op, value_t& l, value_t r)
 	}
 	return true;
 }
-bool Inst::eval(opmul op, value_t& l, value_t r)
-{	switch (op)
+bool Inst::evalMUL(value_t& l, value_t r)
+{	switch (OpM)
 	{default:
 		return false;
 	 case M_FMUL:
 		l.fValue *= r.fValue; break;
 	 case M_MUL24:
-		// TODO: 24 bit mask
+		r.iValue &= 0xFFFFFF;
+		l.iValue &= 0xFFFFFF;
 		l.iValue *= r.iValue; break;
 	 case M_V8MULD:
 		muld(l.cValue[0], r.cValue[0]);
@@ -126,6 +127,95 @@ bool Inst::eval(opmul op, value_t& l, value_t r)
 		subs(l.cValue[3], r.cValue[3]);
 		break;
 	}
+	return true;
+}
+
+bool Inst::evalPack(value_t& r, value_t v, bool mul)
+{	int32_t mask = -1;
+	if (PM)
+	{	if (mul) // MUL ALU pack mode?
+			switch (Pack)
+			{default:
+				return false;
+
+			 case P_8a:
+			 case P_8b:
+			 case P_8c:
+			 case P_8d:
+				mask = 0xff << ((Pack & 3) * 8);
+			 case P_8abcd:
+				if (v.fValue <= 0.F)
+					v.iValue = 0;
+				else if (v.fValue >= 1.0F)
+					v.iValue = 255;
+				else
+					v.iValue = (int)(v.fValue * 255); // TODO: is the rounding correct?
+				v.iValue *= 0x1010101; // replicate bytes
+				r.iValue &= ~mask;
+				r.iValue |= v.iValue;
+				return true;
+
+			 case P_32:;
+			}
+	} else
+	{	if (mul == WS) // regfile A pack mode?
+			switch (Pack)
+			{case P_16a:
+				mask = 0xffff;
+				goto pack16_cont;
+			 case P_16b:
+				mask = 0xffff0000;
+				goto pack16_cont;
+			 case P_16aS:
+				mask = 0xffff;
+				goto pack16S_cont;
+			 case P_16bS:
+				mask = 0xffff0000;
+			 pack16S_cont:
+				if (v.iValue < 0x8000)
+					v.iValue = 0x8000;
+				else if (v.iValue > 0x7fff)
+					v.iValue = 0x7fff;
+			 pack16_cont:
+				if (mul ? OpM == M_MUL24 : 0x17e & (1<<OpA))
+					throw string("The 16 bit floating point pack modes are not yet implemented."); // TODO
+				v.iValue &= 0xffff;
+				v.iValue *= 0x10001; // replicate words
+				goto pack_cont;
+
+			 case P_8a:
+			 case P_8b:
+			 case P_8c:
+			 case P_8d:
+				mask = 0xff << ((Pack & 3) * 8);
+				goto pack8_cont;
+			 case P_8aS:
+			 case P_8bS:
+			 case P_8cS:
+			 case P_8dS:
+				mask = 0xff << ((Pack & 3) * 8);
+			 case P_8abcdS:
+				if (v.iValue < 0)
+					v.iValue = 0;
+				else if (v.iValue > 255)
+					v.iValue = 255;
+			 case P_8abcd:
+			 pack8_cont:
+				v.iValue &= 0xff;
+				v.iValue *= 0x1010101; // replicate bytes
+			 pack_cont:
+				r.iValue &= ~mask;
+				r.iValue |= v.iValue;
+				return true;
+
+			 case P_32S:
+				throw string("The 32 bit pack mode with saturation is not yet implemented."); // TODO
+
+			 case P_32:;
+			}
+	}
+	// no pack
+	r = v;
 	return true;
 }
 
@@ -212,16 +302,16 @@ void Inst::optimize()
 {	value_t val;
 	switch (Sig)
 	{case S_SMI:
-		if (OpM == M_NOP && MuxAA == X_RB && MuxAB == X_RB && SImmd < 48)
+		if (WAddrM == R_NOP && MuxAA == X_RB && MuxAB == X_RB && SImmd < 48)
 		{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
 			val = SMIValue();
-			if (eval(OpA, val, val))
+			if (evalADD(val, val) && evalPack(val, val, false))
 				goto mkLDI;
 		}
 		if (OpA == A_NOP && MuxMA == X_RB && MuxMB == X_RB && SImmd < 48)
 		{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
 			val = SMIValue();
-			if (eval(OpM, val, val))
+			if (evalMUL(val, val) && evalPack(val, val, true))
 				goto mkLDI;
 		}
 	 default:
@@ -263,6 +353,8 @@ void Inst::optimize()
 		Sig = S_LDI;
 		LdMode = L_LDI;
 		Immd = val;
+		PM = false;
+		Pack = P_32;
 	 case S_LDI: // ldi, sema
 		if (WAddrA == R_NOP && !SF)
 			CondA = C_NEVER;

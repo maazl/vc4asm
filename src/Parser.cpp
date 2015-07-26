@@ -934,9 +934,15 @@ void Parser::assembleMOV(int mode)
 			{	if ( (Extensions || !si->OpCode.isExt())
 					&& ( Instruct.Sig == Inst::S_NONE
 						|| (Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd) )
+					&& ( !si->Pack || Instruct.Pack == Inst::P_32
+						|| (Instruct.Pack == si->Pack.pack() && Instruct.PM == si->Pack.mode()) )
 					&& ((!si->OpCode.isMul() ^ useMUL) || Instruct.trySwap(si->OpCode.isMul())) )
 				{	Instruct.Sig   = Inst::S_SMI;
 					Instruct.SImmd = si->SImmd;
+					if (!!si->Pack)
+					{	Instruct.Pack = si->Pack.pack();
+						Instruct.PM   = si->Pack.mode();
+					}
 				 mov0:
 					if (si->OpCode.isMul())
 					{	Instruct.MuxMA = Instruct.MuxMB = Inst::X_RB;
@@ -1396,7 +1402,7 @@ void Parser::parseSET(int flags)
 	string name = Token;
 	switch (NextToken())
 	{default:
-		Fail("Directive .set requires ', <value>' or '(<arguments>) <value>'. Fount %s.", Token.c_str());
+		Fail("Directive .set requires ', <value>' or '(<arguments>) <value>'. Found %s.", Token.c_str());
 	 case BRACE1:
 		{	function func(*Context.back());
 		 next:

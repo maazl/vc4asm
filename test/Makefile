@@ -7,11 +7,19 @@ clean :
 
 .SECONDARY :
 
-shader_%.strip : shader_%.hex
+%.strip : %.hex
 	sed 's/\s*\/\/.*//' $< >$@
 
 test_% : gpu_fft_%.hex shader_%.strip
 	diff $^
 
 gpu_fft_%.hex : gpu_fft_%.qasm gpu_fft.qinc gpu_fft_ex.qinc ../bin/vc4asm
+	../bin/vc4asm -V -c $@ ../share/vc4.qinc $<
+
+test.strip : test.hex
+
+test : test.hex test.strip
+	diff $^
+
+test.hex : test.qasm ../bin/vc4asm
 	../bin/vc4asm -V -c $@ ../share/vc4.qinc $<

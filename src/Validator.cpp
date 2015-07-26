@@ -186,10 +186,14 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 				|| (Instruct.Sig == Inst::S_LDI && (Instruct.LdMode & Inst::L_SEMA)) )
 			+ (regWA == 45 || regWA == 46 || regWB == 45 || regWB == 46 || Instruct.Sig == Inst::S_LOADC || Instruct.Sig == Inst::S_LDCEND) ) > 1 )
 			Message(At, "More than one access to TMU, TLB or mutex/semaphore within one instruction.");
-		if ( Instruct.Sig != Inst::S_BRANCH
-			&& ( ((0x1100000000000000ULL & (1ULL << Instruct.WAddrA)) && Instruct.CondA != Inst::C_AL)
-				|| ((0x1100000000000000ULL & (1ULL << Instruct.WAddrM)) && Instruct.CondM != Inst::C_AL) ))
-			Message(At, "Conditional write to TMU does not work.");
+		// Some combinations that do not work
+		if (Instruct.Sig != Inst::S_BRANCH)
+		{	if ( ((0x1100000000000000ULL & (1ULL << Instruct.WAddrA)) && Instruct.CondA != Inst::C_AL)
+				|| ((0x1100000000000000ULL & (1ULL << Instruct.WAddrM)) && Instruct.CondM != Inst::C_AL) )
+				Message(At, "Conditional write to TMU does not work.");
+			if (Instruct.PM && (Instruct.Pack & 0xc) == Inst::P_8a && Instruct.WAddrM >= 32 && Instruct.WAddrM != Inst::R_NOP)
+				Message(At, "Pack modes with partial writes do not work for peripheral registers.");
+		}
 		// Update last used fields
 		st.LastRreg[0][regRA] = At;
 		st.LastRreg[!Inst::isRRegAB(regRB)][regRB] = At;

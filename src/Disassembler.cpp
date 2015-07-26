@@ -96,45 +96,56 @@ void Disassembler::DoADD()
 		opa = 32;
 
 	append(cOpA[opa]);
-	if (opa != Inst::A_NOP)
-	{	append(cCC[Instruct.CondA]);
-		if (Instruct.isSFADD())
-			append(".setf");
-		append(" ");
+	if (opa == Inst::A_NOP)
+		return;
 
-		// Parameters for ADD ALU
-		// Target
-		append(cWreg[Instruct.WS][Instruct.WAddrA]);
-		if (!Instruct.PM && !Instruct.WS)
+	append(cCC[Instruct.CondA]);
+	if (Instruct.isSFADD())
+		append(".setf");
+	append(" ");
+
+	// Parameters for ADD ALU
+	// Target
+	append(cWreg[Instruct.WS][Instruct.WAddrA]);
+	bool unpack = false;
+	if (!Instruct.PM && !Instruct.WS)
+	{	if (0x0909 & (1<<Instruct.Pack))
+			unpack = true;
+		else
 			appendPack(false);
-
-		if (opa == 32)
-		{	switch (Instruct.OpA)
-			{case Inst::A_SUB:
-			 case Inst::A_XOR:
-			 case Inst::A_V8SUBS:
-				return append(", 0");
-			 default:;
-			}
-			if (Instruct.Sig == Inst::S_SMI && Instruct.MuxAB == Inst::X_RB)
-			{	// constant => evaluate
-				value_t value(Instruct.SMIValue());
-				Inst::eval(Instruct.OpA, value, value);
-				append(", ");
-				appendImmd(value);
-				return;
-			}
-		}
-
-		appendSource(Instruct.MuxAA);
-
-		if (opa != 32 && !isUnary)
-			appendSource(Instruct.MuxAB);
 	}
+
+	if (opa == 32)
+	{	switch (Instruct.OpA)
+		{case Inst::A_SUB:
+		 case Inst::A_XOR:
+		 case Inst::A_V8SUBS:
+			return append(", 0");
+		 default:;
+		}
+		if (Instruct.Sig == Inst::S_SMI && Instruct.MuxAB == Inst::X_RB)
+		{	// constant => evaluate
+			value_t value(Instruct.SMIValue());
+			Instruct.evalADD(value, value);
+			if (unpack)
+				Instruct.evalPack(value, value, false);
+			append(", ");
+			appendImmd(value);
+			return;
+		}
+	}
+
+	appendSource(Instruct.MuxAA);
+
+	if (opa != 32 && !isUnary)
+		appendSource(Instruct.MuxAB);
 }
 
 void Disassembler::DoMUL()
 {
+	if (!Instruct.isMUL())
+		return;
+
 	uint8_t opm = Instruct.OpM;
 
 	if ( UseMOV && Instruct.MuxMA == Instruct.MuxMB // Both inputs equal and
@@ -142,35 +153,40 @@ void Disassembler::DoMUL()
 			|| (Instruct.Sig == Inst::S_SMI && Instruct.MuxMB == Inst::X_RB) )) // small immediate
 		opm = 8;
 
-	if (opm != Inst::M_NOP)
-	{	append("; ");
-		append(cOpM[opm]);
-		append(cCC[Instruct.CondM]);
-		if (Instruct.isSFMUL())
-			append(".setf");
-		if (Instruct.Sig == Inst::S_SMI && Instruct.SImmd >= 48)
-			appendf(".rot %d,", Instruct.SImmd - 48);
+	append("; ");
+	append(cOpM[opm]);
+	append(cCC[Instruct.CondM]);
+	if (Instruct.isSFMUL())
+		append(".setf");
+	if (Instruct.Sig == Inst::S_SMI && Instruct.SImmd >= 48)
+		appendf(".rot %d,", Instruct.SImmd - 48);
 
-		append(" ");
-		append(cWreg[!Instruct.WS][Instruct.WAddrM]);
-		if (Instruct.PM || Instruct.WS)
+	append(" ");
+	append(cWreg[!Instruct.WS][Instruct.WAddrM]);
+	bool unpack = false;
+	if ((Instruct.PM || Instruct.WS))
+	{	if (0x0009 & (1<<Instruct.Pack))
+			unpack = true;
+		else
 			appendPack(true);
-
-		if (opm == 8)
-		{	if (Instruct.OpM == Inst::M_V8SUBS)
-				return append(", 0");
-			if (Instruct.Sig == Inst::S_SMI && Instruct.MuxMB == Inst::X_RB)
-			{	// constant => evaluate
-				value_t value(Instruct.SMIValue());
-				Inst::eval(Instruct.OpM, value, value);
-				append(", ");
-				appendImmd(value);
-				return;
-			}
-		} else
-			appendSource(Instruct.MuxMA);
-		appendSource(Instruct.MuxMB);
 	}
+
+	if (opm == 8)
+	{	if (Instruct.OpM == Inst::M_V8SUBS)
+			return append(", 0");
+		if (Instruct.Sig == Inst::S_SMI && Instruct.MuxMB == Inst::X_RB)
+		{	// constant => evaluate
+			value_t value(Instruct.SMIValue());
+			Instruct.evalMUL(value, value);
+			if (unpack)
+				Instruct.evalPack(value, value, true);
+			append(", ");
+			appendImmd(value);
+			return;
+		}
+	} else
+		appendSource(Instruct.MuxMA);
+	appendSource(Instruct.MuxMB);
 }
 
 void Disassembler::DoALU()

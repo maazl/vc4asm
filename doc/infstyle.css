@@ -13,6 +13,9 @@
 .M {
   color: #cc0000;
 }
+.P {
+  font-style: italic;
+}
 
 h1 {
   text-align: center;
