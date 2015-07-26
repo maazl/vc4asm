@@ -7,7 +7,7 @@ LD  = gcc-4.8
 EXE =
 O = .o
 
-../obj/%$(O) : %.cpp
+../obj/%$(O) : %.cpp ../obj
 	$(CC) $(FLAGS) $(CPPFLAGS) -o $@ $<
 
 BASEOBJECTS = ../obj/utils$(O) ../obj/expr$(O) ../obj/Inst$(O) ../obj/Eval$(O) ../obj/Validator$(O)
@@ -18,6 +18,9 @@ all: ../bin/vc4asm$(EXE) ../bin/vc4dis$(EXE)
 
 clean:
 	-rm ../bin/* ../obj/*
+
+../obj :
+	mkdir ../obj
 
 ../bin/vc4asm$(EXE) : $(ASMOBJECTS)
 	$(LD) $(FLAGS) $(LDFLAGS) -o $@ $(ASMOBJECTS) $(LIBS)

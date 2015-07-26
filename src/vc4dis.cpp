@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <getopt.h>
 #include <vector>
+#include <iostream>
+#include <fstream>
 #include <sys/param.h>
 
 using namespace std;
@@ -25,34 +27,21 @@ static inline uint64_t swap_uint64(uint64_t x)
 #endif
 
 static void file_load_bin(const char *filename, vector<uint64_t>& memory)
-{	FILE *f = fopen(filename, "rb");
-	if (!f)
-	{	fprintf(stderr, "Failed to read %s: %s\n", filename, strerror(errno));
+{
+	ifstream f{filename};
+	if (!f.is_open())
+	{
+		cerr << "Failed to read " << filename << ": "<<strerror(errno) << endl;
 		return;
 	}
-	if (fseek(f, 0, SEEK_END) == 0)
-	{	long size = ftell(f);
-		if (size % sizeof(uint64_t))
-			fprintf(stderr, "File size %li of source %s is not a multiple of 64 bit.\n", size, filename);
-		size /= sizeof(uint64_t);
-		size_t oldsize = memory.size();
-		if (size > 0)
-			memory.resize(oldsize + size);
-		fseek(f, 0, SEEK_SET);
-		memory.resize(oldsize + fread(&memory[oldsize], size, sizeof(uint64_t), f));
-	} else
-	{	size_t count = 8192;
-		for (;;)
-		{	size_t oldsize = memory.size();
-			memory.resize(oldsize + count);
-			count = fread(&memory[oldsize], 8192, sizeof(uint64_t), f);
-			if (count < 8192)
-			{	memory.resize(oldsize + count);
-				break;
-			}
-		}
+	vector<char> octets{istreambuf_iterator<char>(f), istreambuf_iterator<char>()};
+	if (octets.size() % sizeof(uint64_t))
+	{
+		cerr << "File size " << octets.size() << " of source " << filename << " is not a multiple of 64 bit." << endl;
 	}
-	fclose(f);
+	auto raw64 = reinterpret_cast<uint64_t*>(octets.data());
+	memory.assign(raw64, raw64 + octets.size() / sizeof(uint64_t));
+
 	#if (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__) || (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN)
 	for (auto& i : memory)
 		i = swap_uint64(i);
@@ -60,7 +49,8 @@ static void file_load_bin(const char *filename, vector<uint64_t>& memory)
 }
 
 static void file_load_x32(const char *filename, vector<uint64_t>& memory)
-{	FILE *f = fopen(filename, "r");
+{
+	FILE *f = fopen(filename, "r");
 	if (!f)
 	{	fprintf(stderr, "Failed to read %s: %s\n", filename, strerror(errno));
 		return;
