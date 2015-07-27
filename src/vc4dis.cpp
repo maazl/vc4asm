@@ -39,13 +39,13 @@ static void file_load_bin(const char *filename, vector<uint64_t>& memory)
 		if (size > 0)
 			memory.resize(oldsize + size);
 		fseek(f, 0, SEEK_SET);
-		memory.resize(oldsize + fread(&memory[oldsize], size, sizeof(uint64_t), f));
+		memory.resize(oldsize + fread(&memory[oldsize], sizeof(uint64_t), size, f));
 	} else
 	{	size_t count = 8192;
 		for (;;)
 		{	size_t oldsize = memory.size();
 			memory.resize(oldsize + count);
-			count = fread(&memory[oldsize], 8192, sizeof(uint64_t), f);
+			count = fread(&memory[oldsize], sizeof(uint64_t), 8192, f);
 			if (count < 8192)
 			{	memory.resize(oldsize + count);
 				break;
