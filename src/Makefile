@@ -5,9 +5,9 @@ LIBS     = -lm -lstdc++
 CC  = g++-4.8
 LD  = gcc-4.8
 EXE =
-O = .o
+O   = .o
 
-../obj/%$(O) : %.cpp
+../obj/%$(O) : %.cpp | ../obj
 	$(CC) $(FLAGS) $(CPPFLAGS) -o $@ $<
 
 BASEOBJECTS = ../obj/utils$(O) ../obj/expr$(O) ../obj/Inst$(O) ../obj/Eval$(O) ../obj/Validator$(O)
@@ -19,11 +19,17 @@ all: ../bin/vc4asm$(EXE) ../bin/vc4dis$(EXE)
 clean:
 	-rm ../bin/* ../obj/*
 
-../bin/vc4asm$(EXE) : $(ASMOBJECTS)
+../bin/vc4asm$(EXE) : $(ASMOBJECTS) | ../bin
 	$(LD) $(FLAGS) $(LDFLAGS) -o $@ $(ASMOBJECTS) $(LIBS)
 
-../bin/vc4dis$(EXE) : $(DISOBJECTS)
+../bin/vc4dis$(EXE) : $(DISOBJECTS) | ../bin
 	$(LD) $(FLAGS) $(LDFLAGS) -o $@ $(DISOBJECTS) $(LIBS)
+
+../obj:
+	mkdir $@
+
+../bin:
+	mkdir $@
 
 %.cpp : %.h
 ../obj/utils$(O) : utils.cpp utils.h
