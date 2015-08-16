@@ -1525,6 +1525,7 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "pack8ds",        &Parser::addPack,   Inst::P_8dS,    E_DSTOP }
 ,	{ "rot",            &Parser::addRot,    0,              E_DSTOP }
 ,	{ "setf",           &Parser::addSetF,   0,              E_DSTOP }
+,	{ "sf",             &Parser::addSetF,   0,              E_DSTOP }
 ,	{ "unpack16a",      &Parser::addUnpack, Inst::U_16a,    E_SRCOP }
 ,	{ "unpack16b",      &Parser::addUnpack, Inst::U_16b,    E_SRCOP }
 ,	{ "unpack32",       &Parser::addUnpack, Inst::U_32,     E_SRCOP } // NOP
