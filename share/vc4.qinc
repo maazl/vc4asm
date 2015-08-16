@@ -2,7 +2,7 @@
 
 # VPM setup helpers
 .func vdr_setup_0(mpitch, rowlen, nrows, dma)
-  .assert countBits(mpitch) <= 1 && !(mpitch & ~0x7fff0) 
+  .assert !(mpitch & (mpitch-1)) && !(mpitch & ~0x7fff0) 
   .assert !((rowlen-1) & ~0xf)
   .assert !((nrows-1) & ~0xf)
   .assert !(dma & ~0x7000ffff) && (dma & 0x70000000) != 0x10000000
