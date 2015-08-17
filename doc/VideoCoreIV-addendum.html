@@ -11,6 +11,14 @@
     <h1>Addendum to the <a href="http://www.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf">Broadcom
         VideoCore IV documentation</a></h1>
     <h2>Additional features</h2>
+    <h3>Horizontal vector rotation</h3>
+    <p>Both source operands must be from accumulator <tt>r0</tt>..<tt>r3</tt>
+      for full vector rotation. But if you choose not to do so the rotation will
+      only take place within the slices. I.e. [0,1,2,3, 4,5,6,7, 8,9,10,11,
+      12,13,14,15] rotates to [3,0,1,2, 7,4,5,6, 11,8,9,10, 15,12,13,14]. In
+      fact all source operands are taken from the current element and only the
+      write is rotated within the slice by the lower two bits. This can be
+      particularly useful in some cases.</p>
     <h3>Table 35: VCD DMA Write (VDW) Stride Setup Format</h3>
     <p>Unlike the documentation suggests the <tt>STRIDE</tt> field is 16 bits
       wide. Probably just a typo.</p>
@@ -21,7 +29,7 @@
       TMU/VPM fifo is triggered unconditional to process the request with
       undefined data in case the condition is not true. Probably any other
       peripheral register share the same problem.</p>
-    <p>vc4asm warns about this kind of access.</p>
+    <p>vc4asm warns about this kind of access in verify mode.</p>
     <h3>Distance of branch instructions</h3>
     <p>There must be at least two non branch instructions between every two
       branch instructions. Otherwise no branch is taken or the thread will
