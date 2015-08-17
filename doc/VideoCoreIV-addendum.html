@@ -15,11 +15,12 @@
     <p>Unlike the documentation suggests the <tt>STRIDE</tt> field is 16 bits
       wide. Probably just a typo.</p>
     <h2>Instruction constraints</h2>
-    <h3>No conditional write to <tt>t0s</tt>, <tt>t1s</tt></h3>
-    <p>A write to the TMU retiring register (TMU0_S, TMU1_S) must not use
+    <h3>No conditional write to peripheral registers</h3>
+    <p>A write to the TMU retiring register (TMU0_S, TMU1_S) or VPM must not use
       conditional write access. Although the conditional write itself works the
-      TMU fifo is triggered unconditional to process the request with undefined
-      data in case the condition is not true.</p>
+      TMU/VPM fifo is triggered unconditional to process the request with
+      undefined data in case the condition is not true. Probably any other
+      peripheral register share the same problem.</p>
     <p>vc4asm warns about this kind of access.</p>
     <h3>Distance of branch instructions</h3>
     <p>There must be at least two non branch instructions between every two

@@ -42,7 +42,7 @@ void Validator::Message(int refloc, const char* fmt, ...)
 	vfprintf(stderr, fmt, va);
 	va_end(va);
 	fprintf(stderr, "\n  instruction at 0x%x\n", BaseAddr + At * (unsigned)sizeof(uint64_t));
-	if (refloc >= 0)
+	if (refloc >= 0 && refloc != At)
 		fprintf(stderr, "  referring to instruction at 0x%x\n", BaseAddr + refloc * (unsigned)sizeof(uint64_t));
 }
 
@@ -188,9 +188,9 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 			Message(At, "More than one access to TMU, TLB or mutex/semaphore within one instruction.");
 		// Some combinations that do not work
 		if (Instruct.Sig != Inst::S_BRANCH)
-		{	if ( ((0x1100000000000000ULL & (1ULL << Instruct.WAddrA)) && Instruct.CondA != Inst::C_AL)
-				|| ((0x1100000000000000ULL & (1ULL << Instruct.WAddrM)) && Instruct.CondM != Inst::C_AL) )
-				Message(At, "Conditional write to TMU does not work.");
+		{	if ( (Instruct.CondA != Inst::C_AL && Instruct.WAddrA >= 32 && Instruct.WAddrA != Inst::R_NOP)
+				|| (Instruct.CondM != Inst::C_AL && Instruct.WAddrM >= 32 && Instruct.WAddrM != Inst::R_NOP) )
+				Message(At, "Conditional write to peripheral registers does not work.");
 			if (Instruct.PM && (Instruct.Pack & 0xc) == Inst::P_8a && Instruct.WAddrM >= 32 && Instruct.WAddrM != Inst::R_NOP)
 				Message(At, "Pack modes with partial writes do not work for peripheral registers.");
 		}
