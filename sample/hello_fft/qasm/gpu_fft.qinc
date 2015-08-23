@@ -415,8 +415,8 @@
     ;mov r0, 1<<0
     and.setf -, elem_num, r0;                                    ldtmu0
     # (MM) Optimized: better use of both ALUs, no need for ra_temp
-    mov r0, r4;               fmul      r2, ra_tw_re+TW16+0, r4; ldtmu0
-    mov r1, r4;               fmul      r3, rb_tw_im+TW16+0, r4
+    mov r0, r4;               fmul.ifnz r2, ra_tw_re+TW16+0, r4; ldtmu0
+    mov r1, r4;               fmul.ifnz r3, rb_tw_im+TW16+0, r4
 :fft_16_cont
 .rep i, 3
     fsub.ifnz r0, r2, r3;     fmul.ifnz r2, rb_tw_im+TW16+i, r0
