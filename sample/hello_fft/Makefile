@@ -28,7 +28,7 @@ hex/shader_%.hex:	qasm/gpu_fft_%.qasm ../../share/vc4.qinc qasm/gpu_fft.qinc | h
 	../../bin/vc4asm -V -c $@ ../../share/vc4.qinc $<
 
 hex/shader_%.dis:       hex/shader_%.hex
-	../../bin/vc4dis -x -o $@ $<
+	../../bin/vc4dis -v -x -o $@ $<
 
 %.o : %.c
 	gcc $(CFLAGS) -o $@ -c $<
