@@ -85,7 +85,7 @@ class Disassembler
 	/// @param val Value to append.
 	/// @details The function chooses between integer, floating point and hex format automatically.
 	/// It just guesses the best format. The floating point format can be disabled by the UseFloat option.
-	void appendImmd(value_t val);
+	void appendImmd(qpuValue val);
 	/// Append per element signed value.
 	/// @param sign true: per element signed, false: per element unsigned.
 	/// @details The immediate value is directly taken from Instruct.Immd.

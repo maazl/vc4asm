@@ -32,6 +32,12 @@
     <dl>
     </dl>
     <dl>
+      <dt>V0.2</dt>
+      <dd>Changed internal expression evaluation to 64 bit or double precision
+        respectively.<br>
+        Support for alphanumeric mathematical operators like trigonometric,
+        hyperbolic or exponential function.<br>
+        Added identity, full comparison and xnor operators.</dd>
       <dt>V0.1.9</dt>
       <dd>Fixed vc4dis: decoded not only the first 8 instructions in case of a
         binary source file.<br>
@@ -186,7 +192,8 @@
       compliant compiler to build. Current Raspiban ships with gcc 4.9 which
       works. Raspbian Wheezy seems not to be sufficient. While I succeeded with
       gcc 4.7.3 on another platform, gcc 4.7.2 of Wheezy fails to compile the
-      disassembler.</p>
+      disassembler. But you can install gcc 4.8 in Raspbian Wheezy. This will
+      work.</p>
     <ul>
       <li>Download and extract the source.</li>
       <li>Go to folder <tt>src</tt>.</li>

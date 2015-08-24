@@ -5,9 +5,13 @@
  *      Author: mueller
  */
 
+#define __STDC_FORMAT_MACROS // Work around for older g++
+
 #include "Parser.h"
-#include <stdio.h>
-#include <stdlib.h>
+
+#include <cstdio>
+#include <cstdlib>
+#include <cinttypes>
 #include <algorithm>
 #include <cctype>
 
@@ -120,17 +124,19 @@ Parser::token_t Parser::NextToken()
 	 case '^':
 	 case '|':
 		if (At[1] == At[0])
-		{	if (At[2] == At[1])
+		{op2:
+			if (At[2] == At[1])
 			{	Token.assign(At, 3);
 				At += 3;
 				return OP;
 			}
-		 op2:
 			Token.assign(At, 2);
 			At += 2;
 			return OP;
 		}
 	 case '!':
+		if (At[1] == '^')
+			goto op2;
 	 case '=':
 		if (At[1] == '=')
 			goto op2;
@@ -161,13 +167,13 @@ Parser::token_t Parser::NextToken()
 	return isdigit(Token[0]) ? NUM : WORD;
 }
 
-size_t Parser::parseUInt(const char* src, uint32_t& dst)
+size_t Parser::parseInt(const char* src, int64_t& dst)
 {	dst = 0;
 	const char* cp = src;
-	uint32_t basis = 10;
-	uint32_t limit = UINT32_MAX / 10;
+	uint64_t basis = 10;
+	int64_t limit = UINT64_MAX / 10;
 	for (char c; (c = *cp) != 0; ++cp)
-	{	uint32_t digit = c - '0';
+	{	int digit = c - '0';
 		if (digit >= 10)
 		{	digit = toupper(c) - 'A';
 			if (digit < 6)
@@ -175,9 +181,9 @@ size_t Parser::parseUInt(const char* src, uint32_t& dst)
 			else
 			{	if (dst == 0 && cp - src == 1)
 					switch (c)
-					{	case 'b': basis = 2; limit = UINT32_MAX/2; continue;
-						case 'o': basis = 8; limit = UINT32_MAX/8; continue;
-						case 'x': basis = 16; limit = UINT32_MAX/16; continue;
+					{	case 'b': basis = 2; limit = UINT64_MAX/2; continue;
+						case 'o': basis = 8; limit = UINT64_MAX/8; continue;
+						case 'x': basis = 16; limit = UINT64_MAX/16; continue;
 						case 'd': continue;
 					}
 				break;
@@ -186,7 +192,7 @@ size_t Parser::parseUInt(const char* src, uint32_t& dst)
 		if (dst > limit)
 			break;
 		dst *= basis;
-		if (dst > UINT32_MAX - digit)
+		if ((uint64_t)dst > UINT64_MAX - digit)
 			break;
 		dst += digit;
 	}
@@ -227,7 +233,7 @@ exprValue Parser::parseElemInt()
 				Fail("All integers in load per QPU element must be either in the range [-2..1] or in the range [0..3].");
 			sign = 1;
 		}
-		value |= (val.uValue * 0x8001 & 0x10001) << pos;
+		value |= (val.iValue * 0x8001 & 0x10001) << pos;
 
 		switch (NextToken())
 		{case END:
@@ -279,10 +285,18 @@ exprValue Parser::ParseExpression()
 				}
 			}
 			{	// try register
-				const regEntry* rp = binary_search(regMap, Token.c_str());
+				auto rp = binary_search(regMap, Token.c_str());
 				if (rp)
 				{	value = rp->Value;
 					break;
+				}
+			}
+			{	// try alphanumeric operator
+				auto op = binary_search(operatorMap2, Token.c_str());
+				if (op)
+				{	if (!eval.PushOperator(op->Op))
+						goto discard;
+					goto next;
 				}
 			}
 			// Try label prefix
@@ -313,13 +327,13 @@ exprValue Parser::ParseExpression()
 						value = ParseExpression();
 						if (value.Type != V_INT)
 							Fail("Expecting integer constant, found %s.", type2string(value.Type));
-						reg.Num = (uint8_t)value.uValue;
+						reg.Num = (uint8_t)value.iValue;
 						if (NextToken() != COMMA)
 							Fail("Expected ',', found '%s'.", Token.c_str());
 						value = ParseExpression();
 						if (value.Type != V_INT)
 							Fail("Expecting integer constant, found %s.", type2string(value.Type));
-						reg.Type = (regType)value.uValue;
+						reg.Type = (regType)value.iValue;
 						switch (NextToken())
 						{default:
 							Fail("Expected ',' or ']', found '%s'.", Token.c_str());
@@ -327,7 +341,7 @@ exprValue Parser::ParseExpression()
 							value = ParseExpression();
 							if (value.Type != V_INT)
 								Fail("Expecting integer constant, found %s.", type2string(value.Type));
-							reg.Rotate = (uint8_t)value.uValue;
+							reg.Rotate = (uint8_t)value.iValue;
 							if (NextToken() != SQBRC2)
 								Fail("Expected ']', found '%s'.", Token.c_str());
 							break;
@@ -385,13 +399,13 @@ exprValue Parser::ParseExpression()
 			{	// integer
 				//size_t len;  sscanf of gcc4.8.2/Linux x32 can't read "0x80000000".
 				//if (sscanf(Token.c_str(), "%i%n", &stack.front().iValue, &len) != 1 || len != Token.size())
-				if (parseUInt(Token.c_str(), value.uValue) != Token.size())
+				if (parseInt(Token.c_str(), value.iValue) != Token.size())
 					Fail("%s is no integral number.", Token.c_str());
 				value.Type = V_INT;
 			} else
 			{	// float number
 				size_t len;
-				if (sscanf(Token.c_str(), "%f%zn", &value.fValue, &len) != 1 || len != Token.size())
+				if (sscanf(Token.c_str(), "%lf%zn", &value.fValue, &len) != 1 || len != Token.size())
 					Fail("%s is no real number.", Token.c_str());
 				value.Type = V_FLOAT;
 			}
@@ -435,14 +449,6 @@ Inst::mux Parser::muxReg(reg_t reg)
 		}
 	}
 	Fail("Read access to register conflicts with another access to the same register file.");
-}
-
-uint8_t Parser::getSmallImmediate(uint32_t i)
-{	if (i + 16 <= 0x1f)
-		return (uint8_t)(i & 0x1f);
-	if (!((i - 0x3b800000) & 0xf87fffff))
-		return (uint8_t)(((i >> 23) - 0x77) ^ 0x28);
-	return 0xff; // failed
 }
 
 const Parser::smiEntry* Parser::getSmallImmediateALU(uint32_t i)
@@ -571,7 +577,7 @@ void Parser::addRot(int, InstContext ctx)
 	 default:
 		Fail("QPU rotation needs an integer argument or r5 for the rotation count.");
 	 case V_INT:
-		si += count.uValue & 0xf;
+		si += count.iValue & 0xf;
 		if (si == 48)
 			return; // Rotation is a multiple of 16 => nothing to do
 	}
@@ -676,27 +682,30 @@ Inst::mux Parser::doALUExpr(InstContext ctx)
 		}
 	 case V_FLOAT:
 	 case V_INT:
-		{	// some special hacks for ADD ALU
+		{	qpuValue value;
+			value = param;
+			// some special hacks for ADD ALU
 			if (ctx == IC_SRCB)
 			{	switch (Instruct.OpA)
 				{case Inst::A_ADD: // swap ADD and SUB in case of constant 16
 				 case Inst::A_SUB:
-					if (param.uValue == 16)
+					if (value.iValue == 16)
 					{	(uint8_t&)Instruct.OpA ^= Inst::A_ADD ^ Inst::A_SUB; // swap add <-> sub
-						param.iValue = -16;
+						value.iValue = -16;
 					}
 					break;
 				 case Inst::A_ASR: // shift instructions ignore all bits except for the last 5
 				 case Inst::A_SHL:
 				 case Inst::A_SHR:
 				 case Inst::A_ROR:
-					param.iValue = (param.iValue << 27) >> 27; // sign extend
+					if (value.iValue)
+					value.iValue = (value.iValue << 27) >> 27; // sign extend
 				 default:;
 				}
 			}
-			uint8_t si = getSmallImmediate(param.uValue);
+			uint8_t si = Inst::AsSMIValue(value);
 			if (si == 0xff)
-				Fail("Value 0x%x does not fit into the small immediate field.", param.uValue);
+				Fail("Value 0x%x does not fit into the small immediate field.", value.uValue);
 			doSMI(si);
 			ret = Inst::X_RB;
 			break;
@@ -750,14 +759,15 @@ void Parser::doBRASource(exprValue param)
 		Fail("Data type is not allowed as branch target.");
 	 case V_LABEL:
 		if (Instruct.Rel)
-			param.uValue -= (PC + 4) * sizeof(uint64_t);
+			param.iValue -= (PC + 4) * sizeof(uint64_t);
 		else
 			Msg(WARNING, "Using value of label as target of a absolute branch instruction.");
+		param.Type = V_INT;
 	 case V_INT:
-		if (!param.uValue)
-			return;
 		if (Instruct.Immd.uValue)
 			Fail("Cannot specify two immediate values as branch target.");
+		if (!param.iValue)
+			return;
 		Instruct.Immd = param;
 		break;
 	 case V_REG:
@@ -867,6 +877,7 @@ void Parser::assembleMOV(int mode)
 	if (NextToken() != COMMA)
 		Fail("Expected ', <source1>' after first argument to ALU instruction, found %s.", Token.c_str());
 	exprValue param = ParseExpression();
+	qpuValue value;
 	switch (param.Type)
 	{default:
 		Fail("The last parameter of a MOV instruction must be a register or a immediate value. Found %s", type2string(param.Type));
@@ -874,7 +885,7 @@ void Parser::assembleMOV(int mode)
 		if (param.rValue.Type & R_SEMA)
 		{	// semaphore access by LDI like instruction
 			mode = Inst::L_SEMA;
-			param.uValue = param.rValue.Num | (param.rValue.Type & R_SACQ);
+			value.uValue = param.rValue.Num | (param.rValue.Type & R_SACQ);
 			break;
 		}
 		if (isLDI)
@@ -900,24 +911,27 @@ void Parser::assembleMOV(int mode)
 		if (mode != Inst::L_LDI && mode != Inst::L_PES)
 			Fail("Load immediate mode conflicts with per QPU element constant.");
 		mode = Inst::L_PES;
-		break;
+		goto ldpe_cont;
 	 case V_LDPEU:
 		if (mode != Inst::L_LDI && mode != Inst::L_PEU)
 			Fail("Load immediate mode conflicts with per QPU element constant.");
 		mode = Inst::L_PEU;
-		break;
+		goto ldpe_cont;
 	 case V_LDPE:
 		if (mode >= Inst::L_SEMA)
 			Fail("Load immediate mode conflicts with per QPU element constant.");
 		if (mode < Inst::L_PES)
 			mode = Inst::L_PES;
+	 ldpe_cont:
+		value = param;
 		break;
 	 case V_INT:
 	 case V_FLOAT:
+		value = param;
 		// try small immediate first
 		if (!isLDI && mode < 0)
 		{	const smiEntry* si;
-			if (!param.uValue)
+			if (!value.iValue)
 			{	// mov ... ,0 does not require small immediate value
 				si = smiMap + useMUL;
 				goto mov0;
@@ -930,7 +944,7 @@ void Parser::assembleMOV(int mode)
 					Fail ("Immediate value collides with read from register file B.");
 			 case Inst::S_SMI:;
 			}
-			for (si = getSmallImmediateALU(param.uValue); si->Value == param.uValue; ++si)
+			for (si = getSmallImmediateALU(value.uValue); si->Value == value.uValue; ++si)
 			{	if ( (Extensions || !si->OpCode.isExt())
 					&& ( Instruct.Sig == Inst::S_NONE
 						|| (Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd) )
@@ -963,8 +977,8 @@ void Parser::assembleMOV(int mode)
 	{default:
 		Fail("Load immediate cannot be used with signals.");
 	 case Inst::S_LDI:
-		if (Instruct.Immd.uValue != param.uValue || Instruct.LdMode != mode)
-			Fail("Tried to load two different immediate values in one instruction. (0x%x vs. 0x%x)", Instruct.Immd.uValue, param.uValue);
+		if (Instruct.Immd.uValue != value.uValue || Instruct.LdMode != mode)
+			Fail("Tried to load two different immediate values in one instruction. (0x%x vs. 0x%x)", Instruct.Immd.uValue, value.uValue);
 	 case Inst::S_NONE:;
 	}
 	// LDI or semaphore
@@ -972,7 +986,7 @@ void Parser::assembleMOV(int mode)
 		Fail("Cannot combine load immediate with value %s with ALU instructions.", param.toString().c_str());
 	Instruct.Sig = Inst::S_LDI;
 	Instruct.LdMode = (Inst::ldmode)mode;
-	Instruct.Immd = param;
+	Instruct.Immd = value;
 }
 
 void Parser::assembleBRANCH(int relative)
@@ -1033,14 +1047,14 @@ void Parser::assembleSEMA(int type)
 		Fail("Expected ', <number>' after first argument to semaphore instruction, found %s.", Token.c_str());
 
 	auto param = ParseExpression();
-	if (param.Type != V_INT || (param.uValue & ~(type << 4)) >= 16)
+	if (param.Type != V_INT || ((uint64_t)param.iValue & ~(type << 4)) >= 16)
 		Fail("Semaphore instructions require a single integer argument less than 16 with the semaphore number.");
-	param.uValue |= type << 4;
+	uint32_t value = param.iValue | (type << 4);
 
 	switch (Instruct.Sig)
 	{case Inst::S_LDI:
 		if (Instruct.LdMode == Inst::L_LDI)
-		{	if ((Instruct.Immd.uValue & 0x1f) != param.uValue)
+		{	if ((Instruct.Immd.uValue & 0x1f) != (value & 0x1f))
 				Fail("Combining a semaphore instruction with load immediate requires the low order 5 bits to match the semaphore number and the direction bit.");
 			break;
 		}
@@ -1048,7 +1062,7 @@ void Parser::assembleSEMA(int type)
 		Fail("Semaphore Instructions normally cannot be combined with any other instruction.");
 	 case Inst::S_NONE:
 		Instruct.Sig = Inst::S_LDI;
-		Instruct.Immd = param;
+		Instruct.Immd.uValue = value;
 	}
 	Instruct.LdMode = Inst::L_SEMA;
 }
@@ -1158,24 +1172,32 @@ void Parser::parseDATA(int type)
 	if (value.Type != V_INT && value.Type != V_FLOAT)
 		Fail("Immediate data instructions require integer or floating point constants. Found %s.", type2string(value.Type));
 	switch (type)
-	{case -4:
+	{case -32: // float
 		if (value.Type == V_INT)
 			value.fValue = value.iValue;
 		type = 4;
 		break;
-	 case 1: // byte
-		if (value.iValue > 0xFF || value.iValue < -0x80)
-			Msg(WARNING, "Byte value out of range: 0x%x", value.uValue);
+	 case 1: // bit
+		if (value.iValue & ~1)
+			Msg(WARNING, "Bit value out of range: 0x%" PRIx64, value.iValue);
 		break;
-	 case 2: // short
+	 case 8: // byte
+		if (value.iValue > 0xFF || value.iValue < -0x80)
+			Msg(WARNING, "Byte value out of range: 0x%" PRIx64, value.iValue);
+		break;
+	 case 16: // short
 		if (value.iValue > 0xFFFF || value.iValue < -0x8000)
-			Msg(WARNING, "Short integer value out of range: 0x%x", value.uValue);
+			Msg(WARNING, "Short integer value out of range: 0x%" PRIx64, value.iValue);
+		break;
+	 case 32: // int
+		if (value.iValue > 0xFFFFFFFF || value.iValue < -0x80000000)
+			Msg(WARNING, "32 bit integer value out of range: 0x%" PRIx64, value.iValue);
 	}
 	// Prevent optimizer across .data segment
 	Flags() |= IF_BRANCH_TARGET;
 	// store value
-	target |= (uint64_t)value.uValue << count;
-	if ((count += (type << 3)) >= 64)
+	target |= value.iValue << count;
+	if ((count += type) >= 64)
 	{	StoreInstruction(target);
 		count = 0;
 		target = 0;
@@ -1239,10 +1261,10 @@ void Parser::endREP(int)
 	saveContext ctx(*this, new fileContext(CTX_MACRO, m.Definition.File, m.Definition.Line));
 
 	// loop
-	uint32_t count;
+	int count;
 	sscanf(m.Args[1].c_str(), "%i", &count);
 	auto& current = *Context.back();
-	for (uint32_t& i = current.Consts.emplace(m.Args.front(), constDef(exprValue(0), current)).first->second.Value.uValue;
+	for (int64_t& i = current.Consts.emplace(m.Args.front(), constDef(exprValue(0LL), current)).first->second.Value.iValue;
 		i < count; ++i)
 	{	// Invoke rep
 		for (const string& line : m.Content)
@@ -1328,13 +1350,15 @@ void Parser::beginBACK(int)
 	exprValue param = ParseExpression();
 	if (param.Type != V_INT)
 		Fail("Expected integer constant after .back.");
-	if (param.uValue > 10)
+	if (param.iValue < 0)
+		Fail(".back expects positive integer argument.");
+	if (param.iValue > 10)
 		Fail("Cannot move instructions more than 10 slots back.");
-	if (param.uValue > PC)
+	if ((unsigned)param.iValue > PC)
 		Fail("Cannot move instructions back before the start of the code.");
 	if (NextToken() != END)
 		Fail("Expected end of line, found '%s'.", Token.c_str());
-	Back = param.uValue;
+	Back = (unsigned)param.iValue;
 	size_t pos = PC -= Back;
 	// Load last instruction before .back to provide combine support
 	if (pos)
@@ -1370,21 +1394,21 @@ void Parser::parseCLONE(int)
 	exprValue param1 = ParseExpression();
 	if (param1.Type != V_LABEL)
 		Fail("The first argument to .clone must by a label. Found %s.", type2string(param1.Type));
-	param1.uValue >>= 3; // offset in instructions rather than bytes
+	param1.iValue >>= 3; // offset in instructions rather than bytes
 	if (NextToken() != COMMA)
 		Fail("Expected ', <count>' at .clone.");
 	exprValue param2 = ParseExpression();
-	if (param2.Type != V_INT || param2.uValue > 3)
+	if (param2.Type != V_INT || (uint64_t)param2.iValue > 3)
 		Fail("Expected integer constant in the range [0,3].");
-	FlagsSize(PC + param2.uValue);
-	param2.uValue += param1.uValue; // end offset rather than count
-	if (Pass2 && param2.uValue >= Instructions.size())
+	FlagsSize(PC + (unsigned)param2.iValue);
+	param2.iValue += param1.iValue; // end offset rather than count
+	if (Pass2 && param2.iValue >= Instructions.size())
 		Fail("TODO: Cannot clone behind the end of the code.");
 
-	for (auto src = param1.uValue; src < param2.uValue; ++src)
+	for (auto src = (unsigned)param1.iValue; src < (unsigned)param2.iValue; ++src)
 	{	InstFlags[PC] |= InstFlags[src] & ~IF_BRANCH_TARGET;
 		if ((Instructions[src] & 0xF000000000000000ULL) == 0xF000000000000000ULL)
-			Msg(WARNING, "You should not clone branch instructions. (#%u)", src - param1.uValue);
+			Msg(WARNING, "You should not clone branch instructions. (#%u)", src - (unsigned)param1.iValue);
 		StoreInstruction(Instructions[src]);
 	}
 	// Restore last instruction to provide combine support
@@ -1479,7 +1503,7 @@ bool Parser::doCondition()
 		Fail("Conditional expression must be a integer constant, found '%s'.", param.toString().c_str());
 	if (NextToken() != END)
 		Fail("Expected end of line, found '%s'.", Token.c_str());
-	return param.uValue != 0;
+	return param.iValue != 0;
 }
 
 void Parser::parseIF(int)

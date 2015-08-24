@@ -5,8 +5,13 @@
  *      Author: mueller
  */
 
+#define __STDC_FORMAT_MACROS // Work around for older g++
+
 #include "expr.h"
 #include "utils.h"
+
+#include <cinttypes>
+
 
 string exprValue::toPE(unsigned val, bool sign)
 {	string r;
@@ -24,14 +29,14 @@ string exprValue::toString() const
 	{default:
 		return string();
 	 case V_INT:
-		return stringf("0x%x", uValue);
+		return stringf("0x%" PRIx64, iValue);
 	 case V_LDPES:
-		return toPE(uValue, true);
+		return toPE((unsigned)iValue, true);
 	 case V_LDPE:
 	 case V_LDPEU:
-		return toPE(uValue, false);
+		return toPE((unsigned)iValue, false);
 	 case V_LABEL:
-		return stringf(":(0x%x)", uValue);
+		return stringf(":(0x%" PRIi64 ")", iValue);
 	 case V_FLOAT:
 		return stringf("%g", fValue);
 	 case V_REG:

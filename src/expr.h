@@ -56,18 +56,6 @@ enum valueType : char
 };
 /// Convert expression type into a human readable format.
 extern const char* type2string(valueType type);
-/// Value of an expression. In most cases you should prefer exprValue.
-/// @remarks This is basically a union rather than a struct.
-/// But the struct wrapper is required to derive from this type.
-struct value_t
-{	union
-	{	uint32_t  uValue;   ///< Value as unsigned integer
-		int32_t   iValue;   ///< Value as signed integer
-		float     fValue;   ///< Value as 32 bit float
-		uint8_t   cValue[4];///< Value as 4 separate bytes
-		reg_t     rValue;   ///< Register value
-	};
-};
 /// @brief Expression value.
 /// @details This is a polymorphic type. It can either be
 /// - an integer constant,
@@ -75,19 +63,24 @@ struct value_t
 /// - a set of 2 bit integer constants for each QPU,
 /// - a register reference or
 /// - a label reference.
-struct exprValue : value_t
-{	valueType   Type;     /// Current type of the expression value.
+struct exprValue
+{	union
+	{	int64_t   iValue;   ///< signed integer value
+		double    fValue;   ///< 64 bit float
+		reg_t     rValue;   ///< Register value
+	};
+	valueType   Type;     /// Current type of the expression value.
 	/// Construct invalid expression value.
-	exprValue()           : Type(V_NONE)  { uValue = 0; }
+	exprValue()           : Type(V_NONE)  { iValue = 0; }
 	/// Construct constant expression with explicit type.
 	/// @param i 32 bit value
 	/// @param type One of V_INT, V_LDPE*, V_REG or V_LABEL.
 	/// Everything else makes no sense here.
-	exprValue(uint32_t i, valueType type) : Type(type) { uValue = i; }
+	exprValue(int64_t i, valueType type) : Type(type) { iValue = i; }
 	/// Construct signed integer constant.
-	exprValue(int32_t i)  : Type(V_INT)   { iValue = i; }
+	exprValue(int64_t i)  : Type(V_INT)   { iValue = i; }
 	/// Construct floating point constant.
-	exprValue(float f)    : Type(V_FLOAT) { fValue = f; }
+	exprValue(double f)   : Type(V_FLOAT) { fValue = f; }
 	/// Construct register reference.
 	exprValue(reg_t r)    : Type(V_REG)   { rValue = r; }
 	/// Write the expression in human readable and turn around safe format.

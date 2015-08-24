@@ -85,10 +85,14 @@ class Parser
 	,	COLON  = ':'
 	};
 	/// Entry of the operator lookup table, POD, compatible with binary_search().
-	static const struct opInfo
-	{	char        Name[4]; ///< Operator string
+	struct opInfo
+	{	char        Name[7]; ///< Operator string
 		Eval::mathOp Op;     ///< Operator type, see Eval::mathOp
-	} operatorMap[];       ///< Operator lookup table, ordered by Name.
+	};
+	///< Operator lookup table, ordered by Name. Symbol operators only.
+	static const opInfo operatorMap[];
+	///< Operator lookup table, ordered by Name. Alphanumeric operators only.
+	static const opInfo operatorMap2[];
 	/// Entry of the register lookup table, POD, compatible with binary_search().
 	static const struct regEntry
 	{	char        Name[16];///< Name of the register
@@ -439,7 +443,7 @@ class Parser
 	token_t          NextToken();
 	/// Work around for gcc on 32 bit Linux that can't read "0x80000000" with sscanf anymore.
 	/// @return Number of characters parsed.
-	static size_t    parseUInt(const char* src, uint32_t& dst);
+	static size_t    parseInt(const char* src, int64_t& dst);
 
 	/// @brief Parse immediate value per QPU element in the [a,b,{...14}] syntax.
 	/// @details The function has to be called after the opening bracket.
@@ -460,10 +464,6 @@ class Parser
 	/// @exception std::string Syntax error.
 	exprValue        ParseExpression();
 
-	/// Converts an integer constant into a small immediate value.
-	/// @param i Integer value
-	/// @return Small immediate value or 0xff if \p i cannot be expressed by a small immediate value.
-	static uint8_t   getSmallImmediate(uint32_t i);
 	/// @brief Find the first potential match for an ALU instruction that can assign an immediate value using small immediates.
 	/// @details The function does not only seek for an exactly match small immediate value but also for small immediate values
 	/// that	can be transformed to the wanted value by applying an ADD or MUL ALU instruction to it.

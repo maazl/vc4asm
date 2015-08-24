@@ -233,7 +233,7 @@
     <h2><tt><a id=".byte" name=".byte"></a><a id=".short" name=".short"></a><a id=".int"
           name=".int"></a><a id=".long" name=".long"></a><a id=".float" name=".float"></a>.byte
         .short .int .long .float</tt> - place constants inside code blocks</h2>
-    <pre>.byte <var>constant, constant</var> ...<br>.short <var><var>constant, constant</var></var> ...<var></var>.int <var><var>constant, constant</var></var> ...<br>.long <var>constant, constant</var> ...
+    <pre>.byte <var>constant, constant</var> ...<br>.short <var><var>constant, constant</var></var> ...<var></var><br>.int <var><var>constant, constant</var></var> ...<br>.long <var>constant, constant</var> ...
 .float <var>constant, constant</var> ...</pre>
     <dl>
       <dt><tt><var>constant</var></tt></dt>
@@ -244,9 +244,9 @@
       as address. Or you may emit opcodes that are unsupported by vc4asm.</p>
     <p><tt>.byte</tt> creates 8 bit constants (signed or unsigned), <tt>.short</tt>
       creates 16 bit constants (signed or unsigned), <tt>.int</tt> creates 32
-      bit constants (signed, unsigned or float) and <tt>.float</tt> forces 32
-      bit floating point constants. The result is always stored in big endian
-      format.</p>
+      bit constants (signed, unsigned or float), .long creates 64 bit integers
+      and <tt>.float</tt> forces 32 bit floating point constants. The result is
+      always stored in big endian format.</p>
     <p>There are restrictions when placing constants in the code:</p>
     <ul>
       <li>First of all the constants must not break the 64 bit instruction

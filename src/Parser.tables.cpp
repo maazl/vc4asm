@@ -11,6 +11,9 @@
 const Parser::opInfo Parser::operatorMap[] =
 {	{ "!",  Eval::lNOT }
 ,	{ "!=", Eval::NE }
+,	{ "!==",Eval::NIDNT }
+,	{ "!^", Eval::XNOR }
+,	{ "!^^",Eval::lXNOR }
 ,	{ "%",  Eval::MOD }
 ,	{ "&",  Eval::AND }
 ,	{ "&&", Eval::lAND }
@@ -25,6 +28,8 @@ const Parser::opInfo Parser::operatorMap[] =
 ,	{ "<<", Eval::ASL }
 ,	{ "<<<",Eval::SHL }
 ,	{ "<=", Eval::LE }
+,	{ "<=>",Eval::CMP }
+,	{ "===",Eval::IDNT }
 ,	{ "==", Eval::EQ }
 ,	{ ">",  Eval::GT }
 ,	{ ">=", Eval::GE }
@@ -35,6 +40,32 @@ const Parser::opInfo Parser::operatorMap[] =
 ,	{ "|",  Eval::OR }
 ,	{ "||", Eval::lOR }
 ,	{ "~",  Eval::NOT }
+};
+// MUST BE ORDERED!
+const Parser::opInfo Parser::operatorMap2[] =
+{	{ "abs",   Eval::ABS }
+,	{ "acos",  Eval::ACOS }
+,	{ "acosh", Eval::ACOSH }
+,	{ "asin",  Eval::ASIN }
+,	{ "asinh", Eval::ASINH }
+,	{ "atan",  Eval::ATAN }
+,	{ "atanh", Eval::ATANH }
+,	{ "ceil",  Eval::CEIL }
+,	{ "cos",   Eval::COS }
+,	{ "cosh",  Eval::COSH }
+,	{ "erf",   Eval::ERF }
+,	{ "erfc",  Eval::ERFC }
+,	{ "exp",   Eval::EXP }
+,	{ "exp10", Eval::EXP10 }
+,	{ "exp2",  Eval::EXP2 }
+,	{ "floor", Eval::FLOOR }
+,	{ "log",   Eval::LOG }
+,	{ "log10", Eval::LOG10 }
+,	{ "log2",  Eval::LOG2 }
+,	{ "sin",   Eval::SIN }
+,	{ "sinh",  Eval::SINH }
+,	{ "tan",   Eval::TAN }
+,	{ "tanh",  Eval::TANH }
 };
 
 // MUST BE ORDERED!
@@ -1540,11 +1571,12 @@ const Parser::opExtEntry Parser::extMap[] =
 const Parser::opEntry<8> Parser::directiveMap[] =
 {	{ "assert",  &Parser::parseASSERT }
 ,	{ "back",    &Parser::beginBACK }
-,	{ "byte",    &Parser::parseDATA,  1 }
+,	{ "bit",     &Parser::parseDATA,  1 }
+,	{ "byte",    &Parser::parseDATA,  8 }
 ,	{ "clone",   &Parser::parseCLONE }
 ,	{ "const",   &Parser::parseSET,   C_CONST }
 ,	{ "define",  &Parser::parseSET,   C_NONE }
-,	{ "dword",   &Parser::parseDATA,  4 }
+,	{ "dword",   &Parser::parseDATA,  32 }
 ,	{ "elif",    &Parser::parseELSEIF }
 ,	{ "else",    &Parser::parseELSE }
 ,	{ "elseif",  &Parser::parseELSEIF }
@@ -1558,22 +1590,23 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "endr",    &Parser::endREP }
 ,	{ "endrep",  &Parser::endREP }
 ,	{ "equ",     &Parser::parseSET,   C_NONE }
-,	{ "float",   &Parser::parseDATA,  -4 }
+,	{ "float",   &Parser::parseDATA,  -32 }
 ,	{ "foreach", &Parser::beginFOREACH }
 ,	{ "func",    &Parser::beginMACRO, M_FUNC }
 ,	{ "if",      &Parser::parseIF }
 ,	{ "ifset",   &Parser::parseIFSET, C_NONE }
 ,	{ "include", &Parser::doINCLUDE }
-,	{ "int",     &Parser::parseDATA,  4 }
+,	{ "int",     &Parser::parseDATA,  32 }
 ,	{ "lconst",  &Parser::parseSET,   C_LOCAL|C_CONST }
-,	{ "long",    &Parser::parseDATA,  4 }
+,	{ "long",    &Parser::parseDATA,  64 }
 ,	{ "lset",    &Parser::parseSET,   C_LOCAL }
 ,	{ "lunset",  &Parser::parseUNSET, C_LOCAL }
 ,	{ "macro",   &Parser::beginMACRO, M_NONE }
+,	{ "qword",   &Parser::parseDATA,  64 }
 ,	{ "rep",     &Parser::beginREP }
 ,	{ "set",     &Parser::parseSET,   C_NONE }
-,	{ "short",   &Parser::parseDATA,  2 }
+,	{ "short",   &Parser::parseDATA,  16 }
 ,	{ "undef",   &Parser::parseUNSET, C_NONE }
 ,	{ "unset",   &Parser::parseUNSET, C_NONE }
-,	{ "word",    &Parser::parseDATA,  2 }
+,	{ "word",    &Parser::parseDATA,  16 }
 };

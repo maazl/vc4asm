@@ -5,8 +5,39 @@
  *      Author: mueller
  */
 
+#define __STDC_FORMAT_MACROS // Work around for older g++
+
 #include "Inst.h"
-#include <math.h>
+#include "utils.h"
+
+#include <cfloat>
+#include <cmath>
+#include <cinttypes>
+
+
+qpuValue& qpuValue::operator=(const exprValue& value)
+{
+	switch (value.Type)
+	{default:
+		throw stringf("Value of type %s cannot be used for QPU evaluation. Only constants are allowed.", type2string(value.Type));
+
+	 case V_LDPES:
+	 case V_LDPE:
+	 case V_LDPEU:
+	 case V_INT:
+		if (value.iValue < INT32_MIN || value.iValue > UINT32_MAX)
+			throw stringf("Integer constant 0x%" PRIx64 " out of range for use as QPU constant.", value.iValue);
+		iValue = (int32_t)value.iValue;
+		break;
+
+	 case V_FLOAT:
+		if (fabs(value.fValue) > FLT_MAX)
+			throw stringf("Floating point constant %f does not fit into 32 bit float.", value.fValue);
+		fValue = (float)value.fValue;
+	}
+	return *this;
+}
+
 
 static inline void adds(uint8_t& l, uint8_t r)
 {	l = (uint8_t)min(255, (l+r));
@@ -19,8 +50,9 @@ static inline void muld(uint8_t& l, uint8_t r)
 	l = (uint8_t)((l * r) / 65025);
 }
 
-bool Inst::evalADD(value_t& l, value_t r)
-{	switch (OpA)
+bool Inst::evalADD(qpuValue& l, qpuValue r)
+{
+	switch (OpA)
 	{default:
 		return false;
 	 case A_FADD:
@@ -86,7 +118,7 @@ bool Inst::evalADD(value_t& l, value_t r)
 	}
 	return true;
 }
-bool Inst::evalMUL(value_t& l, value_t r)
+bool Inst::evalMUL(qpuValue& l, qpuValue r)
 {	switch (OpM)
 	{default:
 		return false;
@@ -130,7 +162,7 @@ bool Inst::evalMUL(value_t& l, value_t r)
 	return true;
 }
 
-bool Inst::evalPack(value_t& r, value_t v, bool mul)
+bool Inst::evalPack(qpuValue& r, qpuValue v, bool mul)
 {	int32_t mask = -1;
 	if (PM)
 	{	if (mul) // MUL ALU pack mode?
@@ -299,7 +331,7 @@ bool Inst::trySwap(bool mul)
 }
 
 void Inst::optimize()
-{	value_t val;
+{	qpuValue val;
 	switch (Sig)
 	{case S_SMI:
 		if (WAddrM == R_NOP && MuxAA == X_RB && MuxAB == X_RB && SImmd < 48)
@@ -448,12 +480,20 @@ void Inst::decode(uint64_t code)
 	WAddrM = (uint8_t)(code >> 32 & 0x3f);
 }
 
-value_t Inst::SMIValue() const
-{ value_t ret;
+qpuValue Inst::SMIValue() const
+{ qpuValue ret;
 	ret.uValue = 0;
 	if (SImmd < 32)
 		ret.iValue = (int8_t)(SImmd << 3) >> 3; // signed expand
 	else if (SImmd < 48)
 		ret.iValue = ((int32_t)(SImmd ^ 0x28) << 23) + 0x3b800000;
 	return ret;
+}
+
+uint8_t Inst::AsSMIValue(qpuValue i)
+{	if (i.uValue + 16 <= 0x1f)
+		return (uint8_t)(i.uValue & 0x1f);
+	if (!((i.uValue - 0x3b800000) & 0xf87fffff))
+		return (uint8_t)(((i.uValue >> 23) - 0x77) ^ 0x28);
+	return 0xff; // failed
 }

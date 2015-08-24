@@ -5,10 +5,11 @@
  *      Author: mueller
  */
 
+#define __STDC_FORMAT_MACROS // Work around for older g++
+
 #include "Disassembler.h"
 #include "utils.h"
 
-#define __STDC_FORMAT_MACROS
 #include <cstdarg>
 #include <cstring>
 #include <cstdlib>
@@ -29,7 +30,7 @@ void Disassembler::appendf(const char* fmt, ...)
 	va_end(va);
 }
 
-void Disassembler::appendImmd(value_t value)
+void Disassembler::appendImmd(qpuValue value)
 {	// Check whether likely a float, just a guess
 	if (UseFloat && abs(((value.iValue >> 23) & 0xff) ^ 0x80) <= 20)
 		CodeAt += snprintf(CodeAt, Code + sizeof Code - CodeAt, "%.6e", value.fValue);
@@ -125,7 +126,7 @@ void Disassembler::DoADD()
 		}
 		if (Instruct.Sig == Inst::S_SMI && Instruct.MuxAB == Inst::X_RB)
 		{	// constant => evaluate
-			value_t value(Instruct.SMIValue());
+			auto value(Instruct.SMIValue());
 			Instruct.evalADD(value, value);
 			if (unpack)
 				Instruct.evalPack(value, value, false);
@@ -176,7 +177,7 @@ void Disassembler::DoMUL()
 			return append(", 0");
 		if (Instruct.Sig == Inst::S_SMI && Instruct.MuxMB == Inst::X_RB)
 		{	// constant => evaluate
-			value_t value(Instruct.SMIValue());
+			auto value(Instruct.SMIValue());
 			Instruct.evalMUL(value, value);
 			if (unpack)
 				Instruct.evalPack(value, value, true);
@@ -207,27 +208,6 @@ void Disassembler::DoALU()
 
 	append(cOpS[Instruct.Sig]);
 }
-
-/*const char *qpu_ldi_unpack(uint32_t unpack, uint32_t data)
-{
-	char *tmp = tmpalloc(128);
-	// unpack = 1 (2 bit signed vectors), 3 = (2 bit unsigned vectors);
-	if ((unpack==1) || (unpack==3)) {
-		int d[16];
-		for (int i=0; i<16; i++) {
-			d[i] = ((data >> (16+i-1))&0x2) | ((data >> i) & 0x1);
-			if ((unpack == 1) && d[i] &0x2)
-				d[i] |= 0xfffffffc;
-		}
-		sprintf(tmp, "[%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d]",
-			d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7],
-			d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]);
-	}
-	else {
-		sprintf(tmp, "0x%08x", data);
-	}
-	return tmp;
-}*/
 
 void Disassembler::DoLDI()
 {

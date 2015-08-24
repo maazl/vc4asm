@@ -14,6 +14,18 @@
 using namespace std;
 
 
+struct qpuValue
+{	union
+	{	uint32_t  uValue;   ///< Value as unsigned integer
+		int32_t   iValue;   ///< Value as signed integer
+		float     fValue;   ///< Value as 32 bit float
+		uint8_t   cValue[4];///< Value as 4 separate bytes @remarks The endianess does not count here.
+	};
+	/// Assign from expression value if possible.
+	/// @exception std::string Error during conversion.
+	qpuValue& operator=(const exprValue& value);
+};
+
 /// Worker class to assemble or disassemble QPU instruction words.
 struct Inst
 {	/// Signaling bits
@@ -176,7 +188,7 @@ struct Inst
 		};
 		struct            // ldi, sema, branch
 		{	ldmode LdMode;  ///< load immediate mode
-			value_t Immd;   ///< immediate value
+			qpuValue Immd;  ///< immediate value
 		};
 	};
 	union
@@ -205,14 +217,14 @@ struct Inst
 	/// @param l Left operand and result
 	/// @param r Right operand
 	/// @return false: Invalid operator
-	bool       evalADD(value_t& l, value_t r);
+	bool       evalADD(qpuValue& l, qpuValue r);
 	/// Simulate a MUL ALU operation of the current instruction.
 	/// @param l Left operand and result
 	/// @param r Right operand
 	/// @return false: Invalid operator
-	bool       evalMUL(value_t& l, value_t r);
+	bool       evalMUL(qpuValue& l, qpuValue r);
 	/// Simulate pack operation of the current instruction.
-	bool       evalPack(value_t& r, value_t v, bool mul);
+	bool       evalPack(qpuValue& r, qpuValue v, bool mul);
 
 	/// Reset instruction to its initial state, i.e. \c nop.
 	void       reset();
@@ -229,7 +241,11 @@ struct Inst
 	/// Get small immediate value
 	/// @return effective value represented by SImmd
 	/// @pre Sig == S_SMI && SImmd < 48
-	value_t    SMIValue() const;
+	qpuValue   SMIValue() const;
+	/// Converts an integer constant into a small immediate value.
+	/// @param i Integer value
+	/// @return Small immediate value or 0xff if \p i cannot be expressed by a small immediate value.
+	static uint8_t AsSMIValue(qpuValue i);
 
 	/// Check whether ADD ALU is in use
 	/// @pre Sig < S_LDI

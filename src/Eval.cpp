@@ -26,11 +26,11 @@ Eval::Fail::Fail(const char* format, ...)
 Eval::operate::operate(vector<exprEntry>& stack)
 :	rhs(stack.back())
 ,	lhs(stack[stack.size()-2])
-,	types((1 << rhs.Type) | ((lhs.Op & UNARY_OP) == 0) * (1 << lhs.Type))
+,	types((1 << rhs.Type) | !isUnary(lhs.Op) * (1 << lhs.Type))
 {}
 
 void Eval::operate::TypesFail()
-{	if (lhs.Op & UNARY_OP)
+{	if (isUnary(lhs.Op))
 		throw Fail("Cannot apply unary operator %s to operand of type %s.", op2string(lhs.Op), type2string(rhs.Type));
 	else
 		throw Fail("Cannot apply operator %s to operands of type %s and %s.", op2string(lhs.Op), type2string(lhs.Type), type2string(rhs.Type));
@@ -91,9 +91,9 @@ int Eval::operate::Compare()
 	 case 1<<V_LDPE:
 	 case 1<<V_LDPEU:
 	 case 1<<V_LABEL:
-		if (lhs.uValue < rhs.uValue)
+		if (lhs.iValue < rhs.iValue)
 			goto less;
-		if (lhs.uValue > rhs.uValue)
+		if (lhs.iValue > rhs.iValue)
 			goto greater;
 		goto equal;
 	 case 1<<V_REG:
@@ -127,9 +127,35 @@ int Eval::operate::Compare()
 	return ret;
 }
 
+bool Eval::operate::Identical()
+{	lhs.Type = V_INT;
+	switch (types)
+	{default:
+		return false;
+	 case 1<<V_FLOAT:
+	 case 1<<V_INT:
+	 case 1<<V_LDPES:
+	 case 1<<V_LDPE:
+	 case 1<<V_LDPEU:
+	 case 1<<V_LABEL:
+		return lhs.iValue == rhs.iValue; // Compare integer in case of float too, because of NaN === NaN.
+	 case 1<<V_REG:
+		return lhs.rValue.Type == rhs.rValue.Type
+			&& lhs.rValue.Rotate == rhs.rValue.Rotate
+			&& lhs.rValue.Num == rhs.rValue.Num;
+	}
+}
+
+void Eval::operate::ApplyUnaryMathOp(double (*op)(double))
+{	if (types & ~(1<<V_INT | 1<<V_FLOAT))
+		TypesFail();
+	PropFloat();
+	lhs.fValue = op(rhs.fValue);
+}
+
 bool Eval::operate::Apply(bool unary)
-{	if ( (lhs.Op & PRECEDENCE) < (rhs.Op & PRECEDENCE)
-		|| (unary && !(lhs.Op & UNARY_OP)) )
+{	if ( precedence(lhs.Op) < precedence(rhs.Op)
+		|| (unary && isUnary(lhs.Op)) )
 		return true;
 
 	switch (lhs.Op)
@@ -148,9 +174,8 @@ bool Eval::operate::Apply(bool unary)
 			return true; // can't evaluate over opening brace
 		}
 	 case NOP:
-		lhs.uValue = rhs.uValue; // works for float also
-		lhs.Type = rhs.Type;
-		break;
+		lhs = rhs;
+		return false;
 	 case NEG:
 		lhs.Type = rhs.Type;
 		switch (rhs.Type)
@@ -163,16 +188,16 @@ bool Eval::operate::Apply(bool unary)
 			lhs.iValue = -rhs.iValue; break;
 		 case V_LDPEU:
 		 case V_LDPE:
-			sh = (rhs.uValue & 0x55555555U) << 1;
-			if (rhs.uValue & sh)
+			sh = (rhs.iValue & 0x55555555U) << 1;
+			if (rhs.iValue & sh)
 				throw Fail("Cannot negate per element value set containing a value of 3.");
-			lhs.uValue = rhs.uValue | sh;
+			lhs.iValue = rhs.iValue | sh;
 			lhs.Type = V_LDPES;
 			break;
 		 case V_LDPES:
-			sh = (rhs.uValue & 0x55555555U) << 1;
-			lhs.uValue = rhs.uValue | sh;
-			if (lhs.uValue & sh)
+			sh = (rhs.iValue & 0x55555555U) << 1;
+			lhs.iValue = rhs.iValue | sh;
+			if (lhs.iValue & sh)
 				throw Fail("Cannot negate per element value set containing a value of -2.");
 			break;
 		}
@@ -185,20 +210,79 @@ bool Eval::operate::Apply(bool unary)
 		 case V_LDPES:
 		 case V_LDPE:
 		 case V_LDPEU:
-			lhs.uValue = ~rhs.uValue; break;
+			lhs.iValue = ~rhs.iValue; break;
 		}
 		lhs.Type = rhs.Type;
 		break;
 	 case lNOT:
 		CheckBool();
-		lhs.uValue = !rhs.uValue;
+		lhs.iValue = !rhs.iValue;
 		break;
+	 case ABS:
+		CheckNumericPropFloat();
+		if (rhs.Type == V_FLOAT)
+			lhs.fValue = fabs(rhs.fValue);
+		else
+			lhs.iValue = abs(rhs.iValue);
+		break;
+	 case CEIL:
+		if (types != V_FLOAT)
+			TypesFail();
+		lhs.iValue = (int64_t)ceil(rhs.iValue);
+		lhs.Type = V_INT;
+		break;
+	 case FLOOR:
+		if (types != V_FLOAT)
+			TypesFail();
+		lhs.iValue = (int64_t)floor(rhs.iValue);
+		lhs.Type = V_INT;
+		break;
+	 case EXP:
+		ApplyUnaryMathOp(&exp); break;
+	 case EXP2:
+		ApplyUnaryMathOp(&exp2); break;
+	 case EXP10:
+		ApplyUnaryMathOp([](double val) { return pow(10., val); }); break;
+	 case LOG:
+		ApplyUnaryMathOp(&log); break;
+	 case LOG2:
+		ApplyUnaryMathOp(&log2); break;
+	 case LOG10:
+		ApplyUnaryMathOp(&log10); break;
+	 case COS:
+		ApplyUnaryMathOp(&cos); break;
+	 case SIN:
+		ApplyUnaryMathOp(&sin); break;
+	 case TAN:
+		ApplyUnaryMathOp(&tan); break;
+	 case ACOS:
+		ApplyUnaryMathOp(&acos); break;
+	 case ASIN:
+		ApplyUnaryMathOp(&asin); break;
+	 case ATAN:
+		ApplyUnaryMathOp(&atan); break;
+	 case COSH:
+		ApplyUnaryMathOp(&cosh); break;
+	 case SINH:
+		ApplyUnaryMathOp(&sinh); break;
+	 case TANH:
+		ApplyUnaryMathOp(&tanh); break;
+	 case ACOSH:
+		ApplyUnaryMathOp(&acosh); break;
+	 case ASINH:
+		ApplyUnaryMathOp(&asinh); break;
+	 case ATANH:
+		ApplyUnaryMathOp(&atanh); break;
+	 case ERF:
+		ApplyUnaryMathOp(&erf); break;
+	 case ERFC:
+		ApplyUnaryMathOp(&erfc); break;
 	 case POW:
 		CheckNumericPropFloat();
 		if (rhs.Type == V_FLOAT)
 			lhs.fValue = pow(lhs.fValue, rhs.fValue);
 		else
-			lhs.iValue = (int32_t)floor(pow(lhs.iValue, rhs.iValue)+.5);
+			lhs.iValue = (int64_t)floor(pow(lhs.iValue, rhs.iValue)+.5);
 		break;
 	 case MUL:
 		CheckNumericPropFloat();
@@ -233,7 +317,7 @@ bool Eval::operate::Apply(bool unary)
 		 case 1<<V_LABEL | 1<<V_INT:
 			lhs.Type = V_LABEL;
 		 case 1<<V_INT:
-			lhs.uValue += rhs.uValue; break;
+			lhs.iValue += rhs.iValue; break;
 		 case 1<<V_REG | 1<<V_INT:
 			{	unsigned r = lhs.Type == V_REG ? lhs.rValue.Num + rhs.iValue : rhs.rValue.Num + lhs.iValue;
 								if (lhs.Type == V_REG)
@@ -254,12 +338,12 @@ bool Eval::operate::Apply(bool unary)
 			lhs.fValue -= rhs.fValue; break;
 		 case 1<<V_LABEL:
 			lhs.Type = V_INT;
-			lhs.uValue -= rhs.uValue; break;
+			lhs.iValue -= rhs.iValue; break;
 		 case 1<<V_LABEL | 1<<V_INT:
 			if (rhs.Type == V_LABEL)
 				TypesFail();
 		 case 1<<V_INT:
-			lhs.uValue -= rhs.uValue; break;
+			lhs.iValue -= rhs.iValue; break;
 		 case 1<<V_REG | 1<<V_INT:
 			if (rhs.Type == V_REG)
 				TypesFail();
@@ -312,30 +396,30 @@ bool Eval::operate::Apply(bool unary)
 		} break;
 	 case SHL:
 		CheckInt();
-		lhs.uValue <<= rhs.uValue;
+		lhs.iValue <<= rhs.iValue;
 		break;
 	 case SHR:
 		CheckInt();
-		lhs.uValue >>= rhs.uValue;
+		(uint64_t&)lhs.iValue >>= rhs.iValue;
 		break;
 	 case GT:
-		lhs.iValue = Compare() == 1;
-		break;
+		lhs.iValue = Compare() == 1; break;
 	 case GE:
-		lhs.iValue = Compare() >= 0;
-		break;
+		lhs.iValue = Compare() >= 0; break;
 	 case LT:
-		lhs.iValue = Compare() == -1;
-		break;
+		lhs.iValue = Compare() == -1; break;
 	 case LE:
-		lhs.iValue = (unsigned)(Compare() + 1) <= 1; // take care of indeterminate
-		break;
+		lhs.iValue = (unsigned)(Compare() + 1) <= 1; break; // take care of indeterminate
+	 case CMP:
+		lhs.iValue = Compare(); break;
 	 case EQ:
-		lhs.iValue = Compare() == 0;
-		break;
+		lhs.iValue = Compare() == 0; break;
 	 case NE:
-		lhs.iValue = Compare() != 0;
-		break;
+		lhs.iValue = Compare() != 0; break;
+	 case IDNT:
+		lhs.iValue = Identical(); break;
+	 case NIDNT:
+		lhs.iValue = !Identical(); break;
 	 case AND:
 		if (types == 1<<V_REG)
 		{	// Hack to mask registers
@@ -345,26 +429,35 @@ bool Eval::operate::Apply(bool unary)
 			break;
 		}
 		CheckInt();
-		lhs.uValue &= rhs.uValue;
+		lhs.iValue &= rhs.iValue;
 		break;
 	 case XOR:
 		CheckInt();
-		lhs.uValue ^= rhs.uValue;
+		lhs.iValue ^= rhs.iValue;
+		break;
+	 case XNOR:
+		CheckInt();
+		lhs.iValue = ~(lhs.iValue ^ rhs.iValue);
 		break;
 	 case OR:
 		CheckInt();
-		lhs.uValue |= rhs.uValue;
+		lhs.iValue |= rhs.iValue;
 		break;
 	 case lAND:
 		CheckBool();
-		lhs.iValue = lhs.uValue && rhs.uValue;
+		lhs.iValue = lhs.iValue && rhs.iValue;
 		break;
 	 case lXOR:
 		CheckBool();
-		lhs.iValue = !lhs.uValue ^ !rhs.uValue;
+		lhs.iValue = !lhs.iValue ^ !rhs.iValue;
+		break;
+	 case lXNOR:
+		CheckBool();
+		lhs.iValue = !(!lhs.iValue ^ !rhs.iValue);
+		break;
 	 case lOR:
 		CheckBool();
-		lhs.iValue = lhs.uValue || rhs.uValue;
+		lhs.iValue = lhs.iValue || rhs.iValue;
 		break;
 	}
 	lhs.Op = rhs.Op;
@@ -392,7 +485,7 @@ bool Eval::partialEvaluate(bool unary)
 bool Eval::PushOperator(mathOp op)
 {	exprEntry& current = Stack.back();
 	current.Op = op;
-	if (op & UNARY_OP)
+	if (isUnary(op))
 	{	if (current.Type != V_NONE)
 			throw Fail("Unexpected unary operator %s after numeric expression.", op2string(op));
 	 unary:
@@ -447,34 +540,62 @@ exprValue Eval::Evaluate()
 
 const char* Eval::op2string(mathOp op)
 {	switch (op)
-	{case BRO: return "(";
-	 case BRC: return ")";
+	{case BRO:  return "(";
+	 case BRC:  return ")";
 	 case NOP:
-	 case ADD: return "+";
+	 case ADD:  return "+";
 	 case NEG:
-	 case SUB: return "-";
-	 case NOT: return "~";
-	 case lNOT:return "!";
-	 case POW: return "**";
-	 case MUL: return "*";
-	 case DIV: return "/";
-	 case MOD: return "%";
-	 case ASL: return "<<";
-	 case ASR: return ">>";
-	 case SHL: return "<<<";
-	 case SHR: return ">>>";
-	 case GT:  return ">";
-	 case GE:  return ">=";
-	 case LT:  return "<";
-	 case LE:  return "<=";
-	 case EQ:  return "==";
-	 case NE:  return "!=";
-	 case AND: return "&";
-	 case XOR: return "^";
-	 case OR:  return "|";
-	 case lAND:return "&&";
-	 case lXOR:return "^^";
-	 case lOR: return "||";
-	 default:  return NULL;
+	 case SUB:  return "-";
+	 case NOT:  return "~";
+	 case lNOT: return "!";
+	 case ABS:  return "abs";
+	 case CEIL: return "ceil";
+	 case FLOOR:return "floor";
+	 case EXP:  return "exp";
+	 case EXP2: return "exp2";
+	 case EXP10:return "exp10";
+	 case LOG:  return "log";
+	 case LOG2: return "log2";
+	 case LOG10:return "log10";
+	 case COS:  return "cos";
+	 case SIN:  return "sin";
+	 case TAN:  return "tan";
+	 case ACOS: return "acos";
+	 case ASIN: return "asin";
+	 case ATAN: return "atan";
+	 case COSH: return "cosh";
+	 case SINH: return "sinh";
+	 case TANH: return "tanh";
+	 case ACOSH:return "acosh";
+	 case ASINH:return "asinh";
+	 case ATANH:return "atanh";
+	 case ERF:  return "erf";
+	 case ERFC: return "erfc";
+	 case POW:  return "**";
+	 case MUL:  return "*";
+	 case DIV:  return "/";
+	 case MOD:  return "%";
+	 case ASL:  return "<<";
+	 case ASR:  return ">>";
+	 case SHL:  return "<<<";
+	 case SHR:  return ">>>";
+	 case GT:   return ">";
+	 case GE:   return ">=";
+	 case LT:   return "<";
+	 case LE:   return "<=";
+	 case EQ:   return "==";
+	 case NE:   return "!=";
+	 case IDNT: return "===";
+	 case NIDNT:return "!==";
+	 case CMP:  return "<=>";
+	 case AND:  return "&";
+	 case XOR:  return "^";
+	 case XNOR: return "!^";
+	 case OR:   return "|";
+	 case lAND: return "&&";
+	 case lXOR: return "^^";
+	 case lXNOR:return "!^^";
+	 case lOR:  return "||";
+	 default:   return NULL;
 	}
 }

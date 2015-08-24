@@ -24,13 +24,36 @@
 class Eval
 {public:
 	/// @brief Operators
-	/// @details The high nibble is the precedence. Bit 2 is set for unary operators.
+	/// @details The high nibble is the precedence. >= d is for unary operators.
 	enum mathOp : unsigned char
-	{	BRO  = 0xe4 ///< \c ( : opening brace
-	,	NOP  = 0xd4 ///< unary \c + : no operation
-	,	NEG  = 0xd5 ///< unary \c - : negative value
-	,	NOT  = 0xd6 ///< \c ~ : 2s complement
-	,	lNOT = 0xd7 ///< \c ! : logical not
+	{	BRO  = 0xf0 ///< \c ( : opening brace
+	,	NOP  = 0xe0 ///< unary \c + : no operation
+	,	NEG  = 0xe1 ///< unary \c - : negative value
+	,	NOT  = 0xe2 ///< \c ~ : 2s complement
+	,	lNOT = 0xe3 ///< \c ! : logical not
+	,	ABS  = 0xe4 ///< absolute value
+	,	CEIL = 0xe5 ///< round up to integer
+	,	FLOOR= 0xe6 ///< round down to integer
+	,	EXP  = 0xe8 ///< exponential function
+	,	EXP2 = 0xe9 ///< binary exponential function
+	,	EXP10= 0xea ///< common exponential function
+	,	LOG  = 0xec ///< natural logarithm
+	,	LOG2 = 0xed ///< binary logarithm
+	,	LOG10= 0xee ///< common logarithm
+	,	COS  = 0xd0 ///< cosine
+	,	SIN  = 0xd1 ///< sine
+	,	TAN  = 0xd2 ///< tangent
+	,	ACOS = 0xd4 ///< arc cosine
+	,	ASIN = 0xd5 ///< arc sine
+	,	ATAN = 0xd6 ///< arc tangent
+	,	COSH = 0xd8 ///< hyperbolic cosine
+	,	SINH = 0xd9 ///< hyperbolic sine
+	,	TANH = 0xda ///< hyperbolic tangent
+	,	ERF  = 0xdb ///< error function
+	,	ACOSH= 0xdc ///< arc hyperbolic cosine
+	,	ASINH= 0xdd ///< arc hyperbolic sine
+	,	ATANH= 0xde ///< arc hyperbolic tangent
+	,	ERFC = 0xdf ///< complementary error function
 	,	POW  = 0xc0 ///< \c ** : power
 	,	MUL  = 0xb0 ///< \c * : multiply
 	,	DIV  = 0xb1 ///< \c / : divide
@@ -45,13 +68,18 @@ class Eval
 	,	GE   = 0x81 ///< \c >= : greater or equal
 	,	LT   = 0x82 ///< \c < : less than
 	,	LE   = 0x83 ///< \c <= : less or equal
+	,	CMP  = 0x84 ///< \c <=> : Perl like comparison operator
 	,	EQ   = 0x70 ///< \c == : equal
 	,	NE   = 0x71 ///< \c != : not equal
+	,	IDNT = 0x72 ///< \c === : identical
+	,	NIDNT= 0x73 ///< \c !== : not identical
 	,	AND  = 0x60 ///< \c & : bitwise and
 	,	XOR  = 0x51 ///< \c ^ : bitwise exclusive or
+	,	XNOR = 0x52 ///< \c !^ : bitwise exclusive nor
 	,	OR   = 0x42 ///< \c | : bitwise or
 	,	lAND = 0x30 ///< \c && : logical and
 	,	lXOR = 0x21 ///< \c ^^ : logical exclusive or
+	,	lXNOR= 0x22 ///< \c !^^ : logical exclusive nor
 	,	lOR  = 0x12 ///< \c || : logical or
 	,	BRC  = 0x00 ///< \c ) : closing brace
 	,	EVAL = 0x01 ///< done : evaluate all
@@ -63,11 +91,10 @@ class Eval
 	{	Fail(const char* fmt, ...);
 	};
  private:
-	/// Bits encoded in the mathOp enum values.
-	enum
-	{	UNARY_OP  = 0x04 ///< Unary operator flag.
-	,	PRECEDENCE= 0xf0 ///< Precedence mask.
-	};
+	/// Check whether \a op is an unary operator.
+	static bool isUnary(mathOp op) { return op >= 0xd0; }
+	/// Get operator precedence
+	static unsigned char precedence(mathOp op) { return op & 0xf0; }
 
 	/// @brief Entry in the evaluation stack.
 	/// @details This structure consists of a value and an operator.
@@ -149,6 +176,13 @@ class Eval
 		///   registers are less than labels.
 		///   Different types never compare equal, except for V_INT vs. V_FLOAT of course.
 		int       Compare();
+		/// Check whether two values are identical (not just equal).
+		bool      Identical();
+		/// @brief Apply the unary mathematical operator \a op.
+		/// @param op Mathematical operator function.
+		/// @exception Fail The operand is not of type V_INT or V_FLOAT.
+		/// @post The result operand is of type V_FLOAT.
+		void      ApplyUnaryMathOp(double (*op)(double));
 	 public:
 		/// @brief Prepare evaluation of the last but one operator.
 		/// @details Evaluate the operator of the last but one stack entry
