@@ -1569,13 +1569,15 @@ const Parser::opExtEntry Parser::extMap[] =
 };
 
 const Parser::opEntry<8> Parser::directiveMap[] =
-{	{ "assert",  &Parser::parseASSERT }
+{	{ "align",   &Parser::parseALIGN, -1 }
+,	{ "assert",  &Parser::parseASSERT }
 ,	{ "back",    &Parser::beginBACK }
 ,	{ "bit",     &Parser::parseDATA,  1 }
 ,	{ "byte",    &Parser::parseDATA,  8 }
 ,	{ "clone",   &Parser::parseCLONE }
 ,	{ "const",   &Parser::parseSET,   C_CONST }
 ,	{ "define",  &Parser::parseSET,   C_NONE }
+,	{ "double",  &Parser::parseDATA,  -64 }
 ,	{ "dword",   &Parser::parseDATA,  32 }
 ,	{ "elif",    &Parser::parseELSEIF }
 ,	{ "else",    &Parser::parseELSE }

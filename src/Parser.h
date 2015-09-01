@@ -381,6 +381,10 @@ class Parser
 	int              UseUnpack;
 	/// Current program counter in GPU words. Relative to the start of the assembly.
 	unsigned         PC;
+	/// @brief Offset in bits in the current instruction word.
+	/// @details Only valid for data directives since instruction words must always start on a 64 bit boundary.
+	/// A non-zero value implies that the instruction slot at PC already has been allocated.
+	unsigned         BitOffset;
 
 	// context
 	/// Points to an entry of \ref Macros if we are currently inside a macro definition block. NULL otherwise.
@@ -620,6 +624,16 @@ class Parser
 	/// - -4 => 32 bit float data
 	/// @exception std::string Failed, error message.
 	void             parseDATA(int type);
+	/// Handle .align.
+	/// @param bytes Bytes to align. 1 = byte alignment, 8 = 64 bit alignment etc.
+	/// Must be a power of 2 or -1 for parsing an alignment argument.
+	/// @exception std::string Failed, error message.
+	void             parseALIGN(int bytes);
+	/// Enforce alignment of PC.
+	/// @param bytes Bytes to align. 1 = byte alignment, 8 = 64 bit alignment etc.
+	/// @pre \a bytes must be a power of 2.
+	/// @return true: alignment caused padding.
+	bool             doALIGN(int bytes);
 	/// @brief Handle \c .rep directive.
 	/// @details This opens a local macro with the reserved name ".rep" to record the code block
 	/// and pushes the loop identifier as the first argument and the number of repetitions as second one.

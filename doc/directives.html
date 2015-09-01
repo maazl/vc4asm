@@ -9,11 +9,12 @@
   </head>
   <body>
     <h1>VC4ASM - Assembler directives</h1>
-    <p><a href="index.html">&uarr; Top</a>, <tt><a href="#.assert">.assert</a>
-        <a href="#.back">.back</a> </tt><tt> <a href="#.byte">.byte</a> <a href="#.clone">.clone</a>
-      </tt><tt><a href="#.const">.const</a>&nbsp;<a href="#.else">.else</a> <a
-          href="#.elseif">.elseif</a> <a href="#.back">.endb</a></tt><tt><tt> <a
-            href="#.func">.endf</a> </tt></tt><tt><tt><tt><tt><a href="#.foreach">.endfor</a></tt></tt></tt>
+    <p><a href="index.html">&uarr; Top</a>, <tt><a href="#.assert"><tt><a href="#.align">.align</a></tt></a><tt>
+        </tt><a href="#.assert">.assert</a> <a href="#.back">.back</a> </tt><tt><a
+          href="#.bit">.bit</a></tt><tt> <a href="#.byte">.byte</a> <a href="#.clone">.clone</a>
+      </tt><tt><a href="#.const">.const</a></tt><tt><tt>&nbsp;<a href="#.double">.double</a></tt>
+        <a href="#.else">.else</a> <a href="#.elseif">.elseif</a> <a href="#.back">.endb</a></tt><tt><tt>
+          <a href="#.func">.endf</a> </tt></tt><tt><tt><tt><tt><a href="#.foreach">.endfor</a></tt></tt></tt>
         <a href="#.endif">.endif</a> <a href="#.macro">.endm</a> <a href="#.rep">.endr</a>
         <a href="#.equ">.equ</a></tt><tt><tt> <a href="#.float">.float</a> </tt></tt><tt><tt><tt><a
               href="#.foreach">.foreach</a>&nbsp;</tt></tt><a href="#.func">.func</a>
@@ -231,10 +232,11 @@
     <p>An included file denotes a local context. Definitions that are local like
       <tt>.setlc</tt> are only valid within the included file and sub includes.</p>
     <h2><tt><a id=".byte" name=".byte"></a><a id=".short" name=".short"></a><a id=".int"
-          name=".int"></a><a id=".long" name=".long"></a><a id=".float" name=".float"></a>.byte
-        .short .int .long .float</tt> - place constants inside code blocks</h2>
-    <pre>.byte <var>constant, constant</var> ...<br>.short <var><var>constant, constant</var></var> ...<var></var><br>.int <var><var>constant, constant</var></var> ...<br>.long <var>constant, constant</var> ...
-.float <var>constant, constant</var> ...</pre>
+          name=".int"></a><a id=".long" name=".long"></a><a id=".float" name=".float"></a><a
+          id=".bit" name=".bit"></a><a id=".double" name=".double"></a>.byte
+        .short .int .long .bit .float .double</tt> - place constants inside code
+      blocks</h2>
+    <pre>.byte <var>constant, constant</var> ...<br>.short <var><var>constant, constant</var></var> ...<var></var><br>.int <var><var>constant, constant</var></var> ...<br>.long <var>constant, constant</var> ...<br>.bit <var>constant, constant</var> ...<br>.float <var>constant, constant</var> ...<br>.double <var>constant, constant</var> ...</pre>
     <dl>
       <dt><tt><var>constant</var></tt></dt>
       <dd>Expression that evaluates to an integer or floating point constant.</dd>
@@ -244,16 +246,15 @@
       as address. Or you may emit opcodes that are unsupported by vc4asm.</p>
     <p><tt>.byte</tt> creates 8 bit constants (signed or unsigned), <tt>.short</tt>
       creates 16 bit constants (signed or unsigned), <tt>.int</tt> creates 32
-      bit constants (signed, unsigned or float), .long creates 64 bit integers
-      and <tt>.float</tt> forces 32 bit floating point constants. The result is
-      always stored in big endian format.</p>
-    <p>There are restrictions when placing constants in the code:</p>
+      bit constants (signed, unsigned or float), <tt>.long</tt> creates 64 bit
+      integers, <tt>.bit</tt> single bits, <tt>.float</tt> forces 32 bit
+      floating point constants and <tt>.double</tt> 64 bit floating point
+      constants. Well, the latter makes only little sense since the GPU cannot
+      deal with double precision.</p>
+    <p>The result is always stored in big endian format.</p>
+    <p>You should ensure that the constants will not accidentally be executed
+      unless they contain valid Videocore IV instructions.</p>
     <ul>
-      <li>First of all the constants must not break the 64 bit instruction
-        alignment. I.e. each line (not each block!) should emit a multiple of 64
-        bit. vc4asm will use padding bytes otherwise.</li>
-      <li>You should ensure that the constants will not accidentally be executed
-        unless they contain valid Videocore IV instructions.</li>
     </ul>
     <p>In general you should prefer uniforms over constants in the code because
       they are easier to access. In most cases it is also more efficient to use
@@ -265,5 +266,18 @@
     <pre>    brr r0, r:1f<br>    mov t0s, r0<br>    add r0, r0, 4; ldtmu0  # load first floating point value after :0
     mov r1, r4;    mov t0s, r0<br>:0  .float 3.14159, 2.71828, ...<br>:1  add r0, r0, 4; ldtmu0  # load second floating point value after :0
     mov r2, r4     mov t0s, r0</pre>
+    <h2><a id=".align" name=".align"></a><tt>.align</tt> - ensure memory
+      alignment</h2>
+    <pre>.align <var>constant</var></pre>
+    <p>Force the current instruction pointer to be aligned to a byte boundary
+      with a specified power of 2.</p>
+    <dl>
+      <dt><tt><var>constant</var></tt></dt>
+      <dd>Expression that evaluates to an integer constant with the number of
+        bytes to align. <tt>1</tt> ensures byte alignment (makes only sense
+        after <tt>.bit</tt>), <tt>2</tt> enures 16 bit alignment, <tt>4 </tt>ensures
+        32 bit alignment and so on. The value must be a power of two and &le;
+        64. <tt>.align 0</tt> is a no-op.</dd>
+    </dl>
   </body>
 </html>

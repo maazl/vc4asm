@@ -103,9 +103,11 @@ void Parser::FlagsSize(size_t min)
 
 void Parser::StoreInstruction(uint64_t inst)
 {
-	for (unsigned i = Back; i--;)
-		Instructions[PC+i+1] = Instructions[PC+i];
-	Instructions[PC++] = inst;
+	uint64_t* ptr = &Instructions[PC+Back];
+	uint64_t* ip  = ptr - Back;
+	while (ptr != ip)
+		*ptr = ptr[-1], --ptr;
+	*ptr = inst;
 }
 
 Parser::token_t Parser::NextToken()
@@ -1032,6 +1034,9 @@ void Parser::assembleBRANCH(int relative)
 		}
 	}
 
+	if (Instruct.Immd.uValue & 3)
+		Msg(WARNING, "A branch target without 32 bit alignment probably does not hit the nail on the head.");
+
 	// add branch target flag for the branch point unless the target is 0
 	if (Instruct.Reg || Instruct.Immd.uValue != 0)
 	{	size_t pos = PC + 4;
@@ -1138,8 +1143,10 @@ void Parser::defineLabel()
 		}
 	}
 	if (!Pass2)
-		lp->Value = PC * sizeof(uint64_t);
-	else if (lp->Name != Token || lp->Value != PC * sizeof(uint64_t))
+	{	if (BitOffset & 7)
+			Fail("Cannot set a label at a bit boundary. At least byte alignment is required.");
+		lp->Value = PC * sizeof(uint64_t) + (BitOffset >> 3);
+	} else if (lp->Name != Token || lp->Value != PC * sizeof(uint64_t))
 		Fail("Inconsistent Label definition during Pass 2.");
 	lp->Definition = *Context.back();
 
@@ -1165,17 +1172,27 @@ void Parser::parseLabel()
 void Parser::parseDATA(int type)
 {	if (doPreprocessor())
 		return;
- int count = 0;
-	uint64_t target = 0;
+	int alignment = 0;
+	int bits = type;
  next:
 	exprValue value = ParseExpression();
 	if (value.Type != V_INT && value.Type != V_FLOAT)
 		Fail("Immediate data instructions require integer or floating point constants. Found %s.", type2string(value.Type));
 	switch (type)
-	{case -32: // float
+	{case -64: // double
 		if (value.Type == V_INT)
 			value.fValue = value.iValue;
-		type = 4;
+		bits = -type;
+		break;
+	 case -32: // float
+		{	union
+			{	uint32_t uVal;
+				float    fVal;
+			} cvt;
+			cvt.fVal = value.Type == V_INT ? value.iValue : value.fValue;
+			value.iValue = cvt.uVal;
+		}
+		bits = -type;
 		break;
 	 case 1: // bit
 		if (value.iValue & ~1)
@@ -1184,23 +1201,34 @@ void Parser::parseDATA(int type)
 	 case 8: // byte
 		if (value.iValue > 0xFF || value.iValue < -0x80)
 			Msg(WARNING, "Byte value out of range: 0x%" PRIx64, value.iValue);
+		value.iValue &= 0xFF;
 		break;
 	 case 16: // short
 		if (value.iValue > 0xFFFF || value.iValue < -0x8000)
 			Msg(WARNING, "Short integer value out of range: 0x%" PRIx64, value.iValue);
+		value.iValue &= 0xFFFF;
 		break;
 	 case 32: // int
 		if (value.iValue > 0xFFFFFFFF || value.iValue < -0x80000000)
 			Msg(WARNING, "32 bit integer value out of range: 0x%" PRIx64, value.iValue);
+		value.iValue &= 0xFFFFFFFFULL;
 	}
+	// Ensure slot
+	if (!BitOffset)
+		StoreInstruction(0);
+	// Check alignment
+	else if (!alignment && (alignment = BitOffset & (bits-1)) != 0)
+		Msg(WARNING, "Unaligned immediate data directive. %i bits missing for correct alignment.", type - alignment);
 	// Prevent optimizer across .data segment
 	Flags() |= IF_BRANCH_TARGET;
 	// store value
-	target |= value.iValue << count;
-	if ((count += type) >= 64)
-	{	StoreInstruction(target);
-		count = 0;
-		target = 0;
+	uint64_t& target = Instructions[PC];
+	target |= value.iValue << BitOffset;
+	if ((BitOffset += bits) >= 64)
+	{	++PC;
+		// If value crosses instruction boundary => store remaining part
+		if ((BitOffset -= 64) != 0)
+			StoreInstruction((uint64_t)value.iValue >> (bits - BitOffset));
 	}
 	switch (NextToken())
 	{default:
@@ -1209,14 +1237,53 @@ void Parser::parseDATA(int type)
 		goto next;
 	 case END:;
 	}
-	if (count & 63)
-	{	Msg(INFO, "Used padding to enforce 64 bit alignment of immediate data.");
-		StoreInstruction(target);
-	}
 	// Prevent optimizer across .data segment
-	FlagsSize(PC + 1);
 	Flags() |= IF_BRANCH_TARGET;
 	Instruct.reset();
+}
+
+void Parser::parseALIGN(int bytes)
+{
+	if (bytes < 0)
+	{	auto val = ParseExpression();
+		if (val.Type != V_INT)
+			Fail("Expected integer constant after .align.");
+		if (val.iValue > 64 || val.iValue < 0)
+			Fail("Alignment value must be in the range [0, 64].");
+		bytes = (int)val.iValue;
+		if (bytes & (bytes-1))
+			Fail("Alignment value must be a power of 2.");
+	}
+	if (NextToken() != END)
+		Fail("Expected end of line after alignment directive.");
+
+	doALIGN(bytes);
+}
+
+bool Parser::doALIGN(int bytes)
+{	if (!bytes)
+		return false;
+
+	// bit alignment
+	int align = BitOffset & ((8*bytes)-1);
+	if (align)
+	{	BitOffset += 8*bytes - align;
+		if (BitOffset == 64) // cannot overflow
+		{	BitOffset = 0;
+			++PC;
+		}
+	}
+
+	// Instruction level alignment
+	bytes >>= 8;
+	if (!bytes || !(PC & --bytes))
+		return align != 0;
+	// BitOffset is necessarily zero at this point.
+	do
+	{	StoreInstruction(0);
+		++PC;
+	} while (PC & bytes);
+	return true;
 }
 
 void Parser::beginREP(int)
@@ -1400,20 +1467,29 @@ void Parser::parseCLONE(int)
 	exprValue param2 = ParseExpression();
 	if (param2.Type != V_INT || (uint64_t)param2.iValue > 3)
 		Fail("Expected integer constant in the range [0,3].");
+	// Fast exit without any further checks.
+	if (param2.iValue == 0)
+		return;
+
 	FlagsSize(PC + (unsigned)param2.iValue);
 	param2.iValue += param1.iValue; // end offset rather than count
 	if (Pass2 && param2.iValue >= Instructions.size())
-		Fail("TODO: Cannot clone behind the end of the code.");
+		Fail("Cannot clone behind the end of the code.");
 
-	for (auto src = (unsigned)param1.iValue; src < (unsigned)param2.iValue; ++src)
+	if (doALIGN(64))
+		Msg(WARNING, "Used padding to enforce 64 bit alignment of GPU instruction.");
+
+	auto src = (unsigned)param1.iValue;
+	do
 	{	InstFlags[PC] |= InstFlags[src] & ~IF_BRANCH_TARGET;
 		if ((Instructions[src] & 0xF000000000000000ULL) == 0xF000000000000000ULL)
 			Msg(WARNING, "You should not clone branch instructions. (#%u)", src - (unsigned)param1.iValue);
 		StoreInstruction(Instructions[src]);
-	}
+		++PC;
+		++src;
+	} while (src < (unsigned)param2.iValue);
 	// Restore last instruction to provide combine support
-	if (PC)
-		Instruct.decode(Instructions[PC-1]);
+	Instruct.decode(Instructions[PC-1]);
 }
 
 void Parser::parseSET(int flags)
@@ -1940,6 +2016,9 @@ void Parser::ParseLine()
 			return;
 		}
 
+		if (doALIGN(64))
+			Msg(WARNING, "Used padding to enforce 64 bit alignment of GPU instruction.");
+
 		if (trycombine)
 		{	char* atbak = At;
 			bool succbak = Success;
@@ -1973,6 +2052,7 @@ void Parser::ParseLine()
 
 		ParseInstruction();
 		StoreInstruction(Instruct.encode());
+		++PC;
 		return;
 	}
 }
@@ -2031,6 +2111,7 @@ void Parser::ResetPass()
 	InstFlags.clear();
 	PC = 0;
 	Instruct.reset();
+	BitOffset = 0;
 }
 
 void Parser::EnsurePass2()
