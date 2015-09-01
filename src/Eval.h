@@ -136,7 +136,7 @@ class Eval
 		void      CheckInt();
 		/// @brief Check whether both operand types implicitly convert to bool.
 		/// @exception Fail At least one of the operands is not convertible to boolean,
-		/// e.g. a label or a register.
+		/// e.g. a float, a label or a register.
 		/// @details The function also patches the return type to be integer (V_INT)
 		/// since vc4asm has no boolean type.
 		void      CheckBool();

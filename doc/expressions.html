@@ -447,8 +447,7 @@
         </tr>
         <tr>
           <td><tt>!</tt></td>
-          <td>int &rarr; int<br>
-            float &rarr; int</td>
+          <td>int &rarr; int</td>
           <td>logical not, <tt>1</tt> if operand is zero, otherwise <tt>0</tt></td>
         </tr>
         <tr>
@@ -572,7 +571,7 @@
             power<br>
           </td>
           <td><tt>**</tt></td>
-          <td>int, int &rarr; int<br>
+          <td colspan="1" rowspan="4">int, int &rarr; int<br>
             float, float &rarr; float <br>
             int, float &rarr; float<br>
             float, int &rarr; float</td>
@@ -587,10 +586,6 @@
           <td colspan="1" rowspan="3">binary<br>
             multiplicative</td>
           <td><tt>*</tt></td>
-          <td colspan="1" rowspan="3">int, int &rarr; int<br>
-            float, float &rarr; float <br>
-            int, float &rarr; float<br>
-            float, int &rarr; float</td>
           <td>multiplication<br>
           </td>
         </tr>
@@ -700,7 +695,7 @@
           <td colspan="1" rowspan="4">binary<br>
             equality</td>
           <td><tt>==</tt> </td>
-          <td colspan="1" rowspan="2">all, all &rarr; int</td>
+          <td colspan="1" rowspan="4">all, all &rarr; int</td>
           <td>equal</td>
         </tr>
         <tr>
@@ -709,13 +704,12 @@
         </tr>
         <tr>
           <td><tt>===</tt></td>
-          <td colspan="1" rowspan="2">all, all &rarr; int</td>
           <td>identical, not just equal, e.g. <tt>NaN === NaN</tt> but <tt>NaN
               != NaN</tt></td>
         </tr>
         <tr>
           <td><tt>!==</tt></td>
-          <td>not identical, e.g. <tt>1.0 !== 1</tt> but <tt>1.0 == 1</tt> but
+          <td>not identical, e.g. <tt>1.0 !== 1</tt> but <tt>1.0 == 1</tt> and
             also <tt>1.00 === 1.0</tt></td>
         </tr>
         <tr>
@@ -723,13 +717,12 @@
           <td colspan="1" rowspan="4">binary<br>
             bitwise</td>
           <td><tt>&amp;</tt></td>
-          <td>int, int &rarr; int</td>
+          <td colspan="1" rowspan="4">int, int &rarr; int</td>
           <td>binary and</td>
         </tr>
         <tr>
           <td colspan="1" rowspan="2">10</td>
           <td><tt>^</tt></td>
-          <td colspan="1" rowspan="2">int, int &rarr; int</td>
           <td>binary exclusive or</td>
         </tr>
         <tr>
@@ -739,7 +732,6 @@
         <tr>
           <td>11</td>
           <td><tt>|</tt></td>
-          <td>int, int &rarr; int</td>
           <td>binary inclusive or</td>
         </tr>
         <tr>
@@ -747,19 +739,12 @@
           <td colspan="1" rowspan="4">binary<br>
             logical</td>
           <td><tt>&amp;&amp;</tt></td>
-          <td>int, int &rarr; int<br>
-            float, float &rarr; int<br>
-            int, float &rarr; int<br>
-            float, int &rarr; int</td>
+          <td colspan="1" rowspan="4">int, int &rarr; int</td>
           <td>logical and</td>
         </tr>
         <tr>
           <td colspan="1" rowspan="2">13</td>
           <td><tt>^^</tt></td>
-          <td colspan="1" rowspan="2">int, int &rarr; int<br>
-            float, float &rarr; int<br>
-            int, float &rarr; int<br>
-            float, int &rarr; int</td>
           <td>logical exclusive or</td>
         </tr>
         <tr>
@@ -769,10 +754,6 @@
         <tr>
           <td>14</td>
           <td><tt>||</tt></td>
-          <td>int, int &rarr; int<br>
-            float, float &rarr; int<br>
-            int, float &rarr; int<br>
-            float, int &rarr; int</td>
           <td>logical inclusive or</td>
         </tr>
       </tbody>

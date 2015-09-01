@@ -42,8 +42,7 @@ void Eval::operate::CheckInt()
 }
 
 void Eval::operate::CheckBool()
-{	if (types & ~(1<<V_INT | 1<<V_FLOAT | 1<<V_LDPE | 1<<V_LDPES | 1<<V_LDPEU))
-		TypesFail();
+{	CheckInt();
 	lhs.Type = V_INT;
 }
 
