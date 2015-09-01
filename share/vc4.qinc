@@ -6,7 +6,7 @@
   .assert !((rowlen-1) & ~0xf)
   .assert !((nrows-1) & ~0xf)
   .assert !(dma & ~0x7000ffff) && (dma & 0x70000000) != 0x10000000
-  0x80000000 | log2(mpitch/8+1) << 24 | (rowlen & 0xf) << 20 | (nrows & 0xf) << 16 | dma
+  0x80000000 | ilog2(mpitch/8+1) << 24 | (rowlen & 0xf) << 20 | (nrows & 0xf) << 16 | dma
 .endf
 .func vdr_setup_1(stride)
   .assert !(stride & ~0x1fff)
@@ -96,17 +96,17 @@
     y
   .endif
 .endf
-.func log2(x) # unsigned!
+.func ilog2(x) # unsigned!
   .if !(x & ~0x3)
     x - 1 - (x == 3) 
   .elseif !(x & ~0xf)
-    log2(x >>> 2) + 2
+    ilog2(x >>> 2) + 2
   .elseif !(x & ~0xff)
-    log2(x >>> 4) + 4
+    ilog2(x >>> 4) + 4
   .elseif !(x & ~0xffff)
-    log2(x >>> 8) + 8
+    ilog2(x >>> 8) + 8
   .else
-    log2(x >>> 16) + 16
+    ilog2(x >>> 16) + 16
   .endif
 .endf
 .func countBits(x)
@@ -123,3 +123,18 @@
   .lset x, ((x & 0xff00ff00) >>> 8) | ((x & 0x00ff00ff) <<< 8)
   (x >>> 16) | (x <<< 16)
 .endf
+.set M_E,       2.7182818284590452354  # e
+.set M_LOG2E,   1.4426950408889634074  # log_2 e
+.set M_LOG10E,  0.43429448190325182765 # log_10 e
+.set M_LN2,     0.69314718055994530942 # log_e 2
+.set M_LN10,    2.30258509299404568402 # log_e 10
+.set M_PI,      3.14159265358979323846 # pi
+.set M_2PI,     6.28318530717958646692 # 2 pi
+.set M_PI_2,    1.57079632679489661923 # pi/2
+.set M_PI_4,    0.78539816339744830962 # pi/4
+.set M_1_PI,    0.31830988618379067154 # 1/pi
+.set M_2_PI,    0.63661977236758134308 # 2/pi
+.set M_2_SQRTPI,1.12837916709551257390 # 2/sqrt pi
+.set M_SQRT2,   1.41421356237309504880 # sqrt 2
+.set M_SQRT1_2, 0.70710678118654752440 # 1/sqrt 2
+
