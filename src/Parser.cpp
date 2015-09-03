@@ -63,7 +63,7 @@ string Parser::enrichMsg(string msg)
 			 case CTX_FUNCTION:
 				msg += stringf("\n  At function invocation from %s (%u)", ctx.File.c_str(), ctx.Line);
 				break;
-			 case CTX_ROOT:;
+			 default:;
 			}
 		type = ctx.Type;
 	}
@@ -1541,8 +1541,8 @@ void Parser::parseSET(int flags)
 			if (NextToken() != END)
 				Fail("Syntax error: unexpected %s.", Token.c_str());
 
-			auto& current = flags & C_LOCAL ? *Context.back() : *Context.front();
-			auto r = current.Consts.emplace(name, constDef(expr, current));
+			auto& consts = (flags & C_LOCAL ? Context.back() : Context.front())->Consts;
+			auto r = consts.emplace(name, constDef(expr, *Context.back()));
 			if (!r.second)
 			{	if (flags & C_CONST)
 					// redefinition not allowed
@@ -2087,7 +2087,7 @@ void Parser::ParseFile()
 void Parser::ParseFile(const string& file)
 {	if (Pass2)
 		throw string("Cannot add another file after pass 2 has been entered.");
-	saveContext ctx(*this, new fileContext(CTX_ROOT, file, 0));
+	saveContext ctx(*this, new fileContext(CTX_FILE, file, 0));
 	try
 	{	ParseFile();
 		Filenames.emplace_back(file);
@@ -2104,6 +2104,7 @@ void Parser::ResetPass()
 {	AtMacro = NULL;
 	AtIf.clear();
 	Context.clear();
+	Context.emplace_back(new fileContext(CTX_ROOT, "", 0));
 	Functions.clear();
 	Macros.clear();
 	LabelsByName.clear();
@@ -2136,7 +2137,7 @@ void Parser::EnsurePass2()
 	}
 
 	for (auto file : Filenames)
-	{	saveContext ctx(*this, new fileContext(CTX_INCLUDE, file, 0));
+	{	saveContext ctx(*this, new fileContext(CTX_FILE, file, 0));
 		ParseFile();
 	}
 

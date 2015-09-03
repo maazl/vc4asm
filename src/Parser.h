@@ -168,7 +168,8 @@ class Parser
 
 	/// Type of parser call stack entry.
 	enum contextType
-	{	CTX_ROOT             ///< Document root, i.e. command line argument.
+	{	CTX_ROOT             ///< Root node
+	,	CTX_FILE             ///< File supplied by command line
 	,	CTX_INCLUDE          ///< .include directive
 	,	CTX_MACRO            ///< macro invocation
 	,	CTX_FUNCTION         ///< function call
