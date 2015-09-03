@@ -150,6 +150,7 @@ void Eval::operate::ApplyUnaryMathOp(double (*op)(double))
 		TypesFail();
 	PropFloat();
 	lhs.fValue = op(rhs.fValue);
+	lhs.Type = V_FLOAT;
 }
 
 bool Eval::operate::Apply(bool unary)
