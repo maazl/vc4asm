@@ -1209,9 +1209,9 @@ void Parser::parseDATA(int type)
 		value.iValue &= 0xFFFF;
 		break;
 	 case 32: // int
-		if (value.iValue > 0xFFFFFFFF || value.iValue < -0x80000000)
+		if (value.iValue > 0xFFFFFFFFLL || value.iValue < -0x80000000LL)
 			Msg(WARNING, "32 bit integer value out of range: 0x%" PRIx64, value.iValue);
-		value.iValue &= 0xFFFFFFFFULL;
+		value.iValue &= 0xFFFFFFFFLL;
 	}
 	// Ensure slot
 	if (!BitOffset)
