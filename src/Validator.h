@@ -92,6 +92,12 @@ class Validator
 	bool Pass2;       ///< Check only for dependencies of branch target.
 	Inst Instruct;    ///< current instruction to analyze.
  private:
+	/// @brief Turn reference location into an absolute value.
+	/// @details This is the opposite done in the \see state constructor.
+	/// The value changes only when it is before \see Start.
+	/// @param refloc location to relocate.
+	/// @return Absolute index into instructions array.
+	int  MakeAbsRef(int refloc) { if (refloc < Start) refloc += From - Start; return refloc; }
 	/// @brief print a validation warning.
 	/// @param refloc The Validation error at the current instruction (\ref At) is caused by the instruction at location \p refloc.
 	/// The location is automatically relocated if it is from before a branch.
@@ -102,6 +108,22 @@ class Validator
 	/// Convert an ALU input multiplexer to an index into a write register index.
 	/// @remarks This function is used to check for back to back read after write.
 	int  FromMux(Inst::mux m);
+	/// @brief Get effective condition of all read access to input mux \a m
+	/// in the current instruction.
+	/// @param m Check only for access to this input mux.
+	/// @details The function takes care of any ALU that uses this value
+	/// for write to any register other than R_NOP or to the flags.
+	Inst::conda GetRdCond(Inst::mux m);
+	/// @brief Checks whether the read access to a register in the current instruction
+	/// can conflict with a write access to the same register at a prior instruction.
+	/// @param reg Register to check, > 64 for regfile B. See FromMux.
+	/// @param rdcond conditional access at the register read.
+	/// In fact you cannot read conditional, but if the result is discarded
+	/// an undefined value might be OK.
+	/// @param code Check this write instruction.
+	/// @pre The instruction at \a at really writes to register \a reg
+	/// with a condition overlapping with \a rdcond.
+	bool IsCondOverlap(int reg, Inst::conda rdcond, uint64_t code);
 	/// Ensure termination of the current task.
 	/// @param Maximum number of further instructions to check.
 	void TerminateRq(int after);

@@ -57,6 +57,59 @@ int Validator::FromMux(Inst::mux m)
 	}
 }
 
+Inst::conda Validator::GetRdCond(Inst::mux m)
+{
+	switch (Instruct.Sig)
+	{case Inst::S_LDI:
+		// ldi never reads a register
+		return Inst::C_NEVER;
+	 case Inst::S_BRANCH:
+		// branch is special, the branch conditions do not count here
+		return Instruct.Reg && m == Inst::X_RA ? Inst::C_AL : Inst::C_NEVER;
+	 case Inst::S_SMI:
+		// small immediates cannot access regfile B
+		if (m == Inst::X_RB)
+			return Inst::C_NEVER;
+	 default:;
+	}
+	Inst::conda res = Inst::C_NEVER;
+	// ADD ALU read
+	if (Instruct.MuxAA == m || (Instruct.MuxAB == m && !Instruct.isUnary()))
+		res = Instruct.isSFADD() ? Inst::C_AL : Instruct.CondA;
+	// MUL ALU read
+	if (Instruct.MuxMA == m || Instruct.MuxMB == m)
+	{	auto res2 = Instruct.isSFMUL() ? Inst::C_AL : Instruct.CondM;
+		// merge conditions
+		if (res == Inst::C_NEVER)
+			res = res2;
+		else if (res != res2 && res2 != Inst::C_NEVER)
+			res = Inst::C_AL; // All non equal conditions except for C_NEVER have some overlap.
+	}
+	return res;
+}
+
+bool Validator::IsCondOverlap(int reg, Inst::conda rdcond, uint64_t code)
+{	// trivial case, and no check for I/O registers.
+	if (rdcond == Inst::C_NEVER || reg > 37 || reg == 35)
+		return false;
+	// decode old instruction
+	Inst inst;
+	inst.decode(code);
+	// apply write swap to the source register, because it is easier to do so.
+	if (inst.WS && (reg & 32) == 0)
+		reg ^= 64;
+	// check ADD ALU write
+	if (reg < 64 && reg == inst.WAddrA
+		&& (inst.Sig == Inst::S_BRANCH || !(inst.CondA == Inst::C_NEVER || (inst.CondA ^ rdcond) == 1)))
+		return true;
+	// check MUL ALU write
+	if (reg >= 32 && (reg & 63) == inst.WAddrM
+		&& (inst.Sig == Inst::S_BRANCH || !(inst.CondM == Inst::C_NEVER || (inst.CondM ^ rdcond) == 1)))
+		return true;
+	// no hit
+	return false;
+}
+
 void Validator::TerminateRq(int after)
 {	//printf("TerminateRq %u, %x\n", after, after + At);
 	after += At;
@@ -135,9 +188,11 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 		}
 
 		// check for RA/RB back to back read/write
-		if (regRA < 32 && st.LastWreg[0][regRA] == At-1)
+		if ( regRA < 32 && st.LastWreg[0][regRA] == At-1
+			&& IsCondOverlap(regRA, GetRdCond(Inst::X_RA), instructions[MakeAbsRef(At-1)]) )
 			Message(At-1, "Cannot read register ra%d because it just have been written by the previous instruction.", regRA);
-		if (regRB < 32 && st.LastWreg[1][regRB] == At-1)
+		if ( regRB < 32 && st.LastWreg[1][regRB] == At-1
+			&& IsCondOverlap(regRB|64, GetRdCond(Inst::X_RB), instructions[MakeAbsRef(At-1)]) )
 			Message(At-1, "Cannot read register rb%d because it just have been written by the previous instruction.", regRB);
 
 		if (At < 2 && Instruct.Sig == Inst::S_SBWAIT)
@@ -169,8 +224,11 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 			if (Instruct.SImmd == 48 && (st.LastWreg[0][37] == At-1 || st.LastWreg[1][37] == At-1))
 				Message(At-1, "Vector rotation must not follow a write to r5.");
 			// check source A
-			if ( st.LastWreg[0][FromMux(Instruct.MuxMA)] == At-1
-				|| st.LastWreg[0][FromMux(Instruct.MuxMB)] == At-1 )
+			int reg;
+			if ( ( st.LastWreg[0][reg = FromMux(Instruct.MuxMA)] == At-1
+					&& IsCondOverlap(reg, Instruct.isSFMUL() ? Inst::C_AL : Instruct.CondM, instructions[MakeAbsRef(At-1)]) )
+				|| ( st.LastWreg[0][reg = FromMux(Instruct.MuxMB)] == At-1
+					&& IsCondOverlap(reg, Instruct.isSFMUL() ? Inst::C_AL : Instruct.CondM, instructions[MakeAbsRef(At-1)]) ) )
 				Message(At-1, "Must not write to the source of a vector rotation in the previous instruction.");
 		}
 		// TLB Z -> MS_FLAGS
