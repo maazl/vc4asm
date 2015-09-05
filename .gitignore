@@ -27,6 +27,11 @@
 *.out
 *.app
 
+# Assembled files
+*.hex
+# intermediate files of test cases
+*.strip
+
 # Files from other Rpositories
 .svn
 CVS
