@@ -45,7 +45,11 @@
         Fixed: cannot define global constants in another file invoked from
         command line.<br>
         Validator: check for disjunctive conditional access before warning about
-        back to back register access. </dd>
+        back to back register access.<br>
+        Automatically choose MUL ALU if <tt>mov</tt> instruction contains
+        vector rotation.<br>
+        Warn about unexpected side effects in conjunction with MUL ALU vector
+        rotations.</dd>
       <dt>V0.1.9</dt>
       <dd>Fixed vc4dis: decoded not only the first 8 instructions in case of a
         binary source file.<br>

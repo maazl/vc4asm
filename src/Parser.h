@@ -145,25 +145,23 @@ class Parser
 		opAddMul    OpCode;  ///< ALU opcode to achieve this result.
 		packRaMul   Pack;    ///< Pack mode to achieve the desired result.
 	}             smiMap[];///< Immediate value lookup table used for <tt>mov rx, immd</tt>.
-	/// Context of a current expression during parse, bit vector
-	enum InstContext : uint8_t
+	/// Context of a current expression during parse, bit vector.
+	enum InstContext
 	{	IC_NONE     = 0      ///< No argument context, i.e. currently at the expression itself.
 	,	IC_MUL      = 1      ///< Bit test: currently at a MUL ALU instruction.
 	,	IC_SRC      = 2      ///< Bit test: currently at a source argument to an OP code; assignment: currently at the first source argument to an ADD ALU OP code.
-	,	IC_MULSRC   = 3      ///< Assignment: currently at the first source argument to a MUL ALU OP code.
 	,	IC_DST      = 4      ///< Bit test: currently at the destination argument to an OP code; assignment: currently at the destination argument to an ADD ALU OP code.
-	,	IC_MULDST   = 5      ///< Assignment: currently at the destination argument of a MUL ALU OP code.
 	,	IC_B        = 8      ///< Bit test: currently at the second argument to an OP code.
 	,	IC_SRCB     = 10     ///< Assignment: currently at the second source argument to an ADD ALU OP code.
-	,	IC_MULSRCB  = 11     ///< Assignment: currently at the second source argument to a MUL ALU OP code.
+	,	IC_CANSWAP  = 16     ///< Allow to swap ADD and MUL ALU, i.e. toggle bit 0
 	};
-	/// State of unpack extensions to the current OP code, bit vector.
-	enum UnpackReq
-	{	UR_NONE     = 0            ///< No unpack request by this ALU.
-	,	UR_OP       = 1 << IC_NONE ///< Unpack request at opcode level, mutual exclusive with UR_SRC*.
-	,	UR_SRCA     = 1 << IC_SRC  ///< Unpack request for first source argument.
-	,	UR_SRCB     = 1 << IC_SRCB ///< Unpack request for second source argument.
-	,	UR_NEW      = 1 << IC_MUL  ///< New unpack request => check for interaction with other ALU.
+	/// State of extensions to the current OP code, bit vector.
+	enum ExtReq
+	{	XR_NONE = 0          ///< No request by this ALU.
+	,	XR_OP   = 1<<IC_NONE ///< Request at opcode level, mutual exclusive with UR_SRC*.
+	,	XR_SRCA = 1<<IC_SRC  ///< Request for first source argument.
+	,	XR_SRCB = 1<<IC_SRCB ///< Request for second source argument.
+	,	XR_NEW  = 1<<IC_MUL  ///< New request => check for interaction with other ALU.
 	};
 
 	/// Type of parser call stack entry.
@@ -202,7 +200,7 @@ class Parser
 	/// Entry of the OP code extension lookup table, POD, compatible with binary_search().
 	struct opExtEntry
 	{	char           Name[16];///< Name of the extension
-		void (Parser::*Func)(int,InstContext);///< Parser function to call, receives an arbitrary argument and the parser context (see InstContext).
+		void (Parser::*Func)(int);///< Parser function to call, receives an arbitrary argument.
 		int            Arg;  ///< Arbitrary argument to the parser function. See documentation of the parser functions.
 		opExtFlags     Flags;///< Flags, define the contexts where an extension may be used.
 	};
@@ -378,8 +376,12 @@ class Parser
 	string           Token;
 	/// Buffer to build up the current instruction word for the GPU.
 	Inst             Instruct;
-	/// Unpack mode used by the current instruction. See UnpackReq.
+	/// Current expression context. Type InstContext.
+	int              InstCtx;
+	/// Unpack mode used by the current instruction. See toUnpackReq.
 	int              UseUnpack;
+	/// Vector rotation used by the current instruction. See toUnpackReq.
+	int              UseRot;
 	/// Current program counter in GPU words. Relative to the start of the assembly.
 	unsigned         PC;
 	/// @brief Offset in bits in the current instruction word.
@@ -500,64 +502,55 @@ class Parser
 	/// @param input mux to check. If the mux points to regfile A The read address is also check not to address an IO register.
 	/// @return PM flag for the instruction, i.e. 1 for r4 and 0 for regfile A or -1 if not possible.
 	int              isUnpackable(Inst::mux mux) { if (mux == Inst::X_R4) return true; if (mux == Inst::X_RA && Instruct.RAddrA < 32) return false; return -1; }
-	/// Convert instruction context to bit vector for UseUnpack.
-	static int       toUnpackReq(InstContext ctx) { return 1 << (ctx&IC_SRCB); }
+	/// Convert instruction context to bit vector for UseUnpack or UseRot.
+	/// @param ctx Context, type InstContext.
+	static int       toExtReq(int ctx) { return 1 << (ctx&IC_SRCB); }
+	/// Apply vector rotation to the current context.
+	/// @param count Desired rotation: 0 = none, 1 = one element right ... 15 = one element left, -16 = rotate by r5
+	void             applyRot(int count);
 
 	// OP code extensions
 	/// Handle \c .if opcode extension
 	/// @param cond Requested condition code, must be of type Inst::conda.
-	/// @param ctx Context.
 	/// @exception std::string Failed, error message.
-	void             addIf(int cond, InstContext ctx);
+	void             addIf(int cond);
 	/// @brief Handle \c .unpack extensions
 	/// @details Besides .unpack* this method can also handle the short hand form like .8a applied to source arguments.
 	/// @param mode Unpack mode, must be of type Inst::unpack.
-	/// @param ctx Context.
 	/// @exception std::string Failed, error message.
-	void             addUnpack(int mode, InstContext ctx);
+	void             addUnpack(int mode);
 	/// Handle \c .pack extensions
 	/// @param mode Unpack mode, must be of type Inst::pack.
-	/// @param ctx Context.
 	/// @exception std::string Failed, error message.
-	void             addPack(int mode, InstContext ctx);
+	void             addPack(int mode);
 	/// Handle \c .setf opcode extension
-	/// @param ctx Context.
 	/// @exception std::string Failed, error message.
-	void             addSetF(int, InstContext ctx);
+	void             addSetF(int);
 	/// Handle \c branch condition code
 	/// @param cond Condition code, must be of type Inst::condb.
-	/// @param ctx Context.
 	/// @exception std::string Failed, error message.
-	void             addCond(int cond, InstContext ctx);
+	void             addCond(int cond);
 	/// @brief Handle \c .rot extension
 	/// @details This extension reads an expression immediately after the \c .rot to get the rotation count.
 	/// Of course the count must be a constant less than 16 or \c r5.
-	/// @param ctx Context.
 	/// @exception std::string Failed, error message.
-	void             addRot(int, InstContext ctx);
+	void             addRot(int);
 	/// @brief Handle and dispatch instruction extensions.
 	/// @details The function will check the next token for a dot '.' and if true read an extension identifier after the dot.
 	/// After the identifier is read the matching \c add... function is invoked,
 	/// but only if the extension is allowed within the current context.
 	/// See extMap table for valid extensions and their matching handlers.
-	/// @param ctx Context.
 	/// @exception std::string Failed, error message.
-	void             doInstrExt(InstContext ctx);
+	void             doInstrExt();
 
 	/// @brief Assemble an expression as ALU target.
 	/// @details The function will also try to read instruction extensions if any.
 	/// @param param Expression value
-	/// @param mul \c IC_MUL if MUL ALU instruction, \c IC_NONE if ADD ALU.
 	/// @exception std::string Failed, error message.
-	void             doALUTarget(exprValue param, InstContext mul);
+	void             doALUTarget(exprValue param);
 	/// Handle an ALU source expression.
-	/// @param ctx Context, i.e. \c IC_SRC or \c IC_SRCB and optionally \c IC_MUL.
-	/// @return Multiplexer value required to access the source argument.
 	/// @exception std::string Failed, error message.
-	/// @remarks The function could also store the returned multiplexer directly in the instruction word,
-	/// but this would require a switch/case while from the callers point of view it is always an unconditional assignment.
-	/// This is just simpler.
-	Inst::mux        doALUExpr(InstContext ctx);
+	void             doALUExpr();
 	/// Handle source argument of branch instruction.
 	/// @param param Expression value
 	/// @exception std::string Failed, error message.

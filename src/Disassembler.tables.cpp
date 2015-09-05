@@ -5,10 +5,6 @@
  *      Author: mueller
  */
 
-const char Disassembler::cAcc[6][4] =
-{	"r0", "r1", "r2", "r3", "r4", "r5"
-};
-
 const char Disassembler::cRreg[2][64][10] = {
 {	"ra0", "ra1", "ra2", "ra3", "ra4", "ra5", "ra6", "ra7",
 	"ra8", "ra9", "ra10", "ra11", "ra12", "ra13", "ra14", "ra15", //ra15 is w in shaders

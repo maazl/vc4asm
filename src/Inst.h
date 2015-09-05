@@ -246,6 +246,10 @@ struct Inst
 	/// @param i Integer value
 	/// @return Small immediate value or 0xff if \p i cannot be expressed by a small immediate value.
 	static uint8_t AsSMIValue(qpuValue i);
+	/// Check whether an input mux supports full MUL ALU vector rotation, i.e. swapping between QPU slices.
+	/// @param m Input mux to check.
+	/// @return true for r0 to r3 and r5.
+	static bool SupportsFullRotate(mux m) { return (m ^ 1) < 5; }
 
 	/// Check whether ADD ALU is in use
 	/// @pre Sig < S_LDI
@@ -276,6 +280,9 @@ struct Inst
 	uint64_t   encode() const;
 	/// Decode instruction from QPU binary format into this instance.
 	void       decode(uint64_t code);
+
+	/// Convert input mux to human readable format, e.g. for error messages.
+	static const char* toString(mux m);
 };
 
 #endif // INSTRUCTION_H_

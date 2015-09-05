@@ -497,3 +497,13 @@ uint8_t Inst::AsSMIValue(qpuValue i)
 		return (uint8_t)(((i.uValue >> 23) - 0x77) ^ 0x28);
 	return 0xff; // failed
 }
+
+static const char cAcc[6][4] =
+{	"r0", "r1", "r2", "r3", "r4", "r5"
+};
+static const char cRF[2][10] =
+{	"regfile A", "regfile B"
+};
+const char* Inst::toString(mux m)
+{	return m >= X_RA ? cRF[m-X_RA] : cAcc[m];
+}

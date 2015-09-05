@@ -38,8 +38,6 @@ class Disassembler
 	/// Instructions to disassemble.
 	vector<uint64_t> Instructions;
  private: // Decode tables
-	/// Mux accumulator names
-	static const char cAcc[6][4];
 	/// Read register codes, cReg[B!A][regnum]
 	static const char cRreg[2][64][10];
 	/// Write register codes, cReg[B!A][regnum]

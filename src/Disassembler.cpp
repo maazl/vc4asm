@@ -73,7 +73,7 @@ void Disassembler::appendSource(Inst::mux mux)
 		append(cRreg[1][Instruct.RAddrB]);
 		break;
 	 default:
-		append(cAcc[mux]);
+		append(Inst::toString(mux));
 	}
 	if ( (Instruct.PM && mux == Inst::X_R4) // r4 unpack
 		|| (!Instruct.PM && mux == Inst::X_RA) ) // RA unpack
