@@ -334,7 +334,7 @@ void Disassembler::Disassemble()
 		DoInstruction();
 		*CodeAt = 0;
 		if (PrintComment)
-			fprintf(Out, "\t%-48s # %04x: %0" PRIx64 " %s\n", Code, Addr, i, Comment);
+			fprintf(Out, "\t%-55s # %04x: %016" PRIx64 " %s\n", Code, Addr, i, Comment);
 		else
 			fprintf(Out, "\t%s\n", Code);
 		Addr += sizeof(uint64_t);
