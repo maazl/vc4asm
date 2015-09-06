@@ -283,17 +283,19 @@ bool Inst::trySwap(bool mul)
 		switch (OpM)
 		{default:
 			return false;
-		 case M_NOP:
-			return true;
 		 case M_V8ADDS:
-			OpA = A_V8ADDS; break;
+			OpA = A_V8ADDS;
+			break;
 		 case M_V8SUBS:
-			OpA = A_V8SUBS; break;
+			OpA = A_V8SUBS;
+			break;
 		 case M_V8MIN:
 		 case M_V8MAX:
 			if (MuxMA != MuxMB)
 				return false;
-			OpA = A_OR;    break;
+			OpA = A_OR;
+		 case M_NOP:
+			break;
 		}                OpM = M_NOP;
 		MuxAA = MuxMA;   MuxMA = X_R0;
 		MuxAB = MuxMB;   MuxMB = X_R0;
@@ -303,23 +305,25 @@ bool Inst::trySwap(bool mul)
 		switch (OpA)
 		{default:
 			return false;
-		 case A_NOP:
-			return true;
 		 case A_V8ADDS:
-			OpM = M_V8ADDS; break;
+			OpM = M_V8ADDS;
+			break;
 		 case A_XOR:
 		 case A_SUB:
 			if (MuxMA != MuxMB)
 				return false;
 		 case A_V8SUBS:
-			OpM = M_V8SUBS; break;
+			OpM = M_V8SUBS;
+			break;
 		 case A_OR:
 		 case A_AND:
 		 case A_MIN:
 		 case A_MAX:
 			if (MuxMA != MuxMB)
 				return false;
-			OpM = M_V8MIN;  break;
+			OpM = M_V8MIN;
+		 case A_NOP:
+			break;
 		}                OpA = A_NOP;
 		MuxMA = MuxAA;   MuxAA = X_R0;
 		MuxMB = MuxAB;   MuxAB = X_R0;
@@ -358,7 +362,7 @@ void Inst::optimize()
 			break;
 		 case A_XOR:
 		 case A_SUB:
-			if (OpM == M_NOP && MuxAA == MuxAB)
+			if (WAddrM == R_NOP && MuxAA == MuxAB)
 				goto mkLDI0; // convert to LDI ..., 0
 			break;
 		}
@@ -372,7 +376,7 @@ void Inst::optimize()
 			//MuxMB = X_R0;
 			break;
 		 case M_V8SUBS:
-			if (OpA == A_NOP && MuxMA == MuxMB)
+			if (!SF && WAddrA == R_NOP && MuxMA == MuxMB)
 				goto mkLDI0; // convert to LDI ..., 0
 			break;
 		}
