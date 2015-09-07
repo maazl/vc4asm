@@ -110,7 +110,7 @@ void Disassembler::DoADD()
 	append(cWreg[Instruct.WS][Instruct.WAddrA]);
 	bool unpack = false;
 	if (!Instruct.PM && !Instruct.WS)
-	{	if (0x0909 & (1<<Instruct.Pack))
+	{	if (opa == 32 && (0x0909 & (1<<Instruct.Pack)))
 			unpack = true;
 		else
 			appendPack(false);
@@ -166,7 +166,7 @@ void Disassembler::DoMUL()
 	append(cWreg[!Instruct.WS][Instruct.WAddrM]);
 	bool unpack = false;
 	if ((Instruct.PM || Instruct.WS))
-	{	if (0x0009 & (1<<Instruct.Pack))
+	{	if (opm == 8 && (0x0009 & (1<<Instruct.Pack)))
 			unpack = true;
 		else
 			appendPack(true);
