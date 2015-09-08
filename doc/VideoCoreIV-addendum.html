@@ -26,6 +26,19 @@
       are taken from the current element and only the write is rotated within
       the slice by the lower two bits. This can be particularly useful in some
       cases.</p>
+    <h3>Section 7: QPU Reading and Writing of VPM</h3>
+    <p>VPM reads seem to <em>block immediately if the FIFO is empty</em>. No
+      undefined data is returned when the reads are made too early.</p>
+    <p>Furthermore the <em>VPM read setups cannot be queued</em>. Only if the
+      result of the last VPM read setup is fully transferred to the VPM FIFO,
+      i.e. there is no more than one value outstanding, a new setup is accepted.<br>
+      Example: if you request 2 reads with the first write to <tt>vr_setup</tt>
+      and another two reads with the second write, then the second job is
+      ignored and you can read only two values without a deadlock. In contrast,
+      if you request 1 read by the first setup and 3 by the second one, then
+      everything is fine, since the single read of the first setup is
+      immediately transferred to the FIFO and the setup is discarded. No delay
+      slot instructions are required in the latter case.</p>
     <h3>Table 35: VCD DMA Write (VDW) Stride Setup Format</h3>
     <p>Unlike the documentation suggests the <tt>STRIDE</tt> field is <em>16
         bits wide</em>. Probably just a typo.</p>
