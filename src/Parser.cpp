@@ -1260,7 +1260,7 @@ void Parser::parseDATA(int type)
 	else if (!alignment && (alignment = BitOffset & (bits-1)) != 0)
 		Msg(WARNING, "Unaligned immediate data directive. %i bits missing for correct alignment.", type - alignment);
 	// Prevent optimizer across .data segment
-	Flags() |= IF_BRANCH_TARGET;
+	Flags() |= IF_BRANCH_TARGET|IF_DATA;
 	// store value
 	uint64_t& target = Instructions[PC];
 	target |= value.iValue << BitOffset;
@@ -1268,8 +1268,10 @@ void Parser::parseDATA(int type)
 	{	++PC;
 		// If value crosses instruction boundary => store remaining part
 		if ((BitOffset -= 64) != 0)
-			StoreInstruction((uint64_t)value.iValue >> (bits - BitOffset));
-	}
+		{	StoreInstruction((uint64_t)value.iValue >> (bits - BitOffset));
+			// Prevent optimizer across .data segment
+			Flags() |= IF_BRANCH_TARGET|IF_DATA;
+	}	}
 	switch (NextToken())
 	{default:
 		Fail("Syntax error. Expected ',' or end of line.");
@@ -1277,8 +1279,6 @@ void Parser::parseDATA(int type)
 		goto next;
 	 case END:;
 	}
-	// Prevent optimizer across .data segment
-	Flags() |= IF_BRANCH_TARGET;
 	Instruct.reset();
 }
 
@@ -2142,12 +2142,14 @@ void Parser::EnsurePass2()
 	}
 
 	// Optimize instructions
+	size_t i = 0;
+	Inst optimized;
 	for (auto& inst : Instructions)
-	{	Inst optimized;
-		optimized.decode(inst);
-		optimized.optimize();
-		inst = optimized.encode();
-	}
+	{	if ((InstFlags[i++] & IF_DATA) == 0)
+		{	optimized.decode(inst);
+			optimized.optimize();
+			inst = optimized.encode();
+	}	}
 }
 
 Parser::Parser()
