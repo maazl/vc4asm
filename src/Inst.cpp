@@ -371,7 +371,8 @@ void Inst::optimize()
 			if (WAddrM != R_NOP || (SF && (OpA == A_NOP || CondA == C_NEVER)))
 				break;
 		 case M_NOP:
-			CondM = C_NEVER;
+			if (WAddrM == R_NOP)
+				CondM = C_NEVER;
 			//MuxMA = X_R0;
 			//MuxMB = X_R0;
 			break;
@@ -382,10 +383,12 @@ void Inst::optimize()
 		}
 		break;
 	 mkLDI0:
-		if (Sig != S_NONE)
+		if (Sig != S_NONE || RAddrB != R_NOP)
 			break;
 		val.uValue = 0;
 	 mkLDI:
+		if (RAddrA != R_NOP)
+			break;
 		Sig = S_LDI;
 		LdMode = L_LDI;
 		Immd = val;
