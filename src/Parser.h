@@ -628,26 +628,17 @@ class Parser
 	/// @pre \a bytes must be a power of 2.
 	/// @return true: alignment caused padding.
 	bool             doALIGN(int bytes);
-	/// @brief Handle \c .rep directive.
-	/// @details This opens a local macro with the reserved name ".rep" to record the code block
-	/// and pushes the loop identifier as the first argument and the number of repetitions as second one.
+	/// @brief Handle \c .rep or .foreach directive.
+	/// @param mode 0 = .rep, 1 = .foreach
+	/// @details This opens a local macro with the reserved name ".rep" or ".foreach" to record the code block
+	/// and pushes the arguments as macro arguments. The first argument is always the loop identifier.
 	/// @exception std::string Failed, error message.
-	void             beginREP(int);
-	/// @brief Handle \c .endr directive.
-	/// @details This completes the ".rep" macro and invokes it immediately the requested number of times.
+	void             beginREP(int mode);
+	/// @brief Handle \c .endr or .endfor directive.
+	/// @param mode 0 = .rep, 1 = .foreach
+	/// @details This completes the .rep/.foreach macro and invokes it immediately the requested number of times.
 	/// @exception std::string Failed, error message.
-	void             endREP(int);
-	/// @brief Handle \c .foreach directive.
-	/// @details This opens a local macro with the reserved name ".foreach" to record the code block
-	/// and pushes the loop identifier as the first argument
-	/// and the values for which the block should be executed as further arguments.
-	/// @exception std::string Failed, error message.
-	void             beginFOREACH(int);
-	/// @brief Handle \c .endfor directive.
-	/// @details This completes the ".foreach macro and invokes it immediately for any expression
-	/// starting from the second macro argument.
-	/// @exception std::string Failed, error message.
-	void             endFOR(int);
+	void             endREP(int node);
 	/// @brief Handle \c .back directive.
 	/// @details This function basically sets the \ref Back member to a specific value.
 	/// @exception std::string Failed, error message.

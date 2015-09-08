@@ -1585,15 +1585,15 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "endb",    &Parser::endBACK }
 ,	{ "endback", &Parser::endBACK }
 ,	{ "endf",    &Parser::endMACRO,   M_FUNC }
-,	{ "endfor",  &Parser::endFOR }
+,	{ "endfor",  &Parser::endREP,     1 }
 ,	{ "endfunc", &Parser::endMACRO,   M_FUNC }
 ,	{ "endif",   &Parser::parseENDIF }
 ,	{ "endm",    &Parser::endMACRO,   M_NONE }
-,	{ "endr",    &Parser::endREP }
-,	{ "endrep",  &Parser::endREP }
+,	{ "endr",    &Parser::endREP,     0 }
+,	{ "endrep",  &Parser::endREP,     0 }
 ,	{ "equ",     &Parser::parseSET,   C_NONE }
 ,	{ "float",   &Parser::parseDATA,  -32 }
-,	{ "foreach", &Parser::beginFOREACH }
+,	{ "foreach", &Parser::beginREP,   1 }
 ,	{ "func",    &Parser::beginMACRO, M_FUNC }
 ,	{ "if",      &Parser::parseIF }
 ,	{ "ifset",   &Parser::parseIFSET, C_NONE }
@@ -1605,7 +1605,7 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "lunset",  &Parser::parseUNSET, C_LOCAL }
 ,	{ "macro",   &Parser::beginMACRO, M_NONE }
 ,	{ "qword",   &Parser::parseDATA,  64 }
-,	{ "rep",     &Parser::beginREP }
+,	{ "rep",     &Parser::beginREP,   0 }
 ,	{ "set",     &Parser::parseSET,   C_NONE }
 ,	{ "short",   &Parser::parseDATA,  16 }
 ,	{ "undef",   &Parser::parseUNSET, C_NONE }

@@ -1326,119 +1326,79 @@ bool Parser::doALIGN(int bytes)
 	return true;
 }
 
-void Parser::beginREP(int)
+void Parser::beginREP(int mode)
 {
 	if (doPreprocessor())
 		return;
 
-	AtMacro = &Macros[".rep"];
+	auto name = mode ? ".foreach" : ".rep";
+	AtMacro = &Macros[name];
 	AtMacro->Definition = *Context.back();
 
 	if (NextToken() != WORD)
-		Fail("Expected loop variable name after .rep.");
+		Fail("Expected loop variable name after %s.", name);
 
 	AtMacro->Args.push_back(Token);
 	if (NextToken() != COMMA)
-		Fail("Expected ', <count>' at .rep.");
-	const auto& expr = ParseExpression();
-	if (expr.Type != V_INT)
-		Fail("Second argument to .rep must be a non-negative integral number. Found %s", expr.toString().c_str());
-	if (NextToken() != END)
-		Fail("Expected end of line.");
-	AtMacro->Args.push_back(expr.toString());
-}
+		Fail(mode ? "Expected ', <parameters>' at .foreach." : "Expected ', <count>' at .rep.");
 
-void Parser::endREP(int)
-{
-	auto iter = Macros.find(".rep");
-	if (AtMacro != &iter->second)
-	{	if (doPreprocessor())
-			return;
-		Fail(".endr without .rep");
-	}
-
-	const macro m = *AtMacro;
-	AtMacro = NULL;
-	Macros.erase(iter);
-
-	if (m.Args.size() != 2)
-		return; // no loop count => 0
-
-	// Setup invocation context
-	saveContext ctx(*this, new fileContext(CTX_MACRO, m.Definition.File, m.Definition.Line));
-
-	// loop
-	int count;
-	sscanf(m.Args[1].c_str(), "%i", &count);
-	auto& current = *Context.back();
-	for (int64_t& i = current.Consts.emplace(m.Args.front(), constDef(exprValue(0LL), current)).first->second.Value.iValue;
-		i < count; ++i)
-	{	// Invoke rep
-		for (const string& line : m.Content)
-		{	++Context.back()->Line;
-			strncpy(Line, line.c_str(), sizeof(Line));
-			ParseLine();
-		}
-	}
-}
-
-void Parser::beginFOREACH(int)
-{
-	if (doPreprocessor())
-		return;
-
-	AtMacro = &Macros[".foreach"];
-	AtMacro->Definition = *Context.back();
-
-	if (NextToken() != WORD)
-		Fail("Expected loop variable name after .foreach.");
-
-	AtMacro->Args.push_back(Token);
-	if (NextToken() != COMMA)
-		Fail("Expected ', <parameters>' at .foreach.");
 	{nextpar:
 		const auto& expr = ParseExpression();
-		if (expr.Type != V_INT)
-			Fail("Second argument to .rep must be an integral number. Found %s", expr.toString().c_str());
+		if (!mode && (expr.Type != V_INT || (uint64_t)expr.iValue > 0x10000))
+			Fail("Second argument to .rep must be a non-negative integral number. Found %s", expr.toString().c_str());
 		AtMacro->Args.push_back(expr.toString());
 
 		switch (NextToken())
 		{default:
 			Fail("Expected ',' or end of line.");
 		 case COMMA:
+			if (!mode)
+				Fail("Expected end of line.");
 			goto nextpar;
 		 case END:;
 		}
 	}
 }
 
-void Parser::endFOR(int)
+void Parser::endREP(int mode)
 {
-	auto iter = Macros.find(".foreach");
+	auto name = mode ? ".foreach" : ".rep";
+	auto iter = Macros.find(name);
 	if (AtMacro != &iter->second)
 	{	if (doPreprocessor())
 			return;
-		Fail(".endfor without .foreach");
+		Fail("%s without %s", Token.c_str(), name);
 	}
-
 	const macro m = *AtMacro;
 	AtMacro = NULL;
 	Macros.erase(iter);
 
-	if (m.Args.size() != 2)
+	if (NextToken() != END)
+		Fail("Expected end of line.");
+
+	if (m.Args.size() < 2)
 		return; // no loop count => 0
 
 	// Setup invocation context
 	saveContext ctx(*this, new fileContext(CTX_MACRO, m.Definition.File, m.Definition.Line));
 
 	// loop
+	size_t count;
+	if (mode)
+		count = m.Args.size()-1;
+	else
+		sscanf(m.Args[1].c_str(), "%zi", &count);
 	auto& current = *Context.back();
-	auto& value = current.Consts.emplace(m.Args.front(), constDef(exprValue(), current)).first->second.Value;
-	for (size_t i = 1; i < m.Args.size(); ++i)
-	{	strncpy(Line, m.Args[i].c_str(), sizeof(Line));
-		At = 0;
-		value = ParseExpression();
-		// invoke body
+	auto& value = current.Consts.emplace(m.Args.front(), constDef(exprValue(0LL), current)).first->second.Value;
+	for (size_t i = 0; i < count; ++i)
+	{	// set argument
+		if (mode)
+		{	strncpy(Line, m.Args[i+1].c_str(), sizeof(Line));
+			At = Line;
+			value = ParseExpression();
+		} else
+			value.iValue = i;
+		// Invoke body
 		for (const string& line : m.Content)
 		{	++Context.back()->Line;
 			strncpy(Line, line.c_str(), sizeof(Line));
