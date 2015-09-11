@@ -126,25 +126,6 @@ int Eval::operate::Compare()
 	return ret;
 }
 
-bool Eval::operate::Identical()
-{	lhs.Type = V_INT;
-	switch (types)
-	{default:
-		return false;
-	 case 1<<V_FLOAT:
-	 case 1<<V_INT:
-	 case 1<<V_LDPES:
-	 case 1<<V_LDPE:
-	 case 1<<V_LDPEU:
-	 case 1<<V_LABEL:
-		return lhs.iValue == rhs.iValue; // Compare integer in case of float too, because of NaN === NaN.
-	 case 1<<V_REG:
-		return lhs.rValue.Type == rhs.rValue.Type
-			&& lhs.rValue.Rotate == rhs.rValue.Rotate
-			&& lhs.rValue.Num == rhs.rValue.Num;
-	}
-}
-
 void Eval::operate::ApplyUnaryMathOp(double (*op)(double))
 {	if (types & ~(1<<V_INT | 1<<V_FLOAT))
 		TypesFail();
@@ -417,9 +398,13 @@ bool Eval::operate::Apply(bool unary)
 	 case NE:
 		lhs.iValue = Compare() != 0; break;
 	 case IDNT:
-		lhs.iValue = Identical(); break;
+		lhs.iValue = lhs == rhs;
+		lhs.Type = V_INT;
+		break;
 	 case NIDNT:
-		lhs.iValue = !Identical(); break;
+		lhs.iValue = lhs != rhs;
+		lhs.Type = V_INT;
+		break;
 	 case AND:
 		if (types == 1<<V_REG)
 		{	// Hack to mask registers

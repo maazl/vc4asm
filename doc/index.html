@@ -38,7 +38,7 @@
         Support for alphanumeric mathematical operators like trigonometric,
         hyperbolic or exponential function.<br>
         Support for data directives without 64 bit alignment and <tt>.align</tt>.<br>
-        Added identity (<tt>===</tt>, <tt>!==</tt>), perl like full comparison
+        Added identity (<tt>===</tt>, <tt>!==</tt>), Perl like full comparison
         (<tt>&lt;=&gt;</tt>) and xnor (<tt>!^</tt>, <tt>!^^</tt>) operators.<br>
         No longer accept floats as boolean expression, use explicit comparison
         against 0.0 instead.<br>
@@ -51,6 +51,9 @@
         Warn about unexpected side effects in conjunction with MUL ALU vector
         rotations.<br>
         Fixed <tt>.foreach</tt></dd>
+      <dd>Added support for direct ELF output.<br>
+        Added <tt>.global</tt> directive to export symbols in ELF format.<br>
+        Added support for include search paths.</dd>
       <dt>V0.1.9</dt>
       <dd>Fixed vc4dis: decoded not only the first 8 instructions in case of a
         binary source file.<br>
@@ -117,7 +120,7 @@
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
     <p>The heart of the software. It assembles QPU code to binary or C
       constants.</p>
-    <pre>vc4asm [-o &lt;bin-output&gt;] [-c &lt;c-output&gt;] [-E &lt;preprocessed&gt;] &lt;qasm-file&gt; [&lt;qasm-file2&gt; ...]</pre>
+    <pre>vc4asm [-o &lt;bin-output&gt;] [-c &lt;c-output&gt;] [-e &lt;ELF-output&gt;] [-I &lt;include-path&gt; [-I &lt;include-path2&gt; ...]] &lt;qasm-file&gt; [&lt;qasm-file2&gt; ...]</pre>
     <h3>Options</h3>
     <dl>
       <dt><tt>-o &lt;bin-output&gt; </tt></dt>
@@ -132,6 +135,22 @@
           };</tt></dd>
       <dt><tt>-C</tt><tt> &lt;C-output&gt;</tt></dt>
       <dd>Same as <tt>-c</tt>, but suppress trailing '<tt>,</tt>'.</dd>
+      <dt><tt>-e &lt;ELF-output&gt;</tt></dt>
+      <dd>Write the assembled binary directly to an ARM compatible object file
+        in ELF format that can be passed to <tt>ld</tt> or <tt>gcc</tt>
+        respectively.<br>
+        The ELF object will contain all symbols that have been exported by <a href="directives.html#.global"><tt>.global</tt></a>
+        and the following predefined symbols:<br>
+        - <tt>&lt;filename-wo-extension&gt;</tt> points to the starting address
+        of the generated binary code.</dd>
+      <dd>- <tt>&lt;filename-wo-extension&gt;_end</tt> points behind the
+        generated binary code.<br>
+        - <tt>&lt;filename-wo-extension&gt;_size</tt> receives the size of the
+        generated binary code in bytes.<br>
+        Special characters in the file name are replaced by an underscore.</dd>
+      <dt><tt>-I &lt;include-path&gt;</tt></dt>
+      <dd>Add an include path to the search path list. This paths are used at <a
+          href="directives.html#.include"><tt>.include &lt;...&gt;</tt></a>.</dd>
       <dt><tt>-V</tt></dt>
       <dd>Check for Videocore IV constraints, e.g. reading a register file
         address immediately after writing it.</dd>

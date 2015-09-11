@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include "Validator.h"
+#include "WriteELF.h"
 
 #include <cstdio>
 #include <getopt.h>
@@ -20,21 +21,28 @@ static const char CPPTemplate[] = ",\n0x%08lx, 0x%08lx";
 
 int main(int argc, char **argv)
 {
-	const char* outfname = NULL;
+	const char* writeBIN = NULL;
 	const char* writeCPP = NULL;
 	const char* writeCPP2 = NULL;
+	const char* writeELF = NULL;
 	const char* writePRE = NULL;
 	bool check = false;
 
+	Parser parser;
+
 	int c;
-	while ((c = getopt(argc, argv, "o:c:C:E:V")) != -1)
+	while ((c = getopt(argc, argv, "o:c:e:C:E:I:V")) != -1)
 	{	switch (c)
 		{case 'o':
-			outfname = optarg; break;
+			writeBIN = optarg; break;
 		 case 'c':
 			writeCPP = optarg; break;
 		 case 'C':
 			writeCPP2 = optarg; break;
+		 case 'e':
+			writeELF = optarg; break;
+		 case 'I':
+			parser.IncludePaths.push_back(optarg); break;
 		 case 'V':
 			check = true; break;
 		 case 'E':
@@ -42,18 +50,18 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (!outfname && !writeCPP && !writeCPP2 && !writePRE) {
+	if (!writeBIN && !writeCPP && !writeCPP2 && !writePRE && !writeELF) {
 		fputs("vc4asm V0.2\n"
 			"Usage: vc4asm [-o <bin-output>] [-{c|C} <c-output>] [-V] <qasm-file(s)>\n"
 			" -o<file> Binary output file.\n"
 			" -c<file> C output file with trailing ','.\n"
 			" -C<file> C output file withOUT trailing ','.\n"
+			" -e<file> Linux ELF output file.\n"
+			" -I<path> Add search path for .include <...>\n"
 			" -V       Run instruction verifier and print warnings about suspicious code.\n"
 			, stderr);
 		return 1;
 	}
-
-	Parser parser;
 
 	if (writePRE)
 	{	parser.Preprocessed = fopen(writePRE, "wt");
@@ -105,19 +113,31 @@ int main(int argc, char **argv)
 			fclose(of);
 		}
 
-		if (outfname)
+		if (writeBIN)
 		{
-			#if (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__) || (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN)
+			/*#if (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__) || (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN)
 			for (auto& i : memory)
 				i = swap_uint64(i);
-			#endif
-			FILE* of = fopen(outfname, "wb");
+			#endif*/
+			FILE* of = fopen(writeBIN, "wb");
 			if (of == NULL)
-			{	fprintf(stderr, "Failed to open %s for writing.", outfname);
+			{	fprintf(stderr, "Failed to open %s for writing.", writeBIN);
 				return -1;
 			}
 			fwrite(&*parser.GetInstructions().begin(), sizeof(uint64_t), parser.GetInstructions().size(), of);
 			fclose(of);
+		}
+
+		if (writeELF)
+		{
+			WriteELF we;
+			we.Target = fopen(writeELF, "wb");
+			if (we.Target == NULL)
+			{	fprintf(stderr, "Failed to open %s for writing.", writeELF);
+				return -1;
+			}
+			we.Write(parser, writeELF);
+			fclose(we.Target);
 		}
 	} catch (const string& msg)
 	{	fputs(msg.c_str(), stderr);

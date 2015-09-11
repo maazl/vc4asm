@@ -44,6 +44,23 @@ string exprValue::toString() const
 	}
 }
 
+bool operator==(const exprValue& l, const exprValue& r)
+{
+	if (l.Type != r.Type)
+		return false;
+	switch (l.Type)
+	{case V_NONE:
+		return true;
+	 case V_REG:
+		return l.rValue.Type == r.rValue.Type
+			&& l.rValue.Rotate == r.rValue.Rotate
+			&& l.rValue.Num == r.rValue.Num;
+	 default:
+		return l.iValue == r.iValue;
+	}
+}
+
+
 const char* type2string(valueType type)
 {	switch (type)
 	{	default:      return "unknown";

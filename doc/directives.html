@@ -9,22 +9,18 @@
   </head>
   <body>
     <h1>VC4ASM - Assembler directives</h1>
-    <p><a href="index.html">&uarr; Top</a>, <tt><a href="#.assert"><tt><a href="#.align">.align</a></tt></a><tt>
-        </tt><a href="#.assert">.assert</a> <a href="#.back">.back</a> </tt><tt><a
-          href="#.bit">.bit</a></tt><tt> <a href="#.byte">.byte</a> <a href="#.clone">.clone</a>
-      </tt><tt><a href="#.const">.const</a></tt><tt><tt>&nbsp;<a href="#.double">.double</a></tt>
-        <a href="#.else">.else</a> <a href="#.elseif">.elseif</a> <a href="#.back">.endb</a></tt><tt><tt>
-          <a href="#.func">.endf</a> </tt></tt><tt><tt><tt><tt><a href="#.foreach">.endfor</a></tt></tt></tt>
+    <p><a href="index.html">&uarr; Top</a> <tt><a href="#.align">.align</a> <a
+          href="#.assert">.assert</a> <a href="#.back">.back</a> <a href="#.bit">.bit</a>
+        <a href="#.byte">.byte</a> <a href="#.clone">.clone</a> <a href="#.const">.const</a>
+        <a href="#.double">.double</a> <a href="#.else">.else</a> <a href="#.elseif">.elseif</a>
+        <a href="#.back">.endb</a> <a href="#.func">.endf</a> <a href="#.foreach">.endfor</a>
         <a href="#.endif">.endif</a> <a href="#.macro">.endm</a> <a href="#.rep">.endr</a>
-        <a href="#.equ">.equ</a></tt><tt><tt> <a href="#.float">.float</a> </tt></tt><tt><tt><tt><a
-              href="#.foreach">.foreach</a>&nbsp;</tt></tt><a href="#.func">.func</a>
-        <a href="#.if">.if</a> </tt><tt><tt><a href="#.ifset">.ifset</a></tt> <a
-          href="#.include">.include</a> </tt><tt><tt><a href="#.int">.int</a></tt></tt><tt><tt><tt>
-            <a href="#.const">.lconst</a> </tt> </tt></tt><tt><tt><tt><a href="#.long">.long</a></tt></tt></tt><tt><tt><tt><tt>
-              <a href="#.set">.lset</a></tt></tt></tt></tt><tt><tt><tt><tt><tt>
-                <a href="#.unset">.lunset</a> </tt> </tt> </tt> </tt> <a href="#.macro">.macro</a>
-        <a href="#.rep">.rep</a> <a href="#.set">.set</a>&nbsp;</tt><tt><tt><a
-            href="#.short">.short</a> </tt> <a href="#.unset">.unset</a></tt></p>
+        <a href="#.equ">.equ</a> <a href="#.float">.float</a> <a href="#.foreach">.foreach</a>
+        <a href="#.func">.func</a> <a href="#.global">.global</a> <a href="#.if">.if</a>
+        <a href="#.ifset">.ifset</a> <a href="#.include">.include</a> <a href="#.int">.int</a>
+        <a href="#.const">.lconst</a> <a href="#.long">.long</a> <a href="#.set">.lset</a>
+        <a href="#.unset">.lunset</a> <a href="#.macro">.macro</a> <a href="#.rep">.rep</a>
+        <a href="#.set">.set</a> <a href="#.short">.short</a> <a href="#.unset">.unset</a></tt></p>
     <h2><a id=".const" name=".const"></a><a id=".set" name=".set"></a><tt>.const
         .set .lconst .lset</tt> - define a constant or single line function</h2>
     <pre>.const <i>identifier</i>, <i>expression</i>
@@ -223,18 +219,21 @@
     </dl>
     <h2><a id=".include" name=".include"></a><tt>.include</tt> - include another
       file</h2>
-    <pre>.include "<var>filename</var>"</pre>
+    <pre>.include "<var>filename</var>"<br>.include &lt;<var>filename</var>&gt;</pre>
     <dl>
       <dt><tt><var>filename</var></tt></dt>
       <dd>Name of another assembler file to include. The path may be relative or
-        absolute.</dd>
+        absolute.<br>
+        If <var><tt>filename</tt></var> is enclosed in angle brackets <tt>&lt;...&gt;</tt>
+        the list of include paths is searched first for the file. See <a href="index.html#vc4asm">option
+          <tt>-I</tt></a>.</dd>
     </dl>
     <p>An included file denotes a local context. Definitions that are local like
-      <tt>.setlc</tt> are only valid within the included file and sub includes.</p>
+      <tt>.lset</tt> are only valid within the included file and sub includes.</p>
     <h2><tt><a id=".byte" name=".byte"></a><a id=".short" name=".short"></a><a id=".int"
           name=".int"></a><a id=".long" name=".long"></a><a id=".float" name=".float"></a><a
           id=".bit" name=".bit"></a><a id=".double" name=".double"></a>.byte
-        .short .int .long .bit .float .double</tt> - place constants inside code
+        .short .int .long .bit .float .double</tt> - emit constants inside code
       blocks</h2>
     <pre>.byte <var>constant, constant</var> ...<br>.short <var><var>constant, constant</var></var> ...<var></var><br>.int <var><var>constant, constant</var></var> ...<br>.long <var>constant, constant</var> ...<br>.bit <var>constant, constant</var> ...<br>.float <var>constant, constant</var> ...<br>.double <var>constant, constant</var> ...</pre>
     <dl>
@@ -278,6 +277,39 @@
         after <tt>.bit</tt>), <tt>2</tt> enures 16 bit alignment, <tt>4 </tt>ensures
         32 bit alignment and so on. The value must be a power of two and &le;
         64. <tt>.align 0</tt> is a no-op.</dd>
+    </dl>
+    <h2><a id=".global" name=".global"></a><tt>.global</tt> - export symbol</h2>
+    <pre>.global <var>label</var><br>.global <var>symbol, value</var></pre>
+    <p>Export a label or some other constant as global linker symbol in ELF
+      format. <tt>.global</tt> has no effect on other output formats.<br>
+      It is an error to assign different values to the same global symbol.</p>
+    <dl>
+      <dt><tt><var>label</var></tt></dt>
+      <dd>Name of a label to export. This will create a global symbol which
+        address points to the code at <tt><var>label</var></tt> after linkage.<br>
+        This is the short form of <tt>.global <var>label</var>, :<var>label</var></tt>.</dd>
+      <dt><tt><var>symbol</var></tt></dt>
+      <dd>Name of the global symbol to define. The symbol receives the following
+        value.</dd>
+      <dt><tt><var>value</var></tt></dt>
+      <dd>Value of the symbol. This can be any expression that evaluates to a
+        label or a 32 bit integer constant.<br>
+        If it is a label the exported symbol will point to the code at the label
+        after linkage.<br>
+        If it is an integer constant the symbol receives the value of the
+        expression as absolute value, i.e. <tt>SHN_ABS</tt>.</dd>
+    </dl>
+    <h3>Example</h3>
+    <pre>.global code_start<br>.global code_size, :end - :start<br>:start<br># some code<br>:end</pre>
+    <p>Use the ELF output to create a object file (.o).<br>
+      And in the C language write:</p>
+    <pre>extern char code_start[];<br>extern char code_size[];<br>#define code_length ((size_t)&amp;code_size)<br><br>memcpy(qpu_memory_buffer, code_start, code_length);</pre>
+    <p>Note that this is just an example. The start, the size and the end of the
+      generated code block are automatically exported as symbols as mentioned <a
+        href="index.html#vc4asm">here</a>.</p>
+    <dl>
+    </dl>
+    <dl>
     </dl>
   </body>
 </html>

@@ -56,7 +56,12 @@ class Parser
 	,	WARNING
 	,	INFO
 	};
+	/// @brief List of export symbol definitions.
+	/// @details name => (value, type)
+	typedef unordered_map<string,exprValue> globals_t;
  public:
+	/// List of path prefixes to search for include files.
+	vector<string> IncludePaths;
 	/// The assembly process did not fail so far and can produce reasonable output.
 	bool Success = true;
 	/// Enable OP code extensions and allow undocumented OP codes during assembly.
@@ -414,6 +419,9 @@ class Parser
 	/// @details This dictionary associates the label name with the label ID.
 	/// The association may change because of local labels, e.g. with leading '.'.
 	lnames_t         LabelsByName;
+	/// @brief Global label definitions.
+	/// @details List of labels that should be exported in ELF output.
+	globals_t        GlobalsByName;
 	/// Single line function definitions, i.e. .set with parameters.
 	/// @details This definitions are not context sensitive.
 	funcs_t          Functions;
@@ -452,6 +460,12 @@ class Parser
 	/// Work around for gcc on 32 bit Linux that can't read "0x80000000" with sscanf anymore.
 	/// @return Number of characters parsed.
 	static size_t    parseInt(const char* src, int64_t& dst);
+	/// @brief Get referenced label.
+	/// @param name Label name.
+	/// @param forward The reference is a forward reference, e.g. r:.1f.
+	/// @return Reference to the label definition, either a new or an existing entry.
+	/// The value is reliable only in pass 2.
+	label&           labelRef(string name, bool forward = false);
 
 	/// @brief Parse immediate value per QPU element in the [a,b,{...14}] syntax.
 	/// @details The function has to be called after the opening bracket.
@@ -611,6 +625,8 @@ class Parser
 	void             parseLabel();
 
 	// directives
+	/// @brief Handle .global
+	void             parseGLOBAL(int);
 	/// Handle raw data directives like \c .byte.
 	/// @param type Data type:
 	/// - 1 => 8 bit int data
@@ -782,7 +798,10 @@ class Parser
 	void             ParseFile(const string& file);
 	/// @brief Return the fully assembled code.
 	/// @details This will invoke pass 2 if not yet done.
-	const vector<uint64_t>& GetInstructions();
+	const vector<uint64_t>& GetInstructions() { EnsurePass2(); return Instructions; }
+	/// @brief Global label definitions if any.
+	/// @details This will invoke pass 2 if not yet done.
+	const globals_t& GetGlobals() { EnsurePass2(); return GlobalsByName; }
 };
 
 #endif // PARSER_H_

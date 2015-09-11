@@ -14,6 +14,7 @@
 #include <cinttypes>
 #include <algorithm>
 #include <cctype>
+#include <sys/stat.h>
 
 #include "Parser.tables.cpp"
 
@@ -71,8 +72,7 @@ string Parser::enrichMsg(string msg)
 }
 
 void Parser::Fail(const char* fmt, ...)
-{	Success = false;
-	va_list va;
+{	va_list va;
 	va_start(va, fmt);
 	const string& msg = vstringf(fmt, va);
 	va_end(va);
@@ -88,6 +88,7 @@ static const char msgpfx[][10]
 void Parser::Msg(severity level, const char* fmt, ...)
 {	if (!Pass2 || Verbose < level)
 		return;
+	Success &= level > ERROR;
 	va_list va;
 	va_start(va, fmt);
 	fputs(msgpfx[level], stderr);
@@ -199,6 +200,22 @@ size_t Parser::parseInt(const char* src, int64_t& dst)
 		dst += digit;
 	}
 	return cp - src;
+}
+
+Parser::label& Parser::labelRef(string name, bool forward)
+{
+	const auto& l = LabelsByName.emplace(name, LabelCount);
+	if (!!l.second || (forward && !!Labels[l.first->second].Definition))
+	{	// new label
+		l.first->second = LabelCount;
+		if (!Pass2)
+			Labels.emplace_back(Token);
+		else if (Labels.size() <= LabelCount || Labels[LabelCount].Name != Token)
+			Fail("Inconsistent label definition during Pass 2.");
+		Labels[LabelCount].Reference = *Context.back();
+		++LabelCount;
+	}
+	return Labels[l.first->second];
 }
 
 exprValue Parser::parseElemInt()
@@ -361,18 +378,7 @@ exprValue Parser::ParseExpression()
 					}
 				 case WORD:;
 				}
-				const auto& l = LabelsByName.emplace(Token, LabelCount);
-				if (!!l.second || (forward && !!Labels[l.first->second].Definition))
-				{	// new label
-					l.first->second = LabelCount;
-					if (!Pass2)
-						Labels.emplace_back(Token);
-					else if (Labels.size() <= LabelCount || Labels[LabelCount].Name != Token)
-						Fail("Inconsistent label definition during Pass 2.");
-					Labels[LabelCount].Reference = *Context.back();
-					++LabelCount;
-				}
-				value = exprValue(Labels[l.first->second].Value, V_LABEL);
+				value = exprValue(labelRef(Token, forward).Value, V_LABEL);
 				break;
 			}
 
@@ -1209,6 +1215,47 @@ void Parser::parseLabel()
 	}
 }
 
+void Parser::parseGLOBAL(int)
+{
+	if (NextToken() != WORD)
+		Fail("Expected global symbol name after .global. Found '%s'.", Token.c_str());
+	string name = Token;
+	exprValue value;
+	switch (NextToken())
+	{default:
+		Fail("Expected ',' or end of line after symbol name.");
+	 case COMMA: // name, value
+		value = ParseExpression();
+		if (NextToken() != END)
+			Fail("Expected end of line.");
+		switch (value.Type)
+		{default:
+			Fail("The value of a global symbol definition must be either a label or an integer constant. Found %s.", type2string(value.Type));
+		 case V_INT:
+			if (value.iValue < -0x80000000LL || value.iValue > 0xffffffffLL)
+				Fail("Cannot export 64 bit constant 0x%" PRIx64 "as symbol.", value.iValue);
+		 case V_LABEL:;
+		}
+		break;
+	 case COLON:
+		if (NextToken() != WORD)
+			Fail("Label name expected. Found '%s'.", Token.c_str());
+		name = Token;
+		if (NextToken() != END)
+			Fail("Expected end of line.");
+	 case END: // only label name
+		value = exprValue(labelRef(name).Value, V_LABEL);
+	}
+	auto p = GlobalsByName.emplace(name, value);
+	if (!p.second && Pass2)
+	{	// Doubly defined
+		if (p.first->second == value)
+			Msg(INFO, "Label '%s' has already been marked as global.", name.c_str());
+		else
+			Msg(ERROR, "Another label or value has already been assigned to the global symbol '%s'.", name.c_str());
+	}
+}
+
 void Parser::parseDATA(int type)
 {	if (doPreprocessor())
 		return;
@@ -1921,13 +1968,27 @@ void Parser::doINCLUDE(int)
 			*cp = 0;
 	}
 	size_t len = strlen(At);
-	if (*At != '"' || At[len-1] != '"')
-		Fail("Syntax error. Expected \"<file-name>\" after .include, found '%s'.", At);
+	if ((*At != '"' || At[len-1] != '"') && (*At != '<' || At[len-1] != '>'))
+		Fail("Syntax error. Expected \"file-name\" or <file-name> after .include, found '%s'.", At);
 	Token.assign(At+1, len-2);
 
-	Token = relpath(Context.back()->File, Token);
+	// find file
+	struct stat buffer;
+	string file;
+	if (*At == '<')
+	{	// check include paths first
+		for (string path : IncludePaths)
+		{	file = path + Token;
+			if (stat(file.c_str(), &buffer) == 0)
+				goto got_it;
+		}
+	}
+	file = relpath(Context.back()->File, Token);
+	if (stat(file.c_str(), &buffer) != 0)
+		Fail("Cannot locate included file '%s'.", Token.c_str());
 
-	saveContext ctx(*this, new fileContext(CTX_INCLUDE, Token, 0));
+ got_it:
+	saveContext ctx(*this, new fileContext(CTX_INCLUDE, file, 0));
 
 	ParseFile();
 }
@@ -2108,6 +2169,7 @@ void Parser::ResetPass()
 	Functions.clear();
 	Macros.clear();
 	LabelsByName.clear();
+	GlobalsByName.clear();
 	LabelCount = 0;
 	InstFlags.clear();
 	PC = 0;
@@ -2161,11 +2223,4 @@ void Parser::Reset()
 	Labels.clear();
 	Pass2 = false;
 	Filenames.clear();
-}
-
-const vector<uint64_t>& Parser::GetInstructions()
-{
-	EnsurePass2();
-
-	return Instructions;
 }

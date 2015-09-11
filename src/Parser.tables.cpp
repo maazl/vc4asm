@@ -1595,6 +1595,7 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "float",   &Parser::parseDATA,  -32 }
 ,	{ "foreach", &Parser::beginREP,   1 }
 ,	{ "func",    &Parser::beginMACRO, M_FUNC }
+,	{ "global",  &Parser::parseGLOBAL }
 ,	{ "if",      &Parser::parseIF }
 ,	{ "ifset",   &Parser::parseIFSET, C_NONE }
 ,	{ "include", &Parser::doINCLUDE }

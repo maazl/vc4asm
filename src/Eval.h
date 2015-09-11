@@ -176,8 +176,6 @@ class Eval
 		///   registers are less than labels.
 		///   Different types never compare equal, except for V_INT vs. V_FLOAT of course.
 		int       Compare();
-		/// Check whether two values are identical (not just equal).
-		bool      Identical();
 		/// @brief Apply the unary mathematical operator \a op.
 		/// @param op Mathematical operator function.
 		/// @exception Fail The operand is not of type V_INT or V_FLOAT.

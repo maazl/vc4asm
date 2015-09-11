@@ -85,6 +85,10 @@ struct exprValue
 	exprValue(reg_t r)    : Type(V_REG)   { rValue = r; }
 	/// Write the expression in human readable and turn around safe format.
 	string      toString() const;
+	/// Check for equality
+	friend bool operator==(const exprValue& l, const exprValue& r);
+	/// Check for inequality
+	friend bool operator!=(const exprValue& l, const exprValue& r) { return !(l == r); }
  private:
 	static string toPE(unsigned value, bool sign);
 };
