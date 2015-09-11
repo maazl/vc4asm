@@ -26,11 +26,15 @@ string Parser::location::toString() const
 
 Parser::saveContext::saveContext(Parser& parent, fileContext* ctx)
 :	Parent(parent)
+,	Context(ctx)
 {	parent.Context.emplace_back(ctx);
 }
 
 Parser::saveContext::~saveContext()
-{	Parent.Context.pop_back();
+{	auto& ctx = *Parent.Context.back();
+	if (Context != &ctx)
+		throw stringf("Unterminated context block in the current file at line %u.", ctx.Line);
+	Parent.Context.pop_back();
 }
 
 Parser::saveLineContext::saveLineContext(Parser& parent, fileContext* ctx)
@@ -1371,6 +1375,27 @@ bool Parser::doALIGN(int bytes)
 		++PC;
 	} while (PC & bytes);
 	return true;
+}
+
+void Parser::beginLOCAL(int)
+{
+	if (doPreprocessor())
+		return;
+
+	if (NextToken() != END)
+		Fail("Expected end of line.");
+
+	Context.emplace_back(new fileContext(CTX_BLOCK, Context.back()->File, Context.back()->Line));
+}
+
+void Parser::endLOCAL(int)
+{
+	if (doPreprocessor())
+		return;
+
+	if (Context.back()->Type != CTX_BLOCK)
+		Fail(".endloc without .local in the current file.");
+	Context.pop_back();
 }
 
 void Parser::beginREP(int mode)

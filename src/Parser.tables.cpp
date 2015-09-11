@@ -1588,6 +1588,7 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "endfor",  &Parser::endREP,     1 }
 ,	{ "endfunc", &Parser::endMACRO,   M_FUNC }
 ,	{ "endif",   &Parser::parseENDIF }
+,	{ "endloc",  &Parser::endLOCAL }
 ,	{ "endm",    &Parser::endMACRO,   M_NONE }
 ,	{ "endr",    &Parser::endREP,     0 }
 ,	{ "endrep",  &Parser::endREP,     0 }
@@ -1601,6 +1602,7 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "include", &Parser::doINCLUDE }
 ,	{ "int",     &Parser::parseDATA,  32 }
 ,	{ "lconst",  &Parser::parseSET,   C_LOCAL|C_CONST }
+,	{ "local",   &Parser::beginLOCAL }
 ,	{ "long",    &Parser::parseDATA,  64 }
 ,	{ "lset",    &Parser::parseSET,   C_LOCAL }
 ,	{ "lunset",  &Parser::parseUNSET, C_LOCAL }

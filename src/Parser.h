@@ -173,6 +173,7 @@ class Parser
 	enum contextType
 	{	CTX_ROOT             ///< Root node
 	,	CTX_FILE             ///< File supplied by command line
+	,	CTX_BLOCK            ///< .local block
 	,	CTX_INCLUDE          ///< .include directive
 	,	CTX_MACRO            ///< macro invocation
 	,	CTX_FUNCTION         ///< function call
@@ -322,6 +323,7 @@ class Parser
 	class saveContext
 	{protected:
 		Parser&        Parent;
+		fileContext*   Context;
 	 public:
 		/// Enter a file context.
 		/// @param parent back reference to the current parser instance.
@@ -645,6 +647,10 @@ class Parser
 	/// @pre \a bytes must be a power of 2.
 	/// @return true: alignment caused padding.
 	bool             doALIGN(int bytes);
+	/// Enter local block.
+	void             beginLOCAL(int);
+	/// Leave local block.
+	void             endLOCAL(int);
 	/// @brief Handle \c .rep or .foreach directive.
 	/// @param mode 0 = .rep, 1 = .foreach
 	/// @details This opens a local macro with the reserved name ".rep" or ".foreach" to record the code block
