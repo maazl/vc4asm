@@ -1434,8 +1434,6 @@ const Parser::opEntry<8> Parser::opcodeMap[] =
 ,	{"min",    &Parser::assembleADD, Inst::A_MIN }
 ,	{"mov",    &Parser::assembleMOV, -1 }
 ,	{"mul24",  &Parser::assembleMUL, Inst::M_MUL24 }
-,	{"mv8adds",&Parser::assembleMUL, Inst::M_V8ADDS } // force MUL ALU
-,	{"mv8subs",&Parser::assembleMUL, Inst::M_V8SUBS } // force MUL ALU
 ,	{"nop",    &Parser::assembleADD, Inst::A_NOP } // alternative M_NOP
 ,	{"not",    &Parser::assembleADD, Inst::A_NOT }
 ,	{"or",     &Parser::assembleADD, Inst::A_OR }
@@ -1453,11 +1451,11 @@ const Parser::opEntry<8> Parser::opcodeMap[] =
 ,	{"thrsw",  &Parser::assembleSIG, Inst::S_THRSW }
 ,	{"tswitch",&Parser::assembleSIG, Inst::S_THRSW }
 ,	{"unlscb", &Parser::assembleSIG, Inst::S_SBDONE }
-,	{"v8adds", &Parser::assembleADD, Inst::A_V8ADDS } // alternative M_V8ADDS
+,	{"v8adds", &Parser::assembleMUL, Inst::M_V8ADDS } // alternative A_V8ADDS
 ,	{"v8max",  &Parser::assembleMUL, Inst::M_V8MAX }
 ,	{"v8min",  &Parser::assembleMUL, Inst::M_V8MIN }
 ,	{"v8muld", &Parser::assembleMUL, Inst::M_V8MULD }
-,	{"v8subs", &Parser::assembleADD, Inst::A_V8SUBS } // alternative M_V8SUBS
+,	{"v8subs", &Parser::assembleMUL, Inst::M_V8SUBS } // alternative A_V8SUBS
 ,	{"waitscb",&Parser::assembleSIG, Inst::S_SBWAIT }
 ,	{"xor",    &Parser::assembleADD, Inst::A_XOR }
 };
