@@ -1208,15 +1208,16 @@ void Parser::defineLabel()
 
 void Parser::parseLabel()
 {
-	switch (NextToken())
-	{default:
-		Fail("Expected label name after ':', found '%s'.", Token.c_str());
-	 case WORD:
-	 case NUM:
-		defineLabel();
-	 case END:
-		Flags() |= IF_BRANCH_TARGET;
-	}
+	if (!isspace(*At))
+		switch (NextToken())
+		{default:
+			Fail("Expected label name after ':', found '%s'.", Token.c_str());
+		 case WORD:
+		 case NUM:
+			defineLabel();
+		 case END:;
+		}
+	Flags() |= IF_BRANCH_TARGET;
 }
 
 void Parser::parseGLOBAL(int)
