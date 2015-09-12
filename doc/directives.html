@@ -76,7 +76,15 @@
     </dl>
     <p><tt>.lunset</tt> only removes the identifier from the current local
       context.</p>
-    <h2><a name=".func"></a><tt>.func</tt> - define a multi line user function</h2>
+    <h2><a id=".local" name=".local"></a><tt>.local</tt> - enter a local block</h2>
+    <pre>.local<br><i>    #...</i><br>.endloc<i></i></pre>
+    <p><tt>.local</tt>/<tt>.endloc</tt> has no direct effect on the generated
+      code but it creates a local context for symbols that can be set by <a href="#.lset">.lset</a>.
+      All local symbols go out of scope at the end of the block. The behavior is
+      similar to <tt>{ }</tt> in C and similar languages.</p>
+    <h3>Example</h3>
+    <pre>.local<br>  .lset count, ra2<br>  mov count, unif<br>:.1<br>  # some loop body here<br><br>  sub.setf count, count, 1<br>  brr.allnz -, r:.1<br>  nop<br>  nop<br>  nop<br>.endloc</pre>
+    <h2><tt>.func</tt> - define a multi line user function</h2>
     <pre>.func <var>identifier</var>(<var>argument1, argument2</var> ...)<br> &nbsp;<var>body</var><br>.endf<var></var></pre>
     <dl>
       <dt><var><tt>identifier</tt></var></dt>
