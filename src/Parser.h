@@ -298,11 +298,10 @@ class Parser
 	,	IS_INHERIT = 4 ///< .if or .else block but the condition does not matter because an outer conditional block evaluated to false.
 	};
 	/// Context of conditional block.
-	struct ifContext
-	{	unsigned       Line;      ///< Source code line where the context started.
-		unsigned       State;     ///< State of conditional block, see ifContext.
+	struct ifContext : public location
+	{	unsigned       State;     ///< State of conditional block, see ifContext.
 		/// Construct ifContext from property values
-		ifContext(unsigned line, unsigned state) : Line(line), State(state) {}
+		ifContext(const location& loc, unsigned state) : location(loc), State(state) {}
 	};
 	/// Call stack if .if nested contexts. The deepest context is always the last entry.
 	typedef vector<ifContext> ifs_t;

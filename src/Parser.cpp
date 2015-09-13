@@ -1663,7 +1663,7 @@ void Parser::parseIF(int)
 	if (doPreprocessor(PP_MACRO))
 		return;
 
-	AtIf.emplace_back(Context.back()->Line, isDisabled() ? 4 : doCondition());
+	AtIf.emplace_back(*Context.back(), isDisabled() ? 4 : doCondition());
 }
 
 void Parser::parseIFSET(int)
@@ -1689,7 +1689,7 @@ void Parser::parseIFSET(int)
 	if (NextToken() != END)
 		Fail("Expected end of line, found '%s'.", Token.c_str());
 
-	AtIf.emplace_back(Context.back()->Line, state);
+	AtIf.emplace_back(*Context.back(), state);
 }
 
 void Parser::parseELSEIF(int)
@@ -1726,10 +1726,12 @@ void Parser::parseENDIF(int)
 	if (doPreprocessor(PP_MACRO))
 		return;
 
-	if (!AtIf.size())
-		Fail(".endif without .if");
 	if (NextToken() != END)
 		Msg(ERROR, "Expected end of line. .endif has no arguments.");
+	if (!AtIf.size())
+		Fail(".endif without .if.");
+	if (AtIf.back().File != Context.back()->File)
+		Fail(".endif without .if in the same file.");
 
 	AtIf.pop_back();
 }
@@ -2152,6 +2154,7 @@ void Parser::ParseFile()
 	FILE* f = fopen(Context.back()->File.c_str(), "r");
 	if (!f)
 		Fail("Failed to open file %s.", Context.back()->File.c_str());
+	auto ifs = AtIf.size();
 	try
 	{	while (fgets(Line, sizeof(Line), f))
 		{	++Context.back()->Line;
@@ -2173,6 +2176,8 @@ void Parser::ParseFile()
 	{	fclose(f);
 		throw;
 	}
+	if (ifs < AtIf.size())
+		Fail("Unterminated .if at line %u.", AtIf[ifs].Line);
 }
 void Parser::ParseFile(const string& file)
 {	if (Pass2)
