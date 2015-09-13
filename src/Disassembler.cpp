@@ -154,7 +154,7 @@ void Disassembler::DoMUL()
 			|| (Instruct.Sig == Inst::S_SMI && Instruct.MuxMB == Inst::X_RB) )) // small immediate
 		opm = 8;
 
-	append("; ");
+	append(";  ");
 	append(cOpM[opm]);
 	append(cCC[Instruct.CondM]);
 	if (Instruct.isSFMUL())

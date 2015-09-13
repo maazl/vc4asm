@@ -61,9 +61,9 @@ const char Disassembler::cOpL[8][7] =
 { "ldi", "ldipes", "ldi02?", "ldipeu", "s", "s01?", "s02?", "s03?"
 };
 
-const char Disassembler::cOpS[14][9] =
-{	"; bkpt", "", "; thrsw", "; thrend", "; sbwait", "; sbdone", "; lthrsw", "; loadcv",
-	"; loadc", "; ldcend", "; ldtmu0", "; ldtmu1", "; loadam", ""
+const char Disassembler::cOpS[14][10] =
+{	";  bkpt", "", ";  thrsw", ";  thrend", ";  sbwait", ";  sbdone", ";  lthrsw", ";  loadcv",
+	";  loadc", ";  ldcend", ";  ldtmu0", ";  ldtmu1", ";  loadam", ""
 };
 
 const char Disassembler::cCC[8][7] =

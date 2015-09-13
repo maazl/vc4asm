@@ -59,7 +59,7 @@ class Disassembler
 	/// Branch conditions
 	static const char cBCC[16][7];
 	/// Signaling opcodes
-	static const char cOpS[14][9];
+	static const char cOpS[14][10];
  private: // Working set
 	/// Current PC in bytes, with offset of 3 instructions during the label scan.
 	uint32_t    Addr = 0;
