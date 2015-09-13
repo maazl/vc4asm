@@ -270,7 +270,8 @@ void Disassembler::DoBranch()
 	{	append(cRreg[0][Instruct.RAddrA]);
 		if (Instruct.Immd.iValue)
 			append(", ");
-	}
+	} else if (Instruct.WAddrA != Inst::R_NOP && Instruct.WAddrM != Inst::R_NOP)
+		append("-, ");
 	// try label
 	if (Instruct.Immd.iValue)
 	{	uint32_t target = Instruct.Immd.uValue;
