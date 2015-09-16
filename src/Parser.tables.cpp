@@ -1047,7 +1047,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xbe7fffff, 36, Inst::A_NOT }
 ,	{ 0xbeffffff, 35, Inst::A_NOT }
 ,	{ 0xbf7fffff, 34, Inst::A_NOT }
-,	{ 0xbf800000, 29, Inst::A_ITOF } // -1.0
+,	{ 0xbf800000, 31, Inst::A_ITOF } // -1.0
 ,	{ 0xbfbfbfbf, 26, Inst::A_ROR,  Inst::P_8abcd }
 ,	{ 0xbfffffff, 33, Inst::A_NOT }
 ,	{ 0xc0000000, 30, Inst::A_ITOF } // -2.0
