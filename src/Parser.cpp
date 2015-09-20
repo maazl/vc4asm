@@ -1026,11 +1026,12 @@ void Parser::assembleMOV(int mode)
 	 case Inst::S_LDI:
 		if (Instruct.Immd.uValue != value.uValue || Instruct.LdMode != mode)
 			Fail("Tried to load two different immediate values in one instruction. (0x%x vs. 0x%x)", Instruct.Immd.uValue, value.uValue);
-	 case Inst::S_NONE:;
+		break;
+	 case Inst::S_NONE:
+		if (Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP)
+			Fail("Cannot combine load immediate with value %s with ALU instructions.", param.toString().c_str());
 	}
 	// LDI or semaphore
-	if (Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP)
-		Fail("Cannot combine load immediate with value %s with ALU instructions.", param.toString().c_str());
 	Instruct.Sig = Inst::S_LDI;
 	Instruct.LdMode = (Inst::ldmode)mode;
 	Instruct.Immd = value;

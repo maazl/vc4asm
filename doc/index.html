@@ -60,7 +60,9 @@
         Disassembler: fixed wrong code for branch with two write registers and
         no regfile A read.<br>
         Do not accept <tt>.if</tt> blocks to cross file boundaries.<br>
-        Fixed <tt>mov ..., -1.0</tt></dd>
+        Fixed <tt>mov ..., -1.0</tt><br>
+        Allow to combine two <tt>ldi</tt> with the same value to assign two
+        targets.</dd>
       <dt>V0.1.9</dt>
       <dd>Fixed vc4dis: decoded not only the first 8 instructions in case of a
         binary source file.<br>
