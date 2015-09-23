@@ -48,16 +48,16 @@ v8min vpm, r0, r1 # Y24
 v8max vpm, r0, r1
 v8adds vpm, r0, r1
 v8subs vpm, r0, r1
-.long 0x009e7040, 0x10020c27 # Anop, Y28
-.long 0x099e7040, 0x10020c27 # AddOp 9
-.long 0x0a9e7040, 0x10020c27 # AddOp 10
-.long 0x0b9e7040, 0x10020c27 # AddOp 11
-.long 0x199e7040, 0x10020c27 # AddOp 25, Y32
-.long 0x1a9e7040, 0x10020c27 # AddOp 26
-.long 0x1b9e7040, 0x10020c27 # AddOp 27
-.long 0x1c9e7040, 0x10020c27 # AddOp 28
-.long 0x1d9e7040, 0x10020c27 # AddOp 29, Y36
-.long 0x009e7001, 0x100049f0 # Mnop
+.int 0x009e7040, 0x10020c27 # Anop, Y28
+.int 0x099e7040, 0x10020c27 # AddOp 9
+.int 0x0a9e7040, 0x10020c27 # AddOp 10
+.int 0x0b9e7040, 0x10020c27 # AddOp 11
+.int 0x199e7040, 0x10020c27 # AddOp 25, Y32
+.int 0x1a9e7040, 0x10020c27 # AddOp 26
+.int 0x1b9e7040, 0x10020c27 # AddOp 27
+.int 0x1c9e7040, 0x10020c27 # AddOp 28
+.int 0x1d9e7040, 0x10020c27 # AddOp 29, Y36
+.int 0x009e7001, 0x100049f0 # Mnop
 
 # dma write
 mov r2, 16*4; mov r1, ra3
@@ -147,6 +147,7 @@ mov r2, RES_COUNT2*16*4
 add ra3, ra3, r2
 mov -, vw_wait
 
+:end
 thrend
 mov interrupt, 1;
 nop
