@@ -212,6 +212,8 @@ struct Inst
 	/// Check whether a register write to register file A and B is interchangeable,
 	/// i.e. \ref WS is not fixed.
 	static bool isWRegAB(uint8_t reg) { return ((1ULL<<reg) & 0xfff9f9df00000000ULL) != 0; }
+	/// Check whether a register write is a peripheral register.
+	static bool isPeripheralWReg(uint8_t reg) { return (reg^1) > 36 && reg != R_NOP; }
 
 	/// Simulate a ADD ALU operation of the current instruction.
 	/// @param l Left operand and result

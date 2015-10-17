@@ -26,6 +26,10 @@
       are taken from the current element and only the write is rotated within
       the slice by the lower two bits. This can be particularly useful in some
       cases.</p>
+    <p>Furthermore the restriction that the source register of the vector
+      rotation must not be written in the previous instruction does not apply if
+      the values are transferred to a higher QPU element. You may ensure this by
+      an appropriate <code>.if<var>cc</var></code> extension.</p>
     <h3>Section 7: QPU Reading and Writing of VPM</h3>
     <p>VPM reads seem to <em>block immediately if the FIFO is empty</em>. No
       undefined data is returned when the reads are made too early.</p>

@@ -223,12 +223,13 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 		{	// rot r5
 			if (Instruct.SImmd == 48 && (st.LastWreg[0][37] == At-1 || st.LastWreg[1][37] == At-1))
 				Message(At-1, "Vector rotation must not follow a write to r5.");
-			// check source A
+			// check source
+			auto cond = Instruct.isSFMUL() ? Inst::C_AL : Instruct.CondM;
 			int reg;
-			if ( ( st.LastWreg[0][reg = FromMux(Instruct.MuxMA)] == At-1
-					&& IsCondOverlap(reg, Instruct.isSFMUL() ? Inst::C_AL : Instruct.CondM, instructions[MakeAbsRef(At-1)]) )
-				|| ( st.LastWreg[0][reg = FromMux(Instruct.MuxMB)] == At-1
-					&& IsCondOverlap(reg, Instruct.isSFMUL() ? Inst::C_AL : Instruct.CondM, instructions[MakeAbsRef(At-1)]) ) )
+			if ( ( (st.LastWreg[0][reg = FromMux(Instruct.MuxMA)] == At-1 && IsCondOverlap(reg, cond, instructions[MakeAbsRef(At-1)]))
+					|| (st.LastWreg[0][reg = FromMux(Instruct.MuxMB)] == At-1 && IsCondOverlap(reg, cond, instructions[MakeAbsRef(At-1)])) )
+				// Some rotations are likely to work even without an instruction in between.
+				&& !((Instruct.CondM & 1) == 0 && Instruct.SImmd > 48 && Instruct.SImmd <= 56 && !Instruct.isSFMUL()) )
 				Message(At-1, "Must not write to the source of a vector rotation in the previous instruction.");
 		}
 		// TLB Z -> MS_FLAGS
@@ -239,17 +240,18 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 			+ ((0xfff09e0000000000ULL & (1ULL << regWB)) != 0)
 			+ ((0x0008060000000000ULL & (1ULL << regRA)) != 0)
 			+ ((0x0008060000000000ULL & (1ULL << regRB)) != 0)
-			+ ( Instruct.Sig == Inst::S_LDTMU0 || Instruct.Sig == Inst::S_LDTMU1
-				|| Instruct.Sig == Inst::S_LOADCV || Instruct.Sig == Inst::S_LOADAM
+			+ ( (Instruct.Sig >= Inst::S_LOADCV && Instruct.Sig <= Inst::S_LOADAM)
 				|| (Instruct.Sig == Inst::S_LDI && (Instruct.LdMode & Inst::L_SEMA)) )
 			+ (regWA == 45 || regWA == 46 || regWB == 45 || regWB == 46 || Instruct.Sig == Inst::S_LOADC || Instruct.Sig == Inst::S_LDCEND) ) > 1 )
 			Message(At, "More than one access to TMU, TLB or mutex/semaphore within one instruction.");
+		if (regWA == 49 && regWB == 49)
+			Message(At, "Concurrent write to VPM read and write setup does not work.");
 		// Some combinations that do not work
 		if (Instruct.Sig != Inst::S_BRANCH)
-		{	if ( (Instruct.CondA != Inst::C_AL && Instruct.WAddrA > Inst::R_NOP)
-				|| (Instruct.CondM != Inst::C_AL && Instruct.WAddrM > Inst::R_NOP) )
+		{	if ( (Instruct.CondA != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrA))
+				|| (Instruct.CondM != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrM)) )
 				Message(At, "Conditional write to peripheral register does not work.");
-			if (Instruct.PM && (Instruct.Pack & 0xc) == Inst::P_8a && Instruct.WAddrM >= 32 && Instruct.WAddrM != Inst::R_NOP)
+			if (Instruct.PM && (Instruct.Pack & 0xc) == Inst::P_8a && Inst::isPeripheralWReg(Instruct.WAddrM))
 				Message(At, "Pack modes with partial writes do not work for peripheral registers.");
 		}
 		// Update last used fields
