@@ -205,6 +205,7 @@ bool Eval::operate::Apply(bool unary)
 			lhs.fValue = fabs(rhs.fValue);
 		else
 			lhs.iValue = abs(rhs.iValue);
+		lhs.Type = rhs.Type;
 		break;
 	 case CEIL:
 		if (types != V_FLOAT)
