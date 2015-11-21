@@ -26,7 +26,7 @@
     <pre>.const <i>identifier</i>, <i>expression</i>
 .set <i>identifier</i>, <i>expression</i>
 .lconst <i>identifier</i>, <i>expression</i>
-.lset <i>identifier</i>, <i>expression</i>.const <var>identifier</var>(<var>argument1, argument2</var> ...) <var>expression</var>
+.lset <i>identifier</i>, <i>expression</i><br>.const <var>identifier</var>(<var>argument1, argument2</var> ...) <var>expression</var>
 .set <var>identifier</var>(<var>argument1, argument2</var> ...) <var>expression</var>
 .lconst <var>identifier</var>(<var>argument1, argument2</var> ...) <var>expression</var>
 .lset <var>identifier</var>(<var>argument1, argument2</var> ...) <var>expression</var></pre>
@@ -66,7 +66,7 @@
 <var></var></pre>
     <h2><a name=".unset"></a><tt>.unset .lunset</tt> - revoke a constant
       definition</h2>
-    <pre>.unset <i>identifier</i>.lunset <i>identifier</i></pre>
+    <pre>.unset <i>identifier</i><br>.lunset <i>identifier</i></pre>
     <dl>
       <dt><var><tt>identifier</tt></var></dt>
       <dd>The assignment of this identifier is undone. This normally reverts the
@@ -209,7 +209,7 @@
     </dl>
     <h2><a id=".ifset" name=".ifset"></a><tt>.ifset</tt> - check whether a
       constant is defined</h2>
-    <pre>.if <var>identifier<br>    your code</var><br><var>    </var>...<br>.else<br>    <var>alternate code</var><br><var>    </var>...<br>.endif</pre>
+    <pre>.ifset <var>identifier<br>    your code</var><br><var>    </var>...<br>.else<br>    <var>alternate code</var><br><var>    </var>...<br>.endif</pre>
     <dl>
       <dt><tt><var>identifier</var></tt></dt>
       <dd>Check whether an identifier is defined within the current context.
