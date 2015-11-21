@@ -251,7 +251,7 @@ struct Inst
 	/// Check whether an input mux supports full MUL ALU vector rotation, i.e. swapping between QPU slices.
 	/// @param m Input mux to check.
 	/// @return true for r0 to r3 and r5.
-	static bool SupportsFullRotate(mux m) { return (m ^ 1) < 5; }
+	static bool isAccu(mux m) { return (m ^ 1) < 5; }
 
 	/// Check whether ADD ALU is in use
 	/// @pre Sig < S_LDI

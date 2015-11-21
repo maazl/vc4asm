@@ -231,6 +231,15 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 				// Some rotations are likely to work even without an instruction in between.
 				&& !((Instruct.CondM & 1) == 0 && Instruct.SImmd > 48 && Instruct.SImmd <= 56 && !Instruct.isSFMUL()) )
 				Message(At-1, "Must not write to the source of a vector rotation in the previous instruction.");
+			// Check for sources that do not support full vector rotation.
+			if ( Instruct.SImmd == 48 || Instruct.isSFMUL()
+				|| !( (Instruct.SImmd <= 48+3 && (Instruct.CondM & 1) == 0)
+					||  (Instruct.SImmd >= 64-3 && (Instruct.CondM & 1) && Instruct.CondM != Inst::C_AL) ))
+			{	if (!Inst::isAccu(Instruct.MuxMA))
+					Message(At, "%s does not support full MUL ALU vector rotation.", Inst::toString(Instruct.MuxMA));
+				if (!Inst::isAccu(Instruct.MuxMB))
+					Message(At, "%s does not support full MUL ALU vector rotation.", Inst::toString(Instruct.MuxMB));
+			}
 		}
 		// TLB Z -> MS_FLAGS
 		if ((regRA == 42 || regRB == 42) && At - st.LastWreg[0][44] <= 2)

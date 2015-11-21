@@ -141,6 +141,7 @@ Parser::token_t Parser::NextToken()
 			At += 2;
 			return OP;
 		}
+		goto op1;
 	 case '!':
 		if (At[1] == '^')
 			goto op2;
@@ -152,6 +153,7 @@ Parser::token_t Parser::NextToken()
 	 case '/':
 	 case '%':
 	 case '~':
+	 op1:
 		Token.assign(At, 1);
 		++At;
 		return OP;
@@ -504,16 +506,11 @@ void Parser::applyRot(int count)
 		InstCtx |= IC_MUL;
 		if (count == 16)
 			Fail("Cannot rotate ALU target right by r5.");
-		if ((InstCtx & IC_SRC) && (abs(count) & 0xc))
-		{	auto m = InstCtx & IC_B ? Instruct.MuxMB : Instruct.MuxMA;
-			if (!Inst::SupportsFullRotate(m))
-				Msg(WARNING, "%s does not support full MUL ALU vector rotation.", Inst::toString(m));
-		}
 
 		if (InstCtx & IC_B)
 		{	if (Instruct.Sig != Inst::S_SMI || Instruct.SImmd < 48)
 				Msg(WARNING, "The Vector rotation of the second MUL ALU source argument silently applies also to the first source.");
-			int mask = !Inst::SupportsFullRotate(Instruct.MuxMA) || !Inst::SupportsFullRotate(Instruct.MuxMB) ? 0x3 : 0xf;
+			int mask = !Inst::isAccu(Instruct.MuxMA) || !Inst::isAccu(Instruct.MuxMB) ? 0x3 : 0xf;
 			if (((Instruct.SImmd - 48) ^ count) & mask)
 				Fail("Cannot use different vector rotations within one instruction.");
 		}
@@ -521,7 +518,7 @@ void Parser::applyRot(int count)
 
 		doSMI(48 + (count & 0xf));
 	} else if ( (InstCtx & IC_B) && (UseRot & XR_SRCA)
-			&& (Inst::SupportsFullRotate(Instruct.MuxMB) || (Instruct.SImmd & 0x3) || Instruct.SImmd == 48) )
+			&& (Inst::isAccu(Instruct.MuxMB) || (Instruct.SImmd & 0x3) || Instruct.SImmd == 48) )
 		Msg(WARNING, "The Vector rotation of the first MUL ALU source argument silently applies also to the second argument.");
 }
 
