@@ -46,7 +46,7 @@
 .endf
 .func vpm_setup(num, stride, dma)
   .assert !((num-1) & ~0xf)
-  .assert !((stride-1) & ~0x3f)
+  .assert !((abs(stride)-1) & ~0x3f)
   .assert !(dma & ~0xfff)
   (num & 0xf) << 20 | (stride & 0x3f) << 12 | dma
 .endf
