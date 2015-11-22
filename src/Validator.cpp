@@ -6,6 +6,8 @@
  */
 
 #include "Validator.h"
+#include "DebugInfo.h"
+#include <set>
 #include <cstddef>
 #include <cstring>
 #include <cstdarg>
@@ -44,6 +46,10 @@ void Validator::Message(int refloc, const char* fmt, ...)
 	fprintf(stderr, "\n  instruction at 0x%x\n", BaseAddr + At * (unsigned)sizeof(uint64_t));
 	if (refloc >= 0 && refloc != At)
 		fprintf(stderr, "  referring to instruction at 0x%x\n", BaseAddr + refloc * (unsigned)sizeof(uint64_t));
+	if (Info)
+	{	auto loc = Info->LineNumbers[At];
+		fprintf(stderr, "  generated at %s (%u)\n", Info->SourceFiles[loc.File].Name.c_str(), loc.Line);
+	}
 }
 
 int Validator::FromMux(Inst::mux m)
@@ -117,21 +123,22 @@ void Validator::TerminateRq(int after)
 		To = after;
 }
 
-void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
+void Validator::ProcessItem(state& st)
 {
 	From = st.From;
 	Start = st.Start;
 	At = st.Start;
-	To = instructions.size();
+	To = Instructions->size();
 	//printf("Fragment %x, %x\n", From, Start);
 	Pass2 = false;
 	int target = -1;
+	set<Inst::mux> accRP;
 	for (At = st.Start; At < To; ++At)
 	{	if (Done[At])
 		{	TerminateRq(MAX_DEPEND);
 			Pass2 = true;
 		}
-		Instruct.decode(instructions[At]);
+		Instruct.decode((*Instructions)[At]);
 		// Check resources
 		uint8_t regRA = Inst::R_NOP;
 		uint8_t regRB = Inst::R_NOP;
@@ -189,12 +196,38 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 
 		// check for RA/RB back to back read/write
 		if ( regRA < 32 && st.LastWreg[0][regRA] == At-1
-			&& IsCondOverlap(regRA, GetRdCond(Inst::X_RA), instructions[MakeAbsRef(At-1)]) )
+			&& IsCondOverlap(regRA, GetRdCond(Inst::X_RA), (*Instructions)[MakeAbsRef(At-1)]) )
 			Message(At-1, "Cannot read register ra%d because it just have been written by the previous instruction.", regRA);
 		if ( regRB < 32 && st.LastWreg[1][regRB] == At-1
-			&& IsCondOverlap(regRB|64, GetRdCond(Inst::X_RB), instructions[MakeAbsRef(At-1)]) )
+			&& IsCondOverlap(regRB|64, GetRdCond(Inst::X_RB), (*Instructions)[MakeAbsRef(At-1)]) )
 			Message(At-1, "Cannot read register rb%d because it just have been written by the previous instruction.", regRB);
-
+		// check for back to back accumulator reads with conditional write and periphal target
+		if (Instruct.Sig < Inst::S_BRANCH)
+		{	accRP.clear();
+			if (Inst::isPeripheralWReg(Instruct.WAddrA))
+			{	if (Inst::isAccu(Instruct.MuxAA) && st.LastWreg[0][Instruct.MuxAA+32] == At-1)
+					accRP.emplace(Instruct.MuxAA);
+				if (!Instruct.isUnary() && Inst::isAccu(Instruct.MuxAB) && st.LastWreg[0][Instruct.MuxAB+32] == At-1)
+					accRP.emplace(Instruct.MuxAB);
+			}
+			if (Inst::isPeripheralWReg(Instruct.WAddrM))
+			{	if (Inst::isAccu(Instruct.MuxMA) && st.LastWreg[0][Instruct.MuxMA+32] == At-1)
+					accRP.emplace(Instruct.MuxMA);
+				if (Inst::isAccu(Instruct.MuxMB) && st.LastWreg[0][Instruct.MuxMB+32] == At-1)
+					accRP.emplace(Instruct.MuxMB);
+			}
+			Inst inst;
+			inst.decode((*Instructions)[MakeAbsRef(At-1)]);
+			if (inst.CondA > Inst::C_AL && accRP.find((Inst::mux)(inst.WAddrA-32)) != accRP.end())
+				Message(At-1, "Writing the result of the conditional assignment to accumulator r%u to a periperal register in the next instruction does not work correctly.", inst.WAddrA-32);
+			if (inst.CondM > Inst::C_AL && accRP.find((Inst::mux)(inst.WAddrM-32)) != accRP.end())
+				Message(At-1, "Writing the result of the conditional assignment to accumulator r%u to a periperal register in the next instruction does not work correctly.", inst.WAddrM-32);
+		}
+		// Two writes to the same register
+		if ( regWA == regWB && regWA != Inst::R_NOP && Inst::isWRegAB(regWA)
+			&& ( Instruct.Sig == Inst::S_BRANCH
+				|| (Instruct.CondA != Inst::C_NEVER && Instruct.CondM != Inst::C_NEVER && Instruct.CondA != (Instruct.CondM ^ 1)) ))
+			Message(At, "Both ALUs write to the same register without inverse condition flags.");
 		if (At < 2 && Instruct.Sig == Inst::S_SBWAIT)
 			Message(At, "The first two fragment shader instructions must not wait for the scoreboard.");
 		// unif_addr
@@ -226,8 +259,8 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 			// check source
 			auto cond = Instruct.isSFMUL() ? Inst::C_AL : Instruct.CondM;
 			int reg;
-			if ( ( (st.LastWreg[0][reg = FromMux(Instruct.MuxMA)] == At-1 && IsCondOverlap(reg, cond, instructions[MakeAbsRef(At-1)]))
-					|| (st.LastWreg[0][reg = FromMux(Instruct.MuxMB)] == At-1 && IsCondOverlap(reg, cond, instructions[MakeAbsRef(At-1)])) )
+			if ( ( (st.LastWreg[0][reg = FromMux(Instruct.MuxMA)] == At-1 && IsCondOverlap(reg, cond, (*Instructions)[MakeAbsRef(At-1)]))
+					|| (st.LastWreg[0][reg = FromMux(Instruct.MuxMB)] == At-1 && IsCondOverlap(reg, cond, (*Instructions)[MakeAbsRef(At-1)])) )
 				// Some rotations are likely to work even without an instruction in between.
 				&& !((Instruct.CondM & 1) == 0 && Instruct.SImmd > 48 && Instruct.SImmd <= 56 && !Instruct.isSFMUL()) )
 				Message(At-1, "Must not write to the source of a vector rotation in the previous instruction.");
@@ -293,7 +326,7 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 			TerminateRq(3);
 		if (!Pass2 && At - st.LastBRANCH == 3)
 		{	// Schedule branch target
-			if ((unsigned)target < instructions.size() && !tend && st.LastTEND < 0)
+			if ((unsigned)target < Instructions->size() && !tend && st.LastTEND < 0)
 				WorkItems.emplace_back(new state(st, At+1, target));
 		}
 
@@ -301,14 +334,14 @@ void Validator::ProcessItem(const vector<uint64_t>& instructions, state& st)
 	}
 }
 
-void Validator::Validate(const vector<uint64_t>& instructions)
+void Validator::Validate()
 {
 	Done.clear();
-	Done.resize(instructions.size());
+	Done.resize(Instructions->size());
 	WorkItems.emplace_back(new state(0));
 	while (!WorkItems.empty())
 	{	unique_ptr<state> item = move(WorkItems.back());
 		WorkItems.pop_back();
-		ProcessItem(instructions, *item);
+		ProcessItem(*item);
 	}
 }

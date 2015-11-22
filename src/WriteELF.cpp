@@ -6,7 +6,8 @@
  */
 
 #include "WriteELF.h"
-#include "Parser.h"
+#include "expr.h"
+#include "DebugInfo.h"
 
 #include <string>
 #include <cstring>
@@ -105,7 +106,7 @@ WriteELF::WriteELF()
 {	Symbols.emplace_back(Sym0);
 }
 
-void WriteELF::Write(Parser& p, const char* filename)
+void WriteELF::Write(const vector<uint64_t>& instructions, const DebugInfo& info, const char* filename)
 {
 	// File name symbol
 	{	auto& sym = AddSymbol(filename);
@@ -113,8 +114,7 @@ void WriteELF::Write(Parser& p, const char* filename)
 		sym.st_shndx = SHN_ABS;
 	}
 
-	auto& insts = p.GetInstructions();
-	size_t code_size = insts.size() * sizeof (uint64_t);
+	size_t code_size = instructions.size() * sizeof (uint64_t);
 
 	// Code fragment symbol, name = file name
 	{	auto cp = strrchr(filename, '/');
@@ -144,7 +144,7 @@ void WriteELF::Write(Parser& p, const char* filename)
 	}
 
 	// Export global symbol table
-	for (auto sym : p.GetGlobals())
+	for (auto sym : info.GlobalsByName)
 	{	auto& value = AddGlobalSymbol(sym.first);
 		value.st_value = (Elf32_Addr)sym.second.iValue;
 		if (sym.second.Type == V_INT)
@@ -171,7 +171,7 @@ void WriteELF::Write(Parser& p, const char* filename)
 	// write section names
 	WriteRaw(SNST);
 	// write code
-	fwrite(&insts.front(), sizeof(uint64_t), insts.size(), Target);
+	fwrite(&instructions.front(), sizeof(uint64_t), instructions.size(), Target);
 	// write symbol table
 	fwrite(&Symbols.front(), sizeof(Elf32_Sym), Symbols.size(), Target);
 	// write symbol names

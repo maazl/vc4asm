@@ -15,13 +15,13 @@
 using namespace std;
 
 
-class Parser;
+class DebugInfo;
 
 class WriteELF
 {public:
 	FILE* Target;
 	WriteELF();
-	void Write(Parser& p, const char* filename);
+	void Write(const vector<uint64_t>& instructions, const DebugInfo& info, const char* filename);
 
  private: // Templates for ELF creation
 	static const Elf32_Ehdr Hdr;      ///< ELF header

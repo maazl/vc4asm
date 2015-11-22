@@ -10,45 +10,20 @@
 
 #include "Eval.h"
 #include "Inst.h"
+#include "DebugInfo.h"
 #include "utils.h"
 
 #include <inttypes.h>
 #include <vector>
 #include <string>
-#include <unordered_map>
 #include <memory>
-#include <string.h>
 #include <stdarg.h>
 
 using namespace std;
 
-/// Find the first occurrence of key in an ordered, constant array of C strings.
-/// @tparam T Element type, must be convertible to const char*.
-/// Since the string is \0 terminated, the Type T may consist of more than the string.
-/// @tparam N Array size
-/// @param arr Array. arr must in fact point to the first string.
-/// @param key String to search.
-/// @return Pointer to the first array element that matches key or NULL if none.
-template <typename T, size_t N>
-inline T* binary_search(T (&arr)[N], const char* key)
-{	size_t l = 0;
-	size_t r = N;
-	int nohit = -1;
-	while (l < r)
-	{	size_t m = (l+r) >> 1;
-		int cmp = strcmp(key, (const char*)(arr + m));
-		if (cmp > 0)
-			l = m + 1;
-		else
-		{	r = m;
-			nohit &= cmp;
-		}
-	}
-	return nohit ? NULL : arr + r;
-}
 
 /// Core class that does the assembly process.
-class Parser
+class Parser : public DebugInfo
 {public:
 	/// Severity of assembler messages.
 	enum severity
@@ -56,10 +31,8 @@ class Parser
 	,	WARNING
 	,	INFO
 	};
-	/// @brief List of export symbol definitions.
-	/// @details name => (value, type)
-	typedef unordered_map<string,exprValue> globals_t;
- public:
+
+ public: // Input
 	/// List of path prefixes to search for include files.
 	vector<string> IncludePaths;
 	/// The assembly process did not fail so far and can produce reasonable output.
@@ -73,6 +46,10 @@ class Parser
 	FILE* Preprocessed = NULL;
 	/// Display only messages with higher or same severity.
 	severity Verbose = WARNING;
+ public: // Result
+	/// Assembled result. The index is PC.
+	/// This is only valid after EnsurePass2 has been called.
+	vector<uint64_t> Instructions;
  private:
 	/// Type of a parser token.
 	enum token_t : char
@@ -215,14 +192,6 @@ class Parser
 	///< Assembler directive lookup table, ordered by Name.
 	static const opEntry<8> directiveMap[];
 
-	/// Reference to a line of assembler code (for messages).
-	struct location
-	{	string         File; ///< Source file containing the line
-		unsigned       Line; ///< Line number in the source file
-		location()     : Line(0) {}///< create uninitialized instance, assign File and Line by yourself
-		bool operator !() const { return !Line; }///< Is this instance not initialized, i.e. Line == 0
-		string         toString() const;///< Covert to filename (line)
-	};
 	/// Label instance
 	struct label
 	{	const string   Name; ///< Name of the label, not unique!
@@ -313,7 +282,7 @@ class Parser
 	{	const contextType Type;   ///< Type of this context.
 		consts_t       Consts;    ///< Constants (.set)
 		/// Create a new invocation context.
-		fileContext(contextType type, const string& file, unsigned line) : Type(type) { File = file; Line = line; }
+		fileContext(contextType type, uint16_t file, uint16_t line) : Type(type) { File = file; Line = line; }
 	};
 	/// Call stack of file invocations. The innermost context is the last entry.
 	/// The containers owns the context instances exclusively.
@@ -350,28 +319,9 @@ class Parser
 	,	IF_DATA          = 8      ///< Result of .data directive, do not optimize
 	};
 
-	/// Refinement of vector<T> that resizes the vector instead of undefined behavior when operator[] is used with an out of bounds index.
-	/// @tparam T vector's element type
-	/// @tparam def default value used to enlarge the vector.
-	template <typename T, T def>
-	class vector_safe : public vector<T>
-	{public:
-		/// Mutable operator[] that implicitly resizes the vector to contain at least the element number n.
-		/// @param n Element index.
-		/// @return reference the the existing element #n or to a newly element number #n. The new elements are initialized from \ref def.
-		typename vector<T>::reference operator[](typename vector<T>::size_type n)
-		{	if (n >= vector<T>::size())
-				vector<T>::resize(n+1, def);
-			return vector<T>::operator[](n);
-		}
-	};
-
 	// parser working set
 	/// Are we already in the second pass?
 	bool             Pass2 = false;
-	/// @brief Files to be parsed from command line in order of appearance.
-	/// @details They are effectively filled by calls to ParseFile in pass 1.
-	vector<string>   Filenames;
 
 	/// @brief Current source line to be parsed.
 	/// @remarks Well, static size ... todo
@@ -420,9 +370,6 @@ class Parser
 	/// @details This dictionary associates the label name with the label ID.
 	/// The association may change because of local labels, e.g. with leading '.'.
 	lnames_t         LabelsByName;
-	/// @brief Global label definitions.
-	/// @details List of labels that should be exported in ELF output.
-	globals_t        GlobalsByName;
 	/// Single line function definitions, i.e. .set with parameters.
 	/// @details This definitions are not context sensitive.
 	funcs_t          Functions;
@@ -433,13 +380,13 @@ class Parser
 	/// @details This definitions are not context sensitive.
 	macros_t         Macros;
 
-	// instruction
-	/// Assembled result. The index is PC.
-	vector_safe<uint64_t,0> Instructions;
 	/// Flags for the above instructions.
 	/// @remarks The flags are kept in a separate array to keep the Instructions array a binary blob that can directly be written to disk.
 	vector_safe<uint8_t,IF_NONE> InstFlags;
+
  private:
+	/// Get name of file ID.
+	const char*      fName(uint16_t file) { return SourceFiles[file].Name.c_str(); }
 	/// Enrich an assembler message with file and line context including the context stack.
 	string           enrichMsg(string msg);
 	/// Enrich the formatted message and throws the result as std::string.
@@ -786,10 +733,8 @@ class Parser
 	/// @exception std::string The file can't be read, error message.
 	void             ParseFile();
 
-	/// This function resets the parser befory any pass.
+	/// This function resets the parser before any pass.
 	void             ResetPass();
-	/// This function switches to pass 2 after pass 1 has completed.
-	void             EnsurePass2();
  public:
 	/// @brief Create a virgin parser
 	/// @details You should call ParseFile to parse the sorce code.
@@ -801,12 +746,9 @@ class Parser
   /// This might be used for global function definition files that are not explicitely included by every source file.
   /// E.g. \c vc4.qinc.
 	void             ParseFile(const string& file);
-	/// @brief Return the fully assembled code.
-	/// @details This will invoke pass 2 if not yet done.
-	const vector<uint64_t>& GetInstructions() { EnsurePass2(); return Instructions; }
-	/// @brief Global label definitions if any.
-	/// @details This will invoke pass 2 if not yet done.
-	const globals_t& GetGlobals() { EnsurePass2(); return GlobalsByName; }
+	/// This function switches to pass 2 after pass 1, i.e. ParseFile, has completed.
+	/// @post This call ensures the validity of Instructions, GlobalSymbolsByName and DebugInfo.
+	void             EnsurePass2();
 };
 
 #endif // PARSER_H_

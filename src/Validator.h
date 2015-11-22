@@ -16,12 +16,18 @@
 #include <climits>
 using namespace std;
 
+struct DebugInfo;
+
 /// Helper class to validate VideoCore IV instruction constraints.
 class Validator
 {public:
 	/// Use this address as absolute address of the first instruction word.
 	/// @remarks The absolute address is used for comments and to resolve absolute branch targets.
 	uint32_t BaseAddr = 0;
+	/// Code block to check. Need to be set before Validate().
+	const vector<uint64_t>* Instructions = nullptr;
+	/// Optional debug info for more expressive messages.
+	const DebugInfo* Info = nullptr;
  private:
 	/// Maximum number of instructions where constraints apply.
 	/// @remarks This is related to the pipeline length in QPU elements.
@@ -130,11 +136,11 @@ class Validator
 	/// Execute a validation task for the given code block.
 	/// @param instructions Code block to check.
 	/// @param st (initial) state of the validator. This is also used to specify the region to be checked.
-	void ProcessItem(const vector<uint64_t>& instructions, state& st);
+	void ProcessItem(state& st);
  public:
 	/// Validate a code block. The validation starts always at the first instruction.
-	/// @param instructions Code block to check.
-	void Validate(const vector<uint64_t>& instructions);
+	/// @pre Instructions must be assigned to the code to analyze.
+	void Validate();
 };
 
 #endif // VALIDATOR_H_

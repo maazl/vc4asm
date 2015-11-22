@@ -36,9 +36,9 @@ clean:
 ../obj/expr$(O) : expr.cpp expr.h utils.h
 ../obj/Inst$(O) : Inst.cpp Inst.h expr.h
 ../obj/Eval$(O) : Eval.cpp Eval.h Inst.h expr.h utils.h
-../obj/Parser$(O) : Parser.cpp Parser.h Eval.h Inst.h expr.h utils.h Parser.tables.cpp
-../obj/Validator$(O) : Validator.cpp Validator.h utils.h Inst.h expr.h
-../obj/WriteELF$(O) : WriteELF.cpp WriteELF.h Parser.h Eval.h Inst.h utils.h
+../obj/Parser$(O) : Parser.cpp Parser.h DebugInfo.h Eval.h Inst.h expr.h utils.h Parser.tables.cpp
+../obj/Validator$(O) : Validator.cpp Validator.h DebugInfo.h utils.h Inst.h expr.h
+../obj/WriteELF$(O) : WriteELF.cpp WriteELF.h DebugInfo.h expr.h
 ../obj/Disassembler$(O) : Disassembler.cpp Disassembler.h Inst.h utils.h Disassembler.tables.cpp
 ../obj/vc4asm$(O) : vc4asm.cpp Parser.h Eval.h Inst.h expr.h utils.h Validator.h
 ../obj/vc4dis$(O) : vc4dis.cpp Disassembler.h Inst.h expr.h Validator.h utils.h

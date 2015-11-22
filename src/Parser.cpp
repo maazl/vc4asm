@@ -19,11 +19,6 @@
 #include "Parser.tables.cpp"
 
 
-string Parser::location::toString() const
-{	return stringf("%s (%u)", File.c_str(), Line);
-}
-
-
 Parser::saveContext::saveContext(Parser& parent, fileContext* ctx)
 :	Parent(parent)
 ,	Context(ctx)
@@ -55,21 +50,23 @@ string Parser::enrichMsg(string msg)
 	for (auto i = Context.rbegin(); i != Context.rend(); ++i)
 	{	const fileContext& ctx = **i;
 		if (ctx.Line)
+		{	auto fname = fName(ctx.File);
 			switch (type)
 			{case CTX_CURRENT:
-				msg = stringf("%s (%u,%zi): ", ctx.File.c_str(), ctx.Line, At - Line - Token.size() + 1) + msg;
+				msg = stringf("%s (%u,%zi): ", fname, ctx.Line, At - Line - Token.size() + 1) + msg;
 				break;
 			 case CTX_INCLUDE:
-				msg += stringf("\n  Included from %s (%u)", ctx.File.c_str(), ctx.Line);
+				msg += stringf("\n  Included from %s (%u)", fname, ctx.Line);
 				break;
 			 case CTX_MACRO:
-				msg += stringf("\n  At invocation of macro from %s (%u)", ctx.File.c_str(), ctx.Line);
+				msg += stringf("\n  At invocation of macro from %s (%u)", fname, ctx.Line);
 				break;
 			 case CTX_FUNCTION:
-				msg += stringf("\n  At function invocation from %s (%u)", ctx.File.c_str(), ctx.Line);
+				msg += stringf("\n  At function invocation from %s (%u)", fname, ctx.Line);
 				break;
 			 default:;
 			}
+		}
 		type = ctx.Type;
 	}
 	return msg;
@@ -108,11 +105,19 @@ void Parser::FlagsSize(size_t min)
 
 void Parser::StoreInstruction(uint64_t inst)
 {
+	Instructions.emplace_back();
+	LineNumbers.emplace_back();
 	uint64_t* ptr = &Instructions[PC+Back];
 	uint64_t* ip  = ptr - Back;
+	location* lp  = &LineNumbers[PC+Back];
 	while (ptr != ip)
-		*ptr = ptr[-1], --ptr;
+	{	*ptr = ptr[-1];
+		*lp  = lp[-1];
+		--ptr;
+		--lp;
+	}
 	*ptr = inst;
+	*lp  = *Context.back();
 }
 
 Parser::token_t Parser::NextToken()
@@ -1183,8 +1188,8 @@ void Parser::defineLabel()
 		if (!!lp->Definition)
 		{	// redefinition
 			if (!isdigit(lp->Name[0]))
-				Fail("Redefinition of non-local label %s, previously defined at %s.",
-					Token.c_str(), lp->Definition.toString().c_str());
+				Fail("Redefinition of non-local label %s, previously defined at %s (%u).",
+					Token.c_str(), fName(lp->Definition.File), lp->Definition.Line);
 			// redefinition allowed, but this is always a new label
 			lname.first->second = LabelCount;
 			goto new_label;
@@ -1604,8 +1609,8 @@ void Parser::parseSET(int flags)
 			const auto& ret = Functions.emplace(name, func);
 			if (!ret.second)
 			{	Msg(INFO, "Redefinition of function %s.\n"
-				      "Previous definition at %s.",
-				  Token.c_str(), ret.first->second.Definition.toString().c_str());
+				      "Previous definition at %s (%u).",
+				  Token.c_str(), fName(ret.first->second.Definition.File), ret.first->second.Definition.Line);
 				ret.first->second = func;
 			}
 			break;
@@ -1620,8 +1625,8 @@ void Parser::parseSET(int flags)
 			if (!r.second)
 			{	if (flags & C_CONST)
 					// redefinition not allowed
-					Fail("Identifier %s has already been defined at %s.",
-						name.c_str(), r.first->second.Definition.toString().c_str());
+					Fail("Identifier %s has already been defined at %s (%u).",
+						name.c_str(), fName(r.first->second.Definition.File), r.first->second.Definition.Line);
 				r.first->second.Value = expr;
 			}
 		}
@@ -1750,15 +1755,15 @@ void Parser::beginMACRO(int flags)
 
 	if (AtMacro)
 		Fail("Cannot nest macro definitions.\n"
-		     "  In definition of macro starting at %s.",
-		  AtMacro->Definition.toString().c_str());
+		     "  In definition of macro starting at %s (%u).",
+		     fName(AtMacro->Definition.File), AtMacro->Definition.Line);
 	if (NextToken() != WORD)
 		Fail("Expected macro name.");
 	AtMacro = &(flags & M_FUNC ? MacroFuncs : Macros)[Token];
-	if (AtMacro->Definition.File.size())
+	if (!!AtMacro->Definition)
 	{	Msg(INFO, "Redefinition of macro %s.\n"
-		          "  Previous definition at %s.",
-		  Token.c_str(), AtMacro->Definition.toString().c_str());
+		          "  Previous definition at %s (%u).",
+		  Token.c_str(), fName(AtMacro->Definition.File), AtMacro->Definition.Line);
 		// redefine
 		AtMacro->Args.clear();
 		AtMacro->Content.clear();
@@ -2012,12 +2017,13 @@ void Parser::doINCLUDE(int)
 				goto got_it;
 		}
 	}
-	file = relpath(Context.back()->File, Token);
+	file = relpath(SourceFiles[Context.back()->File].Name, Token);
 	if (stat(file.c_str(), &buffer) != 0)
 		Fail("Cannot locate included file '%s'.", Token.c_str());
 
  got_it:
-	saveContext ctx(*this, new fileContext(CTX_INCLUDE, file, 0));
+	SourceFiles.emplace_back(file, *Context.back());
+	saveContext ctx(*this, new fileContext(CTX_INCLUDE, SourceFiles.size()-1, 0));
 
 	ParseFile();
 }
@@ -2149,9 +2155,9 @@ void Parser::ParseLine()
 
 void Parser::ParseFile()
 {
-	FILE* f = fopen(Context.back()->File.c_str(), "r");
+	FILE* f = fopen(fName(Context.back()->File), "r");
 	if (!f)
-		Fail("Failed to open file %s.", Context.back()->File.c_str());
+		Fail("Failed to open file %s.", fName(Context.back()->File));
 	auto ifs = AtIf.size();
 	try
 	{	while (fgets(Line, sizeof(Line), f))
@@ -2180,10 +2186,10 @@ void Parser::ParseFile()
 void Parser::ParseFile(const string& file)
 {	if (Pass2)
 		throw string("Cannot add another file after pass 2 has been entered.");
-	saveContext ctx(*this, new fileContext(CTX_FILE, file, 0));
+	SourceFiles.emplace_back(file);
+	saveContext ctx(*this, new fileContext(CTX_FILE, SourceFiles.size()-1, 0));
 	try
 	{	ParseFile();
-		Filenames.emplace_back(file);
 	} catch (const string& msg)
 	{	// recover from errors
 		Success = false;
@@ -2197,7 +2203,7 @@ void Parser::ResetPass()
 {	AtMacro = NULL;
 	AtIf.clear();
 	Context.clear();
-	Context.emplace_back(new fileContext(CTX_ROOT, "", 0));
+	Context.emplace_back(new fileContext(CTX_ROOT, 0, 0));
 	Functions.clear();
 	Macros.clear();
 	LabelsByName.clear();
@@ -2221,18 +2227,23 @@ void Parser::EnsurePass2()
 	// Check all labels
 	for (auto& label : Labels)
 	{	if (!label.Definition)
-			Msg(ERROR, "Label '%s' is undefined. Referenced from %s.\n",
-				label.Name.c_str(), label.Reference.toString().c_str());
+			Msg(ERROR, "Label '%s' is undefined. Referenced from %s (%u).\n",
+				label.Name.c_str(), fName(label.Reference.File), label.Reference.Line);
 		if (!label.Reference)
-			Msg(INFO, "Label '%s' defined at %s is not used.\n",
-				label.Name.c_str(), label.Definition.toString().c_str());
+			Msg(INFO, "Label '%s' defined at %s (%u) is not used.\n",
+				label.Name.c_str(), fName(label.Definition.File), label.Definition.Line);
 		// prepare for next pass
 		label.Definition.Line = 0;
 	}
 
-	for (auto file : Filenames)
-	{	saveContext ctx(*this, new fileContext(CTX_FILE, file, 0));
-		ParseFile();
+	unsigned fileno = 0;
+	for (auto file : SourceFiles)
+	{	// only process files that are invoked from command line.
+		if (!file.Parent)
+		{	saveContext ctx(*this, new fileContext(CTX_FILE, fileno, 0));
+			ParseFile();
+		}
+		++fileno;
 	}
 
 	// Optimize instructions
@@ -2254,5 +2265,5 @@ void Parser::Reset()
 { ResetPass();
 	Labels.clear();
 	Pass2 = false;
-	Filenames.clear();
+	SourceFiles.clear();
 }

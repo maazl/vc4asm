@@ -76,11 +76,16 @@ int main(int argc, char **argv)
 		{	parser.ParseFile(argv[optind]);
 			++optind;
 		}
+		parser.EnsurePass2();
 		if (!parser.Success)
 			throw string("Aborted because of earlier errors.");
 
 		if (check)
-		Validator().Validate(parser.GetInstructions());
+		{	Validator v;
+			v.Instructions = &parser.Instructions;
+			v.Info = &parser;
+			v.Validate();
+		}
 
 		if (writeCPP)
 		{	FILE* of = fopen(writeCPP, "wt");
@@ -90,7 +95,7 @@ int main(int argc, char **argv)
 			}
 
 			const char* tpl = CPPTemplate + 2; // no ,\n in the first line
-			for (auto code : parser.GetInstructions())
+			for (auto code : parser.Instructions)
 			{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
 				tpl = CPPTemplate;
 			}
@@ -105,7 +110,7 @@ int main(int argc, char **argv)
 			}
 
 			const char* tpl = CPPTemplate + 2; // no ,\n in the first line
-			for (auto code : parser.GetInstructions())
+			for (auto code : parser.Instructions)
 			{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
 				tpl = CPPTemplate;
 			}
@@ -124,7 +129,7 @@ int main(int argc, char **argv)
 			{	fprintf(stderr, "Failed to open %s for writing.", writeBIN);
 				return -1;
 			}
-			fwrite(&*parser.GetInstructions().begin(), sizeof(uint64_t), parser.GetInstructions().size(), of);
+			fwrite(&*parser.Instructions.begin(), sizeof(uint64_t), parser.Instructions.size(), of);
 			fclose(of);
 		}
 
@@ -136,7 +141,7 @@ int main(int argc, char **argv)
 			{	fprintf(stderr, "Failed to open %s for writing.", writeELF);
 				return -1;
 			}
-			we.Write(parser, writeELF);
+			we.Write(parser.Instructions, parser, writeELF);
 			fclose(we.Target);
 		}
 	} catch (const string& msg)

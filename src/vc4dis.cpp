@@ -182,6 +182,9 @@ int main(int argc, char * argv[]) {
 		dis.Disassemble();
 
 		if (check)
-			Validator().Validate(dis.Instructions);
+		{	Validator v;
+			v.Instructions = &dis.Instructions;
+			v.Validate();
+		}
 	}
 }
