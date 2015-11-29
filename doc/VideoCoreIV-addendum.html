@@ -27,9 +27,88 @@
       the slice by the lower two bits. This can be particularly useful in some
       cases.</p>
     <p>Furthermore the restriction that the source register of the vector
-      rotation must not be written in the previous instruction does not apply if
-      the values are transferred to a higher QPU element. You may ensure this by
-      an appropriate <code>.if<var>cc</var></code> extension.</p>
+      rotation must not be written in the previous instruction applies <em>if
+        the values are transferred to a lower QPU slice</em> only. You may
+      prevent this by an appropriate <code>.if<var>cc</var></code> extension.</p>
+    <h3>Section 3: Small immediate values</h3>
+    <p>The small immediate codes for vector rotations can also be used as
+      additional constants. Well, all of them are redundant with [16..31] but
+      this allows you to combine vector rotations with immediate values. vc4asm
+      will take care of this.</p>
+    <table border="1" cellpadding="3" cellspacing="0">
+      <thead>
+        <tr>
+          <th>value</th>
+          <th>encoding</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>0x30 = 48</td>
+          <td>0xfffffff0 = -16</td>
+        </tr>
+        <tr>
+          <td>0x31 = 49</td>
+          <td>0xfffffff1 = -15</td>
+        </tr>
+        <tr>
+          <td>0x32 = 50</td>
+          <td>0xfffffff2 = -14</td>
+        </tr>
+        <tr>
+          <td>0x33 = 51</td>
+          <td>0xfffffff3 = -13</td>
+        </tr>
+        <tr>
+          <td>0x34 = 52</td>
+          <td>0xfffffff4 = -12</td>
+        </tr>
+        <tr>
+          <td>0x35 = 53</td>
+          <td>0xfffffff5 = -11</td>
+        </tr>
+        <tr>
+          <td>0x36 = 54</td>
+          <td>0xfffffff6 = -10</td>
+        </tr>
+        <tr>
+          <td>0x37 = 55</td>
+          <td>0xfffffff7 = -9</td>
+        </tr>
+        <tr>
+          <td>0x38 = 56</td>
+          <td>0xfffffff8 = -8</td>
+        </tr>
+        <tr>
+          <td>0x39 = 57</td>
+          <td>0xfffffff9 = -7</td>
+        </tr>
+        <tr>
+          <td>0x3a = 58</td>
+          <td>0xfffffffa = -6</td>
+        </tr>
+        <tr>
+          <td>0x3b = 59</td>
+          <td>0xfffffffb = -5</td>
+        </tr>
+        <tr>
+          <td>0x3c = 60</td>
+          <td>0xfffffffc = -4</td>
+        </tr>
+        <tr>
+          <td>0x3d = 61</td>
+          <td>0xfffffffd = -3</td>
+        </tr>
+        <tr>
+          <td>0x3e = 62</td>
+          <td>0xfffffffe = -2</td>
+        </tr>
+        <tr>
+          <td>0x3f = 63</td>
+          <td>0xffffffff = -1</td>
+        </tr>
+      </tbody>
+    </table>
     <h3>Section 7: QPU Reading and Writing of VPM</h3>
     <p>VPM reads seem to <em>block immediately if the FIFO is empty</em>. No
       undefined data is returned when the reads are made too early.</p>

@@ -488,9 +488,15 @@ void Parser::doSMI(uint8_t si)
 	{default:
 		Fail("Small immediate value or vector rotation cannot be used together with signals.");
 	 case Inst::S_SMI:
-		if (Instruct.SImmd != si)
-			Fail("Only one distinct small immediate value supported per instruction. Requested value: %u, current Value: %u.", si, Instruct.SImmd);
-		return; // value hit
+		if (Instruct.SImmd == si)
+			return; // value hit
+		if ((si & 16) && ((Instruct.SImmd ^ si) & 31) == 0)
+		{	// Vector rotation codes return the same value than [16..31]
+			// => only ensure the rotation bit
+			Instruct.SImmd |= si;
+			return;
+		}
+		Fail("Only one distinct small immediate value supported per instruction. Requested value: %u, current Value: %u.", si, Instruct.SImmd);
 	 case Inst::S_NONE:
 		if (Instruct.RAddrB != Inst::R_NOP)
 			Fail("Small immediate cannot be used together with register file B read access.");
@@ -733,7 +739,7 @@ void Parser::doALUExpr()
 		{	qpuValue value;
 			value = param;
 			// some special hacks for ADD ALU
-			if (InstCtx & IC_B)
+			if (InstCtx == IC_SRCB)
 			{	switch (Instruct.OpA)
 				{case Inst::A_ADD: // swap ADD and SUB in case of constant 16
 				 case Inst::A_SUB:
@@ -1025,6 +1031,8 @@ void Parser::assembleMOV(int mode)
 	switch (Instruct.Sig)
 	{default:
 		Fail("Load immediate cannot be used with signals.");
+	 case Inst::S_SMI:
+		Fail("This pair of immediate values cannot be handled in one instruction word.");
 	 case Inst::S_LDI:
 		if (Instruct.Immd.uValue != value.uValue || Instruct.LdMode != mode)
 			Fail("Tried to load two different immediate values in one instruction. (0x%x vs. 0x%x)", Instruct.Immd.uValue, value.uValue);

@@ -490,9 +490,9 @@ void Inst::decode(uint64_t code)
 qpuValue Inst::SMIValue() const
 { qpuValue ret;
 	ret.uValue = 0;
-	if (SImmd < 32)
+	if (SImmd < 32 || SImmd >= 48)
 		ret.iValue = (int8_t)(SImmd << 3) >> 3; // signed expand
-	else if (SImmd < 48)
+	else
 		ret.iValue = ((int32_t)(SImmd ^ 0x28) << 23) + 0x3b800000;
 	return ret;
 }

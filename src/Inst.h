@@ -242,7 +242,7 @@ struct Inst
 	uint8_t    Sema() const { return Immd.uValue & 0xf; }
 	/// Get small immediate value
 	/// @return effective value represented by SImmd
-	/// @pre Sig == S_SMI && SImmd < 48
+	/// @pre Sig == S_SMI
 	qpuValue   SMIValue() const;
 	/// Converts an integer constant into a small immediate value.
 	/// @param i Integer value
