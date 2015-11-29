@@ -30,8 +30,6 @@
         examples and this documentation</a> (750k)</p>
     <p>The source code is also available at <a href="https://github.com/maazl/vc4asm/">github.com/maazl/vc4asm</a>.</p>
     <dl>
-    </dl>
-    <dl>
       <dt>V0.2</dt>
       <dd>Changed internal expression evaluation to 64 bit or double precision
         respectively.<br>
@@ -62,7 +60,8 @@
         Do not accept <tt>.if</tt> blocks to cross file boundaries.<br>
         Fixed <tt>mov ..., -1.0</tt><br>
         Allow to combine two <tt>ldi</tt> with the same value to assign two
-        targets.</dd>
+        targets.<br>
+        Fixed: disassemble rotation by r5.</dd>
       <dt>V0.1.9</dt>
       <dd>Fixed vc4dis: decoded not only the first 8 instructions in case of a
         binary source file.<br>

@@ -160,7 +160,10 @@ void Disassembler::DoMUL()
 	if (Instruct.isSFMUL())
 		append(".setf");
 	if (Instruct.Sig == Inst::S_SMI && Instruct.SImmd >= 48)
-		appendf(".rot %d,", Instruct.SImmd - 48);
+		if (Instruct.SImmd == 48)
+			append(".rot r5,");
+		else
+			appendf(".rot %d,", Instruct.SImmd - 48);
 
 	append(" ");
 	append(cWreg[!Instruct.WS][Instruct.WAddrM]);
