@@ -105,7 +105,8 @@ void Parser::FlagsSize(size_t min)
 
 void Parser::StoreInstruction(uint64_t inst)
 {
-	Instructions.emplace_back();
+	if (!Pass2)
+		Instructions.emplace_back();
 	LineNumbers.emplace_back();
 	uint64_t* ptr = &Instructions[PC+Back];
 	uint64_t* ip  = ptr - Back;
