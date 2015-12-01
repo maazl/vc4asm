@@ -1431,7 +1431,7 @@ void Parser::beginREP(int mode)
 
 	{nextpar:
 		const auto& expr = ParseExpression();
-		if (!mode && (expr.Type != V_INT || (uint64_t)expr.iValue > 0x10000))
+		if (!mode && (expr.Type != V_INT || (uint64_t)expr.iValue > 0x1000000))
 			Fail("Second argument to .rep must be a non-negative integral number. Found %s", expr.toString().c_str());
 		AtMacro->Args.push_back(expr.toString());
 
