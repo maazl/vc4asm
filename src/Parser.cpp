@@ -122,14 +122,20 @@ void Parser::StoreInstruction(uint64_t inst)
 }
 
 Parser::token_t Parser::NextToken()
-{
-	At += strspn(At, " \t\r\n");
-
+{	size_t i;
+	token_t ret;
+ restart:
 	switch (*At)
 	{case 0:
 	 case '#':
 		Token.clear();
 		return END;
+	 case ' ':
+	 case '\t':
+	 case '\r':
+	 case '\n':
+		At += strspn(At, " \t\r\n");
+		goto restart;
 	 case '*':
 	 case '>':
 	 case '<':
@@ -173,13 +179,26 @@ Parser::token_t Parser::NextToken()
 	 case ':':
 		Token.assign(At, 1);
 		return (token_t)*At++;
+	 case '0':
+	 case '1':
+	 case '2':
+	 case '3':
+	 case '4':
+	 case '5':
+	 case '6':
+	 case '7':
+	 case '8':
+	 case '9':
+		i = strcspn(At + 1, ",;:+-*/%()[]&|^~!=<># \t\r\n") + 1;
+		ret = NUM;
+		break;
+	 default:
+		i = strcspn(At + 1, ".,;:+-*/%()[]&|^~!=<># \t\r\n") + 1;
+		ret = WORD;
 	}
-
-	size_t i = strcspn(At, isdigit(*At) ? ",;:+-*/%()[]&|^~!=<># \t\r\n" : ".,;:+-*/%()[]&|^~!=<># \t\r\n");
 	Token.assign(At, i);
 	At += i;
-
-	return isdigit(Token[0]) ? NUM : WORD;
+	return ret;
 }
 
 size_t Parser::parseInt(const char* src, int64_t& dst)

@@ -110,18 +110,42 @@
   .endif
 .endf
 .func countBits(x)
-  .lset x, x                - ((x >>> 1) & 0x55555555)
-  .lset x, (x & 0x33333333) + ((x >>> 2) & 0x33333333)
-  .lset x, (x & 0x0f0f0f0f) + ((x >>> 4) & 0x0f0f0f0f)
-  .lset x, (x & 0x00ff00ff) + ((x >>> 8) & 0x00ff00ff)
-  (x & 0x0000ffff) + (x >>> 16)
+  .lset x, x                        - (x >>> 1 & 0x5555555555555555)
+  .lset x, (x & 0x3333333333333333) + (x >>> 2 & 0x3333333333333333)
+  .lset x, (x & 0x0f0f0f0f0f0f0f0f) + (x >>> 4 & 0x0f0f0f0f0f0f0f0f)
+  .lset x, (x & 0x00ff00ff00ff00ff) + (x >>> 8 & 0x00ff00ff00ff00ff)
+  .lset x, (x & 0x0000ffff0000ffff) + (x >>> 16 & 0x0000ffff0000ffff)
+           (x & 0x00000000ffffffff) + (x >>> 32)
 .endf
-.func reverseBits(x)
-  .lset x, ((x & 0xaaaaaaaa) >>> 1) | ((x & 0x55555555) <<< 1)
-  .lset x, ((x & 0xcccccccc) >>> 2) | ((x & 0x33333333) <<< 2)
-  .lset x, ((x & 0xf0f0f0f0) >>> 4) | ((x & 0x0f0f0f0f) <<< 4)
-  .lset x, ((x & 0xff00ff00) >>> 8) | ((x & 0x00ff00ff) <<< 8)
-  (x >>> 16) | (x <<< 16)
+.func reverseBits4(x)
+  .lset x, x >>> 1 & 0x5 | (x & 0x5) <<< 1
+  x >>> 2 | x <<< 2
+.endf
+.func reverseBits8(x)
+  .lset x, x >>> 1 & 0x55 | (x & 0x55) <<< 1
+  .lset x, x >>> 2 & 0x33 | (x & 0x33) <<< 2
+  x >>> 4 | x <<< 4
+.endf
+.func reverseBits16(x)
+  .lset x, x >>> 1 & 0x5555 | (x & 0x5555) <<< 1
+  .lset x, x >>> 2 & 0x3333 | (x & 0x3333) <<< 2
+  .lset x, x >>> 4 & 0x0f0f | (x & 0x0f0f) <<< 4
+  x >>> 8 | x <<< 8
+.endf
+.func reverseBits32(x)
+  .lset x, x >>> 1 & 0x55555555 | (x & 0x55555555) <<< 1
+  .lset x, x >>> 2 & 0x33333333 | (x & 0x33333333) <<< 2
+  .lset x, x >>> 4 & 0x0f0f0f0f | (x & 0x0f0f0f0f) <<< 4
+  .lset x, x >>> 8 & 0x00ff00ff | (x & 0x00ff00ff) <<< 8
+  x >>> 16 | x <<< 16
+.endf
+.func reverseBits64(x)
+  .lset x, x >>> 1 & 0x5555555555555555 | (x & 0x5555555555555555) <<< 1
+  .lset x, x >>> 2 & 0x3333333333333333 | (x & 0x3333333333333333) <<< 2
+  .lset x, x >>> 4 & 0x0f0f0f0f0f0f0f0f | (x & 0x0f0f0f0f0f0f0f0f) <<< 4
+  .lset x, x >>> 8 & 0x00ff00ff00ff00ff | (x & 0x00ff00ff00ff00ff) <<< 8
+  .lset x, x >>> 16& 0x00000000ffffffff | (x & 0x00000000ffffffff) <<< 16
+  x >>> 32 | x <<< 32
 .endf
 .set M_E,       2.7182818284590452354  # e
 .set M_LOG2E,   1.4426950408889634074  # log_2 e
