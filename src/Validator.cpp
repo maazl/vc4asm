@@ -43,35 +43,25 @@ void Validator::Message(int refloc, const char* fmt, ...)
 	fputs("Warning: ", stderr);
 	vfprintf(stderr, fmt, va);
 	va_end(va);
-	fprintf(stderr, "\n  instruction at 0x%x\n", BaseAddr + At * (unsigned)sizeof(uint64_t));
+	fprintf(stderr, "\n  instruction at 0x%x", BaseAddr + At * (unsigned)sizeof(uint64_t));
 	if (refloc >= 0 && refloc != At)
-		fprintf(stderr, "  referring to instruction at 0x%x\n", BaseAddr + refloc * (unsigned)sizeof(uint64_t));
+		fprintf(stderr, " referring to instruction at 0x%x", BaseAddr + refloc * (unsigned)sizeof(uint64_t));
+	fputc('\n', stderr);
 	if (Info)
 	{	auto loc = Info->LineNumbers[At];
 		fprintf(stderr, "  generated at %s (%u)\n", Info->SourceFiles[loc.File].Name.c_str(), loc.Line);
 	}
 }
 
-int Validator::FromMux(Inst::mux m)
-{	switch (m)
-	{case Inst::X_RA:
-		return Instruct.RAddrA;
-	 case Inst::X_RB:
-		return Instruct.RAddrB + 64;
-	 default:
-		return (int)m + 32;
-	}
-}
-
-Inst::conda Validator::GetRdCond(Inst::mux m)
+Inst::conda Validator::GetRdCond(Inst inst, Inst::mux m)
 {
-	switch (Instruct.Sig)
+	switch (inst.Sig)
 	{case Inst::S_LDI:
 		// ldi never reads a register
 		return Inst::C_NEVER;
 	 case Inst::S_BRANCH:
 		// branch is special, the branch conditions do not count here
-		return Instruct.Reg && m == Inst::X_RA ? Inst::C_AL : Inst::C_NEVER;
+		return inst.Reg && m == Inst::X_RA ? Inst::C_AL : Inst::C_NEVER;
 	 case Inst::S_SMI:
 		// small immediates cannot access regfile B
 		if (m == Inst::X_RB)
@@ -80,11 +70,11 @@ Inst::conda Validator::GetRdCond(Inst::mux m)
 	}
 	Inst::conda res = Inst::C_NEVER;
 	// ADD ALU read
-	if (Instruct.MuxAA == m || (Instruct.MuxAB == m && !Instruct.isUnary()))
-		res = Instruct.isSFADD() ? Inst::C_AL : Instruct.CondA;
+	if (inst.MuxAA == m || (inst.MuxAB == m && !inst.isUnary()))
+		res = inst.isSFADD() ? Inst::C_AL : inst.CondA;
 	// MUL ALU read
-	if (Instruct.MuxMA == m || Instruct.MuxMB == m)
-	{	auto res2 = Instruct.isSFMUL() ? Inst::C_AL : Instruct.CondM;
+	if (inst.MuxMA == m || inst.MuxMB == m)
+	{	auto res2 = inst.isSFMUL() ? Inst::C_AL : inst.CondM;
 		// merge conditions
 		if (res == Inst::C_NEVER)
 			res = res2;
@@ -94,26 +84,65 @@ Inst::conda Validator::GetRdCond(Inst::mux m)
 	return res;
 }
 
-bool Validator::IsCondOverlap(int reg, Inst::conda rdcond, uint64_t code)
-{	// trivial case, and no check for I/O registers.
-	if (rdcond == Inst::C_NEVER || reg > 37 || reg == 35)
-		return false;
-	// decode old instruction
-	Inst inst;
-	inst.decode(code);
-	// apply write swap to the source register, because it is easier to do so.
-	if (inst.WS && (reg & 32) == 0)
-		reg ^= 64;
-	// check ADD ALU write
-	if (reg < 64 && reg == inst.WAddrA
-		&& (inst.Sig == Inst::S_BRANCH || !(inst.CondA == Inst::C_NEVER || (inst.CondA ^ rdcond) == 1)))
-		return true;
-	// check MUL ALU write
-	if (reg >= 32 && (reg & 63) == inst.WAddrM
-		&& (inst.Sig == Inst::S_BRANCH || !(inst.CondM == Inst::C_NEVER || (inst.CondM ^ rdcond) == 1)))
-		return true;
-	// no hit
-	return false;
+Inst::conda Validator::GetWrCond(Inst inst, uint8_t reg, regType type)
+{	if ( inst.Sig == Inst::S_BRANCH
+		|| ((type & R_AB) && inst.WAddrA == inst.WAddrM) )
+		return Inst::C_AL;
+	uint8_t mask = inst.WS ? R_B : R_A;
+	return (mask & type) && reg == inst.WAddrA ? inst.CondA : inst.CondM;
+}
+
+void Validator::Decode(int refloc)
+{	refloc = MakeAbsRef(refloc);
+	if (refloc != RefDec)
+	{	RefInst.decode((*Instructions)[refloc]);
+		RefDec = refloc;
+	}
+}
+
+void Validator::CheckRotSrc(Inst::mux mux)
+{
+	// check for back to back access in source register
+	// This check is only required for accumulators since other registers cannot be accessed by the next instruction anyway
+	// and r4 does not support rotation between slices.
+	if (Inst::isAccu(mux))
+	{	// detailed check on current instruction
+		// some conditional cases are also likely to work
+		if ( CheckVectorRotationLevel == 1 && !Instruct.isSFMUL()
+			&& (Instruct.CondM & 1) == 0
+				? Instruct.SImmd > 48 && Instruct.SImmd <= 48+8
+				: Instruct.CondM != Inst::C_AL && Instruct.SImmd >= 62 )
+			return;
+		// detailed check on reference instruction
+		Decode(At-1);
+		int reg = 32 + mux;
+		int type = R_A * (RefInst.WAddrA == reg) | R_B * (RefInst.WAddrM == reg);
+		Inst::conda wrcond = Inst::C_AL;
+		if (RefInst.Sig != Inst::S_BRANCH)
+		{	type &= ~(R_A * (RefInst.CondA == Inst::C_NEVER) | R_B * (RefInst.CondM == Inst::C_NEVER));
+			switch (type)
+			{default: // none
+				return;
+			 case R_A:
+				wrcond = RefInst.CondA;
+				break;
+			 case R_B:
+				wrcond = RefInst.CondM;
+			 case R_AB:;
+			}
+		}
+		// some conditional cases are also likely to work
+		if ( CheckVectorRotationLevel == 1
+			&& wrcond != Inst::C_AL && (wrcond & 1) && Instruct.SImmd > 48 && Instruct.SImmd <= 48+8 )
+			return;
+		Message(At-1, "Should not write to the source r%u of the vector rotation in the previous instruction.", mux);
+	}
+	// Check for sources that do not support full vector rotation.
+	else if ( Instruct.SImmd == 48 || Instruct.isSFMUL()
+		// But again some rotations are likely to work even with sources that do not support full vector rotation.
+		|| !( (Instruct.SImmd <= 48+3 && (Instruct.CondM & 1) == 0)
+			||  (Instruct.SImmd >= 64-3 && (Instruct.WAddrM == 32+5 || ((Instruct.CondM & 1) && Instruct.CondM != Inst::C_AL))) ))
+		Message(At, "%s does not support full MUL ALU vector rotation.", Inst::toString(mux));
 }
 
 void Validator::TerminateRq(int after)
@@ -142,10 +171,11 @@ void Validator::ProcessItem(state& st)
 		// Check resources
 		uint8_t regRA = Inst::R_NOP;
 		uint8_t regRB = Inst::R_NOP;
-		uint8_t regWA, regWB;
+		uint8_t regWA = Instruct.WAddrA;
+		uint8_t regWB = Instruct.WAddrM;
 		bool ldr4 = false;
 		bool tend = false;
-		bool rot = false;
+		int rot = -1; // >= 0 = rotation active
 		switch (Instruct.Sig)
 		{case Inst::S_BRANCH:
 			if (Instruct.Reg)
@@ -163,10 +193,9 @@ void Validator::ProcessItem(state& st)
 					:	(Instruct.Immd.uValue - BaseAddr) / sizeof(uint64_t);
 				st.LastBRANCH = At;
 			}
-		 case Inst::S_LDI:
 			break;
 		 case Inst::S_SMI:
-			rot = Instruct.SImmd >= 48;
+			rot = Instruct.SImmd - 48;
 			goto ALUA;
 		 case Inst::S_THREND:
 		 case Inst::S_LTHRSW:
@@ -185,23 +214,23 @@ void Validator::ProcessItem(state& st)
 			regRB = Instruct.RAddrB;
 		 ALUA:
 			regRA = Instruct.RAddrA;
+		 case Inst::S_LDI:
+			if (Instruct.CondA == Inst::C_NEVER)
+				regWA = Inst::R_NOP;
+			if (Instruct.CondM == Inst::C_NEVER)
+				regWB = Inst::R_NOP;
 		}
 		if (Instruct.WS)
-		{	regWA = Instruct.WAddrM;
-			regWB = Instruct.WAddrA;
-		} else
-		{	regWA = Instruct.WAddrA;
-			regWB = Instruct.WAddrM;
-		}
+			swap(regWA, regWB);
 
 		// check for RA/RB back to back read/write
 		if ( regRA < 32 && st.LastWreg[0][regRA] == At-1
-			&& IsCondOverlap(regRA, GetRdCond(Inst::X_RA), (*Instructions)[MakeAbsRef(At-1)]) )
-			Message(At-1, "Cannot read register ra%d because it just have been written by the previous instruction.", regRA);
+			&& (Decode(At-1), IsCondOverlap(GetWrCond(RefInst, regRA, R_A), GetRdCond(Instruct, Inst::X_RA))) )
+			Message(At-1, "Cannot read register ra%d because it just has been written by the previous instruction.", regRA);
 		if ( regRB < 32 && st.LastWreg[1][regRB] == At-1
-			&& IsCondOverlap(regRB|64, GetRdCond(Inst::X_RB), (*Instructions)[MakeAbsRef(At-1)]) )
-			Message(At-1, "Cannot read register rb%d because it just have been written by the previous instruction.", regRB);
-		// check for back to back accumulator reads with conditional write and periphal target
+			&& (Decode(At-1), IsCondOverlap(GetWrCond(RefInst, regRB, R_B), GetRdCond(Instruct, Inst::X_RB))) )
+			Message(At-1, "Cannot read register rb%d because it just has been written by the previous instruction.", regRB);
+		// check for back to back accumulator reads with conditional write and peripheral target
 		if (Instruct.Sig < Inst::S_BRANCH)
 		{	accRP.clear();
 			if (Inst::isPeripheralWReg(Instruct.WAddrA))
@@ -252,27 +281,14 @@ void Validator::ProcessItem(state& st)
 				Message(last, "SFU is already in use.");
 		}
 		// vector rotations
-		if (rot)
+		if (CheckVectorRotationLevel && rot >= 0)
 		{	// rot r5
-			if (Instruct.SImmd == 48 && (st.LastWreg[0][37] == At-1 || st.LastWreg[1][37] == At-1))
-				Message(At-1, "Vector rotation must not follow a write to r5.");
-			// check source
-			auto cond = Instruct.isSFMUL() ? Inst::C_AL : Instruct.CondM;
-			int reg;
-			if ( ( (st.LastWreg[0][reg = FromMux(Instruct.MuxMA)] == At-1 && IsCondOverlap(reg, cond, (*Instructions)[MakeAbsRef(At-1)]))
-					|| (st.LastWreg[0][reg = FromMux(Instruct.MuxMB)] == At-1 && IsCondOverlap(reg, cond, (*Instructions)[MakeAbsRef(At-1)])) )
-				// Some rotations are likely to work even without an instruction in between.
-				&& !((Instruct.CondM & 1) == 0 && Instruct.SImmd > 48 && Instruct.SImmd <= 56 && !Instruct.isSFMUL()) )
-				Message(At-1, "Must not write to the source of a vector rotation in the previous instruction.");
-			// Check for sources that do not support full vector rotation.
-			if ( Instruct.SImmd == 48 || Instruct.isSFMUL()
-				|| !( (Instruct.SImmd <= 48+3 && (Instruct.CondM & 1) == 0)
-					||  (Instruct.SImmd >= 64-3 && (Instruct.CondM & 1) && Instruct.CondM != Inst::C_AL) ))
-			{	if (!Inst::isAccu(Instruct.MuxMA))
-					Message(At, "%s does not support full MUL ALU vector rotation.", Inst::toString(Instruct.MuxMA));
-				if (!Inst::isAccu(Instruct.MuxMB))
-					Message(At, "%s does not support full MUL ALU vector rotation.", Inst::toString(Instruct.MuxMB));
-			}
+			if (rot == 0 && st.LastWreg[0][32+5] == At-1)
+				Message(At-1, "Vector rotation by r5 must not follow a write to r5.");
+			if (st.LastWreg[0][32+Instruct.MuxMA] == At-1)
+				CheckRotSrc(Instruct.MuxMA);
+			if (Instruct.MuxMA != Instruct.MuxMB && st.LastWreg[0][32+Instruct.MuxMA] == At-1)
+				CheckRotSrc(Instruct.MuxMB);
 		}
 		// TLB Z -> MS_FLAGS
 		if ((regRA == 42 || regRB == 42) && At - st.LastWreg[0][44] <= 2)
@@ -290,8 +306,9 @@ void Validator::ProcessItem(state& st)
 			Message(At, "Concurrent write to VPM read and write setup does not work.");
 		// Some combinations that do not work
 		if (Instruct.Sig != Inst::S_BRANCH)
-		{	if ( (Instruct.CondA != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrA))
-				|| (Instruct.CondM != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrM)) )
+		{	if ( !(Instruct.WAddrA == Instruct.WAddrM && (Instruct.CondA ^ Instruct.CondM) != 1) // No problem if both ALUs write conditionally to the same register with opposite conditions.
+				&& ( (Instruct.CondA != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrA))
+						|| (Instruct.CondM != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrM)) ))
 				Message(At, "Conditional write to peripheral register does not work.");
 			if (Instruct.PM && (Instruct.Pack & 0xc) == Inst::P_8a && Inst::isPeripheralWReg(Instruct.WAddrM))
 				Message(At, "Pack modes with partial writes do not work for peripheral registers.");
@@ -300,7 +317,7 @@ void Validator::ProcessItem(state& st)
 		st.LastRreg[0][regRA] = At;
 		st.LastRreg[!Inst::isRRegAB(regRB)][regRB] = At;
 		st.LastWreg[0][regWA] = At;
-		st.LastWreg[!Inst::isWRegAB(regWB)][regWB] = At;
+		st.LastWreg[((1ULL<<regWB) & 0xfff9f9ff00000000ULL) == 0][regWB] = At;
 		if (ldr4)
 			st.LastLDr4 = At;
 		if (tend && st.LastTEND < 0)
@@ -336,6 +353,7 @@ void Validator::ProcessItem(state& st)
 
 void Validator::Validate()
 {
+	RefDec = -1; // invalidate RefInst
 	Done.clear();
 	Done.resize(Instructions->size());
 	WorkItems.emplace_back(new state(0));

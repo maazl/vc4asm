@@ -28,6 +28,12 @@ class Validator
 	const vector<uint64_t>* Instructions = nullptr;
 	/// Optional debug info for more expressive messages.
 	const DebugInfo* Info = nullptr;
+
+	/// Check register writes before vector rotations
+	/// - 0 : no check
+	/// - 1 : relaxed check, warn only combos that are likely to fail.
+	/// - 2 : strict check, warn all cases.
+	int CheckVectorRotationLevel = 1;
  private:
 	/// Maximum number of instructions where constraints apply.
 	/// @remarks This is related to the pipeline length in QPU elements.
@@ -96,7 +102,9 @@ class Validator
 	int  At;          ///< Current Instruction.
 	int  To;          ///< End analysis here.
 	bool Pass2;       ///< Check only for dependencies of branch target.
-	Inst Instruct;    ///< current instruction to analyze.
+	Inst Instruct;    ///< Current instruction to analyze.
+	Inst RefInst;     ///< Reference instruction, decoded by Decode.
+	int  RefDec;      ///< Decoded reference instruction.
  private:
 	/// @brief Turn reference location into an absolute value.
 	/// @details This is the opposite done in the \see state constructor.
@@ -111,25 +119,32 @@ class Validator
 	/// @remarks The reference locations before the branch have always instruction numbers less than start
 	/// because the constructor relocated the accordingly. This function does the opposite transform to get meaningful messages.
 	void Message(int refloc, const char* fmt, ...) PRINTFATTR(3);
-	/// Convert an ALU input multiplexer to an index into a write register index.
-	/// @remarks This function is used to check for back to back read after write.
-	int  FromMux(Inst::mux m);
 	/// @brief Get effective condition of all read access to input mux \a m
 	/// in the current instruction.
+	/// @param inst Instruction to check.
 	/// @param m Check only for access to this input mux.
 	/// @details The function takes care of any ALU that uses this value
 	/// for write to any register other than R_NOP or to the flags.
-	Inst::conda GetRdCond(Inst::mux m);
-	/// @brief Checks whether the read access to a register in the current instruction
-	/// can conflict with a write access to the same register at a prior instruction.
-	/// @param reg Register to check, > 64 for regfile B. See FromMux.
-	/// @param rdcond conditional access at the register read.
-	/// In fact you cannot read conditional, but if the result is discarded
-	/// an undefined value might be OK.
-	/// @param code Check this write instruction.
-	/// @pre The instruction at \a at really writes to register \a reg
-	/// with a condition overlapping with \a rdcond.
-	bool IsCondOverlap(int reg, Inst::conda rdcond, uint64_t code);
+	static Inst::conda GetRdCond(Inst inst, Inst::mux m);
+	/// Get effective write condition of RefInst for a certain register.
+	/// @param inst Instruction to check.
+	/// @param reg Register number to check.
+	/// @param type Register file to check.
+	/// @return Condition when writing to \a reg.
+	/// @pre The instruction in RefIInst really writes to register \a reg.
+	/// Otherwise the result is undefined.
+	static Inst::conda GetWrCond(Inst inst, uint8_t reg, regType type);
+	/// Check whether two conditions do overlap.
+	static bool IsCondOverlap(Inst::conda cond1, Inst::conda cond2) { return (cond1|cond2) && (cond1^cond2) != 1; }
+	/// Decode instruction at certain reference location into RefInst.
+	/// @param refloc Location to decode. This is relocated before.
+	/// @post RefInst gets the result.
+	void Decode(int refloc);
+	/// Check vector rotation for consistency.
+	/// @param mux MUL ALU input multiplexer.
+	/// @pre The current instruction must have a vector rotation
+	/// and the previous instruction needs to write to \a mux if \a mux is an accumulator.
+	void CheckRotSrc(Inst::mux mux);
 	/// Ensure termination of the current task.
 	/// @param Maximum number of further instructions to check.
 	void TerminateRq(int after);

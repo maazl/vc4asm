@@ -18,7 +18,8 @@ static_assert(numeric_limits<float>::is_iec559 && numeric_limits<float>::digits 
 
 /// Kind of register, bit vector
 enum regType : uint8_t
-{	R_A    =  1 ///< register file A
+{	R_NONE =  0 ///< invalid value
+,	R_A    =  1 ///< register file A
 ,	R_B    =  2 ///< register file B
 ,	R_AB   =  3 ///< A /or/ B, whatever is available
 ,	R_READ =  4 ///< read access
