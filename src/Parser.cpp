@@ -153,11 +153,12 @@ Parser::token_t Parser::NextToken()
 			At += 2;
 			return OP;
 		}
-		goto op1;
+		goto opg;
 	 case '!':
 		if (At[1] == '^')
 			goto op2;
 	 case '=':
+	 opg:
 		if (At[1] == '=')
 			goto op2;
 	 case '+':
@@ -165,7 +166,6 @@ Parser::token_t Parser::NextToken()
 	 case '/':
 	 case '%':
 	 case '~':
-	 op1:
 		Token.assign(At, 1);
 		++At;
 		return OP;
