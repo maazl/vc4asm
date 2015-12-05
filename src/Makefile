@@ -1,4 +1,4 @@
-FLAGS    = -Wall -std=c++11 -g
+FLAGS    = -Wall -std=c++11 -O3
 CPPFLAGS = -c
 LDFLAGS  =
 LIBS     = -lm -lstdc++
@@ -9,6 +9,9 @@ O   = .o
 
 ../obj/%$(O) : %.cpp | ../obj
 	$(CC) $(FLAGS) $(CPPFLAGS) -o $@ $<
+
+../obj/%.s : %.cpp | ../obj
+	$(CC) $(FLAGS) $(CPPFLAGS) -S -o $@ $<
 
 BASEOBJECTS = ../obj/utils$(O) ../obj/expr$(O) ../obj/Inst$(O) ../obj/Eval$(O) ../obj/Validator$(O)
 ASMOBJECTS  = $(BASEOBJECTS) ../obj/Parser$(O) ../obj/vc4asm$(O) ../obj/WriteELF$(O)
@@ -32,6 +35,7 @@ clean:
 	mkdir $@
 
 %.cpp : %.h
+
 ../obj/utils$(O) : utils.cpp utils.h
 ../obj/expr$(O) : expr.cpp expr.h utils.h
 ../obj/Inst$(O) : Inst.cpp Inst.h expr.h
