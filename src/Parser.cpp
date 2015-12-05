@@ -1128,6 +1128,22 @@ void Parser::assembleBRANCH(int relative)
 void Parser::assembleSEMA(int type)
 {	InstCtx = IC_NONE;
 
+	bool combine;
+	switch (Instruct.Sig)
+	{case Inst::S_LDI:
+		combine = true;
+		if (Instruct.LdMode == Inst::L_LDI)
+			break;
+	 default:
+		Fail("Semaphore Instructions normally cannot be combined with any other instruction.");
+	 case Inst::S_NONE:
+		combine = false;
+		Instruct.Sig = Inst::S_LDI;
+	}
+	Instruct.LdMode = Inst::L_SEMA;
+
+	doInstrExt();
+
 	doALUTarget(ParseExpression());
 	if (NextToken() != COMMA)
 		Fail("Expected ', <number>' after first argument to semaphore instruction, found %s.", Token.c_str());
@@ -1137,20 +1153,10 @@ void Parser::assembleSEMA(int type)
 		Fail("Semaphore instructions require a single integer argument less than 16 with the semaphore number.");
 	uint32_t value = param.iValue | (type << 4);
 
-	switch (Instruct.Sig)
-	{case Inst::S_LDI:
-		if (Instruct.LdMode == Inst::L_LDI)
-		{	if ((Instruct.Immd.uValue & 0x1f) != (value & 0x1f))
-				Fail("Combining a semaphore instruction with load immediate requires the low order 5 bits to match the semaphore number and the direction bit.");
-			break;
-		}
-	 default:
-		Fail("Semaphore Instructions normally cannot be combined with any other instruction.");
-	 case Inst::S_NONE:
-		Instruct.Sig = Inst::S_LDI;
+	if (combine && (Instruct.Immd.uValue & 0x1f) != (value & 0x1f))
+		Fail("Combining a semaphore instruction with load immediate requires the low order 5 bits to match the semaphore number and the direction bit.");
+	else
 		Instruct.Immd.uValue = value;
-	}
-	Instruct.LdMode = Inst::L_SEMA;
 }
 
 void Parser::assembleSIG(int bits)
