@@ -51,8 +51,8 @@
   (num & 0xf) << 20 | (stride & 0x3f) << 12 | dma
 .endf
 .func h32(y, x)
-  .assert !(y & ~0x30)
-  .assert !(x & ~0xf)
+  .assert !(y & ~0x3f)
+  .assert !x
   0xa00 | y | x
 .endf
 .func v32(y, x)
