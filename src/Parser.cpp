@@ -278,6 +278,7 @@ exprValue Parser::parseElemInt()
 		{	if (sign > 0)
 				Fail("All integers in load per QPU element must be either in the range [-2..1] or in the range [0..3].");
 			sign = -1;
+			val.iValue &= 3;
 		} else if (val.iValue > 1)
 		{	if (sign < 0)
 				Fail("All integers in load per QPU element must be either in the range [-2..1] or in the range [0..3].");
@@ -294,7 +295,9 @@ exprValue Parser::parseElemInt()
 			if (++pos >= 16)
 				Fail("Too many initializers for per QPU element constant.");
 			continue;
-		 case SQBRC2:;
+		 case SQBRC2:
+			if (pos != 15)
+				Fail("Too few initializers for per QPU element constant.");
 		}
 		break;
 	}
