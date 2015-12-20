@@ -683,6 +683,44 @@ void Parser::doInstrExt()
 	At -= Token.size();
 }
 
+void Parser::check4Unpack(Inst::mux mux)
+{
+	// check 4 unpack
+	if (UseUnpack & (XR_OP | toExtReq(InstCtx)))
+	{	// Current source argument should be unpacked.
+		bool pm = Instruct.PM;
+		if (mux == Inst::X_R4)
+			pm = true;
+		else if (mux == Inst::X_RA && Instruct.RAddrA < 32)
+			pm = false;
+		else if (!(UseUnpack & XR_OP))
+			Fail("Cannot unpack this source argument.");
+		else if ((InstCtx & IC_SRCB)
+			&& !(((InstCtx & IC_MUL) || !Instruct.isUnary())
+				&& isUnpackable(InstCtx & IC_MUL ? Instruct.MuxMA : Instruct.MuxAA) >= 0 )) // Operands must contain either r4 xor regfile A
+			Fail("The unpack option works for none of the source operands of the current opcode.");
+		if ((UseUnpack & XR_NEW) && ( (InstCtx & IC_MUL)
+				? isUnpackable(Instruct.MuxAB) == pm || (!Instruct.isUnary() && isUnpackable(Instruct.MuxAA) == pm)
+				: isUnpackable(Instruct.MuxMB) == pm || isUnpackable(Instruct.MuxMA) == pm ))
+			Fail("Using unpack changes the semantic of the other ALU.");
+		if (pm != Instruct.PM)
+		{	if (Instruct.Pack)
+				// TODO: in a few constellations the pack mode of regfile A and the MUL ALU are interchangeable.
+				Fail("Requested unpack mode conflicts with pack mode of the current instruction.");
+			if ((InstCtx & IC_B) && (UseUnpack & XR_SRCA))
+				Fail("Conflicting unpack modes of first and second source operand.");
+			// Check for unpack sensitivity of second ALU instruction.
+			if ( (InstCtx & IC_MUL)
+				? isUnpackable(Instruct.MuxAB) >= 0 || (!Instruct.isUnary() && isUnpackable(Instruct.MuxAA) >= 0)
+				: isUnpackable(Instruct.MuxMB) >= 0 || isUnpackable(Instruct.MuxMA) >= 0 )
+				Fail("The unpack modes of ADD ALU and MUL ALU are different.");
+			Instruct.PM = pm;
+		}
+	} else if ( Instruct.Unpack != Inst::U_32 // Current source should not be unpacked
+		&& (Instruct.PM ? mux == Inst::X_R4 : mux == Inst::X_RA && Instruct.RAddrA < 32) )
+		Fail("The unpack option silently applies to %s source argument.", InstCtx & IC_B ? "2nd" : "1st");
+}
+
 void Parser::doALUTarget(exprValue param)
 {	InstCtx |= IC_DST;
 	if (param.Type != V_REG)
@@ -791,40 +829,7 @@ void Parser::doALUExpr()
 
 	doInstrExt();
 
-	// check 4 unpack
-	if (UseUnpack & (XR_OP | toExtReq(InstCtx)))
-	{	// Current source argument should be unpacked.
-		bool pm = Instruct.PM;
-		if (ret == Inst::X_R4)
-			pm = true;
-		else if (ret == Inst::X_RA && Instruct.RAddrA < 32)
-			pm = false;
-		else if (!(UseUnpack & XR_OP))
-			Fail("Cannot unpack this source argument.");
-		else if ((InstCtx & IC_SRCB)
-			&& !(((InstCtx & IC_MUL) || !Instruct.isUnary())
-				&& isUnpackable(InstCtx & IC_MUL ? Instruct.MuxMA : Instruct.MuxAA) >= 0 )) // Operands must contain either r4 xor regfile A
-			Fail("The unpack option works for none of the source operands of the current opcode.");
-		if ((UseUnpack & XR_NEW) && ( (InstCtx & IC_MUL)
-				? isUnpackable(Instruct.MuxAB) == pm || (!Instruct.isUnary() && isUnpackable(Instruct.MuxAA) == pm)
-				: isUnpackable(Instruct.MuxMB) == pm || isUnpackable(Instruct.MuxMA) == pm ))
-			Fail("Using unpack changes the semantic of the other ALU.");
-		if (pm != Instruct.PM)
-		{	if (Instruct.Pack)
-				// TODO: in a few constellations the pack mode of regfile A and the MUL ALU are interchangeable.
-				Fail("Requested unpack mode conflicts with pack mode of the current instruction.");
-			if ((InstCtx & IC_B) && (UseUnpack & XR_SRCA))
-				Fail("Conflicting unpack modes of first and second source operand.");
-			// Check for unpack sensitivity of second ALU instruction.
-			if ( (InstCtx & IC_MUL)
-				? isUnpackable(Instruct.MuxAB) >= 0 || (!Instruct.isUnary() && isUnpackable(Instruct.MuxAA) >= 0)
-				: isUnpackable(Instruct.MuxMB) >= 0 || isUnpackable(Instruct.MuxMA) >= 0 )
-				Fail("The unpack modes of ADD ALU and MUL ALU are different.");
-			Instruct.PM = pm;
-		}
-	} else if ( Instruct.Unpack != Inst::U_32 // Current source should not be unpacked
-		&& (Instruct.PM ? ret == Inst::X_R4 : ret == Inst::X_RA && Instruct.RAddrA < 32) )
-		Fail("The unpack option silently applies to %s source argument.", InstCtx & IC_B ? "2nd" : "1st");
+	check4Unpack(ret);
 }
 
 void Parser::doBRASource(exprValue param)
@@ -836,7 +841,7 @@ void Parser::doBRASource(exprValue param)
 		if (Instruct.Rel)
 			param.iValue -= (PC + 4) * sizeof(uint64_t);
 		else
-			Msg(WARNING, "Using value of label as target of a absolute branch instruction.");
+			Msg(WARNING, "Using value of label as target of a absolute branch instruction creates non-relocatable code.");
 		param.Type = V_INT;
 	 case V_INT:
 		if (Instruct.Immd.uValue)
@@ -957,8 +962,10 @@ void Parser::assembleMOV(int mode)
 
 	if (NextToken() != COMMA)
 		Fail("Expected ', <source1>' after first argument to ALU instruction, found %s.", Token.c_str());
+	InstCtx ^= IC_DST|IC_SRC; // Swap to source context
 	exprValue param = ParseExpression();
 	qpuValue value;
+	Inst::mux mux;
 	switch (param.Type)
 	{default:
 		Fail("The last parameter of a MOV instruction must be a register or a immediate value. Found %s", type2string(param.Type));
@@ -968,20 +975,24 @@ void Parser::assembleMOV(int mode)
 		{	// semaphore access by LDI like instruction
 			mode = Inst::L_SEMA;
 			value.uValue = param.rValue.Num | (param.rValue.Type & R_SACQ);
-			break;
+			goto ldi;
 		}
 		if (isLDI)
 			Fail("mov instruction with register source cannot be combined with load immediate.");
 
 		applyRot(-param.rValue.Rotate);
 
+		mux = muxReg(param.rValue);
 		if (InstCtx & IC_MUL)
-		{	Instruct.MuxMA = Instruct.MuxMB = muxReg(param.rValue);
+		{	Instruct.MuxMA = Instruct.MuxMB = mux;
 			Instruct.OpM = Inst::M_V8MIN;
 		} else
-		{	Instruct.MuxAA = Instruct.MuxAB = muxReg(param.rValue);
+		{	Instruct.MuxAA = Instruct.MuxAB = mux;
 			Instruct.OpA = Inst::A_OR;
 		}
+	 ext:
+		doInstrExt();
+		check4Unpack(mux);
 		return;
 
 	 case V_LDPES:
@@ -1001,7 +1012,7 @@ void Parser::assembleMOV(int mode)
 			mode = Inst::L_PES;
 	 ldpe_cont:
 		value = param;
-		break;
+		goto ldi;
 
 	 case V_INT:
 	 case V_FLOAT:
@@ -1037,37 +1048,40 @@ void Parser::assembleMOV(int mode)
 					}
 				 mov0:
 					if (si->OpCode.isMul())
-					{	Instruct.MuxMA = Instruct.MuxMB = Inst::X_RB;
+					{	Instruct.MuxMA = Instruct.MuxMB = mux = Inst::X_RB;
 						Instruct.OpM   = si->OpCode.asMul();
 					} else
-					{	Instruct.MuxAA = Instruct.MuxAB = Inst::X_RB;
+					{	Instruct.MuxAA = Instruct.MuxAB = mux = Inst::X_RB;
 						Instruct.OpA   = si->OpCode.asAdd();
 					}
-					return;
+					goto ext;
 				}
 			}
 		}
 		// LDI
 		if (mode < 0)
 			mode = Inst::L_LDI;
+	 ldi:
+		switch (Instruct.Sig)
+		{default:
+			Fail("Load immediate cannot be used with signals.");
+		 case Inst::S_SMI:
+			Fail("This pair of immediate values cannot be handled in one instruction word.");
+		 case Inst::S_LDI:
+			if (Instruct.Immd.uValue != value.uValue || Instruct.LdMode != mode)
+				Fail("Tried to load two different immediate values in one instruction. (0x%x vs. 0x%x)", Instruct.Immd.uValue, value.uValue);
+			break;
+		 case Inst::S_NONE:
+			if (Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP)
+				Fail("Cannot combine load immediate with value %s with ALU instructions.", param.toString().c_str());
+		}
+		// LDI or semaphore
+		Instruct.Sig = Inst::S_LDI;
+		Instruct.LdMode = (Inst::ldmode)mode;
+		Instruct.Immd = value;
+
+		doInstrExt();
 	}
-	switch (Instruct.Sig)
-	{default:
-		Fail("Load immediate cannot be used with signals.");
-	 case Inst::S_SMI:
-		Fail("This pair of immediate values cannot be handled in one instruction word.");
-	 case Inst::S_LDI:
-		if (Instruct.Immd.uValue != value.uValue || Instruct.LdMode != mode)
-			Fail("Tried to load two different immediate values in one instruction. (0x%x vs. 0x%x)", Instruct.Immd.uValue, value.uValue);
-		break;
-	 case Inst::S_NONE:
-		if (Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP)
-			Fail("Cannot combine load immediate with value %s with ALU instructions.", param.toString().c_str());
-	}
-	// LDI or semaphore
-	Instruct.Sig = Inst::S_LDI;
-	Instruct.LdMode = (Inst::ldmode)mode;
-	Instruct.Immd = value;
 }
 
 void Parser::assembleBRANCH(int relative)

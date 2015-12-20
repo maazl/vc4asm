@@ -508,6 +508,10 @@ class Parser : public DebugInfo
 	/// See extMap table for valid extensions and their matching handlers.
 	/// @exception std::string Failed, error message.
 	void             doInstrExt();
+	/// Apply value in UseUnpack to current instruction after source expression.
+	/// @param mux Multiplexer value of current source instruction.
+	/// Could be extracted from Instruct by InstCtx, but this is easier.
+	void             check4Unpack(Inst::mux mux);
 
 	/// @brief Assemble an expression as ALU target.
 	/// @details The function will also try to read instruction extensions if any.
