@@ -1746,6 +1746,9 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "anynn",          &Parser::addCond,   Inst::B_ANYNC,  E_OP }
 ,	{ "anynz",          &Parser::addCond,   Inst::B_ANYZC,  E_OP }
 ,	{ "anyz",           &Parser::addCond,   Inst::B_ANYZS,  E_OP }
+,	{ "c",              &Parser::addIf,     Inst::C_CS,     E_DST }
+,	{ "cc",             &Parser::addIf,     Inst::C_CC,     E_DST }
+,	{ "cs",             &Parser::addIf,     Inst::C_CS,     E_DST }
 ,	{ "ifc",            &Parser::addIf,     Inst::C_CS,     E_DSTOP }
 ,	{ "ifcc",           &Parser::addIf,     Inst::C_CC,     E_DSTOP }
 ,	{ "ifcs",           &Parser::addIf,     Inst::C_CS,     E_DSTOP }
@@ -1757,7 +1760,12 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "ifz",            &Parser::addIf,     Inst::C_ZS,     E_DSTOP }
 ,	{ "ifzc",           &Parser::addIf,     Inst::C_ZC,     E_DSTOP }
 ,	{ "ifzs",           &Parser::addIf,     Inst::C_ZS,     E_DSTOP }
+,	{ "n",              &Parser::addIf,     Inst::C_NS,     E_DST }
+,	{ "nc",             &Parser::addIf,     Inst::C_NC,     E_DST }
 ,	{ "never",          &Parser::addIf,     Inst::C_NEVER,  E_DSTOP }
+,	{ "nn",             &Parser::addIf,     Inst::C_NC,     E_DST }
+,	{ "ns",             &Parser::addIf,     Inst::C_NS,     E_DST }
+,	{ "nz",             &Parser::addIf,     Inst::C_ZC,     E_DST }
 ,	{ "pack16a",        &Parser::addPack,   Inst::P_16a,    E_DSTOP }
 ,	{ "pack16aclamp",   &Parser::addPack,   Inst::P_16aS,   E_DSTOP }
 ,	{ "pack16as",       &Parser::addPack,   Inst::P_16aS,   E_DSTOP }
@@ -1797,6 +1805,9 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "unpack8d",       &Parser::addUnpack, Inst::U_8d,     E_SRCOP }
 ,	{ "unpack8ddupe",   &Parser::addUnpack, Inst::U_8dr,    E_SRCOP }
 ,	{ "unpack8dr",      &Parser::addUnpack, Inst::U_8dr,    E_SRCOP }
+,	{ "z",              &Parser::addIf,     Inst::C_ZS,     E_DST }
+,	{ "zc",             &Parser::addIf,     Inst::C_ZC,     E_DST }
+,	{ "zs",             &Parser::addIf,     Inst::C_ZS,     E_DST }
 };
 
 const Parser::opEntry<8> Parser::directiveMap[] =

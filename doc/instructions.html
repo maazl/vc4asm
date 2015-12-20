@@ -10,8 +10,9 @@
   <body>
     <h1>VC4ASM - Assembler instructions</h1>
     <p><a href="index.html">&uarr; Top</a>, <a href="#ADD">ADD ALU</a>, <a href="#MUL">MUL
-        ALU</a>, <a href="#mov">mov</a>, <a href="#ldi">ldi</a>, <a href="#sema">Semaphore</a>,
-      <a href="#bra">Branch</a>, <a href="#sig">Signal </a></p>
+        ALU</a>, <a href="#mov">mov</a>, <a href="#ldi">ldi</a>, <a href="#ifcc">Conditional
+        assign</a>, <a href="#sema">Semaphore</a>, <a href="#bra">Branch</a>,
+      <a href="#sig">Signal </a></p>
     <h2>General rules</h2>
     <ul>
       <li>Each line of code with QPU assembler instructions generates exactly
@@ -43,8 +44,7 @@
     <ul>
     </ul>
     <h2><a id="ADD" name="ADD"></a>ADD ALU instruction</h2>
-    <pre><var>binaryopcode destination, source1, source2</var><br><var>unaryopcode destination, source1</var><var>opcode</var>.if<var>cc</var> ...<var>
-opcode</var>.setf ...</pre>
+    <pre><var>binaryopcode destination, source1, source2</var><br><var>unaryopcode destination, source1<br>opcode</var>.setf ...</pre>
     <dl>
       <dt><var><tt>binaryopcode</tt></var></dt>
       <dd>
@@ -156,16 +156,12 @@ opcode</var>.setf ...</pre>
       <dt><var><tt>source1, source2</tt></var></dt>
       <dd>Source <a href="expressions.html#register">register</a> or <a href="expressions.html#SMI">small
           immediate value</a>.</dd>
-      <dt><tt>.if</tt><var><tt>cc</tt></var></dt>
-      <dd>Assignment condition. Note that <tt>vc4asm</tt> accepts the
-        assignment condition also as extension to the destination register.</dd>
     </dl>
     <h3> Example</h3>
     <pre>add r3, ra0, unif<var></var></pre>
     <h2><a id="MUL" name="MUL"></a>MUL ALU instruction</h2>
     <pre><var>opcode destination, source1, source2
-opcode</var>.if<var>cc destination, source1, source2
-opcode</var>.setf <var>destination, source1, source2</var><br><var>opcode</var>.rot <var>count, destination, source1, source2</var> </pre>
+</var><var>opcode</var>.setf <var>destination, source1, source2</var><br><var>opcode</var>.rot <var>count, destination, source1, source2</var> </pre>
     <dl>
       <dt><var><tt>opcode</tt></var></dt>
       <dd>
@@ -217,9 +213,6 @@ opcode</var>.setf <var>destination, source1, source2</var><br><var>opcode</var>.
       <dt><var><tt>source1, source2</tt></var></dt>
       <dd>Source <a href="expressions.html#register">register</a> or <a href="expressions.html#SMI">small
           immediate value</a>.</dd>
-      <dt><tt>.if</tt><var><tt>cc</tt></var></dt>
-      <dd>Assignment condition. Note that <tt>vc4asm</tt> accepts the
-        assignment condition also as extension to the destination register.</dd>
       <dt><var><tt>count</tt></var></dt>
       <dd>Number of QPU elements the result should be rotated before assignment
         [0 to 15] or register <tt>r5</tt>.</dd>
@@ -284,15 +277,76 @@ opcode</var>.setf <var>destination, source1, source2</var><br><var>opcode</var>.
     ALU output.<br>
     <h3>Example</h3>
     <pre>ldi ra7, 0xffff0000</pre>
+    <h2><a id="ifcc" name="ifcc"></a>Conditional assignment</h2>
+    <p>All ALU instructions and load immediate can use conditional assignment
+      for the destination operand. The condition code can be applied to the
+      opcode as well as to the destination operand.</p>
+    <pre><var>opcode</var>.if<var>cc destination, ...
+</var><var><var>opcode</var><var> destination.cc, ...</var></var><var><var></var></var></pre>
+    <dl>
+      <dt><var><tt>cc</tt></var></dt>
+      <dd>Condition code.
+        <table border="1" cellpadding="2" cellspacing="0">
+          <thead>
+            <tr>
+              <th><var><tt>cc</tt></var></th>
+              <th style="text-align: center;">Flag</th>
+              <th style="text-align: center;">Value</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><tt>nz, zc</tt> </td>
+              <td style="text-align: center;">Z</td>
+              <td style="text-align: center;">0</td>
+              <td>non zero</td>
+            </tr>
+            <tr>
+              <td><tt>z, zs</tt> </td>
+              <td style="text-align: center;">Z</td>
+              <td style="text-align: center;">1</td>
+              <td>zero</td>
+            </tr>
+            <tr>
+              <td><tt>nn, nc</tt> </td>
+              <td style="text-align: center;">N</td>
+              <td style="text-align: center;">0</td>
+              <td>non negative</td>
+            </tr>
+            <tr>
+              <td><tt>n, ns</tt> </td>
+              <td style="text-align: center;">N</td>
+              <td style="text-align: center;">1</td>
+              <td>negative</td>
+            </tr>
+            <tr>
+              <td><tt>cc</tt> </td>
+              <td style="text-align: center;">C</td>
+              <td style="text-align: center;">0</td>
+              <td>carry clear</td>
+            </tr>
+            <tr>
+              <td><tt>c, cs</tt> </td>
+              <td style="text-align: center;">C</td>
+              <td style="text-align: center;">1</td>
+              <td>carry set</td>
+            </tr>
+          </tbody>
+        </table>
+      </dd>
+    </dl>
+    <h3>Example</h3>
+    <pre>mov.ifnz r0, ra7<br>mov r0.z, rb7</pre>
     <h2><a id="pack" name="pack"></a>Pack/unpack</h2>
     <p>All ALU instructions including <tt>mov</tt> and <tt>ldi</tt> can be
       extended by pack/unpack operations. Be aware of the restriction that apply
       especially to the MUL ALU.</p>
-    <pre>opcode.pack<var>xx</var> <var>destination, ...</var><br>opcode<var></var> <var>destination</var>.<var><var>xx</var>, ...</var>
-opcode.unpack<var>yy</var> <var>destination, ...</var><br>opcode<var></var> <var>destination, source.xx</var><var>, ...</var><var></var>opcode<var></var> <var>destination, ..., source.xx</var><var></var></pre>
+    <pre>opcode.pack<var>xx</var> <var>destination</var>, ...<br>opcode<var></var> <var>destination</var>.<var><var>xx</var></var>, ...
+opcode.unpack<var>yy</var> <var>destination</var>, ...<br>opcode<var></var> <var>destination, source.xx</var>, ...<br>opcode<var></var> <var>destination</var>, ..., <var>source.xx</var><var></var></pre>
     <dl>
       <dt><var><tt>xx</tt></var></dt>
-      <dd>Destination pack mode
+      <dd>Destination pack mode.
         <table border="1" cellpadding="2" cellspacing="0">
           <tbody>
             <tr>
@@ -329,7 +383,7 @@ opcode.unpack<var>yy</var> <var>destination, ...</var><br>opcode<var></var> <var
               <td><tt>8a </tt></td>
               <td><tt>BA __ __ __</tt></td>
               <td><tt>BA __ __ __</tt></td>
-              <td><br>
+              <td>low byte<br>
               </td>
             </tr>
             <tr>
@@ -350,7 +404,7 @@ opcode.unpack<var>yy</var> <var>destination, ...</var><br>opcode<var></var> <var
               <td><tt>8d </tt></td>
               <td><tt>BA __ __ __</tt></td>
               <td><tt>__ __ __ BA</tt></td>
-              <td><br>
+              <td>high byte<br>
               </td>
             </tr>
             <tr>
