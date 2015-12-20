@@ -1234,7 +1234,7 @@ void Parser::defineLabel()
 			Fail("Cannot set a label at a bit boundary. At least byte alignment is required.");
 		lp->Value = PC * sizeof(uint64_t) + (BitOffset >> 3);
 	} else if (lp->Name != Token || lp->Value != PC * sizeof(uint64_t))
-		Fail("Inconsistent Label definition during Pass 2.");
+		Fail("Inconsistent label definition during pass 2.");
 	lp->Definition = *Context.back();
 
 	if (Preprocessed)
@@ -2056,9 +2056,16 @@ void Parser::doINCLUDE(int)
 		Fail("Cannot locate included file '%s'.", Token.c_str());
 
  got_it:
-	SourceFiles.emplace_back(file, *Context.back());
-	saveContext ctx(*this, new fileContext(CTX_INCLUDE, SourceFiles.size()-1, 0));
-
+	if (Pass2)
+	{	const auto& p1file = SourceFiles[FilesCount];
+		if (p1file.Name != file)
+			Fail("Inconsistent include invocation during pass 2.");
+		++FilesCount;
+	} else
+	{	SourceFiles.emplace_back(file, *Context.back());
+		FilesCount = SourceFiles.size();
+	}
+	saveContext ctx(*this, new fileContext(CTX_INCLUDE, FilesCount-1, 0));
 	ParseFile();
 }
 
@@ -2221,7 +2228,8 @@ void Parser::ParseFile(const string& file)
 {	if (Pass2)
 		throw string("Cannot add another file after pass 2 has been entered.");
 	SourceFiles.emplace_back(file);
-	saveContext ctx(*this, new fileContext(CTX_FILE, SourceFiles.size()-1, 0));
+	FilesCount = SourceFiles.size();
+	saveContext ctx(*this, new fileContext(CTX_FILE, FilesCount-1, 0));
 	try
 	{	ParseFile();
 	} catch (const string& msg)
@@ -2238,6 +2246,7 @@ void Parser::ResetPass()
 	AtIf.clear();
 	Context.clear();
 	Context.emplace_back(new fileContext(CTX_ROOT, 0, 0));
+	FilesCount = 0;
 	Functions.clear();
 	Macros.clear();
 	LabelsByName.clear();
@@ -2270,14 +2279,14 @@ void Parser::EnsurePass2()
 		label.Definition.Line = 0;
 	}
 
-	unsigned fileno = 0;
-	for (auto file : SourceFiles)
-	{	// only process files that are invoked from command line.
-		if (!file.Parent)
-		{	saveContext ctx(*this, new fileContext(CTX_FILE, fileno, 0));
-			ParseFile();
-		}
-		++fileno;
+	//for (auto& file : SourceFiles)
+	while (FilesCount < SourceFiles.size())
+	{	const auto& file = SourceFiles[FilesCount];
+		if (!!file.Parent)
+			Fail("Inconsistent include files during pass 2.");
+		saveContext ctx(*this, new fileContext(CTX_FILE, FilesCount, 0));
+		++FilesCount;
+		ParseFile();
 	}
 
 	// Optimize instructions

@@ -38,7 +38,7 @@ class Parser : public DebugInfo
 	/// The assembly process did not fail so far and can produce reasonable output.
 	bool Success = true;
 	/// Enable OP code extensions and allow undocumented OP codes during assembly.
-	/// Allows some constants to be generated from other small immediates in the same expression
+	/// Allows some constants to be generated from other small immediate in the same expression
 	/// using the undocumented OP code 0 (NOP) of the MUL ALU.
 	bool Extensions = false;
 	/// Output preprocessed code to this file stream in not NULL.
@@ -359,6 +359,9 @@ class Parser : public DebugInfo
 	/// The list will contain at least one element for the current file.
 	/// The deepest context is the last item in the list.
 	contexts_t       Context;
+	/// First unused entry in SourceFiles.
+	/// @remark This may point to existing entries during pass 2.
+	size_t           FilesCount;
 	// definitions
 	/// List of label definitions by label ID (= vector index).
 	labels_t         Labels;
