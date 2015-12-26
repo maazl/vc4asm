@@ -1065,8 +1065,9 @@ void Parser::assembleMOV(int mode)
 			{	if ( (Extensions || !si->OpCode.isExt())
 					&& ( Instruct.Sig == Inst::S_NONE
 						|| (Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd) )
-					&& ( !si->Pack || Instruct.Pack == Inst::P_32
-						|| (Instruct.Pack == si->Pack.pack() && Instruct.PM == si->Pack.mode()) )
+					&& ( !si->Pack
+						|| ( (Instruct.Pack == Inst::P_32 || (Instruct.Pack == si->Pack.pack() && Instruct.PM == si->Pack.mode())) // no conflictiong pack mode
+							&& (si->Pack.mode() || (InstCtx & IC_MUL ? Instruct.SF && Instruct.WAddrM > 32 : !Instruct.SF && Instruct.WAddrA < 32)) )) // regfile A
 					&& ((!si->OpCode.isMul() ^ !!(InstCtx & IC_MUL)) || Instruct.trySwap(si->OpCode.isMul())) )
 				{	Instruct.Sig   = Inst::S_SMI;
 					Instruct.SImmd = si->SImmd;
