@@ -129,7 +129,7 @@ class Parser : public DebugInfo
 	}             smiMap[];///< Immediate value lookup table used for <tt>mov rx, immd</tt>.
 	/// Context of a current expression during parse, bit vector.
 	enum InstContext
-	{	IC_NONE     = 0      ///< No argument context, i.e. currently at the expression itself.
+	{	IC_NONE     = 0      ///< No argument context, i.e. currently at the instruction itself.
 	,	IC_MUL      = 1      ///< Bit test: currently at a MUL ALU instruction.
 	,	IC_SRC      = 2      ///< Bit test: currently at a source argument to an OP code; assignment: currently at the first source argument to an ADD ALU OP code.
 	,	IC_DST      = 4      ///< Bit test: currently at the destination argument to an OP code; assignment: currently at the destination argument to an ADD ALU OP code.
@@ -335,9 +335,9 @@ class Parser : public DebugInfo
 	Inst             Instruct;
 	/// Current expression context. Type InstContext.
 	int              InstCtx;
-	/// Unpack mode used by the current instruction. See toUnpackReq.
+	/// Unpack mode used by the current instruction. See toExtReq.
 	int              UseUnpack;
-	/// Vector rotation used by the current instruction. See toUnpackReq.
+	/// Vector rotation used by the current instruction. See toExtReq.
 	int              UseRot;
 	/// Current program counter in GPU words. Relative to the start of the assembly.
 	unsigned         PC;
@@ -470,7 +470,8 @@ class Parser : public DebugInfo
 	int              isUnpackable(Inst::mux mux) { if (mux == Inst::X_R4) return true; if (mux == Inst::X_RA && Instruct.RAddrA < 32) return false; return -1; }
 	/// Convert instruction context to bit vector for UseUnpack or UseRot.
 	/// @param ctx Context, type InstContext.
-	static int       toExtReq(int ctx) { return 1 << (ctx&IC_SRCB); }
+	/// @remarks Bit 0: operator level, bit 2: source arg 1, bit 10: source arg 2
+	static constexpr int toExtReq(int ctx) { return 1 << (ctx&IC_SRCB); }
 	/// Apply vector rotation to the current context.
 	/// @param count Desired rotation: 0 = none, 1 = one element right ... 15 = one element left, -16 = rotate by r5
 	void             applyRot(int count);
@@ -512,6 +513,12 @@ class Parser : public DebugInfo
 	/// @param mux Multiplexer value of current source instruction.
 	/// Could be extracted from Instruct by InstCtx, but this is easier.
 	void             check4Unpack(Inst::mux mux);
+	/// Check vector rotation of for an input multiplexer.
+	/// @pre Current instruction is an ALU instruction.
+	void             checkRot(Inst::mux mux);
+	/// Check vector rotation of the current instruction.
+	/// @pre Current instruction is an ALU instruction.
+	void             checkRot();
 
 	/// @brief Assemble an expression as ALU target.
 	/// @details The function will also try to read instruction extensions if any.

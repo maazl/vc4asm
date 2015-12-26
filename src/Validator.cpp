@@ -100,18 +100,18 @@ void Validator::Decode(int refloc)
 	}
 }
 
-void Validator::CheckRotSrc(Inst::mux mux)
+void Validator::CheckRotSrc(const state& st, Inst::mux mux)
 {
 	// check for back to back access in source register
 	// This check is only required for accumulators since other registers cannot be accessed by the next instruction anyway
-	// and r4 does not support rotation between slices.
-	if (Inst::isAccu(mux))
+	// and r4/r5 does not support rotation between slices.
+	if (Inst::isAccu(mux) && st.LastWreg[0][32+mux] == At-1)
 	{	// detailed check on current instruction
 		// some conditional cases are also likely to work
 		if ( CheckVectorRotationLevel == 1 && !Instruct.isSFMUL()
-			&& (Instruct.CondM & 1) == 0
+			&& ( (Instruct.CondM & 1) == 0
 				? Instruct.SImmd > 48 && Instruct.SImmd <= 48+8
-				: Instruct.CondM != Inst::C_AL && Instruct.SImmd >= 62 )
+				: Instruct.CondM != Inst::C_AL && Instruct.SImmd >= 48+8 ))
 			return;
 		// detailed check on reference instruction
 		Decode(At-1);
@@ -137,12 +137,6 @@ void Validator::CheckRotSrc(Inst::mux mux)
 			return;
 		Message(At-1, "Should not write to the source r%u of the vector rotation in the previous instruction.", mux);
 	}
-	// Check for sources that do not support full vector rotation.
-	else if ( Instruct.SImmd == 48 || Instruct.isSFMUL()
-		// But again some rotations are likely to work even with sources that do not support full vector rotation.
-		|| !( (Instruct.SImmd <= 48+3 && (Instruct.CondM & 1) == 0)
-			||  (Instruct.SImmd >= 64-3 && (Instruct.WAddrM == 32+5 || ((Instruct.CondM & 1) && Instruct.CondM != Inst::C_AL))) ))
-		Message(At, "%s does not support full MUL ALU vector rotation.", Inst::toString(mux));
 }
 
 void Validator::TerminateRq(int after)
@@ -156,13 +150,12 @@ void Validator::ProcessItem(state& st)
 {
 	From = st.From;
 	Start = st.Start;
-	At = st.Start;
 	To = Instructions->size();
 	//printf("Fragment %x, %x\n", From, Start);
 	Pass2 = false;
 	int target = -1;
 	set<Inst::mux> accRP;
-	for (At = st.Start; At < To; ++At)
+	for (At = Start; At < To; ++At)
 	{	if (Done[At])
 		{	TerminateRq(MAX_DEPEND);
 			Pass2 = true;
@@ -285,10 +278,9 @@ void Validator::ProcessItem(state& st)
 		{	// rot r5
 			if (rot == 0 && st.LastWreg[0][32+5] == At-1)
 				Message(At-1, "Vector rotation by r5 must not follow a write to r5.");
-			if (st.LastWreg[0][32+Instruct.MuxMA] == At-1)
-				CheckRotSrc(Instruct.MuxMA);
-			if (Instruct.MuxMA != Instruct.MuxMB && st.LastWreg[0][32+Instruct.MuxMA] == At-1)
-				CheckRotSrc(Instruct.MuxMB);
+			CheckRotSrc(st, Instruct.MuxMA);
+			if (Instruct.MuxMA != Instruct.MuxMB)
+				CheckRotSrc(st, Instruct.MuxMB);
 		}
 		// TLB Z -> MS_FLAGS
 		if ((regRA == 42 || regRB == 42) && At - st.LastWreg[0][44] <= 2)
@@ -324,7 +316,6 @@ void Validator::ProcessItem(state& st)
 			st.LastTEND = At;
 		if (Instruct.Sig == Inst::S_BRANCH && st.LastBRANCH < At -3)
 			st.LastBRANCH = At;
-		st.LastRotReg = rot ? Instruct.WAddrM : -1;
 
 		// Check for UNIF, VARY or VPM access after TEND
 		if (st.LastTEND >= 0)

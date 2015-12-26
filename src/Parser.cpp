@@ -643,9 +643,10 @@ void Parser::addRot(int)
 	if (NextToken() != COMMA)
 		Fail("Expected ',' after rotation count.");
 
-	int si = 0;
+	int si;
 	switch (count.Type)
 	{case V_REG:
+		si = 0;
 		if ((count.rValue.Type & R_READ) && count.rValue.Num == 37) // r5
 			break;
 	 default:
@@ -719,6 +720,28 @@ void Parser::check4Unpack(Inst::mux mux)
 	} else if ( Instruct.Unpack != Inst::U_32 // Current source should not be unpacked
 		&& (Instruct.PM ? mux == Inst::X_R4 : mux == Inst::X_RA && Instruct.RAddrA < 32) )
 		Fail("The unpack option silently applies to %s source argument.", InstCtx & IC_B ? "2nd" : "1st");
+}
+
+void Parser::checkRot(Inst::mux mux)
+{	switch (mux)
+	{case Inst::X_R4:
+	 case Inst::X_R5:
+	 case Inst::X_RA:
+		if ( Instruct.SImmd == 48 || Instruct.isSFMUL()
+			// But again some rotations are likely to work even with sources that do not support full vector rotation.
+			|| !( (Instruct.SImmd <= 48+3 && (Instruct.CondM & 1) == 0)
+				||  (Instruct.SImmd >= 64-3 && (Instruct.WAddrM == 32+5 || ((Instruct.CondM & 1) && Instruct.CondM != Inst::C_AL))) ))
+			Msg(WARNING, "%s does not support full MUL ALU vector rotation.", Inst::toString(mux));
+	 default:;
+	}
+}
+
+void Parser::checkRot()
+{	if (UseRot & (toExtReq(IC_NONE) | toExtReq(IC_SRC)))
+		checkRot(Instruct.MuxMA);
+	if ( (UseRot & toExtReq(IC_SRCB))
+		|| ((UseRot & toExtReq(IC_NONE)) && Instruct.MuxMA != Instruct.MuxMB) )
+		checkRot(Instruct.MuxMB);
 }
 
 void Parser::doALUTarget(exprValue param)
@@ -907,6 +930,8 @@ void Parser::assembleADD(int add_op)
 		Instruct.MuxAB = Instruct.MuxAA;
 	else
 		doALUExpr();
+
+	checkRot();
 }
 
 void Parser::assembleMUL(int mul_op)
@@ -944,6 +969,8 @@ void Parser::assembleMUL(int mul_op)
 	doALUExpr();
 	InstCtx |= IC_B;
 	doALUExpr();
+
+	checkRot();
 }
 
 void Parser::assembleMOV(int mode)
@@ -993,6 +1020,7 @@ void Parser::assembleMOV(int mode)
 	 ext:
 		doInstrExt();
 		check4Unpack(mux);
+		checkRot();
 		return;
 
 	 case V_LDPES:

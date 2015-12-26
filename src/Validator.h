@@ -59,10 +59,6 @@ class Validator
 		const int From;
 		/// Start instruction where the parsing started.
 		const int Start;
-		/// @brief Register used as target of the last QPU vector rotation of the MUL ALU.
-		/// -1 in case none so far.
-		/// @details The value stored is compatible to Inst::WaddrM.
-		int LastRotReg = -1;
 		/// Last instruction that caused an load to register r4 by a signal (not SFU writes).
 		int LastLDr4 = NEVER;
 		/// Last instruction that was of type branch.
@@ -144,7 +140,7 @@ class Validator
 	/// @param mux MUL ALU input multiplexer.
 	/// @pre The current instruction must have a vector rotation
 	/// and the previous instruction needs to write to \a mux if \a mux is an accumulator.
-	void CheckRotSrc(Inst::mux mux);
+	void CheckRotSrc(const state& st, Inst::mux mux);
 	/// Ensure termination of the current task.
 	/// @param Maximum number of further instructions to check.
 	void TerminateRq(int after);
