@@ -250,8 +250,8 @@ struct Inst
 	static uint8_t AsSMIValue(qpuValue i);
 	/// Check whether an input mux supports full MUL ALU vector rotation, i.e. swapping between QPU slices.
 	/// @param m Input mux to check.
-	/// @return true for r0 to r3 and r5.
-	static bool isAccu(mux m) { return (m ^ 1) < 5; }
+	/// @return true for r0 to r3.
+	static bool isAccu(mux m) { return m <= X_R3; }
 
 	/// Check whether ADD ALU is in use
 	/// @pre Sig < S_LDI
