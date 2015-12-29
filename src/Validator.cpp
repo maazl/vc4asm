@@ -298,7 +298,7 @@ void Validator::ProcessItem(state& st)
 			Message(At, "Concurrent write to VPM read and write setup does not work.");
 		// Some combinations that do not work
 		if (Instruct.Sig != Inst::S_BRANCH)
-		{	if ( !(Instruct.WAddrA == Instruct.WAddrM && (Instruct.CondA ^ Instruct.CondM) != 1) // No problem if both ALUs write conditionally to the same register with opposite conditions.
+		{	if ( !(Instruct.WAddrA == Instruct.WAddrM && (Instruct.CondA ^ Instruct.CondM) == 1) // No problem if both ALUs write conditionally to the same register with opposite conditions.
 				&& ( (Instruct.CondA != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrA))
 						|| (Instruct.CondM != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrM)) ))
 				Message(At, "Conditional write to peripheral register does not work.");
