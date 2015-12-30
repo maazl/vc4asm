@@ -287,9 +287,9 @@ void Validator::ProcessItem(state& st)
 			Message(st.LastWreg[0][44], "Cannot read multisample mask (ms_flags) in the two instructions after TLB Z write.");
 		// Combined peripheral access
 		if (( ((0xfff09e0000000000ULL & (1ULL << regWA)) != 0)
-			+ ((0xfff09e0000000000ULL & (1ULL << regWB)) != 0)
+			+ ((0xfff09e0000000000ULL & (1ULL << regWB)) != 0 && !(regWA == regWB && Inst::isWRegAB(regWA)))
 			+ ((0x0008060000000000ULL & (1ULL << regRA)) != 0)
-			+ ((0x0008060000000000ULL & (1ULL << regRB)) != 0)
+			+ ((0x0008060000000000ULL & (1ULL << regRB)) != 0 && !(regRA == regRB && Inst::isRRegAB(regRA)))
 			+ ( (Instruct.Sig >= Inst::S_LOADCV && Instruct.Sig <= Inst::S_LOADAM)
 				|| (Instruct.Sig == Inst::S_LDI && (Instruct.LdMode & Inst::L_SEMA)) )
 			+ (regWA == 45 || regWA == 46 || regWB == 45 || regWB == 46 || Instruct.Sig == Inst::S_LOADC || Instruct.Sig == Inst::S_LDCEND) ) > 1 )
