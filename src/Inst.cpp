@@ -272,62 +272,63 @@ void Inst::reset()
 	SF = false;
 }
 
-bool Inst::trySwap(bool mul)
+bool Inst::trySwap()
 {
 	if ( SF             // can't swap with set flags
-		|| (PM && Pack) ) // can't swap with MUL ALU pack
+		|| (PM && Pack)   // can't swap with MUL ALU pack
+		|| (Sig == S_SMI && SImmd >= 48) ) // can't swap with vector rotation
 		return false;
-	if (mul)
-	{	if (OpA != A_NOP)
+	opadd opa;
+	switch (OpM)
+	{default:
+		return false;
+	 case M_V8ADDS:
+		opa = A_V8ADDS;
+		break;
+	 case M_V8SUBS:
+		opa = A_V8SUBS;
+		break;
+	 case M_V8MIN:
+	 case M_V8MAX:
+		if (MuxMA != MuxMB)
 			return false;
-		switch (OpM)
-		{default:
-			return false;
-		 case M_V8ADDS:
-			OpA = A_V8ADDS;
-			break;
-		 case M_V8SUBS:
-			OpA = A_V8SUBS;
-			break;
-		 case M_V8MIN:
-		 case M_V8MAX:
-			if (MuxMA != MuxMB)
-				return false;
-			OpA = A_OR;
-		 case M_NOP:
-			break;
-		}                OpM = M_NOP;
-		MuxAA = MuxMA;   MuxMA = X_R0;
-		MuxAB = MuxMB;   MuxMB = X_R0;
-	} else
-	{	if (OpM != M_NOP)
-			return false;
-		switch (OpA)
-		{default:
-			return false;
-		 case A_V8ADDS:
-			OpM = M_V8ADDS;
-			break;
-		 case A_XOR:
-		 case A_SUB:
-			if (MuxMA != MuxMB)
-				return false;
-		 case A_V8SUBS:
-			OpM = M_V8SUBS;
-			break;
-		 case A_OR:
-		 case A_AND:
-		 case A_MIN:
-		 case A_MAX:
-			if (MuxMA != MuxMB)
-				return false;
-			OpM = M_V8MIN;
-		 case A_NOP:
-			break;
-		}                OpA = A_NOP;
-		MuxMA = MuxAA;   MuxAA = X_R0;
-		MuxMB = MuxAB;   MuxAB = X_R0;
+		opa = A_OR;
+		break;
+	 case M_NOP:
+		opa = A_NOP;
+		break;
 	}
+	opmul opm;
+	switch (OpA)
+	{default:
+		return false;
+	 case A_V8ADDS:
+		opm = M_V8ADDS;
+		break;
+	 case A_XOR:
+	 case A_SUB:
+		if (MuxMA != MuxMB)
+			return false;
+	 case A_V8SUBS:
+		opm = M_V8SUBS;
+		break;
+	 case A_OR:
+	 case A_AND:
+	 case A_MIN:
+	 case A_MAX:
+		if (MuxAA != MuxAB)
+			return false;
+		opm = M_V8MIN;
+		break;
+	 case A_NOP:
+		opm = M_NOP;
+		break;
+	}
+	// execute swap
+	OpA = opa;
+	OpM = opm;
+	swap(MuxAA, MuxMA);
+	swap(MuxAB, MuxMB);
 	swap(CondA, CondM);
 	swap(WAddrA, WAddrM);
 	WS = !WS;

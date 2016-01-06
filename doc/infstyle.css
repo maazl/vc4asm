@@ -32,9 +32,12 @@ h1,h2,h3 {
 
 th,.th {
   background-color: #eeeeee;
+  font-weight: bold;
+}
+
+th {
   text-align: left;
   vertical-align: bottom;
-  font-weight: bold;
 }
 
 td {

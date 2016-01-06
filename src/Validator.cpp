@@ -101,42 +101,46 @@ void Validator::Decode(int refloc)
 }
 
 void Validator::CheckRotSrc(const state& st, Inst::mux mux)
-{
-	// check for back to back access in source register
+{	// check for back to back access in source register
 	// This check is only required for accumulators since other registers cannot be accessed by the next instruction anyway
 	// and r4/r5 does not support rotation between slices.
-	if (Inst::isAccu(mux) && st.LastWreg[0][32+mux] == At-1)
-	{	// detailed check on current instruction
-		// some conditional cases are also likely to work
-		if ( CheckVectorRotationLevel == 1 && !Instruct.isSFMUL()
-			&& ( (Instruct.CondM & 1) == 0
-				? Instruct.SImmd > 48 && Instruct.SImmd <= 48+8
-				: Instruct.CondM != Inst::C_AL && Instruct.SImmd >= 48+8 ))
-			return;
-		// detailed check on reference instruction
-		Decode(At-1);
-		int reg = 32 + mux;
-		int type = R_A * (RefInst.WAddrA == reg) | R_B * (RefInst.WAddrM == reg);
-		Inst::conda wrcond = Inst::C_AL;
-		if (RefInst.Sig != Inst::S_BRANCH)
-		{	type &= ~(R_A * (RefInst.CondA == Inst::C_NEVER) | R_B * (RefInst.CondM == Inst::C_NEVER));
-			switch (type)
-			{default: // none
-				return;
-			 case R_A:
-				wrcond = RefInst.CondA;
-				break;
-			 case R_B:
-				wrcond = RefInst.CondM;
-			 case R_AB:;
-			}
-		}
-		// some conditional cases are also likely to work
-		if ( CheckVectorRotationLevel == 1
-			&& wrcond != Inst::C_AL && (wrcond & 1) && Instruct.SImmd > 48 && Instruct.SImmd <= 48+8 )
-			return;
+	if (!Inst::isAccu(mux) || st.LastWreg[0][32+mux] != At-1)
+		return;
+	// detailed check on current instruction
+	if (CheckVectorRotationLevel > 1 || Instruct.isSFMUL())
+	{warn:
 		Message(At-1, "Should not write to the source r%u of the vector rotation in the previous instruction.", mux);
+		return;
 	}
+	if (Instruct.CondM == Inst::C_NEVER)
+		return;
+	if (Instruct.SImmd == 48) // rotate by r5
+		goto warn;
+	if (Instruct.SImmd >= 64-3 && Instruct.WAddrM == 32+5) // r5 write
+		return;
+	if (Instruct.CondM > Inst::C_AL) // conditional write might be OK
+		return;
+	// detailed check on reference instruction
+	Decode(At-1);
+	int reg = 32 + mux;
+	int type = R_A * (RefInst.WAddrA == reg) | R_B * (RefInst.WAddrM == reg);
+	Inst::conda wrcond = Inst::C_AL;
+	if (RefInst.Sig != Inst::S_BRANCH)
+	{	type &= ~(R_A * (RefInst.CondA == Inst::C_NEVER) | R_B * (RefInst.CondM == Inst::C_NEVER));
+		switch (type)
+		{default: // no write to the register
+			return;
+		 case R_A:
+			wrcond = RefInst.CondA;
+			break;
+		 case R_B:
+			wrcond = RefInst.CondM;
+		 case R_AB:;
+		}
+	}
+	// conditional write might also work
+	if (wrcond == Inst::C_AL)
+		goto warn;
 }
 
 void Validator::TerminateRq(int after)
@@ -238,12 +242,11 @@ void Validator::ProcessItem(state& st)
 				if (Inst::isAccu(Instruct.MuxMB) && st.LastWreg[0][Instruct.MuxMB+32] == At-1)
 					accRP.emplace(Instruct.MuxMB);
 			}
-			Inst inst;
-			inst.decode((*Instructions)[MakeAbsRef(At-1)]);
-			if (inst.CondA > Inst::C_AL && accRP.find((Inst::mux)(inst.WAddrA-32)) != accRP.end())
-				Message(At-1, "Writing the result of the conditional assignment to accumulator r%u to a periperal register in the next instruction does not work correctly.", inst.WAddrA-32);
-			if (inst.CondM > Inst::C_AL && accRP.find((Inst::mux)(inst.WAddrM-32)) != accRP.end())
-				Message(At-1, "Writing the result of the conditional assignment to accumulator r%u to a periperal register in the next instruction does not work correctly.", inst.WAddrM-32);
+			Decode(At-1);
+			if (RefInst.CondA > Inst::C_AL && accRP.find((Inst::mux)(RefInst.WAddrA-32)) != accRP.end())
+				Message(At-1, "Writing the result of the conditional assignment to accumulator r%u to a peripheral register in the next instruction does not work correctly.", RefInst.WAddrA-32);
+			if (RefInst.CondM > Inst::C_AL && accRP.find((Inst::mux)(RefInst.WAddrM-32)) != accRP.end())
+				Message(At-1, "Writing the result of the conditional assignment to accumulator r%u to a peripheral register in the next instruction does not work correctly.", RefInst.WAddrM-32);
 		}
 		// Two writes to the same register
 		if ( regWA == regWB && regWA != Inst::R_NOP && Inst::isWRegAB(regWA)
@@ -281,6 +284,13 @@ void Validator::ProcessItem(state& st)
 			CheckRotSrc(st, Instruct.MuxMA);
 			if (Instruct.MuxMA != Instruct.MuxMB)
 				CheckRotSrc(st, Instruct.MuxMB);
+
+			// meaningless rotation
+			if ( rot > 3 && rot < 16-3
+				&& !Inst::isAccu(Instruct.MuxMA) && !Inst::isAccu(Instruct.MuxMB)
+				&& Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB
+				&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB )
+				Message(At, "Neither MUL ALU source argument can handle full vector rotation.");
 		}
 		// TLB Z -> MS_FLAGS
 		if ((regRA == 42 || regRB == 42) && At - st.LastWreg[0][44] <= 2)
@@ -300,7 +310,7 @@ void Validator::ProcessItem(state& st)
 		if (Instruct.Sig != Inst::S_BRANCH)
 		{	if ( !(Instruct.WAddrA == Instruct.WAddrM && (Instruct.CondA ^ Instruct.CondM) == 1) // No problem if both ALUs write conditionally to the same register with opposite conditions.
 				&& ( (Instruct.CondA != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrA))
-						|| (Instruct.CondM != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrM)) ))
+					|| (Instruct.CondM != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrM)) ))
 				Message(At, "Conditional write to peripheral register does not work.");
 			if (Instruct.PM && (Instruct.Pack & 0xc) == Inst::P_8a && Inst::isPeripheralWReg(Instruct.WAddrM))
 				Message(At, "Pack modes with partial writes do not work for peripheral registers.");

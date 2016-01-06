@@ -271,10 +271,9 @@ struct Inst
 	bool       isUnary() const { return (0x01800180 & (1<<OpA)) != 0; }
 
 	/// Try to swap ADD and MUL ALU of the current instruction
-	/// @param mul true: move MUL instruction to ADD ALU,
-	///            false: move ADD instruction to MUL ALU
-	/// @return true: swap succeeded
-	bool       trySwap(bool mul);
+	/// @return true: swap succeeded, false: instruction unchanged
+	/// @pre Sig < S_LDI
+	bool       trySwap();
 
 	/// Some optimizations to save ALU power
 	void       optimize();

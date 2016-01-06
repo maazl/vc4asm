@@ -10,7 +10,7 @@
   <body>
     <h1>Addendum to the <a href="http://www.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf">Broadcom
         VideoCore IV documentation</a></h1>
-    <h2>Additional features and erratas</h2>
+    <h2>Additional features</h2>
     <h3>Section 3: Writing to <tt>r5</tt></h3>
     <p><tt>r5</tt> can be written <em>from the elements 0, 4, 8 and 12</em> for
       each slice <em>or only from element 0</em>, depending on whether you
@@ -28,8 +28,10 @@
     <p>Furthermore the restriction that the source register of the vector
       rotation must not be written in the previous instruction applies <em>if
         the values are transferred to a lower QPU slice</em> only. Rotations
-      within a slice and to higher slices are safe. You may
-      ensure this by an appropriate <code>.if<var>cc</var></code> extension.</p>
+      within a slice and to higher slices are safe. You may ensure this by an
+      appropriate <code>.if<var>cc</var></code> extension, either at the
+      previous write or at the rotation instruction itself. Examples:</p>
+    <pre>and.setf -, elem_num, 1<br>mov&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; r0, ra0<br>mov.ifz&nbsp; r1, r0&lt;&lt;1<br><br>shr.setf -, elem_num, 1<br>mov.ifc&nbsp; r0, ra0<br>mov&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; r1, r0&lt;&lt;1<br><br>and.setf -, elem_num, 12<br>mov      r0, ra0<br>mov.ifnz r1, r0&gt;&gt;3</pre>
     <h3>Table 5: Small immediate values</h3>
     <p>The small immediate codes for vector rotations can also be used as
       additional constants. Well, all of them are redundant with [16..31] but
@@ -146,7 +148,7 @@
       do this task.</p>
     <h3>MUL ALU pack modes and I/O register targets</h3>
     <p>The MUL ALU pack modes that write only a single byte are not available
-      for I/O register targets, i.e. <tt>waddr_mul</tt> &ge; 32. The write only
-      hardware registers cannot write slices of a word.</p>
+      for I/O register targets. The write only hardware registers cannot write
+      slices of a word.</p>
   </body>
 </html>

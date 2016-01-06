@@ -513,12 +513,6 @@ class Parser : public DebugInfo
 	/// @param mux Multiplexer value of current source instruction.
 	/// Could be extracted from Instruct by InstCtx, but this is easier.
 	void             check4Unpack(Inst::mux mux);
-	/// Check vector rotation of for an input multiplexer.
-	/// @pre Current instruction is an ALU instruction.
-	void             checkRot(Inst::mux mux);
-	/// Check vector rotation of the current instruction.
-	/// @pre Current instruction is an ALU instruction.
-	void             checkRot();
 
 	/// @brief Assemble an expression as ALU target.
 	/// @details The function will also try to read instruction extensions if any.

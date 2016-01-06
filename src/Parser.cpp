@@ -535,25 +535,50 @@ void Parser::applyRot(int count)
 			Fail("Only one vector rotation per ALU instruction, please.");
 
 		if ( !(InstCtx & IC_MUL)
-			&& !((InstCtx & IC_CANSWAP) && Instruct.trySwap(true)) )
+			&& !((InstCtx & IC_CANSWAP) && Instruct.trySwap()) )
 			Fail("Vector rotation is only available to the MUL ALU.");
 		InstCtx |= IC_MUL;
+		InstCtx &= ~IC_CANSWAP;
 		if (count == 16)
 			Fail("Cannot rotate ALU target right by r5.");
 
-		if (InstCtx & IC_B)
-		{	if (Instruct.Sig != Inst::S_SMI || Instruct.SImmd < 48)
-				Msg(WARNING, "The Vector rotation of the second MUL ALU source argument silently applies also to the first source.");
-			int mask = !Inst::isAccu(Instruct.MuxMA) || !Inst::isAccu(Instruct.MuxMB) ? 0x3 : 0xf;
-			if (((Instruct.SImmd - 48) ^ count) & mask)
-				Fail("Cannot use different vector rotations within one instruction.");
+		count = 48 + (count & 0xf);
+
+		auto mux = InstCtx & IC_B ? Instruct.MuxMB : Instruct.MuxMA;
+		if (mux == Inst::X_R5)
+			Msg(WARNING, "r5 does not support vector rotations.");
+		auto isaccu = Inst::isAccu(mux);
+		if (!isaccu && count > 48+3 && count < 64-3)
+			Msg(WARNING, "%s does not support full MUL ALU vector rotation.", Inst::toString(mux));
+
+		if (Instruct.Sig == Inst::S_SMI)
+		{	int mask = !isaccu
+				|| ( (InstCtx & IC_B) && !Inst::isAccu(Instruct.MuxMA)
+					&& Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB
+					&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB )
+				? 0x13 : 0x1f;
+			if ((Instruct.SImmd ^ count) & mask)
+				Fail( Instruct.SImmd < 48
+					? "Vector rotation is in conflict with small immediate value."
+					: "Cannot use different vector rotations within one instruction." );
+
+			if (!isaccu)
+				count = Instruct.SImmd | 0x20;
+			else
+				Instruct.SImmd = count;
 		}
+
+		if ( (InstCtx & IC_B)
+			&& (Instruct.Sig != Inst::S_SMI || Instruct.SImmd < 48)
+			&& (Inst::isAccu(Instruct.MuxMA) || (count & 0x3) || !count) )
+			Msg(WARNING, "The Vector rotation of the second MUL ALU source argument silently applies also to the first source.");
+
 		UseRot |= toExtReq(InstCtx);
 
-		doSMI(48 + (count & 0xf));
+		doSMI(count);
 	} else if ( (InstCtx & IC_B) && (UseRot & XR_SRCA)
 			&& (Inst::isAccu(Instruct.MuxMB) || (Instruct.SImmd & 0x3) || Instruct.SImmd == 48) )
-		Msg(WARNING, "The Vector rotation of the first MUL ALU source argument silently applies also to the second argument.");
+		Msg(WARNING, "The vector rotation of the first MUL ALU source argument silently applies also to the second argument.");
 }
 
 void Parser::addIf(int cond)
@@ -722,28 +747,6 @@ void Parser::check4Unpack(Inst::mux mux)
 		Fail("The unpack option silently applies to %s source argument.", InstCtx & IC_B ? "2nd" : "1st");
 }
 
-void Parser::checkRot(Inst::mux mux)
-{	switch (mux)
-	{case Inst::X_R4:
-	 case Inst::X_R5:
-	 case Inst::X_RA:
-		if ( Instruct.SImmd == 48 || Instruct.isSFMUL()
-			// But again some rotations are likely to work even with sources that do not support full vector rotation.
-			|| !( (Instruct.SImmd <= 48+3 && (Instruct.CondM & 1) == 0)
-				||  (Instruct.SImmd >= 64-3 && (Instruct.WAddrM == 32+5 || ((Instruct.CondM & 1) && Instruct.CondM != Inst::C_AL))) ))
-			Msg(WARNING, "%s does not support full MUL ALU vector rotation.", Inst::toString(mux));
-	 default:;
-	}
-}
-
-void Parser::checkRot()
-{	if (UseRot & (toExtReq(IC_NONE) | toExtReq(IC_SRC)))
-		checkRot(Instruct.MuxMA);
-	if ( (UseRot & toExtReq(IC_SRCB))
-		|| ((UseRot & toExtReq(IC_NONE)) && Instruct.MuxMA != Instruct.MuxMB) )
-		checkRot(Instruct.MuxMB);
-}
-
 void Parser::doALUTarget(exprValue param)
 {	InstCtx |= IC_DST;
 	if (param.Type != V_REG)
@@ -898,7 +901,7 @@ void Parser::assembleADD(int add_op)
 	if (Instruct.isADD())
 	{	switch (add_op)
 		{default:
-			if (Instruct.trySwap(false))
+			if (Instruct.OpM == Inst::M_NOP && Instruct.trySwap())
 				goto cont;
 			Fail("The ADD ALU has already been used in this instruction.");
 		 case Inst::A_NOP:
@@ -930,8 +933,6 @@ void Parser::assembleADD(int add_op)
 		Instruct.MuxAB = Instruct.MuxAA;
 	else
 		doALUExpr();
-
-	checkRot();
 }
 
 void Parser::assembleMUL(int mul_op)
@@ -942,7 +943,7 @@ void Parser::assembleMUL(int mul_op)
 	if (Instruct.isMUL())
 	{	switch (mul_op)
 		{default:
-			if (Instruct.trySwap(true))
+			if (Instruct.OpA == Inst::A_NOP && Instruct.trySwap())
 				goto cont;
 			Fail("The MUL ALU has already been used by the current instruction.");
 		 case Inst::M_NOP:
@@ -969,8 +970,6 @@ void Parser::assembleMUL(int mul_op)
 	doALUExpr();
 	InstCtx |= IC_B;
 	doALUExpr();
-
-	checkRot();
 }
 
 void Parser::assembleMOV(int mode)
@@ -1007,8 +1006,6 @@ void Parser::assembleMOV(int mode)
 		if (isLDI)
 			Fail("mov instruction with register source cannot be combined with load immediate.");
 
-		applyRot(-param.rValue.Rotate);
-
 		mux = muxReg(param.rValue);
 		if (InstCtx & IC_MUL)
 		{	Instruct.MuxMA = Instruct.MuxMB = mux;
@@ -1017,10 +1014,11 @@ void Parser::assembleMOV(int mode)
 		{	Instruct.MuxAA = Instruct.MuxAB = mux;
 			Instruct.OpA = Inst::A_OR;
 		}
+		applyRot(-param.rValue.Rotate);
+
 	 ext:
 		doInstrExt();
 		check4Unpack(mux);
-		checkRot();
 		return;
 
 	 case V_LDPES:
@@ -1066,9 +1064,9 @@ void Parser::assembleMOV(int mode)
 					&& ( Instruct.Sig == Inst::S_NONE
 						|| (Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd) )
 					&& ( !si->Pack
-						|| ( (Instruct.Pack == Inst::P_32 || (Instruct.Pack == si->Pack.pack() && Instruct.PM == si->Pack.mode())) // no conflictiong pack mode
+						|| ( (Instruct.Pack == Inst::P_32 || (Instruct.Pack == si->Pack.pack() && Instruct.PM == si->Pack.mode())) // no conflicting pack mode
 							&& (si->Pack.mode() || (InstCtx & IC_MUL ? Instruct.SF && Instruct.WAddrM > 32 : !Instruct.SF && Instruct.WAddrA < 32)) )) // regfile A
-					&& ((!si->OpCode.isMul() ^ !!(InstCtx & IC_MUL)) || Instruct.trySwap(si->OpCode.isMul())) )
+					&& ((!si->OpCode.isMul() ^ !!(InstCtx & IC_MUL)) || Instruct.trySwap()) ) // other ALU needed
 				{	Instruct.Sig   = Inst::S_SMI;
 					Instruct.SImmd = si->SImmd;
 					if (!!si->Pack)
