@@ -643,9 +643,7 @@ void Parser::addPack(int mode)
 
 void Parser::addSetF(int)
 {
-	if (Instruct.Sig == Inst::S_BRANCH)
-		Fail("Cannot apply .setf to branch instruction.");
-	if ( Instruct.Sig != Inst::S_LDI && (InstCtx & IC_MUL)
+	if ( Instruct.Sig < Inst::S_LDI && (InstCtx & IC_MUL)
 		&& (Instruct.WAddrA != Inst::R_NOP || Instruct.OpA != Inst::A_NOP) )
 		Fail("Cannot apply .setf because the flags of the ADD ALU will be used.");
 	if (Instruct.SF)
@@ -877,8 +875,6 @@ void Parser::doBRASource(exprValue param)
 		Instruct.Immd = param;
 		break;
 	 case V_REG:
-		if (!(param.rValue.Type & R_WRITE))
-			Fail("Branch target register is not writable.");
 		if (param.rValue.Num == Inst::R_NOP && !param.rValue.Rotate && (param.rValue.Type & R_AB))
 			return;
 		if (!(param.rValue.Type & R_A) || param.rValue.Num >= 32)
@@ -887,6 +883,12 @@ void Parser::doBRASource(exprValue param)
 			Fail("Cannot use vector rotation with branch instruction.");
 		if (Instruct.Reg)
 			Fail("Cannot specify two registers as branch target.");
+		if ((param.rValue.Num & 1) != Instruct.SF)
+		{	if (Instruct.SF)
+				Fail("Branch instruction with .setf cannot use even register numbers.");
+			else
+				Msg(WARNING, "Using an odd register number as branch target implies .setf. Use explicit .setf to avoid this warning.");
+		}
 		Instruct.Reg = true;
 		Instruct.RAddrA = param.rValue.Num;
 		break;

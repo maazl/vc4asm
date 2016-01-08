@@ -583,7 +583,9 @@ opcode.unpack<var>yy</var> <var>destination</var>, ...<br>opcode<var></var> <var
       <dt><var><tt>target, target1, target2</tt></var></dt>
       <dd>Register from register file A, constant or label. Branch instructions
         can add two targets if one of them is a register and the other one is a
-        constant.</dd>
+        constant or label.<br>
+        Note that the use of odd register numbers implies <tt>.setf</tt> which
+        is generally not intended.</dd>
     </dl>
     <p><tt>bra</tt> creates an absolute branch, i.e. target must be a physical
       memory address. <tt>brr</tt> creates a relative branch.</p>

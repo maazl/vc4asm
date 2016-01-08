@@ -168,6 +168,7 @@ struct Inst
 	};
 
 	sig        Sig;     ///< Signaling bits
+	bool       SF;      ///< Set flags
 	bool       WS;      ///< Write swap
 	uint8_t    WAddrA;  ///< Write address ADD ALU
 	uint8_t    WAddrM;  ///< Write address MUL ALU
@@ -197,7 +198,6 @@ struct Inst
 			pack   Pack;    ///< Pack mode
 			conda  CondA;   ///< Write condition for ADD ALU
 			conda  CondM;   ///< Write condition for MUL ALU
-			bool   SF;      ///< Set flags
 		};
 		struct            // branch
 		{	condb  CondBr;  ///< Branch condition

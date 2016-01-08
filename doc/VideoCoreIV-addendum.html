@@ -10,7 +10,7 @@
   <body>
     <h1>Addendum to the <a href="http://www.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf">Broadcom
         VideoCore IV documentation</a></h1>
-    <h2>Additional features</h2>
+    <h2>Bugs and additional features</h2>
     <h3>Section 3: Writing to <tt>r5</tt></h3>
     <p><tt>r5</tt> can be written <em>from the elements 0, 4, 8 and 12</em> for
       each slice <em>or only from element 0</em>, depending on whether you
@@ -111,6 +111,19 @@
         </tr>
       </tbody>
     </table>
+    <h3>Section 3: Branch instruction - implicit set flags</h3>
+    <p>Unlike the Broadcom documentation suggests the <em>branch instruction is
+        able to set the flags</em>. But the <tt>sf</tt> bit is at the same
+      location of the instruction word than the <tt>raddr_a</tt> field. So
+      every branch instruction with an <i>odd register source</i> will set the
+      flags. This is an unwanted side effect since the flags of a PC location
+      are normally useless.</p>
+    <p>vc4asm reports a warning when a branch instruction is used with an odd
+      source register. You can use explicit <tt>.setf</tt> to suppress the
+      warning.</p>
+    <pre>and.setf -,  elem_num, 1<br>bra      -,  ra1        # implies .setf<br>mov.ifz  r0, 1<br>...</pre>
+    <p>Since a branch target will never be at the physical address 0 the <tt>mov.ifz</tt>
+      instruction in the above example will never assign a value.</p>
     <h3>Section 7: QPU Reading and Writing of VPM</h3>
     <p>VPM reads seem to <em>block immediately if the FIFO is empty</em>. No
       undefined data is returned when the reads are made too early.</p>

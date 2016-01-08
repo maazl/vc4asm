@@ -447,7 +447,7 @@ uint64_t Inst::encode() const
 				| CondBr << 20
 				| Rel    << 19
 				| Reg    << 18
-				| RAddrA << 13
+				| (RAddrA|SF) << 13
 				| WS     << 12
 				| WAddrA << 6
 				| WAddrM << 0 ) << 32
@@ -456,36 +456,38 @@ uint64_t Inst::encode() const
 }
 
 void Inst::decode(uint64_t code)
-{	Sig    = (sig)(code >> 60);
-	Unpack = (unpack)(code >> 57 & 0x7);
-	PM     = !!(code & 1ULL<<56);
+{	uint32_t h = (uint32_t)(code >> 32);
+	Sig    = (sig)(h >> 28);
+	Unpack = (unpack)(h >> 25 & 0x7);
+	PM     = !!(h & 1U<<24);
 	if (Sig == S_BRANCH)
-	{	CondBr = (condb)(code >> 52 & 0xf);
-		Rel    = !!(code & 1ULL<<51);
-		Reg    = !!(code & 1ULL<<50);
-		RAddrA = (uint8_t)(code >> 45 & 0x1f);
-		Immd.uValue = (uint32_t)(code >> 0  & 0xffffffff);
+	{	CondBr = (condb)(h >> 20 & 0xf);
+		Rel    = !!(h & 1U<<19);
+		Reg    = !!(h & 1U<<18);
+		RAddrA = (uint8_t)(h >> 13 & 0x1f);
+		Immd.uValue = (uint32_t)(code);
 	} else
-	{	Pack   = (pack)(code >> 52 & 0xf);
-		CondA  = (conda)(code >> 49 & 0x7);
-		CondM  = (conda)(code >> 46 & 0x7);
-		SF     = !!(code & 1ULL<<45);
+	{	Pack   = (pack)(h >> 20 & 0xf);
+		CondA  = (conda)(h >> 17 & 0x7);
+		CondM  = (conda)(h >> 14 & 0x7);
 		if (Sig == S_LDI)
-		{	Immd.uValue = (uint32_t)(code >>  0 & 0xffffffff);
+		{	Immd.uValue = (uint32_t)(code);
 		} else
-		{	OpM    = (opmul)(code >> 29 & 0x7);
-			OpA    = (opadd)(code >> 24 & 0x1f);
-			RAddrA = (uint8_t)(code >> 18 & 0x3f);
-			RAddrB = (uint8_t)(code >> 12 & 0x3f);
-			MuxAA  = (mux)(code >>  9 & 0x7);
-			MuxAB  = (mux)(code >>  6 & 0x7);
-			MuxMA  = (mux)(code >>  3 & 0x7);
-			MuxMB  = (mux)(code >>  0 & 0x7);
+		{	uint32_t l = (uint32_t)code;
+			OpM    = (opmul)(l >> 29 & 0x7);
+			OpA    = (opadd)(l >> 24 & 0x1f);
+			RAddrA = (uint8_t)(l >> 18 & 0x3f);
+			RAddrB = (uint8_t)(l >> 12 & 0x3f);
+			MuxAA  = (mux)(l >>  9 & 0x7);
+			MuxAB  = (mux)(l >>  6 & 0x7);
+			MuxMA  = (mux)(l >>  3 & 0x7);
+			MuxMB  = (mux)(l >>  0 & 0x7);
 		}
 	}
-	WS     = !!(code & 1ULL<<44);
-	WAddrA = (uint8_t)(code >> 38 & 0x3f);
-	WAddrM = (uint8_t)(code >> 32 & 0x3f);
+	SF     = !!(h & 1U<<13);
+	WS     = !!(h & 1U<<12);
+	WAddrA = (uint8_t)(h >> 6 & 0x3f);
+	WAddrM = (uint8_t)(h >> 0 & 0x3f);
 }
 
 qpuValue Inst::SMIValue() const

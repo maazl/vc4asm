@@ -7,7 +7,6 @@
 
 #include "Validator.h"
 #include "DebugInfo.h"
-#include <set>
 #include <cstddef>
 #include <cstring>
 #include <cstdarg>
@@ -158,7 +157,6 @@ void Validator::ProcessItem(state& st)
 	//printf("Fragment %x, %x\n", From, Start);
 	Pass2 = false;
 	int target = -1;
-	set<Inst::mux> accRP;
 	for (At = Start; At < To; ++At)
 	{	if (Done[At])
 		{	TerminateRq(MAX_DEPEND);
@@ -227,27 +225,6 @@ void Validator::ProcessItem(state& st)
 		if ( regRB < 32 && st.LastWreg[1][regRB] == At-1
 			&& (Decode(At-1), IsCondOverlap(GetWrCond(RefInst, regRB, R_B), GetRdCond(Instruct, Inst::X_RB))) )
 			Message(At-1, "Cannot read register rb%d because it just has been written by the previous instruction.", regRB);
-		// check for back to back accumulator reads with conditional write and peripheral target
-		if (Instruct.Sig < Inst::S_BRANCH)
-		{	accRP.clear();
-			if (Inst::isPeripheralWReg(Instruct.WAddrA))
-			{	if (Inst::isAccu(Instruct.MuxAA) && st.LastWreg[0][Instruct.MuxAA+32] == At-1)
-					accRP.emplace(Instruct.MuxAA);
-				if (!Instruct.isUnary() && Inst::isAccu(Instruct.MuxAB) && st.LastWreg[0][Instruct.MuxAB+32] == At-1)
-					accRP.emplace(Instruct.MuxAB);
-			}
-			if (Inst::isPeripheralWReg(Instruct.WAddrM))
-			{	if (Inst::isAccu(Instruct.MuxMA) && st.LastWreg[0][Instruct.MuxMA+32] == At-1)
-					accRP.emplace(Instruct.MuxMA);
-				if (Inst::isAccu(Instruct.MuxMB) && st.LastWreg[0][Instruct.MuxMB+32] == At-1)
-					accRP.emplace(Instruct.MuxMB);
-			}
-			Decode(At-1);
-			if (RefInst.CondA > Inst::C_AL && accRP.find((Inst::mux)(RefInst.WAddrA-32)) != accRP.end())
-				Message(At-1, "Writing the result of the conditional assignment to accumulator r%u to a peripheral register in the next instruction does not work correctly.", RefInst.WAddrA-32);
-			if (RefInst.CondM > Inst::C_AL && accRP.find((Inst::mux)(RefInst.WAddrM-32)) != accRP.end())
-				Message(At-1, "Writing the result of the conditional assignment to accumulator r%u to a peripheral register in the next instruction does not work correctly.", RefInst.WAddrM-32);
-		}
 		// Two writes to the same register
 		if ( regWA == regWB && regWA != Inst::R_NOP && Inst::isWRegAB(regWA)
 			&& ( Instruct.Sig == Inst::S_BRANCH
