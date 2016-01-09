@@ -528,25 +528,31 @@ void Parser::doSMI(uint8_t si)
 	Instruct.SImmd = si;
 }
 
+bool
+Parser::trySwap()
+{	if ((InstCtx & IC_CANSWAP) == 0 || !Instruct.trySwap())
+		return false;
+	InstCtx ^= IC_MUL;
+	return true;
+}
+
 void Parser::applyRot(int count)
 {
 	if (count)
 	{	if (UseRot & (XR_OP | toExtReq(InstCtx)))
 			Fail("Only one vector rotation per ALU instruction, please.");
 
-		if ( !(InstCtx & IC_MUL)
-			&& !((InstCtx & IC_CANSWAP) && Instruct.trySwap()) )
+		if (!(InstCtx & IC_MUL) && !trySwap())
 			Fail("Vector rotation is only available to the MUL ALU.");
-		InstCtx |= IC_MUL;
-		InstCtx &= ~IC_CANSWAP;
 		if (count == 16)
 			Fail("Cannot rotate ALU target right by r5.");
 
-		count = 48 + (count & 0xf);
-
+		InstCtx &= ~IC_CANSWAP;
 		auto mux = InstCtx & IC_B ? Instruct.MuxMB : Instruct.MuxMA;
 		if (mux == Inst::X_R5)
 			Msg(WARNING, "r5 does not support vector rotations.");
+
+		count = 48 + (count & 0xf);
 		auto isaccu = Inst::isAccu(mux);
 		if (!isaccu && count > 48+3 && count < 64-3)
 			Msg(WARNING, "%s does not support full MUL ALU vector rotation.", Inst::toString(mux));
@@ -644,11 +650,13 @@ void Parser::addPack(int mode)
 void Parser::addSetF(int)
 {
 	if ( Instruct.Sig < Inst::S_LDI && (InstCtx & IC_MUL)
-		&& (Instruct.WAddrA != Inst::R_NOP || Instruct.OpA != Inst::A_NOP) )
+		&& (Instruct.WAddrA != Inst::R_NOP || Instruct.OpA != Inst::A_NOP)
+		&& !trySwap() )
 		Fail("Cannot apply .setf because the flags of the ADD ALU will be used.");
 	if (Instruct.SF)
 		Fail("Don't use .setf twice.");
 	Instruct.SF = true;
+	InstCtx &= ~IC_CANSWAP;
 }
 
 void Parser::addCond(int cond)
@@ -1068,7 +1076,7 @@ void Parser::assembleMOV(int mode)
 					&& ( !si->Pack
 						|| ( (Instruct.Pack == Inst::P_32 || (Instruct.Pack == si->Pack.pack() && Instruct.PM == si->Pack.mode())) // no conflicting pack mode
 							&& (si->Pack.mode() || (InstCtx & IC_MUL ? Instruct.SF && Instruct.WAddrM > 32 : !Instruct.SF && Instruct.WAddrA < 32)) )) // regfile A
-					&& ((!si->OpCode.isMul() ^ !!(InstCtx & IC_MUL)) || Instruct.trySwap()) ) // other ALU needed
+					&& ((!si->OpCode.isMul() ^ !!(InstCtx & IC_MUL)) || trySwap()) ) // other ALU needed
 				{	Instruct.Sig   = Inst::S_SMI;
 					Instruct.SImmd = si->SImmd;
 					if (!!si->Pack)

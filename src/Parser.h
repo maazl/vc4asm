@@ -472,6 +472,11 @@ class Parser : public DebugInfo
 	/// @param ctx Context, type InstContext.
 	/// @remarks Bit 0: operator level, bit 2: source arg 1, bit 10: source arg 2
 	static constexpr int toExtReq(int ctx) { return 1 << (ctx&IC_SRCB); }
+	/// Swap ADD and MUL ALU of current instruction if allowed by InstCtx, adjust InstCtx.
+	/// @pre Instruct.Sig < Inst::S_BRANCH
+	/// @return true: swap succeeded, false: swap failed
+	/// @post InstCtx & IC_MUL is inverted on success.
+	bool             trySwap();
 	/// Apply vector rotation to the current context.
 	/// @param count Desired rotation: 0 = none, 1 = one element right ... 15 = one element left, -16 = rotate by r5
 	void             applyRot(int count);
