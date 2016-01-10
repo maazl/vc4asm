@@ -103,6 +103,7 @@ const Elf32_Sym WriteELF::Sym0 = {0};
 
 WriteELF::WriteELF()
 :	Target(NULL)
+,	NoStandardSymbols(false)
 {	Symbols.emplace_back(Sym0);
 }
 
@@ -117,6 +118,7 @@ void WriteELF::Write(const vector<uint64_t>& instructions, const DebugInfo& info
 	size_t code_size = instructions.size() * sizeof (uint64_t);
 
 	// Code fragment symbol, name = file name
+	if (!NoStandardSymbols)
 	{	auto cp = strrchr(filename, '/');
 		if (cp)
 			filename = cp+1;

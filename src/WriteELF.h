@@ -20,6 +20,7 @@ class DebugInfo;
 class WriteELF
 {public:
 	FILE* Target;
+	bool NoStandardSymbols;
 	WriteELF();
 	void Write(const vector<uint64_t>& instructions, const DebugInfo& info, const char* filename);
 

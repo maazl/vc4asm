@@ -25,6 +25,7 @@ int main(int argc, char **argv)
 	const char* writeCPP = NULL;
 	const char* writeCPP2 = NULL;
 	const char* writeELF = NULL;
+	const char* writeELF2 = NULL;
 	const char* writePRE = NULL;
 	bool check = false;
 
@@ -41,11 +42,13 @@ int main(int argc, char **argv)
 			writeCPP2 = optarg; break;
 		 case 'e':
 			writeELF = optarg; break;
+		 case 'E':
+			writeELF2 = optarg; break;
 		 case 'I':
 			parser.IncludePaths.push_back(optarg); break;
 		 case 'V':
 			check = true; break;
-		 case 'E':
+		 case 'P':
 			writePRE = optarg; break;
 		}
 	}
@@ -57,6 +60,7 @@ int main(int argc, char **argv)
 			" -c<file> C output file with trailing ','.\n"
 			" -C<file> C output file withOUT trailing ','.\n"
 			" -e<file> Linux ELF output file.\n"
+			" -E<file> Linux ELF output file without predefined symbols.\n"
 			" -I<path> Add search path for .include <...>\n"
 			" -V       Run instruction verifier and print warnings about suspicious code.\n"
 			, stderr);
@@ -134,13 +138,23 @@ int main(int argc, char **argv)
 		}
 
 		if (writeELF)
-		{
-			WriteELF we;
+		{	WriteELF we;
 			we.Target = fopen(writeELF, "wb");
 			if (we.Target == NULL)
 			{	fprintf(stderr, "Failed to open %s for writing.", writeELF);
 				return -1;
 			}
+			we.Write(parser.Instructions, parser, writeELF);
+			fclose(we.Target);
+		}
+		if (writeELF2)
+		{	WriteELF we;
+			we.Target = fopen(writeELF2, "wb");
+			if (we.Target == NULL)
+			{	fprintf(stderr, "Failed to open %s for writing.", writeELF2);
+				return -1;
+			}
+			we.NoStandardSymbols = true;
 			we.Write(parser.Instructions, parser, writeELF);
 			fclose(we.Target);
 		}

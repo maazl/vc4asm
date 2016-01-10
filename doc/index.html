@@ -161,14 +161,17 @@
         - <tt>&lt;filename-wo-extension&gt;_size</tt> receives the size of the
         generated binary code in bytes.<br>
         Special characters in the file name are replaced by an underscore.</dd>
+      <dt><tt>-E </tt><tt>&lt;ELF-output&gt;</tt></dt>
+      <dd>Like <tt>-e</tt> but do not automatically create the predefined
+        symbols derived from the file name.<br>
+        You need to use <a href="directives.html#.global"><tt>.global</tt></a>
+        to be able to access the code by a linker symbol.</dd>
       <dt><tt>-I &lt;include-path&gt;</tt></dt>
       <dd>Add an include path to the search path list. This paths are used at <a
           href="directives.html#.include"><tt>.include &lt;...&gt;</tt></a>.</dd>
       <dt><tt>-V</tt></dt>
       <dd>Check for Videocore IV constraints, e.g. reading a register file
         address immediately after writing it.</dd>
-      <dt><tt>-E &lt;preprocessed-output&gt;</tt></dt>
-      <dd>This is experimental and intended for debugging purposes only.</dd>
     </dl>
     <h3>File arguments</h3>
     <p>You can pass <i>multiple files</i> to <tt>vc4asm</tt> but this will not
