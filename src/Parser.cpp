@@ -1546,7 +1546,7 @@ void Parser::endREP(int mode)
 	else
 		sscanf(m.Args[1].c_str(), "%zi", &count);
 	auto& current = *Context.back();
-	auto& value = current.Consts.emplace(m.Args.front(), constDef(exprValue(0LL), current)).first->second.Value;
+	auto& value = current.Consts.emplace(m.Args.front(), constDef(exprValue((int64_t)0), current)).first->second.Value;
 	for (size_t i = 0; i < count; ++i)
 	{	// set argument
 		if (mode)
@@ -1630,7 +1630,7 @@ void Parser::parseCLONE(int)
 
 	FlagsSize(PC + (unsigned)param2.iValue);
 	param2.iValue += param1.iValue; // end offset rather than count
-	if (Pass2 && param2.iValue >= Instructions.size())
+	if (Pass2 && (unsigned)param2.iValue >= Instructions.size())
 		Fail("Cannot clone behind the end of the code.");
 
 	if (doALIGN(64))
