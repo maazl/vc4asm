@@ -834,18 +834,18 @@ void Parser::doALUExpr()
 			// some special hacks for ADD ALU
 			if (InstCtx == IC_SRCB)
 			{	switch (Instruct.OpA)
-				{case Inst::A_ADD: // swap ADD and SUB in case of constant 16
+				{case Inst::A_ADD: // swap ADD and SUB in case of constant 16 or negative SMI match
 				 case Inst::A_SUB:
-					if (value.iValue == 16)
+					if ( value.iValue == 16
+						|| (Instruct.Sig == Inst::S_SMI && Instruct.SMIValue().iValue == -value.iValue) )
 					{	(uint8_t&)Instruct.OpA ^= Inst::A_ADD ^ Inst::A_SUB; // swap add <-> sub
-						value.iValue = -16;
+						value.iValue = -value.iValue;
 					}
 					break;
 				 case Inst::A_ASR: // shift instructions ignore all bits except for the last 5
 				 case Inst::A_SHL:
 				 case Inst::A_SHR:
 				 case Inst::A_ROR:
-					if (value.iValue)
 					value.iValue = (value.iValue << 27) >> 27; // sign extend
 				 default:;
 				}
