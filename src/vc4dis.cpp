@@ -1,6 +1,7 @@
 #include "Disassembler.h"
 #include "Validator.h"
 
+#include <cinttypes>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -66,8 +67,8 @@ static void file_load_x32(const char *filename, vector<uint64_t>& memory)
 		return;
 	}
 	uint32_t value1, value2;
-	while ((fscanf(f, "%*[ \t]"), fscanf(f, "//%*[^\n]"), fscanf(f, "%x,", &value1)) == 1)
-	{	if (fscanf(f, "%x,", &value2) != 1)
+	while ((fscanf(f, "%*[ \t]"), fscanf(f, "//%*[^\n]"), fscanf(f, "%" SCNx32 ",", &value1)) == 1)
+	{	if (fscanf(f, "%" SCNx32 "x,", &value2) != 1)
 		{	if (feof(f))
 			{	fprintf(stderr, "File %s must contain an even number of 32 bit words.\n", filename);
 				goto done;
@@ -94,7 +95,7 @@ static void file_load_x64(const char *filename, vector<uint64_t>& memory)
 		return;
 	}
 	uint64_t value;
-	while ((fscanf(f, "%*[ \t]"), fscanf(f, "//%*[^\n]"), fscanf(f, "%Lx,", &value)) == 1)
+	while ((fscanf(f, "%*[ \t]"), fscanf(f, "//%*[^\n]"), fscanf(f, "%" SCNx64 ",", &value)) == 1)
 		memory.push_back(value);
 	if (!feof(f))
 	{	char buf[10];
