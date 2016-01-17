@@ -803,7 +803,6 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x10101010, 28, Inst::M_MUL24, Inst::P_8abcd }
 ,	{ 0x10101010, 44, Inst::M_V8MIN, -Inst::P_8abcd }
 ,	{ 0x10101010, 46, Inst::M_FMUL,  -Inst::P_8abcd }
-,	{ 0x10101010, 11, Inst::A_ADD,   Inst::P_8abcdS }
 ,	{ 0x10101010,  4, Inst::M_MUL24, Inst::P_8abcdS }
 ,	{ 0x10101010, 36, Inst::A_FTOI,  Inst::P_8abcdS }
 ,	{ 0x10101010,  8, Inst::M_V8ADDS,Inst::P_8abcdS }
