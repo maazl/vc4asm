@@ -1070,29 +1070,52 @@ void Parser::assembleMOV(int mode)
 			 case Inst::S_SMI:;
 			}
 			for (si = getSmallImmediateALU(value.uValue); si->Value == value.uValue; ++si)
-			{	if ( (Extensions || !si->OpCode.isExt())
-					&& ( Instruct.Sig == Inst::S_NONE
-						|| (Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd) )
-					&& ( !si->Pack
-						|| ( (Instruct.Pack == Inst::P_32 || (Instruct.Pack == si->Pack.pack() && Instruct.PM == si->Pack.mode())) // no conflicting pack mode
-							&& (si->Pack.mode() || (InstCtx & IC_MUL ? Instruct.SF && Instruct.WAddrM > 32 : !Instruct.SF && Instruct.WAddrA < 32)) )) // regfile A
-					&& ((!si->OpCode.isMul() ^ !!(InstCtx & IC_MUL)) || trySwap()) ) // other ALU needed
-				{	Instruct.Sig   = Inst::S_SMI;
-					Instruct.SImmd = si->SImmd;
-					if (!!si->Pack)
-					{	Instruct.Pack = si->Pack.pack();
-						Instruct.PM   = si->Pack.mode();
+			{	// Opcode extensions not enabled?
+				if (si->OpCode.isExt() && !Extensions)
+					continue;
+				// conflicting signal or small immediate value
+				if (Instruct.Sig != Inst::S_NONE && !(Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd))
+					continue;
+				// Check pack mode
+				if (!!si->Pack)
+				{	// conflicting pack mode?
+					if (Instruct.Pack != Inst::P_32 && !(Instruct.Pack == si->Pack.pack() && Instruct.PM == si->Pack.mode()))
+						continue;
+					// Regfile A target
+					if (!si->Pack.mode())
+					{	// .setf may return unexpected results in pack mode in sign bit. TODO: accept all cases where this does not happen.
+						if (Instruct.SF)
+							continue;
+						// Not regfile A target?
+						if (InstCtx & IC_MUL)
+						{	if (!Instruct.WS || Instruct.WAddrM >= 32)
+								continue;
+						} else
+						{	if (Instruct.WS || Instruct.WAddrA >= 32)
+								continue;
+						}
 					}
-				 mov0:
-					if (si->OpCode.isMul())
-					{	Instruct.MuxMA = Instruct.MuxMB = mux = Inst::X_RB;
-						Instruct.OpM   = si->OpCode.asMul();
-					} else
-					{	Instruct.MuxAA = Instruct.MuxAB = mux = Inst::X_RB;
-						Instruct.OpA   = si->OpCode.asAdd();
-					}
-					goto ext;
 				}
+				// other ALU needed?
+				if ((!si->OpCode.isMul() ^ !(InstCtx & IC_MUL)) && !trySwap())
+					continue;
+
+				// Match!
+				Instruct.Sig   = Inst::S_SMI;
+				Instruct.SImmd = si->SImmd;
+				if (!!si->Pack)
+				{	Instruct.Pack = si->Pack.pack();
+					Instruct.PM   = si->Pack.mode();
+				}
+			 mov0:
+				if (si->OpCode.isMul())
+				{	Instruct.MuxMA = Instruct.MuxMB = mux = Inst::X_RB;
+					Instruct.OpM   = si->OpCode.asMul();
+				} else
+				{	Instruct.MuxAA = Instruct.MuxAB = mux = Inst::X_RB;
+					Instruct.OpA   = si->OpCode.asAdd();
+				}
+				goto ext;
 			}
 		}
 		// LDI
