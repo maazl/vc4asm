@@ -5,7 +5,7 @@
 #include "mailbox.h"
 
 #define VEC_COUNT 3*16
-#define RES_COUNT 38
+#define RES_COUNT 44
 #define RES_COUNT2 24
 #define GPU_MEM_FLG 0xC // cached=0xC; direct=0x4
 
@@ -34,6 +34,7 @@ static const char op[RES_COUNT][8] =
 	"add", "sub", "shr", "asr", "ror", "shl", "min", "max", "and", "or", "xor", "not", "clz",
 	"fmul", "mul24", "v8muld", "v8min", "v8max", "v8adds", "v8subs",
 	"A0", "A9", "A10", "A11", "A25", "A26", "A27", "A28", "A29", "M0",
+	"fmulP", "mul24P", "v8muldP", "v8minP", "v8addsP", "v8subsP"
 };
 
 static const char pack[RES_COUNT2][8] =
