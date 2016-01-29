@@ -473,9 +473,10 @@ Inst::mux Parser::muxReg(reg_t reg)
 	// try RA
 	if (reg.Type & R_A)
 	{	if ( Instruct.RAddrA == reg.Num
-			|| ( (Instruct.OpA == Inst::A_NOP || (Instruct.MuxAA != Inst::X_RA && Instruct.MuxAB != Inst::X_RA))
-				&& (Instruct.OpM == Inst::M_NOP || (Instruct.MuxMA != Inst::X_RA && Instruct.MuxMB != Inst::X_RA)) ))
-		{	Instruct.RAddrA = reg.Num;
+			|| ( Instruct.MuxAA != Inst::X_RA && Instruct.MuxAB != Inst::X_RA
+				&& Instruct.MuxMA != Inst::X_RA && Instruct.MuxMB != Inst::X_RA ))
+		{RA:
+			Instruct.RAddrA = reg.Num;
 			return Inst::X_RA;
 		}
 	}
@@ -484,11 +485,28 @@ Inst::mux Parser::muxReg(reg_t reg)
 	{	if (Instruct.Sig >= Inst::S_SMI)
 			Fail("Access to register file B conflicts with small immediate value.");
 		if ( Instruct.RAddrB == reg.Num
-			|| ( (Instruct.OpA == Inst::A_NOP || (Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB))
-				&& (Instruct.OpM == Inst::M_NOP || (Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB)) ))
-		{	Instruct.RAddrB = reg.Num;
+			|| ( Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB
+				&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB ))
+		{RB:
+			Instruct.RAddrB = reg.Num;
 			return Inst::X_RB;
 		}
+	}
+	// try to swap RA and RB of existing instruction
+	switch (reg.Type & R_AB)
+	{case R_A:
+		if (( Instruct.RAddrB == reg.Num
+				|| ( Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB
+					&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB ))
+			&& Instruct.tryRABSwap() )
+			goto RA;
+		break;
+	 case R_B:
+		if (( Instruct.RAddrA == reg.Num
+				|| ( Instruct.MuxAA != Inst::X_RA && Instruct.MuxAB != Inst::X_RA
+					&& Instruct.MuxMA != Inst::X_RA && Instruct.MuxMB != Inst::X_RA ))
+			&& Instruct.tryRABSwap() )
+			goto RB;
 	}
 	Fail("Read access to register conflicts with another access to the same register file.");
 }
@@ -528,9 +546,8 @@ void Parser::doSMI(uint8_t si)
 	Instruct.SImmd = si;
 }
 
-bool
-Parser::trySwap()
-{	if ((InstCtx & IC_CANSWAP) == 0 || !Instruct.trySwap())
+bool Parser::trySwap()
+{	if ((InstCtx & IC_CANSWAP) == 0 || !Instruct.tryALUSwap())
 		return false;
 	InstCtx ^= IC_MUL;
 	return true;
@@ -911,7 +928,7 @@ void Parser::assembleADD(int add_op)
 	if (Instruct.isADD())
 	{	switch (add_op)
 		{default:
-			if (Instruct.OpM == Inst::M_NOP && Instruct.trySwap())
+			if (Instruct.OpM == Inst::M_NOP && Instruct.tryALUSwap())
 				goto cont;
 			Fail("The ADD ALU has already been used in this instruction.");
 		 case Inst::A_NOP:
@@ -953,7 +970,7 @@ void Parser::assembleMUL(int mul_op)
 	if (Instruct.isMUL())
 	{	switch (mul_op)
 		{default:
-			if (Instruct.OpA == Inst::A_NOP && Instruct.trySwap())
+			if (Instruct.OpA == Inst::A_NOP && Instruct.tryALUSwap())
 				goto cont;
 			Fail("The MUL ALU has already been used by the current instruction.");
 		 case Inst::M_NOP:

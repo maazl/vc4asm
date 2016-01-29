@@ -62,7 +62,7 @@ Inst::conda Validator::GetRdCond(Inst inst, Inst::mux m)
 		// branch is special, the branch conditions do not count here
 		return inst.Reg && m == Inst::X_RA ? Inst::C_AL : Inst::C_NEVER;
 	 case Inst::S_SMI:
-		// small immediates cannot access regfile B
+		// small immediate cannot access regfile B
 		if (m == Inst::X_RB)
 			return Inst::C_NEVER;
 	 default:;

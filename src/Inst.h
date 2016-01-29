@@ -270,10 +270,14 @@ struct Inst
 	/// @pre Sig < S_LDI
 	bool       isUnary() const { return (0x01800180 & (1<<OpA)) != 0; }
 
+	/// Try to swap read access to register file A and B
+	/// if the already existing read access is invariant of this change.
+	/// See also isRRegAB.
+	/// @return true: swap succeeded, false: instruction unchanged
+	bool       tryRABSwap();
 	/// Try to swap ADD and MUL ALU of the current instruction
 	/// @return true: swap succeeded, false: instruction unchanged
-	/// @pre Sig < S_LDI
-	bool       trySwap();
+	bool       tryALUSwap();
 
 	/// Some optimizations to save ALU power
 	void       optimize();

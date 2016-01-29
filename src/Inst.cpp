@@ -272,10 +272,27 @@ void Inst::reset()
 	SF = false;
 }
 
-bool Inst::trySwap()
-{
-	if ( SF             // can't swap with set flags
-		|| (PM && Pack)   // can't swap with MUL ALU pack
+bool Inst::tryRABSwap()
+{	if ( Sig >= S_LDI      // can't swap ldi and branch
+		|| (Unpack && !PM)   // can't swap with regfile A unpack
+		|| !isRRegAB(RAddrA) // regfile A read not invariant
+		|| !isRRegAB(RAddrB) // regfile B read not invariant
+		|| ( Sig == S_LDI    // can't swap small immediate, but vector rotation is OK
+			&& (MuxAA == X_RB || MuxAB == X_RB || MuxMA == X_RB || MuxMB == X_RB) ))
+		return false;
+	// execute swap
+	swap(RAddrA, RAddrB);
+	if (MuxAA >= X_RA) (uint8_t&)MuxAA ^= X_RA^X_RB;
+	if (MuxAB >= X_RA) (uint8_t&)MuxAB ^= X_RA^X_RB;
+	if (MuxMA >= X_RA) (uint8_t&)MuxMA ^= X_RA^X_RB;
+	if (MuxMB >= X_RA) (uint8_t&)MuxMB ^= X_RA^X_RB;
+	return true;
+}
+
+bool Inst::tryALUSwap()
+{	if ( Sig >= S_LDI   // can't swap ldi and branch
+		|| SF             // can't swap with set flags
+		|| (Pack && PM)   // can't swap with MUL ALU pack
 		|| (Sig == S_SMI && SImmd >= 48) ) // can't swap with vector rotation
 		return false;
 	opadd opa;
