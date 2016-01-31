@@ -2,8 +2,8 @@ FLAGS    = -Wall -std=c++11 -O3
 CPPFLAGS = -c
 LDFLAGS  =
 LIBS     = -lm -lstdc++
-CC  = g++-4.8
-LD  = gcc-4.8
+CC  = g++
+LD  = gcc
 EXE =
 O   = .o
 
