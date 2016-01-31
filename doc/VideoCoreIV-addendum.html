@@ -17,7 +17,7 @@
       write to regfile A or regfile B. vc4asm supports the register names <tt>r5quad</tt>
       and <tt>r5rep</tt> for this purpose. The documentation is wrong, nothing
       is concatenated from low order bytes.</p>
-    <h3>Horizontal vector rotation</h3>
+    <h3>Section 3: Horizontal vector rotation</h3>
     <p>Both source operands must be from accumulator <tt>r0</tt>..<tt>r3</tt>
       for full vector rotation. But if you choose not to do so the rotation will
       only take place within the slices. I.e. [0,1,2,3, 4,5,6,7, 8,9,10,11,
@@ -32,7 +32,7 @@
       appropriate <code>.if<var>cc</var></code> extension, either at the
       previous write or at the rotation instruction itself. Examples:</p>
     <pre>and.setf -, elem_num, 1<br>mov&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; r0, ra0<br>mov.ifz&nbsp; r1, r0&lt;&lt;1<br><br>shr.setf -, elem_num, 1<br>mov.ifc&nbsp; r0, ra0<br>mov&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; r1, r0&lt;&lt;1<br><br>and.setf -, elem_num, 12<br>mov      r0, ra0<br>mov.ifnz r1, r0&gt;&gt;3</pre>
-    <h3>Table 5: Small immediate values</h3>
+    <h3>Section 3, Table 5: Small immediate values</h3>
     <p>The small immediate codes for vector rotations can also be used as
       additional constants. Well, all of them are redundant with [16..31] but
       this allows you to combine vector rotations with immediate values. vc4asm
@@ -111,6 +111,14 @@
         </tr>
       </tbody>
     </table>
+    <h3>Section 3: Table 1: ALU Instruction Fields - set flags</h3>
+    <p>The flags are <em>only updated when</em> the corresponding <em>condition
+        codes evaluate true</em> and the target value is assigned. You may use
+      this feature do boolean operations with the flags.</p>
+    <p>Furthermore the flags are <em>only updated from the MUL ALU when the ADD
+        ALU executes a <tt>nop</tt></em>. In contrast to the Broadcom
+      documetation the condition code <tt>.never</tt> has no effect on this
+      behavior.</p>
     <h3>Section 3: Branch instruction - implicit set flags</h3>
     <p>Unlike the Broadcom documentation suggests the <em>branch instruction is
         able to set the flags</em>. But the <tt>sf</tt> bit is at the same
@@ -124,6 +132,16 @@
     <pre>and.setf -,  elem_num, 1<br>bra      -,  ra1        # implies .setf<br>mov.ifz  r0, 1<br>...</pre>
     <p>Since a branch target will never be at the physical address 0 the <tt>mov.ifz</tt>
       instruction in the above example will never assign a value.</p>
+    <h3>Section 3: Branch instruction - register source</h3>
+    <p>The <em>branch target</em> is taken from <em>SIMD element <b>15</b></em>
+      if <tt>reg</tt> is set rather than element 0. This is wrong at several
+      places in the documentation.</p>
+    <h3>Section 3: Branch instruction - target assignment</h3>
+    <p>The assignment of the target register(s) of a branch instruction depends
+      on the flags. The target register is only assigned if the branch is
+      actually taken. The same applies to the flags is <tt>sf</tt> is true. So
+      you may not abuse <tt>brr.never</tt> to load the relocated values of labels
+      into a register.</p>
     <h3>Section 7: QPU Reading and Writing of VPM</h3>
     <p>VPM reads seem to <em>block immediately if the FIFO is empty</em>. No
       undefined data is returned when the reads are made too early.</p>
