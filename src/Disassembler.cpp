@@ -45,7 +45,7 @@ void Disassembler::appendPE(bool sign)
 	signed char values[16];
 	if (sign)
 		for (int pos = 16; pos--; val <<= 1)
-			values[pos] = (((int32_t)val >> 30) & 2) | ((val >> 15) & 1);
+			values[pos] = (((int32_t)val >> 30) & -2) | ((val >> 15) & 1);
 	else
 		for (int pos = 16; pos--; val <<= 1)
 			values[pos] = ((val >> 30) & 2) | ((val >> 15) & 1);
