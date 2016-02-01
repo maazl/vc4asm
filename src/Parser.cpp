@@ -647,14 +647,14 @@ void Parser::addPack(int mode)
 		} else
 		{	// At target register of MUL ALU
 			// Prefer regfile A pack even for MUL ALU
-			if (Instruct.WS && Instruct.WAddrA < 32 && !Instruct.PM)
+			if (Instruct.WS && Instruct.WAddrM < 32 && !Instruct.PM)
 				pm = false;
 			// Check for pack mode supported by MUL ALU
 			else if (mode < Inst::P_8abcdS)
 				Fail("MUL ALU only supports saturated pack modes with 8 bit.");
 			else
 				// Use intermediate pack mode matching the ALU
-				mode &= 7;		// Use intermediate pack mode matching the ALU
+				mode &= 7;
 		}
 	}
 	if (Instruct.Unpack && Instruct.PM != pm)
