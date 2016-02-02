@@ -10,7 +10,7 @@
   <body>
     <h1>Addendum to the <a href="http://www.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf">Broadcom
         VideoCore IV documentation</a></h1>
-    <h2>Bugs and additional features</h2>
+    <h2>Instruction set bugs and additional features</h2>
     <h3>Section 3: Writing to <tt>r5</tt></h3>
     <p><tt>r5</tt> can be written <em>from the elements 0, 4, 8 and 12</em> for
       each slice <em>or only from element 0</em>, depending on whether you
@@ -163,8 +163,11 @@
     <p>A write to the TMU retiring register (TMU0_S, TMU1_S) or VPM must not use
       conditional write access. Although the conditional write itself works the
       TMU/VPM fifo is triggered unconditional to process the request with
-      undefined data in case the condition is not true. Probably any other
-      peripheral register share the same problem.</p>
+      undefined data in case the condition is not true.<br>
+      You should also not write to the same register from both ALUs with inverse
+      condition flags. E.g. <tt>mov.ifz vpm, 0; mov.ifnz vpm, 1</tt> will write
+      an undefined value from the MUL ALU.<br>
+      Probably any other peripheral register share the same problems.</p>
     <p>vc4asm warns about this kind of access in verify mode.</p>
     <h3>Distance of branch instructions</h3>
     <p>There must be at least two non branch instructions between every two
@@ -181,5 +184,10 @@
     <p>The MUL ALU pack modes that write only a single byte are not available
       for I/O register targets. The write only hardware registers cannot write
       slices of a word.</p>
+    <h2>V3D Registers</h2>
+    <h3>Section 10: Performance counters</h3>
+    <p>The documentation of the <em>V3D_PCTRE</em> register is wrong. <em>You
+        need to set </em><em>bit 31</em> (allegedly reserved) to enable
+      performance counters at all.</p>
   </body>
 </html>
