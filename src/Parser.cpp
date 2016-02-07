@@ -778,11 +778,7 @@ void Parser::doALUTarget(exprValue param)
 		Fail("The register is not writable.");
 	bool mul = (InstCtx & IC_MUL) != 0;
 	if ((param.rValue.Type & R_AB) != R_AB)
-	{	bool wsfreeze =
-			  !Inst::isWRegAB(mul ? Instruct.WAddrA : Instruct.WAddrM) // Can't swap the other target register, this includes any regfile A access.
-			|| ( !mul && Instruct.Sig != Inst::S_BRANCH && (           // We assemble a ADD instruction and
-			    (Instruct.Pack != Inst::P_32 && Instruct.PM)           // the MUL ALU pack or
-			  || (Instruct.Sig == Inst::S_SMI && Instruct.SImmd >= 48) ));// vector rotation is used.
+	{	bool wsfreeze = !Inst::isWRegAB(mul ? Instruct.WAddrA : Instruct.WAddrM); // Can't swap the other target register.
 		if ((param.rValue.Type & R_A) && (!wsfreeze || Instruct.WS == mul))
 			Instruct.WS = mul;
 		else if ((param.rValue.Type & R_B) && (!wsfreeze || Instruct.WS != mul))
