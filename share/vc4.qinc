@@ -53,7 +53,7 @@
 .func h32(y, x)
   .assert !(y & ~0x3f)
   .assert !x
-  0xa00 | y | x
+  0xa00 | y
 .endf
 .func v32(y, x)
   .assert !(y & ~0x30)
