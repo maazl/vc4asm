@@ -1466,7 +1466,9 @@ void Parser::parseDATA(int type)
 }
 
 void Parser::parseALIGN(int bytes)
-{
+{	if (doPreprocessor())
+		return;
+
 	if (bytes < 0)
 	{	auto val = ParseExpression();
 		if (val.Type != V_INT)
@@ -1488,17 +1490,17 @@ bool Parser::doALIGN(int bytes)
 		return false;
 
 	// bit alignment
-	int align = BitOffset & ((8*bytes)-1);
+	int align = BitOffset & ((bytes<3)-1);
 	if (align)
 	{	BitOffset += 8*bytes - align;
-		if (BitOffset == 64) // cannot overflow
-		{	BitOffset = 0;
-			++PC;
+		if (BitOffset >= 64) // cannot overflow
+		{	++PC;
+			BitOffset = 0;
 		}
 	}
 
 	// Instruction level alignment
-	bytes >>= 8;
+	bytes >>= 3;
 	if (!bytes || !(PC & --bytes))
 		return align != 0;
 	// BitOffset is necessarily zero at this point.
@@ -1683,7 +1685,7 @@ void Parser::parseCLONE(int)
 	if (Pass2 && (unsigned)param2.iValue >= Instructions.size())
 		Fail("Cannot clone behind the end of the code.");
 
-	if (doALIGN(64))
+	if (doALIGN(8))
 		Msg(WARNING, "Used padding to enforce 64 bit alignment of GPU instruction.");
 
 	auto src = (unsigned)param1.iValue;
@@ -2247,7 +2249,7 @@ void Parser::ParseLine()
 			return;
 		}
 
-		if (doALIGN(64))
+		if (doALIGN(8))
 			Msg(WARNING, "Used padding to enforce 64 bit alignment of GPU instruction.");
 
 		if (trycombine)

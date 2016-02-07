@@ -4,11 +4,10 @@
     <meta content="text/html; charset=windows-1252" http-equiv="content-type">
     <title>vc4asm - change log</title>
     <meta content="Marcel M&uuml;ller" name="author">
-    <meta content="Raspberry Pi BCM2835 QPU macro assembler" name="keywords">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
   </head>
   <body>
-    <h1>VC4ASM -History of changes</h1>
+    <h1>VC4ASM - History of changes</h1>
     <p><a href="index.html">&uarr; Top</a></p>
     <h2>V 0.2.1</h2>
     <ul>
@@ -16,6 +15,7 @@
         register is invariant of that.</li>
       <li>Fixed use of regfile A pack modes with MUL ALU.</li>
       <li>Fixed disassemble signed values at <tt>ldipes</tt>.</li>
+      <li>Fixed <tt>.align</tt> with more than 8 bytes.</li>
       <li>Fixed local labels in <tt>.rep</tt>.</li>
     </ul>
     <h2>V 0.2</h2>
@@ -41,7 +41,7 @@
       <li> Fixed <tt>.foreach</tt></li>
       <li>Added support for direct ELF output.</li>
       <li> Added <tt>.global</tt> directive to export symbols in ELF format.</li>
-      <li> Added support for include search paths.</li>
+      <li> Added support for C like include search paths.</li>
       <li> Added <tt>.local</tt>/<tt>.endloc</tt>.</li>
       <li> Do not accept blanks between : and label name to disambiguate branch
         target markers before instruction names.</li>
