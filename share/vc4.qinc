@@ -144,8 +144,11 @@
   .lset x, x >>> 2 & 0x3333333333333333 | (x & 0x3333333333333333) <<< 2
   .lset x, x >>> 4 & 0x0f0f0f0f0f0f0f0f | (x & 0x0f0f0f0f0f0f0f0f) <<< 4
   .lset x, x >>> 8 & 0x00ff00ff00ff00ff | (x & 0x00ff00ff00ff00ff) <<< 8
-  .lset x, x >>> 16& 0x00000000ffffffff | (x & 0x00000000ffffffff) <<< 16
+  .lset x, x >>> 16& 0x0000ffff0000ffff | (x & 0x0000ffff0000ffff) <<< 16
   x >>> 32 | x <<< 32
+.endf
+.func reverseBits(x,n)
+  reverseBits64(x<<<(64-n))
 .endf
 .set M_E,       2.7182818284590452354  # e
 .set M_LOG2E,   1.4426950408889634074  # log_2 e
