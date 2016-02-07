@@ -8,6 +8,8 @@ Unfortunately this area is highly undocumented in the public domain. And so the 
 
 <a href="http://www.maazl.de/project/vc4asm/doc/index.html#download">&rarr; Homepage & Download</a>
 
+<a href="http://www.maazl.de/project/vc4asm/doc/changelog.html">&rarr; Changelog</a>
+
 <a href="http://www.maazl.de/project/vc4asm/doc/index.html#vc4asm">&rarr; Assembler</a>
 
 <a href="http://www.maazl.de/project/vc4asm/doc/index.html#vc4dis">&rarr; Disassembler</a>
