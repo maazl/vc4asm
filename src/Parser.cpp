@@ -1327,8 +1327,8 @@ void Parser::defineLabel()
 	{	if (BitOffset & 7)
 			Fail("Cannot set a label at a bit boundary. At least byte alignment is required.");
 		lp->Value = PC * sizeof(uint64_t) + (BitOffset >> 3);
-	} else if (lp->Name != Token || lp->Value != PC * sizeof(uint64_t))
-		Fail("Inconsistent label definition during pass 2.");
+	}// else if (lp->Name != Token || lp->Value != PC * sizeof(uint64_t))
+	//	Fail("Inconsistent label definition during pass 2.");
 	lp->Definition = *Context.back();
 
 	if (Preprocessed)
