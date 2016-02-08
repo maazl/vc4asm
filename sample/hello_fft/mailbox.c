@@ -221,21 +221,19 @@ unsigned qpu_enable(int file_desc, unsigned enable)
 }
 
 unsigned execute_qpu(int file_desc, unsigned num_qpus, unsigned control, unsigned noflush, unsigned timeout) {
-   int i=0;
    unsigned p[32];
 
-   p[i++] = 0; // size
-   p[i++] = 0x00000000; // process request
-   p[i++] = 0x30011; // (the tag id)
-   p[i++] = 16; // (size of the buffer)
-   p[i++] = 16; // (size of the data)
-   p[i++] = num_qpus;
-   p[i++] = control;
-   p[i++] = noflush;
-   p[i++] = timeout; // ms
+   p[0] = 10*sizeof *p; // actual size
+   p[1] = 0x00000000; // process request
+   p[2] = 0x30011; // (the tag id)
+   p[3] = 16; // (size of the buffer)
+   p[4] = 16; // (size of the data)
+   p[5] = num_qpus;
+   p[6] = control;
+   p[7] = noflush;
+   p[8] = timeout; // ms
 
-   p[i++] = 0x00000000; // end tag
-   p[0] = i*sizeof *p; // actual size
+   p[9] = 0x00000000; // end tag
 
    mbox_property(file_desc, p);
    return p[5];

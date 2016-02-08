@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mailbox.h"
 
 #include <time.h>
+#include <stdio.h>
 
 #define BUS_TO_PHYS(x) ((x)&~0xC0000000)
 
@@ -44,6 +45,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define V3D_DBCFG   (0xC00e00>>2)
 #define V3D_DBQITE  (0xC00e2c>>2)
 #define V3D_DBQITC  (0xC00e30>>2)
+#define V3D_PCTRC   (0xC00670>>2)
+#define V3D_PCTRE   (0xC00674>>2)
+#define V3D_PCTR(n) (2*(n)+(0xC00680>>2))
+#define V3D_PCTRS(n) (2*(n)+(0xC00684>>2))
 
 // Setting this define to zero on Pi 1 allows GPU_FFT and Open GL
 // to co-exist and also improves performance of longer transforms:
@@ -52,149 +57,188 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define GPU_FFT_NO_FLUSH 0
 #define GPU_FFT_TIMEOUT 2000 // ms
 
-struct GPU_FFT_HOST {
-    unsigned mem_flg, mem_map, peri_addr, peri_size;
+struct GPU_FFT_HOST
+{
+	unsigned mem_flg, mem_map, peri_addr, peri_size;
 };
 
-int gpu_fft_get_host_info(struct GPU_FFT_HOST *info) {
-    void *handle;
-    unsigned (*bcm_host_get_sdram_address)     (void);
-    unsigned (*bcm_host_get_peripheral_address)(void);
-    unsigned (*bcm_host_get_peripheral_size)   (void);
+int gpu_fft_get_host_info(struct GPU_FFT_HOST *info)
+{
+	void *handle;
+	unsigned (*bcm_host_get_sdram_address)(void);
+	unsigned (*bcm_host_get_peripheral_address)(void);
+	unsigned (*bcm_host_get_peripheral_size)(void);
 
-    // Pi 1 defaults
-    info->peri_addr = 0x20000000;
-    info->peri_size = 0x01000000;
-    info->mem_flg = GPU_FFT_USE_VC4_L2_CACHE? 0xC : 0x4;
-    info->mem_map = GPU_FFT_USE_VC4_L2_CACHE? 0x0 : 0x20000000; // Pi 1 only
+	// Pi 1 defaults
+	info->peri_addr = 0x20000000;
+	info->peri_size = 0x01000000;
+	info->mem_flg = GPU_FFT_USE_VC4_L2_CACHE ? 0xC : 0x4;
+	info->mem_map = GPU_FFT_USE_VC4_L2_CACHE ? 0x0 : 0x20000000; // Pi 1 only
 
-    handle = dlopen("libbcm_host.so", RTLD_LAZY);
-    if (!handle) return -1;
+	handle = dlopen("libbcm_host.so", RTLD_LAZY);
+	if (!handle)
+		return -1;
 
-    *(void **) (&bcm_host_get_sdram_address)      = dlsym(handle, "bcm_host_get_sdram_address");
-    *(void **) (&bcm_host_get_peripheral_address) = dlsym(handle, "bcm_host_get_peripheral_address");
-    *(void **) (&bcm_host_get_peripheral_size)    = dlsym(handle, "bcm_host_get_peripheral_size");
+	*(void **)(&bcm_host_get_sdram_address) = dlsym(handle, "bcm_host_get_sdram_address");
+	*(void **)(&bcm_host_get_peripheral_address) = dlsym(handle, "bcm_host_get_peripheral_address");
+	*(void **)(&bcm_host_get_peripheral_size) = dlsym(handle, "bcm_host_get_peripheral_size");
 
-    if (bcm_host_get_sdram_address && bcm_host_get_sdram_address()!=0x40000000) { // Pi 2?
-        info->mem_flg = 0x4; // ARM cannot see VC4 L2 on Pi 2
-        info->mem_map = 0x0;
-    }
+	if (bcm_host_get_sdram_address && bcm_host_get_sdram_address() != 0x40000000)
+	{ // Pi 2?
+		info->mem_flg = 0x4; // ARM cannot see VC4 L2 on Pi 2
+		info->mem_map = 0x0;
+	}
 
-    if (bcm_host_get_peripheral_address) info->peri_addr = bcm_host_get_peripheral_address();
-    if (bcm_host_get_peripheral_size)    info->peri_size = bcm_host_get_peripheral_size();
+	if (bcm_host_get_peripheral_address)
+		info->peri_addr = bcm_host_get_peripheral_address();
+	if (bcm_host_get_peripheral_size)
+		info->peri_size = bcm_host_get_peripheral_size();
 
-    dlclose(handle);
-    return 0;
+	dlclose(handle);
+	return 0;
 }
 
-unsigned gpu_fft_base_exec_direct (
-    struct GPU_FFT_BASE *base,
-    int num_qpus) {
+unsigned gpu_fft_base_exec_direct(struct GPU_FFT_BASE *base, int num_qpus)
+{
 
-    unsigned q, t;
-    time_t limit = 0;
+	unsigned q, t;
+	time_t limit = 0;
 
-    base->peri[V3D_DBCFG] = 0; // Disallow IRQ
-    base->peri[V3D_DBQITE] = 0; // Disable IRQ
-    base->peri[V3D_DBQITC] = -1; // Resets IRQ flags
+	base->peri[V3D_DBCFG] = 0; // Disallow IRQ
+	base->peri[V3D_DBQITE] = 0; // Disable IRQ
+	base->peri[V3D_DBQITC] = -1; // Resets IRQ flags
 
-    base->peri[V3D_L2CACTL] =  1<<2; // Clear L2 cache
-    base->peri[V3D_SLCACTL] = -1; // Clear other caches
+	base->peri[V3D_L2CACTL] = 1 << 2; // Clear L2 cache
+	base->peri[V3D_SLCACTL] = -1; // Clear other caches
 
-    base->peri[V3D_SRQCS] = (1<<7) | (1<<8) | (1<<16); // Reset error bit and counts
+	base->peri[V3D_SRQCS] = (1 << 7) | (1 << 8) | (1 << 16); // Reset error bit and counts
 
-    for (q=0; q<num_qpus; q++) { // Launch shader(s)
-        base->peri[V3D_SRQUA] = base->vc_unifs[q];
-        base->peri[V3D_SRQPC] = base->vc_code;
-    }
+	for (q = 0; q < num_qpus; q++)
+	{ // Launch shader(s)
+		//printf(stderr, "Launch %x, %x\n", base->vc_mail[q].unifs, base->vc_mail[q].code);
+		base->peri[V3D_SRQUA] = base->vc_unifs[q];
+		base->peri[V3D_SRQPC] = base->vc_code;
+	}
 
-    // Busy wait polling
-    for (;;) {
-        q = 1000;
-        do
-            if (((base->peri[V3D_SRQCS]>>16) & 0xff) == num_qpus) // All done?
-                return 0;
-        while (--q);
-        if (!limit)
-        	limit = clock() + CLOCKS_PER_SEC * GPU_FFT_TIMEOUT / 1000;
-        else if (clock() >= limit)
-            // TODO: some cleanup required?
-            return -1;
-    }
+	// Busy wait polling
+	num_qpus <<= 16;
+	for (;;)
+	{
+		q = 1000;
+		do
+			if ((base->peri[V3D_SRQCS] & 0xff0000) == num_qpus) // All done?
+				return 0;
+		while (--q);
+		if (!limit)
+			limit = clock() + CLOCKS_PER_SEC * GPU_FFT_TIMEOUT / 1000;
+		else if (clock() >= limit)
+			// TODO: some cleanup required?
+			return -1;
+	}
+	return 0;
 }
 
-unsigned gpu_fft_base_exec(
-    struct GPU_FFT_BASE *base,
-    int num_qpus) {
-
-    if (base->vc_msg) {
-        // Use mailbox
-        // Returns: 0x0 for success; 0x80000000 for timeout
-        return execute_qpu(base->mb, num_qpus, base->vc_msg, GPU_FFT_NO_FLUSH, GPU_FFT_TIMEOUT);
-    }
-    else {
-        // Direct register poking
-        return gpu_fft_base_exec_direct(base, num_qpus);
-    }
+unsigned gpu_fft_pct_read(struct GPU_FFT_BASE *base, unsigned counters[16][2])
+{
+	unsigned i;
+	//memcpy(counters, (unsigned*)(base->peri + V3D_PCTR(0)), 16 * 8);
+	for (i = 0; i < 16; ++i)
+	{
+		counters[i][0] = base->peri[V3D_PCTR(i)];
+		counters[i][1] = base->peri[V3D_PCTRS(i)];
+	}
+	return base->peri[V3D_PCTRE];
 }
 
-int gpu_fft_alloc (
-    int mb,
-    unsigned size,
-    struct GPU_FFT_PTR *ptr) {
-
-    struct GPU_FFT_HOST host;
-    struct GPU_FFT_BASE *base;
-    volatile unsigned *peri;
-    unsigned handle;
-
-    if (gpu_fft_get_host_info(&host)) return -5;
-
-    if (qpu_enable(mb, 1)) return -1;
-
-    // Shared memory
-    handle = mem_alloc(mb, size, 4096, host.mem_flg);
-    if (!handle) {
-        qpu_enable(mb, 0);
-        return -3;
-    }
-
-    peri = (volatile unsigned *) mapmem(host.peri_addr, host.peri_size);
-    if (!peri) {
-        mem_free(mb, handle);
-        qpu_enable(mb, 0);
-        return -4;
-    }
-
-    ptr->vc = mem_lock(mb, handle);
-    ptr->arm.vptr = mapmem(BUS_TO_PHYS(ptr->vc+host.mem_map), size);
-
-    base = (struct GPU_FFT_BASE *) ptr->arm.vptr;
-    base->peri   = peri;
-    base->peri_size = host.peri_size;
-    base->mb     = mb;
-    base->handle = handle;
-    base->size   = size;
-
-    return 0;
+void gpu_fft_pct_setup(struct GPU_FFT_BASE *base, unsigned char index, int counter)
+{
+	if (counter < 0)
+	{
+		base->peri[V3D_PCTRE] &= ~(1 << index);
+	} else
+	{
+		base->peri[V3D_PCTRS(index)] = counter;
+		base->peri[V3D_PCTRE] |= base->peri[V3D_PCTRC] = 1 << index;
+	}
 }
 
-void gpu_fft_base_release(struct GPU_FFT_BASE *base) {
-    int mb = base->mb;
-    unsigned handle = base->handle, size = base->size;
-    unmapmem((void*)base->peri, base->peri_size);
-    unmapmem((void*)base, size);
-    mem_unlock(mb, handle);
-    mem_free(mb, handle);
-    qpu_enable(mb, 0);
+unsigned gpu_fft_base_exec(struct GPU_FFT_BASE *base, int num_qpus)
+{
+	unsigned rc;
+	base->peri[V3D_PCTRE] |= 0x80000000;
+	if (base->vc_msg)
+	{
+		// Use mailbox
+		// Returns: 0x0 for success; 0x80000000 for timeout
+		rc = execute_qpu(base->mb, num_qpus, base->vc_msg, GPU_FFT_NO_FLUSH, GPU_FFT_TIMEOUT);
+	} else
+	{
+		// Direct register poking
+		rc = gpu_fft_base_exec_direct(base, num_qpus);
+	}
+	base->peri[V3D_PCTRE] &= ~0x80000000;
+	return rc;
 }
 
-unsigned gpu_fft_ptr_inc (
-    struct GPU_FFT_PTR *ptr,
-    int bytes) {
+int gpu_fft_alloc(int mb, unsigned size, struct GPU_FFT_PTR *ptr)
+{
 
-    unsigned vc = ptr->vc;
-    ptr->vc += bytes;
-    ptr->arm.bptr += bytes;
-    return vc;
+	struct GPU_FFT_HOST host;
+	struct GPU_FFT_BASE *base;
+	volatile unsigned *peri;
+	unsigned handle;
+
+	if (gpu_fft_get_host_info(&host))
+		return -5;
+
+	if (qpu_enable(mb, 1))
+		return -1;
+
+	// Shared memory
+	handle = mem_alloc(mb, size, 4096, host.mem_flg);
+	if (!handle)
+	{
+		qpu_enable(mb, 0);
+		return -3;
+	}
+
+	peri = (volatile unsigned *)mapmem(host.peri_addr, host.peri_size);
+	if (!peri)
+	{
+		mem_free(mb, handle);
+		qpu_enable(mb, 0);
+		return -4;
+	}
+
+	ptr->vc = mem_lock(mb, handle);
+	ptr->arm.vptr = mapmem(BUS_TO_PHYS(ptr->vc + host.mem_map), size);
+
+	base = (struct GPU_FFT_BASE *)ptr->arm.vptr;
+	base->peri = peri;
+	base->peri_size = host.peri_size;
+	base->mb = mb;
+	base->handle = handle;
+	base->size = size;
+
+	return 0;
+}
+
+void gpu_fft_base_release(struct GPU_FFT_BASE *base)
+{
+	int mb = base->mb;
+	unsigned handle = base->handle, size = base->size;
+	unmapmem((void*)base->peri, base->peri_size);
+	unmapmem((void*)base, size);
+	mem_unlock(mb, handle);
+	mem_free(mb, handle);
+	qpu_enable(mb, 0);
+}
+
+unsigned gpu_fft_ptr_inc(struct GPU_FFT_PTR *ptr, int bytes)
+{
+
+	unsigned vc = ptr->vc;
+	ptr->vc += bytes;
+	ptr->arm.bptr += bytes;
+	return vc;
 }

@@ -189,8 +189,27 @@ int gpu_fft_prepare(
         info->base.vc_msg = ptr.vc;
     }
 
-    *fft = info;
-    return 0;
+
+	// setup performance counters
+	gpu_fft_pct_setup(&info->base, 0, 13);
+	gpu_fft_pct_setup(&info->base, 1, 14);
+	gpu_fft_pct_setup(&info->base, 2, 16);
+	gpu_fft_pct_setup(&info->base, 3, 17);
+	//gpu_fft_pct_setup(&info->base, 4, 18);
+	//gpu_fft_pct_setup(&info->base, 5, 19);
+	gpu_fft_pct_setup(&info->base, 6, 20);
+	gpu_fft_pct_setup(&info->base, 7, 21);
+	gpu_fft_pct_setup(&info->base, 8, 22);
+	gpu_fft_pct_setup(&info->base, 9, 23);
+	gpu_fft_pct_setup(&info->base, 10, 24);
+	gpu_fft_pct_setup(&info->base, 11, 25);
+	//gpu_fft_pct_setup(&info->base, 12, 26);
+	//gpu_fft_pct_setup(&info->base, 13, 27);
+	gpu_fft_pct_setup(&info->base, 14, 28);
+	gpu_fft_pct_setup(&info->base, 15, 29);
+
+	*fft = info;
+	return 0;
 }
 
 unsigned gpu_fft_execute(struct GPU_FFT *info) {

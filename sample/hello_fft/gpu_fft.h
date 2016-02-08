@@ -32,6 +32,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define GPU_FFT_QPUS 8
 
 #define GPU_FFT_PI 3.14159265358979323846
+#ifndef M_2PI
+#define M_2PI (2*GPU_FFT_PI)
+#endif
 
 #define GPU_FFT_FWD 0 // forward FFT
 #define GPU_FFT_REV 1 // inverse FFT
@@ -97,5 +100,14 @@ void gpu_fft_base_release(
 unsigned gpu_fft_ptr_inc (
     struct GPU_FFT_PTR *ptr,
     int bytes);
+
+void gpu_fft_pct_setup(
+	struct GPU_FFT_BASE *base,
+	unsigned char index,
+	int counter);
+
+unsigned gpu_fft_pct_read(
+	struct GPU_FFT_BASE *base,
+	unsigned counters[16][2]);
 
 #endif // __GPU_FFT__
