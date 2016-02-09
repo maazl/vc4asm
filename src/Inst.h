@@ -27,6 +27,7 @@ struct qpuValue
 };
 
 /// Worker class to assemble or disassemble QPU instruction words.
+/// New instances are uninitialized.
 struct Inst
 {	/// Signaling bits
 	enum sig : uint8_t
@@ -230,8 +231,6 @@ struct Inst
 
 	/// Reset instruction to its initial state, i.e. \c nop.
 	void       reset();
-	/// Create initial instruction, i.e. \c nop.
-	Inst()     { reset(); }
 
 	/// Semaphore access type
 	/// @return true: release, false: acquire
