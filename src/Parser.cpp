@@ -1083,10 +1083,7 @@ void Parser::assembleMOV(int mode)
 			 case Inst::S_SMI:;
 			}
 			for (si = getSmallImmediateALU(value.uValue); si->Value == value.uValue; ++si)
-			{	// Opcode extensions not enabled?
-				if (si->OpCode.isExt() && !Extensions)
-					continue;
-				// conflicting signal or small immediate value
+			{	// conflicting signal or small immediate value
 				if (Instruct.Sig != Inst::S_NONE && !(Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd))
 					continue;
 				// Check pack mode

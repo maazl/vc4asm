@@ -37,10 +37,6 @@ class Parser : public DebugInfo
 	vector<string> IncludePaths;
 	/// The assembly process did not fail so far and can produce reasonable output.
 	bool Success = true;
-	/// Enable OP code extensions and allow undocumented OP codes during assembly.
-	/// Allows some constants to be generated from other small immediate in the same expression
-	/// using the undocumented OP code 0 (NOP) of the MUL ALU.
-	bool Extensions = false;
 	/// Output preprocessed code to this file stream in not NULL.
 	/// This is for internal use only and does not guarantee a specific result.
 	FILE* Preprocessed = NULL;
@@ -82,23 +78,19 @@ class Parser : public DebugInfo
 	}             regMap[];///< Register lookup table, ordered by Name.
 	/// Reference to a ADD \e or MUL ALU operator.
 	class opAddMul
-	{	const int8_t Op;     ///< ADD or MUL ALU opcode, bit 7 set: MUL ALU, bit 6 set: undocumented opcode
+	{	const int8_t Op;     ///< ADD or MUL ALU opcode, bit 7 set: MUL ALU
 	 public:
 		/// Create from ADD ALU OP code.
 		constexpr   opAddMul(Inst::opadd op) : Op(op) {}
 		/// Create from MUL ALU OP code.
 		constexpr   opAddMul(Inst::opmul op) : Op(op|0x80) {}
-		/// Constructor for undocumented OP codes.
-		constexpr   opAddMul(int op)         : Op(op|0x40) {}
 		/// true if the class instance represents a MUL ALU opcode
 		/// false if it is an ADD ALU OP code.
 		bool        isMul() const { return Op < 0; }
-		/// true if it is an undocumented OP code.
-		bool        isExt() const { return (Op & 0x40) != 0; }
 		/// Convert to Inst::opadd.
 		/// @pre isMul() == false
 		/// @return ADD ALU OP code.
-		Inst::opadd asAdd() const { return (Inst::opadd)(Op & 0x1f); }
+		Inst::opadd asAdd() const { return (Inst::opadd)Op; }
 		/// Convert to Inst::opmul.
 		/// @pre isMul() == true
 		/// @return MUL ALU OP code.
