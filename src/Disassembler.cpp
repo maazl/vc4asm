@@ -80,10 +80,27 @@ void Disassembler::appendSource(Inst::mux mux)
 		append(cUnpack[Instruct.Unpack]);
 }
 
-unsigned tmpthis=0;
-unsigned tmpnext=0;
-char tmpbuff[256];
-#define tmpalloc(sizebytes) ( tmpthis = tmpnext+sizebytes > sizeof(tmpbuff) ? 0 : tmpnext, tmpnext = (tmpthis+sizebytes), &tmpbuff[tmpthis])
+void Disassembler::appendMULSource(Inst::mux mux)
+{	appendSource(mux);
+
+	if ( Instruct.Sig != Inst::S_SMI || Instruct.SImmd < 48 // no rotation
+		|| (mux == Inst::X_RA && Instruct.RAddrA == 32) // register not sensitive to rotation
+		|| mux == Inst::X_RB )                          // small immediate value also not
+		return;
+	int rot = Instruct.SImmd - 48; // [0..15]
+	if (rot == 0)
+	{	append(">>r5");
+		return;
+	}
+	if (rot >= 8)
+		rot -= 16;
+	if (mux >= Inst::X_R4)
+		rot %= 4;
+	if (rot < 0)
+		appendf("<<%i", -rot);
+	else
+		appendf(">>%i", rot);
+}
 
 void Disassembler::DoADD()
 {
@@ -159,12 +176,6 @@ void Disassembler::DoMUL()
 	append(cCC[Instruct.CondM]);
 	if (Instruct.isSFMUL())
 		append(".setf");
-	if (Instruct.Sig == Inst::S_SMI && Instruct.SImmd >= 48)
-	{	if (Instruct.SImmd == 48)
-			append(".rot r5,");
-		else
-			appendf(".rot %d,", Instruct.SImmd - 48);
-	}
 	append(" ");
 	append(cWreg[!Instruct.WS][Instruct.WAddrM]);
 	bool unpack = false;
@@ -189,8 +200,8 @@ void Disassembler::DoMUL()
 			return;
 		}
 	} else
-		appendSource(Instruct.MuxMA);
-	appendSource(Instruct.MuxMB);
+		appendMULSource(Instruct.MuxMA);
+	appendMULSource(Instruct.MuxMB);
 }
 
 void Disassembler::DoALU()

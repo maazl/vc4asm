@@ -101,6 +101,8 @@ class Disassembler
 	/// It also takes care of small immediate values.
 	/// @pre Instruct.Sig < Inst::S_LDI
 	void appendSource(Inst::mux mux);
+	/// Same as appendSource but also add vector rotation if any.
+	void appendMULSource(Inst::mux mux);
 	/// Handle ADD ALU opcode
 	/// @pre Instruct.Sig < Inst::S_LDI
 	void DoADD();
