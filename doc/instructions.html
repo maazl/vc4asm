@@ -20,7 +20,7 @@
       <li>Multiple logical instructions can be placed in one line as long as
         their combination still fits into one OP code. The delimiter is <tt>;</tt>.
         Example:<br>
-        <tt>mov ra11, rb11; mov rb11, ra11; ldtmu0</tt></li>
+        <tt>mov ra11, rb11;&nbsp; mov rb11, ra11;&nbsp; ldtmu0</tt></li>
       <li>The sequence of the instructions in one line is normally not
         significant. Only if an instruction can be realized by the ADD and the
         MUL ALU then the ADD ALU is preferred as long as it has not already been
@@ -34,7 +34,7 @@
       <tt>;</tt> and the two instructions fit into a single OP code. E.g.</p>
     <pre>add r0, r0, 1;<br>;mov r2, 64</pre>
     <p>generates the same code as</p>
-    <pre>add r0, r0, 1; mov r2, 64</pre>
+    <pre>add r0, r0, 1;  mov r2, 64</pre>
     <p>This might cross macro boundaries. But be aware that dependencies might
       break your code. E.g. a read to a register file might move immediately
       after a write to the same register. Take special care of branch targets.
@@ -220,10 +220,10 @@
     <dl>
     </dl>
     <h2><a id="mov" name="mov"></a>Move instruction</h2>
-    <pre>mov <var>destination, source</var><var></var><br>mov <var><var>destination,</var> register</var> &lt;&lt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; r5<br>mov.setf ...</pre>
+    <pre>mov <var>destination, source</var><var></var><br>mov <var><var>destination,</var> register</var> &lt;&lt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; r5<br>mov <var>destination1, destination2, source</var><var></var><br>mov.setf ...</pre>
     <dl>
       <dt><var><tt>destination</tt></var></dt>
-      <dd>Target <a href="expressions.html#register">register</a>.</dd>
+      <dd>Target <a href="expressions.html#register">register(s)</a>.</dd>
       <dt><var><tt>source</tt></var></dt>
       <dd>Source <a href="expressions.html#register">register</a> or <a href="expressions.html#constant">immediate
           value</a>.</dd>
@@ -244,7 +244,7 @@
       ADD ALU and <tt>v8min</tt> for the MUL ALU.</p>
     <p>If <b><var><tt>source</tt></var> fits into a small immediate value</b>
       then the assembler prefers this over load immediate. The assembler is
-      quite smart when using small immediates. E.g. the immediate value 64 which
+      quite smart when using small immediate. E.g. the immediate value 64 which
       has no direct equivalent can be achieved by passing 8 to both inputs of
       the MUL ALU with instruction <tt>mul24</tt>. Again the ADD ALU is
       preferred when available. But some hacks like the example before require
@@ -262,7 +262,7 @@
       from register file A and the other source fits into a small immediate
       value of if both sources can be created from the same immediate value.</p>
     <h3>Examples</h3>
-    <pre>mov ra29, 16<br>mov r3, rb4 &lt;&lt; 2; mov r2, ra11  # Uses the MUL ALU for the first move (because of the vector rotation) and the ADD ALU for the second one.<br>mov r0, 0x8000000; mov tmurs, 1 # Uses small immediate value 1 with ror r0, 1, 1 to create the 0x80000000.</pre>
+    <pre>mov ra29, 16<br>mov r3, rb4 &lt;&lt; 2;  mov r2, ra11 # Uses the MUL ALU for the first move (because of the vector rotation) and the ADD ALU for the second one.<br>mov r0, 0x8000000; mov tmurs, 1 # Uses small immediate value 1 with ror r0, 1, 1 to create the 0x80000000.</pre>
     <h2><a id="ldi" name="ldi"></a>Load immediate</h2>
     <pre>ldi <var>destination, constant</var><br>ldi <var>destination1, destination2, constant</var></pre>
     <dl>

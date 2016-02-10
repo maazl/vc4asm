@@ -253,21 +253,7 @@ exprValue Parser::parseElemInt()
 {	uint32_t value = 0;
 	int pos = 0;
 	signed char sign = 0;
-	switch (Instruct.Sig)
-	{case Inst::S_NONE:
-		if (Instruct.Unpack == Inst::U_32
-			&& Instruct.OpA == Inst::A_NOP && Instruct.OpM == Inst::M_NOP
-			&& Instruct.RAddrA == Inst::R_NOP && Instruct.RAddrB == Inst::R_NOP )
-			break;
-	 default:
-	 fail:
-		Fail("Cannot combine load per QPU element with any other instruction.");
-	 case Inst::S_LDI:
-		if (Instruct.LdMode & Inst::L_SEMA)
-			goto fail;
-		if (Instruct.LdMode)
-			sign = Instruct.LdMode == Inst::L_PEU ? 1 : -1;
-	}
+
 	while (true)
 	{	auto val = ParseExpression();
 		if (val.Type != V_INT)
@@ -549,7 +535,7 @@ void Parser::doSMI(uint8_t si)
 bool Parser::trySwap()
 {	if ((InstCtx & IC_CANSWAP) == 0 || !Instruct.tryALUSwap())
 		return false;
-	InstCtx ^= IC_MUL;
+	InstCtx ^= IC_ADD|IC_MUL;
 	return true;
 }
 
@@ -559,7 +545,7 @@ void Parser::applyRot(int count)
 	{	if (UseRot & (XR_OP | toExtReq(InstCtx)))
 			Fail("Only one vector rotation per ALU instruction, please.");
 
-		if (!(InstCtx & IC_MUL) && !trySwap())
+		if ((InstCtx & IC_BOTH) != IC_MUL && !trySwap())
 			Fail("Vector rotation is only available to the MUL ALU.");
 		if (count == 16)
 			Fail("Cannot rotate ALU target right by r5.");
@@ -773,7 +759,7 @@ void Parser::check4Unpack(Inst::mux mux)
 void Parser::doALUTarget(exprValue param)
 {	InstCtx |= IC_DST;
 	if (param.Type != V_REG)
-		Fail("The first argument to a ALU or branch instruction must be a register or '-', found %s.", Token.c_str());
+		Fail("The target argument to a ALU or branch instruction must be a register or '-', found %s.", param.toString().c_str());
 	if (!(param.rValue.Type & R_WRITE))
 		Fail("The register is not writable.");
 	bool mul = (InstCtx & IC_MUL) != 0;
@@ -916,8 +902,75 @@ void Parser::doBRASource(exprValue param)
 	}
 }
 
+bool Parser::trySmallImmd(uint32_t value)
+{	const smiEntry* si;
+	if (!value)
+	{	// mov ... ,0 does not require small immediate value
+		si = smiMap + !!(InstCtx & IC_MUL);
+		goto mov0;
+	}
+	switch (Instruct.Sig)
+	{default:
+		Fail ("Immediate values cannot be used together with signals.");
+	 case Inst::S_NONE:
+		if (Instruct.RAddrB != Inst::R_NOP)
+			Fail ("Immediate value collides with read from register file B.");
+	 case Inst::S_SMI:;
+	}
+	for (si = getSmallImmediateALU(value); si->Value == value; ++si)
+	{	// conflicting signal or small immediate value
+		if (Instruct.Sig != Inst::S_NONE && !(Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd))
+			continue;
+		// Check pack mode
+		if (!!si->Pack)
+		{	// conflicting pack mode?
+			if (Instruct.Pack != Inst::P_32 && !(Instruct.Pack == si->Pack.pack() && Instruct.PM == si->Pack.mode()))
+				continue;
+			// Regfile A target
+			if (!si->Pack.mode())
+			{	// .setf may return unexpected results in pack mode in sign bit. TODO: accept all cases where this does not happen.
+				if (Instruct.SF)
+					continue;
+				// Not regfile A target?
+				if (InstCtx & IC_MUL)
+				{	if (!Instruct.WS || Instruct.WAddrM >= 32)
+						continue;
+				} else
+				{	if (Instruct.WS || Instruct.WAddrA >= 32)
+						continue;
+				}
+			}
+		}
+		// other ALU needed?
+		if ((!si->OpCode.isMul() ^ !(InstCtx & IC_MUL)) && !trySwap())
+			continue;
+
+		// Match!
+		Instruct.Sig   = Inst::S_SMI;
+		Instruct.SImmd = si->SImmd;
+		if (!!si->Pack)
+		{	Instruct.Pack = si->Pack.pack();
+			Instruct.PM   = si->Pack.mode();
+		}
+	 mov0:
+		if (si->OpCode.isMul())
+		{	Instruct.MuxMA = Instruct.MuxMB = Inst::X_RB;
+			Instruct.OpM   = si->OpCode.asMul();
+		} else
+		{	Instruct.MuxAA = Instruct.MuxAB = Inst::X_RB;
+			Instruct.OpA   = si->OpCode.asAdd();
+		}
+
+		doInstrExt();
+		check4Unpack(Inst::X_RB);
+		return true;
+	}
+	// nope, can't help
+	return false;
+}
+
 void Parser::assembleADD(int add_op)
-{	InstCtx = IC_NONE;
+{	InstCtx = IC_ADD;
 
 	if (Instruct.Sig >= Inst::S_LDI)
 		Fail("Cannot use ADD ALU in load immediate or branch instruction.");
@@ -1000,7 +1053,9 @@ void Parser::assembleMOV(int mode)
 	if (Instruct.Sig == Inst::S_BRANCH)
 		Fail("Cannot use MOV together with branch instruction.");
 	bool isLDI = Instruct.Sig == Inst::S_LDI;
-	InstCtx = ((Flags() & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP)) * IC_MUL | IC_CANSWAP;
+	InstCtx = IC_CANSWAP
+		| ( (Flags() & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP)
+			? IC_MUL : IC_ADD );
 	if ((InstCtx & IC_MUL) && (Instruct.WAddrM != Inst::R_NOP || (!isLDI && Instruct.OpM != Inst::M_NOP)))
 		Fail("Both ALUs are already used by the current instruction.");
 	UseRot = UseUnpack = 0;
@@ -1010,9 +1065,34 @@ void Parser::assembleMOV(int mode)
 	doALUTarget(ParseExpression());
 
 	if (NextToken() != COMMA)
-		Fail("Expected ', <source1>' after first argument to ALU instruction, found %s.", Token.c_str());
-	InstCtx ^= IC_DST|IC_SRC; // Swap to source context
+		Fail("Expected source or second target after first argument to mov/ldi instruction, found %s.", Token.c_str());
+
 	exprValue param = ParseExpression();
+	switch (NextToken())
+	{default:
+		Fail("Expected source or end of instruction after second argument to mov/ldi instruction, found %s.", Token.c_str());
+
+	 case DOT:   // extension
+		if (!HaveMoreOperands(At--))
+			break;
+	 case COMMA: // second target
+		if ( InstCtx & IC_MUL
+			? ((Flags() & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP))
+			: (Instruct.WAddrM != Inst::R_NOP || (!isLDI && Instruct.OpM != Inst::M_NOP)) )
+			Fail("ALU instruction with two targets can only be used if both ALUs are available.");
+
+		InstCtx = (InstCtx & ~IC_CANSWAP) ^ (IC_ADD|IC_MUL); // switch ALU
+		doALUTarget(param);
+		// From here we are double ALU
+		InstCtx |= IC_ADD|IC_MUL; // now we are at both ALUs
+		break;
+
+	 case SEMI:  // no second target
+		--At;
+	 case END:;
+	}
+
+	InstCtx ^= IC_DST|IC_SRC; // Swap to source context
 	qpuValue value;
 	Inst::mux mux;
 	switch (param.Type)
@@ -1039,7 +1119,6 @@ void Parser::assembleMOV(int mode)
 		}
 		applyRot(-param.rValue.Rotate);
 
-	 ext:
 		doInstrExt();
 		check4Unpack(mux);
 		return;
@@ -1067,67 +1146,9 @@ void Parser::assembleMOV(int mode)
 	 case V_FLOAT:
 		value = param;
 		// try small immediate first
-		if (!isLDI && mode < 0)
-		{	const smiEntry* si;
-			if (!value.iValue)
-			{	// mov ... ,0 does not require small immediate value
-				si = smiMap + !!(InstCtx & IC_MUL);
-				goto mov0;
-			}
-			switch (Instruct.Sig)
-			{default:
-				Fail ("Immediate values cannot be used together with signals.");
-			 case Inst::S_NONE:
-				if (Instruct.RAddrB != Inst::R_NOP)
-					Fail ("Immediate value collides with read from register file B.");
-			 case Inst::S_SMI:;
-			}
-			for (si = getSmallImmediateALU(value.uValue); si->Value == value.uValue; ++si)
-			{	// conflicting signal or small immediate value
-				if (Instruct.Sig != Inst::S_NONE && !(Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd))
-					continue;
-				// Check pack mode
-				if (!!si->Pack)
-				{	// conflicting pack mode?
-					if (Instruct.Pack != Inst::P_32 && !(Instruct.Pack == si->Pack.pack() && Instruct.PM == si->Pack.mode()))
-						continue;
-					// Regfile A target
-					if (!si->Pack.mode())
-					{	// .setf may return unexpected results in pack mode in sign bit. TODO: accept all cases where this does not happen.
-						if (Instruct.SF)
-							continue;
-						// Not regfile A target?
-						if (InstCtx & IC_MUL)
-						{	if (!Instruct.WS || Instruct.WAddrM >= 32)
-								continue;
-						} else
-						{	if (Instruct.WS || Instruct.WAddrA >= 32)
-								continue;
-						}
-					}
-				}
-				// other ALU needed?
-				if ((!si->OpCode.isMul() ^ !(InstCtx & IC_MUL)) && !trySwap())
-					continue;
-
-				// Match!
-				Instruct.Sig   = Inst::S_SMI;
-				Instruct.SImmd = si->SImmd;
-				if (!!si->Pack)
-				{	Instruct.Pack = si->Pack.pack();
-					Instruct.PM   = si->Pack.mode();
-				}
-			 mov0:
-				if (si->OpCode.isMul())
-				{	Instruct.MuxMA = Instruct.MuxMB = mux = Inst::X_RB;
-					Instruct.OpM   = si->OpCode.asMul();
-				} else
-				{	Instruct.MuxAA = Instruct.MuxAB = mux = Inst::X_RB;
-					Instruct.OpA   = si->OpCode.asAdd();
-				}
-				goto ext;
-			}
-		}
+		if ( !isLDI && mode < 0 && (InstCtx & IC_BOTH) != IC_BOTH
+			&& trySmallImmd(value.uValue))
+			return;
 		// LDI
 		if (mode < 0)
 			mode = Inst::L_LDI;
@@ -1155,7 +1176,7 @@ void Parser::assembleMOV(int mode)
 }
 
 void Parser::assembleBRANCH(int relative)
-{	InstCtx = IC_NONE;
+{	InstCtx = IC_ADD;
 
 	if (Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP || Instruct.Sig != Inst::S_NONE)
 		Fail("A branch instruction must be the only one in a line.");
@@ -1177,9 +1198,11 @@ void Parser::assembleBRANCH(int relative)
 	switch (NextToken())
 	{default:
 		Fail("Expected ',' or end of line, found '%s'.", Token.c_str());
+
 	 case END:
 		doBRASource(param2);
 		break;
+
 	 case COMMA:
 		auto param3 = ParseExpression();
 		switch (NextToken())
@@ -1213,7 +1236,7 @@ void Parser::assembleBRANCH(int relative)
 }
 
 void Parser::assembleSEMA(int type)
-{	InstCtx = IC_NONE;
+{	InstCtx = IC_ADD;
 
 	bool combine;
 	switch (Instruct.Sig)

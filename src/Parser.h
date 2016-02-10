@@ -26,7 +26,7 @@ using namespace std;
 class Parser : public DebugInfo
 {public:
 	/// Severity of assembler messages.
-	enum severity
+	enum severity : unsigned char
 	{	ERROR
 	,	WARNING
 	,	INFO
@@ -120,36 +120,38 @@ class Parser : public DebugInfo
 		packRaMul   Pack;    ///< Pack mode to achieve the desired result.
 	}             smiMap[];///< Immediate value lookup table used for <tt>mov rx, immd</tt>.
 	/// Context of a current expression during parse, bit vector.
-	enum InstContext
+	enum InstContext : unsigned char
 	{	IC_NONE     = 0      ///< No argument context, i.e. currently at the instruction itself.
-	,	IC_MUL      = 1      ///< Bit test: currently at a MUL ALU instruction.
-	,	IC_SRC      = 2      ///< Bit test: currently at a source argument to an OP code; assignment: currently at the first source argument to an ADD ALU OP code.
-	,	IC_DST      = 4      ///< Bit test: currently at the destination argument to an OP code; assignment: currently at the destination argument to an ADD ALU OP code.
-	,	IC_B        = 8      ///< Bit test: currently at the second argument to an OP code.
-	,	IC_SRCB     = 10     ///< Assignment: currently at the second source argument to an ADD ALU OP code.
-	,	IC_CANSWAP  = 16     ///< Allow to swap ADD and MUL ALU, i.e. toggle bit 0
+	,	IC_SRC      = 1      ///< Bit test: currently at a source argument to an OP code; assignment: currently at the first source argument to an ADD ALU OP code.
+	,	IC_DST      = 2      ///< Bit test: currently at the destination argument to an OP code; assignment: currently at the destination argument to an ADD ALU OP code.
+	,	IC_B        = 4      ///< Bit test: currently at the second argument to an OP code.
+	,	IC_SRCB     = 5      ///< Assignment: currently at the second source argument to an ADD ALU OP code.
+	,	IC_ADD      = 8      ///< Bit test: currently at a ADD ALU instruction.
+	,	IC_MUL      = 16     ///< Bit test: currently at a MUL ALU instruction.
+	,	IC_BOTH     = 24     ///< Context of both ALUs, i.e branch or mov instruction with two targets.
+	,	IC_CANSWAP  = 32     ///< Allow to swap ADD and MUL ALU, i.e. toggle bit 0
 	};
 	/// State of extensions to the current OP code, bit vector.
-	enum ExtReq
+	enum ExtReq : unsigned char
 	{	XR_NONE = 0          ///< No request by this ALU.
 	,	XR_OP   = 1<<IC_NONE ///< Request at opcode level, mutual exclusive with UR_SRC*.
 	,	XR_SRCA = 1<<IC_SRC  ///< Request for first source argument.
 	,	XR_SRCB = 1<<IC_SRCB ///< Request for second source argument.
-	,	XR_NEW  = 1<<IC_MUL  ///< New request => check for interaction with other ALU.
+	,	XR_NEW  = 1<<IC_DST  ///< New request => check for interaction with other ALU.
 	};
 
 	/// Type of parser call stack entry.
-	enum contextType
+	enum contextType : unsigned char
 	{	CTX_ROOT             ///< Root node
 	,	CTX_FILE             ///< File supplied by command line
 	,	CTX_BLOCK            ///< .local block
 	,	CTX_INCLUDE          ///< .include directive
 	,	CTX_MACRO            ///< macro invocation
 	,	CTX_FUNCTION         ///< function call
-	, CTX_CURRENT          ///< no context, current line
+	,	CTX_CURRENT          ///< no context, current line
 	};
 	/// Type of preprocessor action, bit vector
-	enum preprocType
+	enum preprocType : unsigned char
 	{	PP_MACRO = 1         ///< Macro expansion
 	,	PP_IF    = 2         ///< .if/.else check
 	,	PP_ALL   = 3         ///< all above actions
@@ -165,7 +167,7 @@ class Parser : public DebugInfo
 	///< OP code lookup table, ordered by Name.
 	static const opEntry<8> opcodeMap[];
 	///< Flags for OP code extensions, bit vector
-	enum opExtFlags
+	enum opExtFlags : unsigned char
 	{	E_SRC   = 0x01       ///< Extension is valid for source arguments.
 	,	E_DST   = 0x02       ///< Extension is valid for destination arguments.
 	,	E_OP    = 0x04       ///< Extension can be applied directly to the OP code.
@@ -252,7 +254,7 @@ class Parser : public DebugInfo
 	/// @brief State of conditional code block context, bit vector
 	/// @details Only the state IF_TRUE is an enabled state. All others indicate disabled code.
 	/// @par A integer conversion from bool will implicitly give the right stage for the initial .if.
-	enum ifState
+	enum ifState : unsigned char
 	{	IS_FALSE       ///< .if block with condition evaluated to false
 	,	IS_TRUE        ///< .if block with condition evaluated to true
 	,	IS_ELSE        ///< .else block, condition (IS_TRUE) is inverted
@@ -260,9 +262,9 @@ class Parser : public DebugInfo
 	};
 	/// Context of conditional block.
 	struct ifContext : public location
-	{	unsigned       State;     ///< State of conditional block, see ifContext.
+	{	unsigned char  State;     ///< State of conditional block, see ifState.
 		/// Construct ifContext from property values
-		ifContext(const location& loc, unsigned state) : location(loc), State(state) {}
+		ifContext(const location& loc, unsigned char state) : location(loc), State(state) {}
 	};
 	/// Call stack if .if nested contexts. The deepest context is always the last entry.
 	typedef vector<ifContext> ifs_t;
@@ -303,7 +305,7 @@ class Parser : public DebugInfo
 		~saveLineContext();
 	};
 	/// Instruction optimization flags, bit vector
-	enum InstFlags : uint8_t
+	enum InstFlags : unsigned char
 	{	IF_NONE          = 0      ///< no flags, none of the conditions below is met
 	,	IF_HAVE_NOP      = 1      ///< at least one NOP in the current instruction so far
 	,	IF_CMB_ALLOWED   = 2      ///< Instruction of the following line could be merged
@@ -326,11 +328,11 @@ class Parser : public DebugInfo
 	/// Buffer to build up the current instruction word for the GPU.
 	Inst             Instruct;
 	/// Current expression context. Type InstContext.
-	int              InstCtx;
+	unsigned char    InstCtx;
 	/// Unpack mode used by the current instruction. See toExtReq.
-	int              UseUnpack;
+	unsigned char    UseUnpack;
 	/// Vector rotation used by the current instruction. See toExtReq.
-	int              UseRot;
+	unsigned char    UseRot;
 	/// Current program counter in GPU words. Relative to the start of the assembly.
 	unsigned         PC;
 	/// @brief Offset in bits in the current instruction word.
@@ -427,7 +429,16 @@ class Parser : public DebugInfo
 	/// @par The expansion of constants, functions and functional macros is also handled here.
 	/// @return The expression value
 	/// @exception std::string Syntax error.
+	/// @post NextToken does not return WORD, COLON, OP, BRACE1, SQBRC1 or NUM on the next invocation.
+	/// I.e. only END, BRACE2, SQBRC2 and SEMI are left.
 	exprValue        ParseExpression();
+	/// Check the current location whether there are further arguments,
+	/// i.e. the next ',' comes before any termination of the instruction or expression block.
+	/// @param rem Remaining text in the line, usually At.
+	/// @return true: there are more arguments in the current block.
+	/// @pre The function should only be called after ParseExpression.
+	/// It cannot deal with expressions and braces.
+	static bool      HaveMoreOperands(const char* rem) { return rem[strcspn(rem, ",;)]")] == ','; }
 
 	/// @brief Find the first potential match for an ALU instruction that can assign an immediate value using small immediates.
 	/// @details The function does not only seek for an exactly match small immediate value but also for small immediate values
@@ -462,8 +473,8 @@ class Parser : public DebugInfo
 	int              isUnpackable(Inst::mux mux) { if (mux == Inst::X_R4) return true; if (mux == Inst::X_RA && Instruct.RAddrA < 32) return false; return -1; }
 	/// Convert instruction context to bit vector for UseUnpack or UseRot.
 	/// @param ctx Context, type InstContext.
-	/// @remarks Bit 0: operator level, bit 2: source arg 1, bit 10: source arg 2
-	static constexpr int toExtReq(int ctx) { return 1 << (ctx&IC_SRCB); }
+	/// @remarks Bit 0: operator level, bit 1: source arg 1, bit 5: source arg 2
+	static constexpr unsigned char toExtReq(unsigned char ctx) { return 1 << (ctx&IC_SRCB); }
 	/// Swap ADD and MUL ALU of current instruction if allowed by InstCtx, adjust InstCtx.
 	/// @pre Instruct.Sig < Inst::S_BRANCH
 	/// @return true: swap succeeded, false: swap failed
@@ -515,6 +526,7 @@ class Parser : public DebugInfo
 	/// @details The function will also try to read instruction extensions if any.
 	/// @param param Expression value
 	/// @exception std::string Failed, error message.
+	/// @pre The ALU selected by InstCtx must be available.
 	void             doALUTarget(exprValue param);
 	/// Handle an ALU source expression.
 	/// @exception std::string Failed, error message.
@@ -523,6 +535,11 @@ class Parser : public DebugInfo
 	/// @param param Expression value
 	/// @exception std::string Failed, error message.
 	void             doBRASource(exprValue param);
+	/// Try to get immediate value at mov by a small immediate value and an availabe ALU.
+	/// @param value requested immediate value.
+	/// @return true: succeeded.
+	/// @exception std::string Failed, error message.
+	bool             trySmallImmd(uint32_t value);
 
 	// OP codes
 	/// @brief Assemble \c add instruction.
@@ -541,12 +558,11 @@ class Parser : public DebugInfo
 	/// no more no less.
 	/// @exception std::string Failed, error message.
 	void             assembleMUL(int op);
-	/// @brief Assemble \c mov instruction.
-	/// @details assembleMOV can create almost an \c ldi or ALU instruction.
+	/// @brief Assemble \c mov or ldi instruction.
+	/// @details assembleMOV can create almost any \c ldi or ALU instruction.
 	/// if auto mode is allowed, i.e. \a mode < 0, and the source argument is an immediate value
-	/// then it first tries to load the desired value from any small immediate value using any ALU operator
-	/// of any available ALU. If this fails a load immediate instruction is created for immediate values
-	/// and \c v8min or \c or instruction to assign a register source.
+	/// then it first tries to load the desired value from any small immediate value
+	/// using any ALU operator of any available ALU. If this fails a load immediate instruction is created.
 	/// @param mode Value for Inst::LdMode or < 0 to choose automatically.
 	/// @exception std::string Failed, error message.
 	void             assembleMOV(int mode);
