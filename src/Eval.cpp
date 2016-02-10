@@ -452,7 +452,7 @@ bool Eval::operate::Apply(bool unary)
 
 
 bool Eval::partialEvaluate(bool unary)
-{	for (;;)
+{	while (true)
 	{	if (Stack.size() <= 1)
 		{	if (Stack.back().Op == BRC) // closing brace w/o opening brace, might not belong to our expression
 			{	if (Stack.back().Type == V_NONE)
