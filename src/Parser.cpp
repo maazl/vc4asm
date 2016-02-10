@@ -831,7 +831,7 @@ void Parser::doALUExpr()
 		{	qpuValue value;
 			value = param;
 			// some special hacks for ADD ALU
-			if (InstCtx == IC_SRCB)
+			if (InstCtx == (IC_SRCB|IC_ADD))
 			{	switch (Instruct.OpA)
 				{case Inst::A_ADD: // swap ADD and SUB in case of constant 16 or negative SMI match
 				 case Inst::A_SUB:
