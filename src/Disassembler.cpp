@@ -56,7 +56,8 @@ void Disassembler::appendPE(bool sign)
 }
 
 void Disassembler::appendPack(bool mul)
-{	append(cPack[mul][Instruct.Pack * (Instruct.PM == mul)]);
+{	if (Instruct.PM ? mul : Instruct.WS == mul)
+		append(cPack[Instruct.PM][Instruct.Pack]);
 }
 
 void Disassembler::appendSource(Inst::mux mux)
@@ -106,11 +107,12 @@ void Disassembler::DoADD()
 {
 	uint8_t opa = Instruct.OpA;
 	bool isUnary = Instruct.isUnary();
+	bool isImmd = Instruct.Sig == Inst::S_SMI && Instruct.MuxAA == Inst::X_RB
+		&& (isUnary || Instruct.MuxAB == Inst::X_RB);
 
 	if ( UseMOV
 		&& ( (Instruct.MuxAA == Instruct.MuxAB && (0x807c2000 & (1<<opa))) // Both inputs equal and instruction that returns identity or 0
-			|| ( Instruct.Sig == Inst::S_SMI && Instruct.MuxAB == Inst::X_RB
-				&& (isUnary || Instruct.MuxAA == Inst::X_RB) ))) // unary or binary operator on constant
+			|| isImmd ))
 		opa = 32;
 
 	append(cOpA[opa]);
@@ -126,12 +128,10 @@ void Disassembler::DoADD()
 	// Target
 	append(cWreg[Instruct.WS][Instruct.WAddrA]);
 	bool unpack = false;
-	if (!Instruct.PM && !Instruct.WS)
-	{	if (opa == 32 && (0x0909 & (1<<Instruct.Pack)))
-			unpack = true;
-		else
-			appendPack(false);
-	}
+	if (UseMOV && isImmd && (0x0909 & (1<<Instruct.Pack)))
+		unpack = true;
+	else
+		appendPack(false);
 
 	if (opa == 32)
 	{	switch (Instruct.OpA)
@@ -141,7 +141,7 @@ void Disassembler::DoADD()
 			return append(", 0");
 		 default:;
 		}
-		if (Instruct.Sig == Inst::S_SMI && Instruct.MuxAB == Inst::X_RB)
+		if (isImmd)
 		{	// constant => evaluate
 			auto value(Instruct.SMIValue());
 			Instruct.evalADD(value, value);
@@ -165,10 +165,11 @@ void Disassembler::DoMUL()
 		return;
 
 	uint8_t opm = Instruct.OpM;
+	bool isSMI = Instruct.Sig == Inst::S_SMI && Instruct.MuxMA == Inst::X_RB;
 
 	if ( UseMOV && Instruct.MuxMA == Instruct.MuxMB // Both inputs equal and
 		&& ( (0xb0 & (1<<opm)) // instruction that returns identity or 0 or
-			|| (Instruct.Sig == Inst::S_SMI && Instruct.MuxMB == Inst::X_RB) )) // small immediate
+			|| isSMI )) // small immediate
 		opm = 8;
 
 	append(";  ");
@@ -179,17 +180,15 @@ void Disassembler::DoMUL()
 	append(" ");
 	append(cWreg[!Instruct.WS][Instruct.WAddrM]);
 	bool unpack = false;
-	if ((Instruct.PM || Instruct.WS))
-	{	if (opm == 8 && (0x0009 & (1<<Instruct.Pack)))
-			unpack = true;
-		else
-			appendPack(true);
-	}
+	if (opm == 8 && isSMI && (0x0009 & (1<<Instruct.Pack)))
+		unpack = true;
+	else
+		appendPack(true);
 
 	if (opm == 8)
 	{	if (Instruct.OpM == Inst::M_V8SUBS)
 			return append(", 0");
-		if (Instruct.Sig == Inst::S_SMI && Instruct.MuxMB == Inst::X_RB)
+		if (isSMI)
 		{	// constant => evaluate
 			auto value(Instruct.SMIValue());
 			Instruct.evalMUL(value, value);
