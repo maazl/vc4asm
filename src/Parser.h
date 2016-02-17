@@ -611,9 +611,10 @@ class Parser : public DebugInfo
 	void             parseALIGN(int bytes);
 	/// Enforce alignment of PC.
 	/// @param bytes Bytes to align. 1 = byte alignment, 8 = 64 bit alignment etc.
+	/// @param offset Do not align based on 0 but based on offset instead.
 	/// @pre \a bytes must be a power of 2.
 	/// @return true: alignment caused padding.
-	bool             doALIGN(int bytes);
+	bool             doALIGN(int bytes, int offset);
 	/// Enter local block.
 	void             beginLOCAL(int);
 	/// Leave local block.

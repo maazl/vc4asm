@@ -1495,18 +1495,34 @@ void Parser::parseALIGN(int bytes)
 		if (bytes & (bytes-1))
 			Fail("Alignment value must be a power of 2.");
 	}
-	if (NextToken() != END)
-		Fail("Expected end of line after alignment directive.");
+	int offset = 0;
+	switch (NextToken())
+	{default:
+		Fail("Expected end of line or ,<offset>.");
+	 case COMMA:
+		{	auto val = ParseExpression();
+			switch (val.Type)
+			{default:
+				Fail("Expected integer constant or label after .align.");
+			 case V_LABEL:
+			 case V_INT:
+				offset = -val.iValue & 63;
+			}
+			if (NextToken() != END)
+				Fail("Expected end of line after alignment directive.");
+		}
+	 case END:;
+	}
 
-	doALIGN(bytes);
+	doALIGN(bytes, offset);
 }
 
-bool Parser::doALIGN(int bytes)
+bool Parser::doALIGN(int bytes, int offset)
 {	if (!bytes)
 		return false;
 
 	// bit alignment
-	int align = BitOffset & ((bytes<3)-1);
+	int align = (BitOffset+(offset<<3)) & 63 & ((bytes<<3)-1);
 	if (align)
 	{	BitOffset += 8*bytes - align;
 		if (BitOffset >= 64) // cannot overflow
@@ -1517,13 +1533,14 @@ bool Parser::doALIGN(int bytes)
 
 	// Instruction level alignment
 	bytes >>= 3;
-	if (!bytes || !(PC & --bytes))
+	offset >>= 3;
+	if (!bytes || !((PC+offset) & --bytes))
 		return align != 0;
 	// BitOffset is necessarily zero at this point.
 	do
 	{	StoreInstruction(0);
 		++PC;
-	} while (PC & bytes);
+	} while ((PC+offset) & bytes);
 	return true;
 }
 
@@ -1701,7 +1718,7 @@ void Parser::parseCLONE(int)
 	if (Pass2 && (unsigned)param2.iValue >= Instructions.size())
 		Fail("Cannot clone behind the end of the code.");
 
-	if (doALIGN(8))
+	if (doALIGN(8, 0))
 		Msg(WARNING, "Used padding to enforce 64 bit alignment of GPU instruction.");
 
 	auto src = (unsigned)param1.iValue;
@@ -2265,7 +2282,7 @@ void Parser::ParseLine()
 			return;
 		}
 
-		if (doALIGN(8))
+		if (doALIGN(8, 0))
 			Msg(WARNING, "Used padding to enforce 64 bit alignment of GPU instruction.");
 
 		if (trycombine)

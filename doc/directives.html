@@ -258,7 +258,7 @@
       floating point constants and <tt>.double</tt> 64 bit floating point
       constants. Well, the latter makes only little sense since the GPU cannot
       deal with double precision.</p>
-    <p>The result is always stored in big endian format.</p>
+    <p>The result is <em>always</em> stored in <em>big endian</em> format.</p>
     <p>You should ensure that the constants will not accidentally be executed
       unless they contain valid Videocore IV instructions.</p>
     <ul>
@@ -275,16 +275,32 @@
     mov r2, r4     mov t0s, r0</pre>
     <h2><a id=".align" name=".align"></a><tt>.align</tt> - ensure memory
       alignment</h2>
-    <pre>.align <var>constant</var></pre>
+    <pre>.align <var>bytes</var><br>.align <var>bytes, base</var></pre>
     <p>Force the current instruction pointer to be aligned to a byte boundary
       with a specified power of 2.</p>
     <dl>
-      <dt><tt><var>constant</var></tt></dt>
+      <dt><tt><var>bytes</var></tt></dt>
       <dd>Expression that evaluates to an integer constant with the number of
-        bytes to align. <tt>1</tt> ensures byte alignment (makes only sense
-        after <tt>.bit</tt>), <tt>2</tt> enures 16 bit alignment, <tt>4 </tt>ensures
-        32 bit alignment and so on. The value must be a power of two and &le;
-        64. <tt>.align 0</tt> is a no-op.</dd>
+        bytes to align. The value must be a power of two and &le; 64. <tt>.align
+          0</tt> is a no-op.</dd>
+      <dt><tt><var>base</var></tt></dt>
+      <dd>Optional offset. If specified the alignment does not use 0 as base
+        offset - in fact the start of the current binary output - but the given
+        base instead.<br>
+        <tt><var>base</var></tt> could either be an <em>integer constant</em>.
+        In this case the location after <tt>.align</tt> will be aligned to <var>bytes</var>
+        with residual <var>base % bytes</var>.</dd>
+      <dd>Or base could be a <em>label</em>. In this case the alignment is
+        relative to the label location, i.e. <var>location </var><var>after <tt>.align</tt>
+          - label % byte</var>s == 0.</dd>
+      <dd>Note that the label <em>must neither be a forward reference nor
+          should</em> the integer constant <em>depend on a forward reference</em>,
+        because .align cannot do its job in this case.</dd>
+    </dl>
+    <p><tt>.align</tt> simply inserts zeros rather than <tt>nop</tt>
+      instructions. So <em>do not use it inside executable code</em>. It is
+      intended for data or sub function alignment only.</p>
+    <dl>
     </dl>
     <h2><a id=".global" name=".global"></a><tt>.global</tt> - export symbol</h2>
     <pre>.global <var>label</var><br>.global <var>symbol, value</var></pre>
