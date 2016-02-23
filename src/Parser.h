@@ -311,6 +311,7 @@ class Parser : public DebugInfo
 	,	IF_CMB_ALLOWED   = 2      ///< Instruction of the following line could be merged
 	,	IF_BRANCH_TARGET = 4      ///< This instruction is a branch target and should not be merged
 	,	IF_DATA          = 8      ///< Result of .data directive, do not optimize
+	,	IF_NOSWAP        = 16     ///< Do not swap regfile A and regfile B peripheral register
 	};
 
 	// parser working set

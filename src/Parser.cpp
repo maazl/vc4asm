@@ -463,6 +463,8 @@ Inst::mux Parser::muxReg(reg_t reg)
 			|| ( Instruct.MuxAA != Inst::X_RA && Instruct.MuxAB != Inst::X_RA
 				&& Instruct.MuxMA != Inst::X_RA && Instruct.MuxMB != Inst::X_RA ))
 		{RA:
+			if (!(reg.Type & R_B))
+				Flags() |= IF_NOSWAP;
 			Instruct.RAddrA = reg.Num;
 			return Inst::X_RA;
 		}
@@ -475,6 +477,8 @@ Inst::mux Parser::muxReg(reg_t reg)
 			|| ( Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB
 				&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB ))
 		{RB:
+			if (!(reg.Type & R_A))
+				Flags() |= IF_NOSWAP;
 			Instruct.RAddrB = reg.Num;
 			return Inst::X_RB;
 		}
@@ -485,14 +489,14 @@ Inst::mux Parser::muxReg(reg_t reg)
 		if (( Instruct.RAddrB == reg.Num
 				|| ( Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB
 					&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB ))
-			&& Instruct.tryRABSwap() )
+			&& !(Flags() & IF_NOSWAP) && Instruct.tryRABSwap() )
 			goto RA;
 		break;
 	 case R_B:
 		if (( Instruct.RAddrA == reg.Num
 				|| ( Instruct.MuxAA != Inst::X_RA && Instruct.MuxAB != Inst::X_RA
 					&& Instruct.MuxMA != Inst::X_RA && Instruct.MuxMB != Inst::X_RA ))
-			&& Instruct.tryRABSwap() )
+			&& !(Flags() & IF_NOSWAP) && Instruct.tryRABSwap() )
 			goto RB;
 	}
 	Fail("Read access to register conflicts with another access to the same register file.");
