@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cctype>
 #include <sys/stat.h>
+#include <inttypes.h>
 
 #include "Parser.tables.cpp"
 
@@ -449,7 +450,7 @@ exprValue Parser::ParseExpression()
 
 Inst::mux Parser::muxReg(reg_t reg)
 {	if (reg.Type & R_SEMA)
-		Fail("Cannot use semaphore source in ALU instruction.");
+		Fail("Cannot use semaphore source in ALU or read instruction.");
 	if (!(reg.Type & R_READ))
 	{	// direct read access for r0..r5.
 		if ((reg.Num ^ 32U) <= 5U)
@@ -828,8 +829,7 @@ void Parser::doALUExpr()
 		}
 	 case V_FLOAT:
 	 case V_INT:
-		{	qpuValue value;
-			value = param;
+		{	qpuValue value; value = param;
 			// some special hacks for ADD ALU
 			if (InstCtx == (IC_SRCB|IC_ADD))
 			{	switch (Instruct.OpA)
@@ -1175,10 +1175,48 @@ void Parser::assembleMOV(int mode)
 	}
 }
 
+void Parser::assembleREAD(int)
+{	InstCtx = IC_SRC;
+
+	if (Instruct.Sig == Inst::S_LDI || Instruct.Sig == Inst::S_BRANCH)
+		Fail("read cannot be combined with load immediate, semaphore or branch instruction.");
+
+	switch (NextToken())
+	{case DOT:
+		Fail("read does not support instruction extensions.");
+	 case END:
+	 case COMMA:
+	 case SEMI:
+		Fail("Expected source register or small immediate value after read.");
+	 default:
+		At -= Token.size();
+	}
+
+	exprValue param = ParseExpression();
+	switch (param.Type)
+	{default:
+		Fail("read instruction requires register file or small immediate source, found '%s'.", param.toString().c_str());
+	 case V_REG:
+		if (param.rValue.Rotate)
+			Fail("Vector rotations cannot be used at read.");
+		if (muxReg(param.rValue) < Inst::X_RA)
+			Fail("Accumulators cannot be used at read.");
+		break;
+	 case V_INT:
+	 case V_FLOAT:
+		qpuValue value; value = param;
+		uint8_t si = Inst::AsSMIValue(value);
+		if (si == 0xff)
+			Fail("Value 0x%" PRIx32 " does not fit into the small immediate field.", value.uValue);
+		doSMI(si);
+	}
+}
+
 void Parser::assembleBRANCH(int relative)
 {	InstCtx = IC_ADD;
 
-	if (Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP || Instruct.Sig != Inst::S_NONE)
+	if ( Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP || Instruct.Sig != Inst::S_NONE
+		|| Instruct.RAddrA != Inst::R_NOP || Instruct.RAddrB != Inst::R_NOP )
 		Fail("A branch instruction must be the only one in a line.");
 
 	Instruct.Sig = Inst::S_BRANCH;
@@ -1245,8 +1283,12 @@ void Parser::assembleSEMA(int type)
 		if (Instruct.LdMode == Inst::L_LDI)
 			break;
 	 default:
+	 fail:
 		Fail("Semaphore Instructions normally cannot be combined with any other instruction.");
 	 case Inst::S_NONE:
+		if ( Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP
+			|| Instruct.RAddrA != Inst::R_NOP || Instruct.RAddrB != Inst::R_NOP )
+			goto fail;
 		combine = false;
 		Instruct.Sig = Inst::S_LDI;
 	}

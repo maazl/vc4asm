@@ -1603,6 +1603,7 @@ const Parser::opEntry<8> Parser::opcodeMap[] =
 ,	{"nop",    &Parser::assembleADD, Inst::A_NOP } // alternative M_NOP
 ,	{"not",    &Parser::assembleADD, Inst::A_NOT }
 ,	{"or",     &Parser::assembleADD, Inst::A_OR }
+,	{"read",   &Parser::assembleREAD }
 ,	{"ror",    &Parser::assembleADD, Inst::A_ROR }
 ,	{"sacq",   &Parser::assembleSEMA,1 }
 ,	{"sbdone", &Parser::assembleSIG, Inst::S_SBDONE }

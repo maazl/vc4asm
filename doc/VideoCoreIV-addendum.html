@@ -10,13 +10,94 @@
   <body>
     <h1>Addendum to the <a href="http://www.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf">Broadcom
         VideoCore IV documentation</a></h1>
-    <h2>Instruction set bugs and additional features</h2>
+    <h2>Documentation bugs</h2>
     <h3>Section 3: Writing to <tt>r5</tt></h3>
     <p><tt>r5</tt> can be written <em>from the elements 0, 4, 8 and 12</em> for
       each slice <em>or only from element 0</em>, depending on whether you
       write to regfile A or regfile B. vc4asm supports the register names <tt>r5quad</tt>
       and <tt>r5rep</tt> for this purpose. The documentation is wrong, nothing
       is concatenated from low order bytes.</p>
+    <h3>Section 3: Table 1: ALU Instruction Fields - set flags</h3>
+    <p>The flags are <em>only updated when</em> the corresponding <em>condition
+        code evaluates true</em> and the target value is assigned. You may use
+      this feature to do boolean operations with the flags.</p>
+    <p>Furthermore the flags are <em>only updated from the MUL ALU when the ADD
+        ALU executes a <tt>nop</tt></em>. In contrast to the Broadcom
+      documetation the condition code <tt>.never</tt> has no effect on the
+      behavior.</p>
+    <h3>Section 3: Branch instruction - implicit set flags</h3>
+    <p>Unlike the Broadcom documentation suggests the <em>branch instruction is
+        able to set the flags</em>. But the <tt>sf</tt> bit is at the same
+      location of the instruction word than the <tt>raddr_a</tt> field. So
+      every branch instruction with an <i>odd register source</i> will set the
+      flags. This is an unwanted side effect since the flags of a PC location
+      are normally useless.</p>
+    <p>vc4asm reports a warning when a branch instruction is used with an odd
+      source register. You can use explicit <tt>.setf</tt> to suppress the
+      warning.</p>
+    <pre>and.setf -,  elem_num, 1<br>bra      -,  ra1        # implies .setf<br>mov.ifz  r0, 1<br>...</pre>
+    <p>Since a branch target will never be at the physical address 0 the <tt>mov.ifz</tt>
+      instruction in the above example will never assign a value.</p>
+    <h3>Section 3: Branch instruction - register source</h3>
+    <p>The <em>branch target</em> is taken from <em>SIMD element <b>15</b></em>
+      if <tt>reg</tt> is set rather than element 0. This is wrong at several
+      places in the documentation.<br>
+      However, this can particularly useful to use an A register as branch
+      target and for VPM/VCD setup and concurrently since the latter will only
+      use SIMD element 0.</p>
+    <h3>Section 3: Branch instruction - target assignment</h3>
+    <p>The assignment of the target register(s) of a branch instruction depends
+      on the flags. The target register is only assigned if the branch is
+      actually taken. The same applies to the flags if <tt>sf</tt> is true. So
+      you may not abuse <tt>brr.never</tt> to load the relocated values of
+      labels into a register. What a pity!</p>
+    <h3>Section 7: QPU Reading and Writing of VPM</h3>
+    <p>VPM reads seem to <em>block immediately if the FIFO is empty</em>. No
+      undefined data is returned when the reads are made too early.</p>
+    <p>Furthermore the <em>VPM read setups cannot be queued</em>. Only if the
+      result of the last VPM read setup is fully transferred to the VPM FIFO,
+      i.e. there is no more than one value outstanding, a new setup is accepted.<br>
+      Example: if you request 2 reads with the first write to <tt>vr_setup</tt>
+      and another two reads with the second write, then the second job is
+      ignored and you can read only two values without a deadlock. In contrast,
+      if you request 1 read by the first setup and 3 by the second one, then
+      everything is fine, since the single read of the first setup is
+      immediately transferred to the FIFO and the setup is discarded. No delay
+      slot instructions are required in the latter case.</p>
+    <h3>Table 35: VCD DMA Write (VDW) Stride Setup Format</h3>
+    <p>Unlike the documentation suggests the <tt>STRIDE</tt> field is <em>16
+        bits wide</em>. Probably just a typo.</p>
+    <h3>Section 10: Performance counters</h3>
+    <p>The documentation of the <em>V3D_PCTRE</em> register is wrong. <em>You
+        need to set </em><em>bit 31</em> (allegedly reserved) to enable
+      performance counters at all.</p>
+    <h2>Instruction constraints</h2>
+    <h3>No conditional write to peripheral registers</h3>
+    <p>A write to the TMU retiring register (TMU0_S, TMU1_S) or VPM must not use
+      conditional write access. Although the conditional write itself works the
+      TMU/VPM fifo is triggered unconditional to process the request with
+      undefined data in case the condition is not true.<br>
+      You should also not write to the same register from both ALUs with inverse
+      condition flags. E.g. <tt>mov.ifz vpm, 0; mov.ifnz vpm, 1</tt> will write
+      an undefined value from the MUL ALU.<br>
+      Probably any other peripheral register share the same problems.</p>
+    <p>vc4asm warns about this kind of access in verify mode.</p>
+    <h3>Distance of branch instructions</h3>
+    <p>There must be at least two non branch instructions between every two
+      branch instructions. Otherwise no branch is taken or the thread will
+      crash. This also applies if the branch conditions are reverse and only one
+      of the branches can actually be taken.</p>
+    <p>However, you can enqueue the next branch just before the last one is
+      taken. Example:</p>
+    <pre># r0 contains semaphore number [0..15]<br>mul24 ra31, r0, 3*8<br>nop<br>brr ra31, ra31, r:sacq<br>nop<br>nop<br>bra -, ra31<br>...<br><br>:sacq<br>.rep i, 16<br>nop<br>nop<br>sacq -, i<br>.endr</pre>
+    <p>The above code fragment dynamically acquires a semaphore depending on the
+      number in the r0 register. This is the shortest possible code fragment to
+      do this task.</p>
+    <h3>MUL ALU pack modes and I/O register targets</h3>
+    <p>The MUL ALU pack modes that write only a single byte are not available
+      for I/O register targets. The write only hardware registers cannot write
+      slices of a word.</p>
+    <h2>Undocumented features</h2>
     <h3>Section 3: Horizontal vector rotation</h3>
     <p>Both source operands must be from accumulator <tt>r0</tt>..<tt>r3</tt>
       for full vector rotation. But if you choose not to do so the rotation will
@@ -111,56 +192,6 @@
         </tr>
       </tbody>
     </table>
-    <h3>Section 3: Table 1: ALU Instruction Fields - set flags</h3>
-    <p>The flags are <em>only updated when</em> the corresponding <em>condition
-        codes evaluate true</em> and the target value is assigned. You may use
-      this feature do boolean operations with the flags.</p>
-    <p>Furthermore the flags are <em>only updated from the MUL ALU when the ADD
-        ALU executes a <tt>nop</tt></em>. In contrast to the Broadcom
-      documetation the condition code <tt>.never</tt> has no effect on this
-      behavior.</p>
-    <h3>Section 3: Branch instruction - implicit set flags</h3>
-    <p>Unlike the Broadcom documentation suggests the <em>branch instruction is
-        able to set the flags</em>. But the <tt>sf</tt> bit is at the same
-      location of the instruction word than the <tt>raddr_a</tt> field. So
-      every branch instruction with an <i>odd register source</i> will set the
-      flags. This is an unwanted side effect since the flags of a PC location
-      are normally useless.</p>
-    <p>vc4asm reports a warning when a branch instruction is used with an odd
-      source register. You can use explicit <tt>.setf</tt> to suppress the
-      warning.</p>
-    <pre>and.setf -,  elem_num, 1<br>bra      -,  ra1        # implies .setf<br>mov.ifz  r0, 1<br>...</pre>
-    <p>Since a branch target will never be at the physical address 0 the <tt>mov.ifz</tt>
-      instruction in the above example will never assign a value.</p>
-    <h3>Section 3: Branch instruction - register source</h3>
-    <p>The <em>branch target</em> is taken from <em>SIMD element <b>15</b></em>
-      if <tt>reg</tt> is set rather than element 0. This is wrong at several
-      places in the documentation.<br>
-      However, this can particularly useful to use an A register as branch
-      target and for VPM/VCD setup and concurrently since the latter will only
-      use SIMD element 0.</p>
-    <h3>Section 3: Branch instruction - target assignment</h3>
-    <p>The assignment of the target register(s) of a branch instruction depends
-      on the flags. The target register is only assigned if the branch is
-      actually taken. The same applies to the flags is <tt>sf</tt> is true. So
-      you may not abuse <tt>brr.never</tt> to load the relocated values of
-      labels into a register. What a pity!</p>
-    <h3>Section 7: QPU Reading and Writing of VPM</h3>
-    <p>VPM reads seem to <em>block immediately if the FIFO is empty</em>. No
-      undefined data is returned when the reads are made too early.</p>
-    <p>Furthermore the <em>VPM read setups cannot be queued</em>. Only if the
-      result of the last VPM read setup is fully transferred to the VPM FIFO,
-      i.e. there is no more than one value outstanding, a new setup is accepted.<br>
-      Example: if you request 2 reads with the first write to <tt>vr_setup</tt>
-      and another two reads with the second write, then the second job is
-      ignored and you can read only two values without a deadlock. In contrast,
-      if you request 1 read by the first setup and 3 by the second one, then
-      everything is fine, since the single read of the first setup is
-      immediately transferred to the FIFO and the setup is discarded. No delay
-      slot instructions are required in the latter case.</p>
-    <h3>Table 35: VCD DMA Write (VDW) Stride Setup Format</h3>
-    <p>Unlike the documentation suggests the <tt>STRIDE</tt> field is <em>16
-        bits wide</em>. Probably just a typo.</p>
     <h3>Secret access to previous input values with vector rotation through the
       NOP register</h3>
     <p><em>Reading</em> one of the <em>NOP registers always returns the last
@@ -182,7 +213,7 @@
     <p>First of all, this is a kind of <em>vector rotation</em>, because you
       can move values from elements 12 to 15 to lower element numbers this way -
       even by the ADD ALU. Example:</p>
-    <pre>mov -, elem_num   # regfile A read<br>mov  r0, ra39     # results in [12,13,14,15, 12,13,14,15, 12,13,14,15, 12,13,14,15]</pre>
+    <pre>read elem_num  # regfile A read<br>mov r0, ra39   # results in [12,13,14,15, 12,13,14,15, 12,13,14,15, 12,13,14,15]</pre>
     <p>Secondly you might <em>access a value read by a previous instruction
         again</em> without the need to store it in an accumulator. This is
       always interesting when you cannot read the value from the same register
@@ -201,36 +232,5 @@
       the value has not been assigned because of an <tt>.if</tt> condition the
       result is unreliable. Example:</p>
     <pre>ldi.setf r0, [0,1,2,3, 1,2,3,0, 2,3,0,1, 3,0,1,2]<br>nop;  v8adds vpm, elem_num, r0  # results in [ 0, 2, 4, 6,  5, 7, 9, 7, 10,12,10,12, 15,13,15,17]<br>nop;  mnop r2                   # results in [15,13,15,17, 15,13,15,17, 15,13,15,17, 15,13,15,17]</pre>
-    <h2>Instruction constraints</h2>
-    <h3>No conditional write to peripheral registers</h3>
-    <p>A write to the TMU retiring register (TMU0_S, TMU1_S) or VPM must not use
-      conditional write access. Although the conditional write itself works the
-      TMU/VPM fifo is triggered unconditional to process the request with
-      undefined data in case the condition is not true.<br>
-      You should also not write to the same register from both ALUs with inverse
-      condition flags. E.g. <tt>mov.ifz vpm, 0; mov.ifnz vpm, 1</tt> will write
-      an undefined value from the MUL ALU.<br>
-      Probably any other peripheral register share the same problems.</p>
-    <p>vc4asm warns about this kind of access in verify mode.</p>
-    <h3>Distance of branch instructions</h3>
-    <p>There must be at least two non branch instructions between every two
-      branch instructions. Otherwise no branch is taken or the thread will
-      crash. This also applies if the branch conditions are reverse and only one
-      of the branches can actually be taken.</p>
-    <p>However, you can enqueue the next branch just before the last one is
-      taken. Example:</p>
-    <pre># r0 contains semaphore number [0..15]<br>mul24 ra31, r0, 3*8<br>nop<br>brr ra31, ra31, r:sacq<br>nop<br>nop<br>bra -, ra31<br>...<br><br>:sacq<br>.rep i, 16<br>nop<br>nop<br>sacq -, i<br>.endr</pre>
-    <p>The above code fragment dynamically acquires a semaphore depending on the
-      number in the r0 register. This is the shortest possible code fragment to
-      do this task.</p>
-    <h3>MUL ALU pack modes and I/O register targets</h3>
-    <p>The MUL ALU pack modes that write only a single byte are not available
-      for I/O register targets. The write only hardware registers cannot write
-      slices of a word.</p>
-    <h2>V3D Registers</h2>
-    <h3>Section 10: Performance counters</h3>
-    <p>The documentation of the <em>V3D_PCTRE</em> register is wrong. <em>You
-        need to set </em><em>bit 31</em> (allegedly reserved) to enable
-      performance counters at all.</p>
   </body>
 </html>

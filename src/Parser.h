@@ -558,7 +558,7 @@ class Parser : public DebugInfo
 	/// no more no less.
 	/// @exception std::string Failed, error message.
 	void             assembleMUL(int op);
-	/// @brief Assemble \c mov or ldi instruction.
+	/// @brief Assemble \c mov or \c ldi instruction.
 	/// @details assembleMOV can create almost any \c ldi or ALU instruction.
 	/// if auto mode is allowed, i.e. \a mode < 0, and the source argument is an immediate value
 	/// then it first tries to load the desired value from any small immediate value
@@ -566,6 +566,9 @@ class Parser : public DebugInfo
 	/// @param mode Value for Inst::LdMode or < 0 to choose automatically.
 	/// @exception std::string Failed, error message.
 	void             assembleMOV(int mode);
+	/// @brief Assemble \c read pseudo instruction.
+	/// @exception std::string Failed, error message.
+	void             assembleREAD(int);
 	/// Assemble branch instruction.
 	/// @param relative zero => \c bra, non-zero => \c brr
 	/// @exception std::string Failed, error message.

@@ -10,9 +10,9 @@
   <body>
     <h1>VC4ASM - Assembler instructions</h1>
     <p><a href="index.html">&uarr; Top</a>, <a href="#ADD">ADD ALU</a>, <a href="#MUL">MUL
-        ALU</a>, <a href="#mov">mov</a>, <a href="#ldi">ldi</a>, <a href="#ifcc">Conditional
-        assign</a>, <a href="#sema">Semaphore</a>, <a href="#bra">Branch</a>,
-      <a href="#sig">Signal</a></p>
+        ALU</a>, <tt><a href="#mov">mov</a></tt>, <tt><a href="#ldi">ldi</a></tt>,
+      <tt><a href="#read">read</a></tt>, <a href="#ifcc">Conditional assign</a>,
+      <a href="#sema">Semaphore</a>, <a href="#bra">Branch</a>, <a href="#sig">Signal</a></p>
     <h2>General rules</h2>
     <ul>
       <li>Each line of code with QPU assembler instructions generates exactly
@@ -234,7 +234,7 @@
       <dd>Optional rotation of the value.</dd>
     </dl>
     <p>Strictly speaking <tt>mov</tt> is no QPU instruction at all. It is
-      simply a convenient way to create a no-op ALU instruction like <tt>or</tt>
+      simply a convenient way to create a identity ALU instruction like <tt>or</tt>
       with two identical source arguments or a <a href="#ldi">load immediate
         instruction</a>, whatever fits best.</p>
     <p>If <b><var><tt>source</tt></var> is a register</b>, the assembler
@@ -251,7 +251,7 @@
       the MUL ALU, but the same value could be constructed by the ADD ALU from
       the value 4 with the <tt>shl</tt> instruction. See the <a href="smallimmediate.html">small
         immediate table</a> for a list of supported values. The value 0 can be
-      assigned without the use of a small immediate value by using <tt>xor</tt>
+      assigned without the use of a small immediate value by any ALU using <tt>xor</tt>
       or <tt>v8subs</tt> with any identical source.<br>
       If neither the second ALU nor signalling flags are used then the
       instruction is converted back to <tt>ldi</tt> to save ALU power.</p>
@@ -277,6 +277,50 @@
     ALU output.<br>
     <h3>Example</h3>
     <pre>ldi ra7, 0xffff0000</pre>
+    <h2><a id="read" name="read"></a>Read instruction</h2>
+    <pre><tt>read <var>source</var></tt></pre>
+    <dl>
+      <dt><var><tt>source</tt></var></dt>
+      <dd>Source register. This must be from register file A or B including
+        peripherals or a small immediate value. </dd>
+    </dl>
+    <p><tt>read</tt> is no real instruction of the GPU. It is just an extension
+      of vc4asm to create a register file A or B access without allocation of an
+      ALU instruction. Semantically it is identical to <tt>mov -, <var>source</var></tt>,
+      but it will <i>not</i> crate any opcode to one of the ALUs. Instead only
+      the <tt>raddr_a</tt> or <tt>raddr_b</tt> field is assigned. You can
+      combine this with up to two ALU instructions into a single instruction
+      word as long as they do not require the particular register file source.</p>
+    <h3>Examples</h3>
+    <p>The read pseudo instruction can be particularly useful in some cases:</p>
+    <dl>
+      <dt>
+        <h4>Wait for peripheral register</h4>
+      </dt>
+      <dd>
+        <p><tt>read vw_wait</tt></p>
+        <p>When you read a register only for the purpose to create a QPU stall
+          then there is no need to involve an ALU. In most cases it is a good
+          advise to prefer <tt>read ...</tt> over <tt>mov -, ...</tt>.</p>
+      </dd>
+      <dt>
+        <h4>Discard uniform or VPM value</h4>
+      </dt>
+      <dd>
+        <p><tt>read unif</tt></p>
+      </dd>
+      <dt>
+        <h4>Prefetch small immediate value</h4>
+      </dt>
+      <dd>
+        <p><tt>read 8;&nbsp; ...<br>
+            and.setf -, elem_num, rb39;&nbsp; ldtmu0</tt></p>
+        <p>Small immediate values cannot be combined with signals. But if you
+          can prefetch the value in the previous instruction, you are able to
+          use the value together with a signal without the need for a temporary
+          accumulator or even one of the ALUs of the previous instruction.</p>
+      </dd>
+    </dl>
     <h2><a id="ifcc" name="ifcc"></a>Conditional assignment</h2>
     <p>All ALU instructions and load immediate can use conditional assignment
       for the destination operand. The condition code can be applied to the
