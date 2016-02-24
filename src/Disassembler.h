@@ -109,6 +109,11 @@ class Disassembler
 	/// Handle MUL ALU opcode
 	/// @pre Instruct.Sig < Inst::S_LDI
 	void DoMUL();
+	/// Create additional read instruction if unused register file access exists.
+	/// @param regfile Register file to check. Inst::X_RA or Inst::X_RB.
+	/// Every other value is invalid.
+	/// @pre Instruct.Sig < Inst::S_LDI
+	void DoRead(Inst::mux regfile);
 	/// Handle ALU instruction
 	/// @pre Instruct.Sig < Inst::S_LDI
 	void DoALU();

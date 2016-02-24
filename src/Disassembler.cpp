@@ -61,8 +61,7 @@ void Disassembler::appendPack(bool mul)
 }
 
 void Disassembler::appendSource(Inst::mux mux)
-{	append(", ");
-	switch (mux)
+{	switch (mux)
 	{case Inst::X_RA:
 		append(cRreg[0][Instruct.RAddrA]);
 		break;
@@ -82,7 +81,8 @@ void Disassembler::appendSource(Inst::mux mux)
 }
 
 void Disassembler::appendMULSource(Inst::mux mux)
-{	appendSource(mux);
+{	append(", ");
+	appendSource(mux);
 
 	if ( Instruct.Sig != Inst::S_SMI || Instruct.SImmd < 48 // no rotation
 		|| (mux == Inst::X_RA && Instruct.RAddrA == 32) // register not sensitive to rotation
@@ -153,10 +153,13 @@ void Disassembler::DoADD()
 		}
 	}
 
+	append(", ");
 	appendSource(Instruct.MuxAA);
 
 	if (opa != 32 && !isUnary)
+	{	append(", ");
 		appendSource(Instruct.MuxAB);
+	}
 }
 
 void Disassembler::DoMUL()
@@ -203,6 +206,15 @@ void Disassembler::DoMUL()
 	appendMULSource(Instruct.MuxMB);
 }
 
+void Disassembler::DoRead(Inst::mux regfile)
+{
+	if ( Instruct.MuxAA != regfile && Instruct.MuxAB != regfile
+		&& Instruct.MuxMA != regfile && Instruct.MuxMB != regfile )
+	{	append(";  read ");
+		appendSource(regfile);
+	}
+}
+
 void Disassembler::DoALU()
 {
 	if (PrintFields)
@@ -218,6 +230,13 @@ void Disassembler::DoALU()
 	DoADD();
 
 	DoMUL();
+
+	if (Instruct.RAddrA != Inst::R_NOP)
+		DoRead(Inst::X_RA);
+	if ( Instruct.Sig == Inst::S_SMI
+		? Instruct.SImmd < 48
+		: Instruct.RAddrB != Inst::R_NOP )
+	DoRead(Inst::X_RB);
 
 	append(cOpS[Instruct.Sig]);
 }
