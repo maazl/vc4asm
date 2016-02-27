@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <cinttypes>
 
 using namespace std;
 
@@ -29,6 +30,22 @@ struct DebugInfo
 		file(const string& name, const location& parent) : Name(name), Parent(parent) {}
 	};
 
+	/// Segment flags (bit vector)
+	enum SegFlags : uint8_t
+	{	SF_None        = 0,   ///< No flags
+		SF_Code        = 1,   ///< Ordinary code segment (default)
+		SF_Data        = 2    ///< Data segment, i.e. created by the a .data directive.
+	};
+	/// @brief Segment entry
+	/// @details A segment is a consecutive run of elements in the instructions array
+	/// that have common properties.
+	struct segment
+	{	unsigned      Start; ///< Start index of the segment properties as index into Instructions.
+		uint8_t        Flags; ///< Segment flags
+		segment() {}
+		segment(int start, uint8_t flags) : Start(start), Flags(flags) {}
+	};
+
 	/// @brief Global label definitions.
 	/// @details List of labels that should be exported in ELF output.
 	/// This is only valid after EnsurePass2 has been called.
@@ -40,6 +57,8 @@ struct DebugInfo
 	/// @details The index of each entry corresponds to the indices in Instruction.
 	/// This is only valid after EnsurePass2 has been called.
 	vector<location> LineNumbers;
+	/// Segment properties ordered by Start address.
+	vector<segment>  Segments;
 };
 
 #endif

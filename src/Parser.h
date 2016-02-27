@@ -722,6 +722,9 @@ class Parser : public DebugInfo
 	/// @return Expression to which the functional macro evaluated after passing arguments.
 	/// @exception std::string Failed, error message.
 	exprValue        doFUNC(funcs_t::const_iterator f);
+	/// Handle code segment directive
+	/// @param flags see \ref SegFlags.
+	void             doSEGMENT(int flags);
 	/// Handle \c .include directive.
 	/// @details The Function reads the file name and immediately invokes the parser for this file.
 	/// @par This creates a new invocation context.

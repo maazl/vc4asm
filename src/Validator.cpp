@@ -334,7 +334,18 @@ void Validator::Validate()
 	RefDec = -1; // invalidate RefInst
 	Done.clear();
 	Done.resize(Instructions->size());
-	WorkItems.emplace_back(new state(0));
+
+	if (Info)
+	{	for (auto& seg : Info->Segments)
+		{	printf("VS: %u, %x\n", seg.Start, seg.Flags);
+			if (seg.Flags == DebugInfo::SF_Code)
+				WorkItems.emplace_back(new state(seg.Start));
+			else if (seg.Flags == DebugInfo::SF_Data)
+				Done[seg.Start] = true;
+		}
+	} else
+		WorkItems.emplace_back(new state(0));
+
 	while (!WorkItems.empty())
 	{	unique_ptr<state> item = move(WorkItems.back());
 		WorkItems.pop_back();

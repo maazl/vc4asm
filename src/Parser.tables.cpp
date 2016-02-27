@@ -1751,6 +1751,7 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "bit",     &Parser::parseDATA,  1 }
 ,	{ "byte",    &Parser::parseDATA,  8 }
 ,	{ "clone",   &Parser::parseCLONE }
+,	{ "code",    &Parser::doSEGMENT,  SF_Code }
 ,	{ "const",   &Parser::parseSET,   C_CONST }
 ,	{ "define",  &Parser::parseSET,   C_NONE }
 ,	{ "double",  &Parser::parseDATA,  -64 }
@@ -1785,8 +1786,10 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "macro",   &Parser::beginMACRO, M_NONE }
 ,	{ "qword",   &Parser::parseDATA,  64 }
 ,	{ "rep",     &Parser::beginREP,   0 }
+,	{ "rodata",  &Parser::doSEGMENT,  SF_Data }
 ,	{ "set",     &Parser::parseSET,   C_NONE }
 ,	{ "short",   &Parser::parseDATA,  16 }
+,	{ "text",    &Parser::doSEGMENT,  SF_Code }
 ,	{ "undef",   &Parser::parseUNSET, C_NONE }
 ,	{ "unset",   &Parser::parseUNSET, C_NONE }
 ,	{ "word",    &Parser::parseDATA,  16 }

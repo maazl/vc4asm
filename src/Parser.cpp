@@ -2199,6 +2199,29 @@ exprValue Parser::doFUNC(funcs_t::const_iterator f)
 	return val;
 }
 
+void Parser::doSEGMENT(int flags)
+{
+	if (doPreprocessor())
+		return;
+
+	if (NextToken() != END)
+		Msg(ERROR, "End of line expected.");
+
+	// Search segment entry at PC
+	auto ptr = upper_bound(Segments.begin()+1, Segments.end(), PC,
+		[](decltype(PC) pc, const segment& seg) { return pc < seg.Start; } );
+	auto cur = ptr - 1;
+
+	// Segment attributes happen to match => no action
+	if (cur->Flags == flags)
+		return;
+	// otherwise ensure distinct entry at PC
+	if (cur->Start != PC)
+		Segments.insert(ptr, segment(PC, (uint8_t)flags));
+	else
+		cur->Flags = flags;
+}
+
 void Parser::doINCLUDE(int)
 {
 	if (doPreprocessor())
@@ -2431,6 +2454,9 @@ void Parser::ResetPass()
 	PC = 0;
 	Instruct.reset();
 	BitOffset = 0;
+	Segments.resize(1);
+	Segments[0].Start = 0;
+	Segments[0].Flags = SF_None;
 }
 
 void Parser::EnsurePass2()
@@ -2464,19 +2490,42 @@ void Parser::EnsurePass2()
 		ParseFile();
 	}
 
-	// Optimize instructions
-	size_t i = 0;
+	// Optimize instructions identify code segments automatically
+	unsigned pc = 0;
 	Inst optimized;
+	auto sp = Segments.begin();
+	auto np = sp + 1;
+	bool autocode = false;
 	for (auto& inst : Instructions)
-	{	if ((InstFlags[i++] & IF_DATA) == 0)
-		{	optimized.decode(inst);
+	{	// next segment?
+		if (np != Segments.end() && np->Start <= pc)
+		{	sp = np++;
+			autocode = false;
+		}
+		if ((InstFlags[pc++] & IF_DATA) == 0)
+		{	// instruction
+			optimized.decode(inst);
 			optimized.optimize();
 			inst = optimized.encode();
-	}	}
-}
-
-Parser::Parser()
-{	Reset();
+			// auto code?
+			if (sp->Flags == SF_None)
+			{	if (sp->Start != pc)
+				{	// not current pc => insert new segment
+					sp = Segments.emplace(np, pc, SF_Code);
+					np = sp + 1;
+				} else
+					// exact match => just change the flags
+					sp->Flags = SF_Code;
+				autocode = true;
+			}
+		} else if (autocode)
+		{	// autocode implies that sp->Start != pc && last Flags = SF_None
+			// => insert an entry at pc
+			sp = Segments.insert(np, segment(pc, SF_None));
+			np = sp + 1;
+			autocode = false;
+		}
+	}
 }
 
 void Parser::Reset()
@@ -2484,4 +2533,8 @@ void Parser::Reset()
 	Labels.clear();
 	Pass2 = false;
 	SourceFiles.clear();
+}
+
+Parser::Parser()
+{	Reset();
 }

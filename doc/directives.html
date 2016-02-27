@@ -11,16 +11,17 @@
     <h1>VC4ASM - Assembler directives</h1>
     <p><a href="index.html">&uarr; Top</a> <tt><a href="#.align">.align</a> <a
           href="#.assert">.assert</a> <a href="#.back">.back</a> <a href="#.bit">.bit</a>
-        <a href="#.byte">.byte</a> <a href="#.clone">.clone</a> <a href="#.const">.const</a>
-        <a href="#.double">.double</a> <a href="#.else">.else</a> <a href="#.elseif">.elseif</a>
-        <a href="#.back">.endb</a> <a href="#.func">.endf</a> <a href="#.foreach">.endfor</a>
-        <a href="#.endif">.endif</a> <a href="#.macro">.endm</a> <a href="#.rep">.endr</a>
-        <a href="#.equ">.equ</a> <a href="#.float">.float</a> <a href="#.foreach">.foreach</a>
-        <a href="#.func">.func</a> <a href="#.global">.global</a> <a href="#.if">.if</a>
-        <a href="#.ifset">.ifset</a> <a href="#.include">.include</a> <a href="#.int">.int</a>
-        <a href="#.const">.lconst</a> <a href="#.long">.long</a> <a href="#.set">.lset</a>
-        <a href="#.unset">.lunset</a> <a href="#.macro">.macro</a> <a href="#.rep">.rep</a>
-        <a href="#.set">.set</a> <a href="#.short">.short</a> <a href="#.unset">.unset</a></tt></p>
+        <a href="#.byte">.byte</a> <a href="#.clone">.clone</a> <a href="#.code">.code</a>
+        <a href="#.const">.const</a> <a href="#.double">.double</a> <a href="#.else">.else</a>
+        <a href="#.elseif">.elseif</a> <a href="#.back">.endb</a> <a href="#.func">.endf</a>
+        <a href="#.foreach">.endfor</a> <a href="#.endif">.endif</a> <a href="#.macro">.endm</a>
+        <a href="#.rep">.endr</a> <a href="#.equ">.equ</a> <a href="#.float">.float</a>
+        <a href="#.foreach">.foreach</a> <a href="#.func">.func</a> <a href="#.global">.global</a>
+        <a href="#.if">.if</a> <a href="#.ifset">.ifset</a> <a href="#.include">.include</a>
+        <a href="#.int">.int</a> <a href="#.const">.lconst</a> <a href="#.long">.long</a>
+        <a href="#.set">.lset</a> <a href="#.unset">.lunset</a> <a href="#.macro">.macro</a>
+        <a href="#.rep">.rep</a> <a href="#.rodata">.rodata</a> <a href="#.set">.set</a>
+        <a href="#.short">.short</a> <a href="#.text">.text</a> <a href="#.unset">.unset</a></tt></p>
     <h2><a id=".const" name=".const"></a><a id=".set" name=".set"></a><tt>.const
         .set .lconst .lset</tt> - define a constant or single line function</h2>
     <pre>.const <i>identifier</i>, <i>expression</i>
@@ -331,6 +332,20 @@
     <p>Note that this is just an example. The start, the size and the end of the
       generated code block are automatically exported as symbols as mentioned <a
         href="index.html#vc4asm">here</a>.</p>
+    <h2><a id=".code" name=".code"></a><a id=".text" name=".text"></a><a id=".rodata"
+        name=".rodata"></a><tt>.code</tt>, <tt>.rodata</tt> - segment
+      definitions</h2>
+    <pre>.code<br>.text<br><br>.rodata</pre>
+    <p>Declares the following instructions or <a href="#.byte">data directives</a>
+      as <em>executable code (<tt>.code</tt> and <tt>.text</tt>)</em> or <em>data
+        section (<tt>.data</tt>)</em> respectively. While this has no effect to
+      the generated output it tells&nbsp; the validator not to validate
+      immediate data embedded in the code.</p>
+    <p>If you specify neither of this directives vc4asm will <em>automatically
+        detect code or data</em>. I.e. everything emitted by any GPU instruction
+      will be marked as code and everything emitted by a data directive like <tt>.int</tt>
+      will be treated as data. Normally this should hit the nail on the head and
+      you need not to worry about this.</p>
     <dl>
     </dl>
     <dl>
