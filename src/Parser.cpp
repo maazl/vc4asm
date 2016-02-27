@@ -1089,8 +1089,8 @@ void Parser::assembleMOV(int mode)
 		doALUTarget(param);
 		// From here we are double ALU
 		InstCtx |= IC_ADD|IC_MUL; // now we are at both ALUs
+		param = ParseExpression();
 		break;
-
 	 case SEMI:  // no second target
 		--At;
 	 case END:;
