@@ -337,7 +337,7 @@ void Validator::Validate()
 
 	if (Info)
 	{	for (auto& seg : Info->Segments)
-		{	printf("VS: %u, %x\n", seg.Start, seg.Flags);
+		{	//printf("VS: %u, %x\n", seg.Start, seg.Flags);
 			if (seg.Flags == DebugInfo::SF_Code)
 				WorkItems.emplace_back(new state(seg.Start));
 			else if (seg.Flags == DebugInfo::SF_Data)
