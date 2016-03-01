@@ -1771,13 +1771,24 @@ const Parser::opEntry<8> Parser::directiveMap[] =
 ,	{ "endrep",  &Parser::endREP,     0 }
 ,	{ "equ",     &Parser::parseSET,   C_NONE }
 ,	{ "float",   &Parser::parseDATA,  -32 }
+,	{ "float16", &Parser::parseDATA,  -16 }
+,	{ "float32", &Parser::parseDATA,  -32 }
+,	{ "float64", &Parser::parseDATA,  -64 }
 ,	{ "foreach", &Parser::beginREP,   1 }
 ,	{ "func",    &Parser::beginMACRO, M_FUNC }
 ,	{ "global",  &Parser::parseGLOBAL }
+,	{ "half",    &Parser::parseDATA,  -16 }
 ,	{ "if",      &Parser::parseIF }
 ,	{ "ifset",   &Parser::parseIFSET, C_NONE }
 ,	{ "include", &Parser::doINCLUDE }
 ,	{ "int",     &Parser::parseDATA,  32 }
+,	{ "int1",    &Parser::parseDATA,  1 }
+,	{ "int16",   &Parser::parseDATA,  16 }
+,	{ "int2",    &Parser::parseDATA,  2 }
+,	{ "int32",   &Parser::parseDATA,  32 }
+,	{ "int4",    &Parser::parseDATA,  4 }
+,	{ "int64",   &Parser::parseDATA,  64 }
+,	{ "int8",    &Parser::parseDATA,  8 }
 ,	{ "lconst",  &Parser::parseSET,   C_LOCAL|C_CONST }
 ,	{ "local",   &Parser::beginLOCAL }
 ,	{ "long",    &Parser::parseDATA,  64 }

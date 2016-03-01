@@ -188,7 +188,7 @@ class Eval
 		/// and the last value as right hand side.
 		operate(vector<exprEntry>& stack);
 		/// @brief Perform the evaluation if the last operator has lower precedence
-		/// than the the last but one operator.
+		/// than the last but one operator.
 		/// @param unary Evaluate unary operators only.
 		/// @return true if the operation is finished without success.
 		/// false if an operator is evaluated and more operators might be ready for evaluation.
@@ -239,6 +239,9 @@ class Eval
 	/// It is up to the parser to enrich this message with the source code location.
 	exprValue   Evaluate();
  public:
+	/// Convert value to half precision floating point value.
+	/// @exception Fail Cannot convert to half precision float.
+	static unsigned toFloat16(exprValue value);
 	/// Human readable string for an operator.
 	static const char* op2string(mathOp op);
 };

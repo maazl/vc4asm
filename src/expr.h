@@ -14,7 +14,7 @@
 
 using namespace std;
 
-static_assert(numeric_limits<float>::is_iec559 && numeric_limits<float>::digits == 24, "error cannot cross compile on platform that does not support 32 bit IEEE float.");
+static_assert(numeric_limits<float>::is_iec559 && numeric_limits<float>::digits == 24, "error cannot cross compile on platform that does not support 32 bit IEEE 754 float.");
 
 /// Kind of register, bit vector
 enum regType : uint8_t
@@ -48,7 +48,7 @@ struct reg_t
 enum valueType : char
 {	V_NONE      ///< no value
 ,	V_INT       ///< integer literal or the result of an integer expression
-,	V_FLOAT     ///< float literal or the result of an float expression
+,	V_FLOAT     ///< float literal or the result of a float expression
 ,	V_LDPES     ///< load per element signed, otherwise like V_INT
 ,	V_LDPE      ///< load per element signed or unsigned, otherwise like V_INT
 ,	V_LDPEU     ///< load per element unsigned, otherwise like V_INT

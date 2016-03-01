@@ -524,6 +524,25 @@ exprValue Eval::Evaluate()
 	return Stack.front();
 }
 
+unsigned Eval::toFloat16(exprValue value)
+{	switch (value.Type)
+	{default:
+		throw Fail("Cannot convert value of type %s to half precision float.", type2string(value.Type));
+	 case V_INT:
+		value.fValue = value.iValue;
+	 case V_FLOAT:;
+	}
+	// vc4asm supports only IEEE 754 floats, so we can just use bit arithmetics.
+	unsigned ret = (value.iValue >> 0) << 15; // copy sign
+	value.fValue = fabs(value.fValue); // clear sign
+	if (value.fValue < 1./16384) // subnormal values and 0.
+		return ret | (int)(value.fValue * 16777216.);
+	if (value.fValue > 65504. && !std::isinf(value.fValue))
+		throw Fail("The value %g is outside the domain of half precision floating point.", value.fValue);
+	// Move exponent as well as mantissa into target including INF and NAN.
+	return ret | ((unsigned)(value.iValue >> 42) & 0x7fff);
+}
+
 const char* Eval::op2string(mathOp op)
 {	switch (op)
 	{case BRO:  return "(";

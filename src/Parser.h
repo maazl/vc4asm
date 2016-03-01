@@ -601,13 +601,9 @@ class Parser : public DebugInfo
 	/// @brief Handle .global
 	void             parseGLOBAL(int);
 	/// Handle raw data directives like \c .byte.
-	/// @param type Data type:
-	/// - 1 => 8 bit int data
-	/// - 2 => 16 bit int data
-	/// - 4 => 32 bit int data
-	/// - -4 => 32 bit float data
+	/// @param bits Number of bits. Negative values are IEEE 754 floating point types.
 	/// @exception std::string Failed, error message.
-	void             parseDATA(int type);
+	void             parseDATA(int bits);
 	/// Handle .align.
 	/// @param bytes Bytes to align. 1 = byte alignment, 8 = 64 bit alignment etc.
 	/// Must be a power of 2 or -1 for parsing an alignment argument.

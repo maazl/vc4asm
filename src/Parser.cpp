@@ -1454,21 +1454,19 @@ void Parser::parseGLOBAL(int)
 	}
 }
 
-void Parser::parseDATA(int type)
+void Parser::parseDATA(int bits)
 {	if (doPreprocessor())
 		return;
 	int alignment = 0;
-	int bits = type;
  next:
 	exprValue value = ParseExpression();
 	if (value.Type != V_INT && value.Type != V_FLOAT)
 		Fail("Immediate data instructions require integer or floating point constants. Found %s.", type2string(value.Type));
-	switch (type)
+	switch (bits)
 	{case -64: // double
 		if (value.Type == V_INT)
 			value.fValue = value.iValue;
-		bits = -type;
-		break;
+		goto flt;
 	 case -32: // float
 		{	union
 			{	uint32_t uVal;
@@ -1477,33 +1475,36 @@ void Parser::parseDATA(int type)
 			cvt.fVal = value.Type == V_INT ? value.iValue : value.fValue;
 			value.iValue = cvt.uVal;
 		}
-		bits = -type;
+	 flt:
+		bits = -bits;
 		break;
+	 case -16: // half precision float
+		try
+		{	value.iValue = Eval::toFloat16(value);
+			goto flt;
+		} catch (const Eval::Fail& msg) // Messages from Eval are not yet enriched.
+		{	throw enrichMsg(msg);
+		}
 	 case 1: // bit
 		if (value.iValue & ~1)
 			Msg(WARNING, "Bit value out of range: 0x%" PRIx64, value.iValue);
 		break;
-	 case 8: // byte
-		if (value.iValue > 0xFF || value.iValue < -0x80)
-			Msg(WARNING, "Byte value out of range: 0x%" PRIx64, value.iValue);
-		value.iValue &= 0xFF;
-		break;
-	 case 16: // short
-		if (value.iValue > 0xFFFF || value.iValue < -0x8000)
-			Msg(WARNING, "Short integer value out of range: 0x%" PRIx64, value.iValue);
-		value.iValue &= 0xFFFF;
-		break;
-	 case 32: // int
-		if (value.iValue > 0xFFFFFFFFLL || value.iValue < -0x80000000LL)
-			Msg(WARNING, "32 bit integer value out of range: 0x%" PRIx64, value.iValue);
-		value.iValue &= 0xFFFFFFFFLL;
+	 default: // 2 to 32 bit integer
+		{	int32_t lower = -1 << (bits - 1);
+			int64_t upper = (1ULL << bits) -1;
+			if (value.iValue > upper || value.iValue < lower)
+				Msg(WARNING, "%u bits integer value out of range [%" PRIi32 ", %" PRIi64 "]: 0x%" PRIx64, bits, lower, upper, value.iValue);
+			value.iValue &= upper;
+			break;
+		}
+	 case 64:;
 	}
 	// Ensure slot
 	if (!BitOffset)
 		StoreInstruction(0);
 	// Check alignment
 	else if (!alignment && (alignment = BitOffset & (bits-1)) != 0)
-		Msg(WARNING, "Unaligned immediate data directive. %i bits missing for correct alignment.", type - alignment);
+		Msg(WARNING, "Unaligned immediate data directive. %i bits missing for correct alignment.", bits - alignment);
 	// Prevent optimizer across .data segment
 	Flags() |= IF_BRANCH_TARGET|IF_DATA;
 	// store value
