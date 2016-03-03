@@ -8,6 +8,7 @@
 #define __STDC_FORMAT_MACROS // Work around for older g++
 
 #include "Inst.h"
+#include "Eval.h"
 #include "utils.h"
 
 #include <cfloat>
@@ -210,8 +211,9 @@ bool Inst::evalPack(qpuValue& r, qpuValue v, bool mul)
 					v.iValue = 0x7fff;
 			 pack16_cont:
 				if (mul ? OpM == M_MUL24 : 0x17e & (1<<OpA))
-					throw string("The 16 bit floating point pack modes are not yet implemented."); // TODO
-				v.iValue &= 0xffff;
+					v.uValue = Eval::toFloat16(v.fValue);
+				else
+					v.iValue &= 0xffff;
 				v.iValue *= 0x10001; // replicate words
 				goto pack_cont;
 

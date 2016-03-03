@@ -38,7 +38,7 @@ clean:
 
 ../obj/utils$(O) : utils.cpp utils.h
 ../obj/expr$(O) : expr.cpp expr.h utils.h
-../obj/Inst$(O) : Inst.cpp Inst.h expr.h
+../obj/Inst$(O) : Inst.cpp Inst.h Eval.h expr.h
 ../obj/Eval$(O) : Eval.cpp Eval.h Inst.h expr.h utils.h
 ../obj/Parser$(O) : Parser.cpp Parser.h DebugInfo.h Eval.h Inst.h expr.h utils.h Parser.tables.cpp
 ../obj/Validator$(O) : Validator.cpp Validator.h DebugInfo.h utils.h Inst.h expr.h
