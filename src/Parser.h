@@ -439,7 +439,7 @@ class Parser : public DebugInfo
 	/// @return true: there are more arguments in the current block.
 	/// @pre The function should only be called after ParseExpression.
 	/// It cannot deal with expressions and braces.
-	static bool      HaveMoreOperands(const char* rem) { return rem[strcspn(rem, ",;)]")] == ','; }
+	static bool      HaveMoreOperands(const char* rem) { return rem[strcspn(rem, ",;)]#")] == ','; }
 
 	/// @brief Find the first potential match for an ALU instruction that can assign an immediate value using small immediates.
 	/// @details The function does not only seek for an exactly match small immediate value but also for small immediate values
