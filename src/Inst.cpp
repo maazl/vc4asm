@@ -356,17 +356,19 @@ void Inst::optimize()
 {	qpuValue val;
 	switch (Sig)
 	{case S_SMI:
-		if (WAddrM == R_NOP && MuxAA == X_RB && MuxAB == X_RB && SImmd < 48)
-		{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
-			val = SMIValue();
-			if (evalADD(val, val) && evalPack(val, val, false))
-				goto mkLDI;
-		}
-		if (OpA == A_NOP && MuxMA == X_RB && MuxMB == X_RB && SImmd < 48)
-		{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
-			val = SMIValue();
-			if (evalMUL(val, val) && evalPack(val, val, true))
-				goto mkLDI;
+		if ((1 << Pack) & 0x0909) // only pack modes that write the entire word
+		{	if (WAddrM == R_NOP && MuxAA == X_RB && MuxAB == X_RB && SImmd < 48)
+			{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
+				val = SMIValue();
+				if (evalADD(val, val) && evalPack(val, val, false))
+					goto mkLDI;
+			}
+			if (OpA == A_NOP && MuxMA == X_RB && MuxMB == X_RB && SImmd < 48)
+			{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
+				val = SMIValue();
+				if (evalMUL(val, val) && evalPack(val, val, true))
+					goto mkLDI;
+			}
 		}
 	 default:
 		switch (OpA)
