@@ -1,7 +1,9 @@
 #include "Parser.h"
 #include "Validator.h"
+#ifdef __linux__
 #include "WriteELF.h"
 
+#endif
 #include <cstdio>
 #include <getopt.h>
 
@@ -40,10 +42,12 @@ int main(int argc, char **argv)
 			writeCPP = optarg; break;
 		 case 'C':
 			writeCPP2 = optarg; break;
+#ifdef __linux__
 		 case 'e':
 			writeELF = optarg; break;
 		 case 'E':
 			writeELF2 = optarg; break;
+#endif
 		 case 'I':
 			parser.IncludePaths.push_back(optarg); break;
 		 case 'V':
@@ -59,8 +63,10 @@ int main(int argc, char **argv)
 			" -o<file> Binary output file.\n"
 			" -c<file> C output file with trailing ','.\n"
 			" -C<file> C output file withOUT trailing ','.\n"
+#ifdef __linux__
 			" -e<file> Linux ELF output file.\n"
 			" -E<file> Linux ELF output file without predefined symbols.\n"
+#endif
 			" -I<path> Add search path for .include <...>\n"
 			" -V       Run instruction verifier and print warnings about suspicious code.\n"
 			, stderr);
@@ -137,6 +143,7 @@ int main(int argc, char **argv)
 			fclose(of);
 		}
 
+#ifdef __linux__
 		if (writeELF)
 		{	WriteELF we;
 			we.Target = fopen(writeELF, "wb");
@@ -158,6 +165,7 @@ int main(int argc, char **argv)
 			we.Write(parser.Instructions, parser, writeELF);
 			fclose(we.Target);
 		}
+#endif
 	} catch (const string& msg)
 	{	fputs(msg.c_str(), stderr);
 	  fputc('\n', stderr);

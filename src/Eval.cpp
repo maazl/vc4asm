@@ -10,6 +10,7 @@
 #include "utils.h"
 
 #include <cmath>
+#include <cstdlib>
 #include <cstdarg>
 #include <climits>
 
