@@ -5,6 +5,7 @@
  *      Author: mueller
  */
 
+#ifdef __linux__
 #include "WriteELF.h"
 #include "expr.h"
 #include "DebugInfo.h"
@@ -196,3 +197,5 @@ Elf32_Sym& WriteELF::AddGlobalSymbol(const string& name)
 	sym.st_shndx = 2; // [.rodata]
 	return sym;
 }
+
+#endif // __linux__

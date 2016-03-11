@@ -2,7 +2,6 @@
 #include "Validator.h"
 #ifdef __linux__
 #include "WriteELF.h"
-
 #endif
 #include <cstdio>
 #include <getopt.h>

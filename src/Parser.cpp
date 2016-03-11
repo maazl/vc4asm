@@ -19,6 +19,9 @@
 
 #include "Parser.tables.cpp"
 
+#ifndef UINT64_MAX
+#define UINT64_MAX (~(uint64_t)0)
+#endif
 
 Parser::saveContext::saveContext(Parser& parent, fileContext* ctx)
 :	Parent(parent)

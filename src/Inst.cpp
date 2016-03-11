@@ -26,7 +26,7 @@ qpuValue& qpuValue::operator=(const exprValue& value)
 	 case V_LDPE:
 	 case V_LDPEU:
 	 case V_INT:
-		if (value.iValue < INT32_MIN || value.iValue > UINT32_MAX)
+		if (value.iValue < -0x80000000 || value.iValue > 0xffffffffU)
 			throw stringf("Integer constant 0x%" PRIx64 " out of range for use as QPU constant.", value.iValue);
 		iValue = (int32_t)value.iValue;
 		break;

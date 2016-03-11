@@ -7,6 +7,7 @@
 
 #ifndef WRITEELF_H_
 #define WRITEELF_H_
+#ifdef __linux__
 
 #include <linux/elf.h>
 #include <stdio.h>
@@ -43,4 +44,5 @@ class WriteELF
 	int WriteRaw(const T& data)      { return fwrite(&data, sizeof(T), 1, Target); }
 };
 
+#endif // __linux__
 #endif // WRITEELF_H_

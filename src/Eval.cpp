@@ -229,7 +229,7 @@ bool Eval::operate::Apply(bool unary)
 	 case LOG:
 		ApplyUnaryMathOp(&log); break;
 	 case LOG2:
-		ApplyUnaryMathOp(&log2); break;
+		ApplyUnaryMathOp([](double val) { return log(val) / M_LN2; }); break;
 	 case LOG10:
 		ApplyUnaryMathOp(&log10); break;
 	 case COS:
