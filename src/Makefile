@@ -1,3 +1,4 @@
+OS := $(shell uname)
 FLAGS    = -Wall -std=c++11 -O3
 CPPFLAGS = -c
 LDFLAGS  =
@@ -14,7 +15,10 @@ O   = .o
 	$(CC) $(FLAGS) $(CPPFLAGS) -S -o $@ $<
 
 BASEOBJECTS = ../obj/utils$(O) ../obj/expr$(O) ../obj/Inst$(O) ../obj/Eval$(O) ../obj/Validator$(O)
-ASMOBJECTS  = $(BASEOBJECTS) ../obj/Parser$(O) ../obj/vc4asm$(O) ../obj/WriteELF$(O)
+ASMOBJECTS  = $(BASEOBJECTS) ../obj/Parser$(O) ../obj/vc4asm$(O)
+ifeq ($(OS),Linux)
+	ASMOBJECTS = $(ASMOBJECTS) ../obj/WriteELF$(O)
+endif
 DISOBJECTS  = $(BASEOBJECTS) ../obj/Disassembler$(O) ../obj/vc4dis$(O)
 
 all: ../bin/vc4asm$(EXE) ../bin/vc4dis$(EXE)
