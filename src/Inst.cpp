@@ -326,7 +326,7 @@ bool Inst::tryALUSwap()
 		break;
 	 case A_XOR:
 	 case A_SUB:
-		if (MuxMA != MuxMB)
+		if (MuxAA != MuxAB)
 			return false;
 	 case A_V8SUBS:
 		opm = M_V8SUBS;
