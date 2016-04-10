@@ -51,6 +51,14 @@
       actually taken. The same applies to the flags if <tt>sf</tt> is true. So
       you may not abuse <tt>brr.never</tt> to load the relocated values of
       labels into a register. What a pity!</p>
+    <h3>Section 4: TMU FIFO</h3>
+    <p>When using direct memory access the TFREQ FIFO can hold up to 8 slots
+      supposedly. It turned out to be <em>unreliable to use more than 4</em> of
+      them. Sometimes the first QPU elements receive the result from 4 slots
+      ahead in case of TMU cache hits.</p>
+    <h3>Section 4: Writing <tt>tmu_noswap</tt></h3>
+    <p>When writing <tt>tmu_noswap</tt> only the value of <em>SIMD element 0</em>
+      counts. Furthermore any non-zero value will disable TMU swap not just 1.</p>
     <h3>Section 7: QPU Reading and Writing of VPM</h3>
     <p>VPM reads seem to <em>block immediately if the FIFO is empty</em>. No
       undefined data is returned when the reads are made too early.</p>
@@ -192,6 +200,7 @@
         </tr>
       </tbody>
     </table>
+    <pre>shl.setf -, elem_num, 30;  mov r0, r0&lt;&lt;2  # Set C flag to bit 2 of elem_num, set N flag to bit 1</pre>
     <h3>Secret access to previous input values with vector rotation through the
       NOP register</h3>
     <p><em>Reading</em> one of the <em>NOP registers always returns the last
@@ -224,13 +233,55 @@
       the pseudo register <tt>unif</tt> in this case, since vc4asm will chose
       freely which register file to use. Example:</p>
     <pre>add ra0, ra32, 8  # read uniform<br>sub rb0, ra39, 8  # read the same uniform again</pre>
+    <p>Combine immediate value with signal:</p>
+    <pre>add ra0, ra0, 8<br>add ra1, ra1, rb39;  ldtmu0  # adds immediate value 8 to ra1 too</pre>
     <h3>Secret access to previous MUL ALU result with vector rotation</h3>
     <p>Using the <em>MUL ALU opcode 0 in conjunction with <tt>waddr_mul</tt></em>
-      let you access the last result of the MUL ALU again. Because the
-      parallelism of the quads is virtual only the results from the last quads,
+      let you access the last result of the MUL ALU again. Because of the
+      virtual parallelism of the quads only the results from the last quads,
       i.e. <em>only SIMD element 12..15</em> are available. But be careful, if
       the value has not been assigned because of an <tt>.if</tt> condition the
       result is unreliable. Example:</p>
     <pre>ldi.setf r0, [0,1,2,3, 1,2,3,0, 2,3,0,1, 3,0,1,2]<br>nop;  v8adds vpm, elem_num, r0  # results in [ 0, 2, 4, 6,  5, 7, 9, 7, 10,12,10,12, 15,13,15,17]<br>nop;  mnop r2                   # results in [15,13,15,17, 15,13,15,17, 15,13,15,17, 15,13,15,17]</pre>
+    <h2><a id="cache" name="cache"></a>Cache details</h2>
+    <table border="1" cellspacing="0">
+      <thead>
+        <tr>
+          <th style="text-align: center;">Cache</th>
+          <th style="text-align: center;">size</th>
+          <th style="text-align: center;">associativity</th>
+          <th style="text-align: center;">cache line</th>
+          <th style="text-align: center;">address bits</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align: center;">Instruction cache</td>
+          <td style="text-align: center;">4 kiB</td>
+          <td style="text-align: center;">4-way</td>
+          <td style="text-align: center;">64 B</td>
+          <td style="text-align: center;">0:7</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">TMU cache</td>
+          <td style="text-align: center;">4 kiB</td>
+          <td style="text-align: center;">-</td>
+          <td style="text-align: center;">64 B</td>
+          <td style="text-align: center;">0:9</td>
+        </tr>
+        <tr>
+          <td style="text-align: center;">V3D L2C</td>
+          <td style="text-align: center;">32 kiB ?</td>
+          <td style="text-align: center;">4-way</td>
+          <td style="text-align: center;">64 B</td>
+          <td style="text-align: center;">0:10 ?</td>
+        </tr>
+      </tbody>
+    </table>
+    <h3>TMU cache</h3>
+    <p><em>Sequence counts!</em> The items are loaded in order of the QPU
+      element number, i.e. if you load the same value twice into another element
+      this will cause a cache miss if a memory address with 4 k offset is in
+      between.</p>
   </body>
 </html>
