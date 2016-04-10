@@ -1566,7 +1566,10 @@ const Parser::smiEntry Parser::smiMap[] =
 const Parser::opEntry<8> Parser::opcodeMap[] =
 {	{"add",    &Parser::assembleADD, Inst::A_ADD }
 ,	{"and",    &Parser::assembleADD, Inst::A_AND }
+,	{"anop",   &Parser::assembleADD, Inst::A_NOP|0x100 }
 ,	{"asr",    &Parser::assembleADD, Inst::A_ASR }
+,	{"av8adds",&Parser::assembleADD, Inst::A_V8ADDS|0x100 }
+,	{"av8subs",&Parser::assembleADD, Inst::A_V8SUBS|0x100 }
 ,	{"bpkt",   &Parser::assembleSIG, Inst::S_BREAK }
 ,	{"bra",    &Parser::assembleBRANCH, false }
 ,	{"break",  &Parser::assembleSIG, Inst::S_BREAK }
@@ -1598,8 +1601,11 @@ const Parser::opEntry<8> Parser::opcodeMap[] =
 ,	{"lthrsw", &Parser::assembleSIG, Inst::S_LTHRSW }
 ,	{"max",    &Parser::assembleADD, Inst::A_MAX }
 ,	{"min",    &Parser::assembleADD, Inst::A_MIN }
+,	{"mnop",   &Parser::assembleMUL, Inst::M_NOP|0x100 }
 ,	{"mov",    &Parser::assembleMOV, -1 }
 ,	{"mul24",  &Parser::assembleMUL, Inst::M_MUL24 }
+,	{"mv8adds",&Parser::assembleMUL, Inst::M_V8ADDS|0x100 }
+,	{"mv8subs",&Parser::assembleMUL, Inst::M_V8SUBS|0x100 }
 ,	{"nop",    &Parser::assembleADD, Inst::A_NOP } // alternative M_NOP
 ,	{"not",    &Parser::assembleADD, Inst::A_NOT }
 ,	{"or",     &Parser::assembleADD, Inst::A_OR }

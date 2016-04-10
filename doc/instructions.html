@@ -289,8 +289,9 @@
       ALU instruction. Semantically it is identical to <tt>mov -, <var>source</var></tt>,
       but it will <i>not</i> crate any opcode to one of the ALUs. Instead only
       the <tt>raddr_a</tt> or <tt>raddr_b</tt> field is assigned. You can
-      combine this with up to two ALU instructions into a single instruction
-      word as long as they do not require the particular register file source.</p>
+      combine up to two <tt>read</tt>s with up to two ALU instructions into a
+      single instruction word as long as they do not require the particular
+      register file source.</p>
     <h3>Examples</h3>
     <p>The read pseudo instruction can be particularly useful in some cases:</p>
     <dl>

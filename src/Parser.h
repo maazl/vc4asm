@@ -61,6 +61,7 @@ class Parser : public DebugInfo
 	,	COMMA  = ','
 	,	SEMI   = ';'
 	,	COLON  = ':'
+	,	COMMENT= '#' ///< begin of comment not returned by NextToken()
 	};
 	/// Entry of the operator lookup table, POD, compatible with binary_search().
 	struct opInfo
@@ -129,7 +130,6 @@ class Parser : public DebugInfo
 	,	IC_ADD      = 8      ///< Bit test: currently at a ADD ALU instruction.
 	,	IC_MUL      = 16     ///< Bit test: currently at a MUL ALU instruction.
 	,	IC_BOTH     = 24     ///< Context of both ALUs, i.e branch or mov instruction with two targets.
-	,	IC_CANSWAP  = 32     ///< Allow to swap ADD and MUL ALU, i.e. toggle bit 0
 	};
 	/// State of extensions to the current OP code, bit vector.
 	enum ExtReq : unsigned char
@@ -311,7 +311,8 @@ class Parser : public DebugInfo
 	,	IF_CMB_ALLOWED   = 2      ///< Instruction of the following line could be merged
 	,	IF_BRANCH_TARGET = 4      ///< This instruction is a branch target and should not be merged
 	,	IF_DATA          = 8      ///< Result of .data directive, do not optimize
-	,	IF_NOSWAP        = 16     ///< Do not swap regfile A and regfile B peripheral register
+	,	IF_NORSWAP       = 16     ///< Do not swap regfile A and regfile B peripheral register
+	,	IF_NOASWAP       = 32     ///< Do not swap ADD and MUL ALU
 	};
 
 	// parser working set
@@ -400,6 +401,9 @@ class Parser : public DebugInfo
 	/// @param value Instruction to store.
 	void             StoreInstruction(uint64_t value);
 
+	/// Check whether the next token is instruction or line end.
+	/// @return Next non whitespace character or 0 in case of line end.
+	char             PeekNextChar() const { return At[strspn(At, " \t\r\n")]; }
 	/// Parse the next token from the current line and store the result in \ref Token.
 	/// @return Type of the token just parsed.
 	token_t          NextToken();
@@ -541,6 +545,8 @@ class Parser : public DebugInfo
 	/// @return true: succeeded.
 	/// @exception std::string Failed, error message.
 	bool             trySmallImmd(uint32_t value);
+	/// Handle nop instruction, ADD or MUL ALU.
+	void             doNOP();
 
 	// OP codes
 	/// @brief Assemble \c add instruction.

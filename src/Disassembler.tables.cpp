@@ -53,7 +53,7 @@ const char Disassembler::cOpA[33][9] =
 };
 
 const char Disassembler::cOpM[9][7] =
-{	"nop", "fmul", "mul24", "v8muld", "v8min", "v8max", "v8adds", "v8subs",
+{	"mnop", "fmul", "mul24", "v8muld", "v8min", "v8max", "v8adds", "v8subs",
 	"mov"
 };
 

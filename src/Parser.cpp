@@ -467,7 +467,7 @@ Inst::mux Parser::muxReg(reg_t reg)
 				&& Instruct.MuxMA != Inst::X_RA && Instruct.MuxMB != Inst::X_RA ))
 		{RA:
 			if (!(reg.Type & R_B))
-				Flags() |= IF_NOSWAP;
+				Flags() |= IF_NORSWAP;
 			Instruct.RAddrA = reg.Num;
 			return Inst::X_RA;
 		}
@@ -481,7 +481,7 @@ Inst::mux Parser::muxReg(reg_t reg)
 				&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB ))
 		{RB:
 			if (!(reg.Type & R_A))
-				Flags() |= IF_NOSWAP;
+				Flags() |= IF_NORSWAP;
 			Instruct.RAddrB = reg.Num;
 			return Inst::X_RB;
 		}
@@ -492,14 +492,14 @@ Inst::mux Parser::muxReg(reg_t reg)
 		if (( Instruct.RAddrB == reg.Num
 				|| ( Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB
 					&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB ))
-			&& !(Flags() & IF_NOSWAP) && Instruct.tryRABSwap() )
+			&& !(Flags() & IF_NORSWAP) && Instruct.tryRABSwap() )
 			goto RA;
 		break;
 	 case R_B:
 		if (( Instruct.RAddrA == reg.Num
 				|| ( Instruct.MuxAA != Inst::X_RA && Instruct.MuxAB != Inst::X_RA
 					&& Instruct.MuxMA != Inst::X_RA && Instruct.MuxMB != Inst::X_RA ))
-			&& !(Flags() & IF_NOSWAP) && Instruct.tryRABSwap() )
+			&& !(Flags() & IF_NORSWAP) && Instruct.tryRABSwap() )
 			goto RB;
 	}
 	Fail("Read access to register conflicts with another access to the same register file.");
@@ -541,7 +541,7 @@ void Parser::doSMI(uint8_t si)
 }
 
 bool Parser::trySwap()
-{	if ((InstCtx & IC_CANSWAP) == 0 || !Instruct.tryALUSwap())
+{	if ((Flags() & IF_NOASWAP) || !Instruct.tryALUSwap())
 		return false;
 	InstCtx ^= IC_ADD|IC_MUL;
 	return true;
@@ -558,7 +558,7 @@ void Parser::applyRot(int count)
 		if (count == 16)
 			Fail("Cannot rotate ALU target right by r5.");
 
-		InstCtx &= ~IC_CANSWAP;
+		Flags() |= IF_NOASWAP;
 		auto mux = InstCtx & IC_B ? Instruct.MuxMB : Instruct.MuxMA;
 		if (mux == Inst::X_R5)
 			Msg(WARNING, "r5 does not support vector rotations.");
@@ -667,7 +667,7 @@ void Parser::addSetF(int)
 	if (Instruct.SF)
 		Fail("Don't use .setf twice.");
 	Instruct.SF = true;
-	InstCtx &= ~IC_CANSWAP;
+	Flags() |= IF_NOASWAP;
 }
 
 void Parser::addCond(int cond)
@@ -976,6 +976,18 @@ bool Parser::trySmallImmd(uint32_t value)
 	return false;
 }
 
+void Parser::doNOP()
+{	Flags() |= IF_HAVE_NOP;
+
+	if (strchr(";#", PeekNextChar()))
+		return;
+
+	doALUTarget(ParseExpression());
+
+	if (!strchr(";#", PeekNextChar()))
+		Fail("Expected end of instruction.");
+}
+
 void Parser::assembleADD(int add_op)
 {	InstCtx = IC_ADD;
 
@@ -999,14 +1011,14 @@ void Parser::assembleADD(int add_op)
 	}
  cont:
 	Instruct.OpA = (Inst::opadd)add_op;
+	if (add_op & ~0xff)
+		Flags() |= IF_NOASWAP;
 	UseRot = UseUnpack = 0;
 
 	doInstrExt();
 
-	if (add_op == Inst::A_NOP)
-	{	Flags() |= IF_HAVE_NOP;
-		return;
-	}
+	if (Instruct.OpA == Inst::A_NOP)
+		return doNOP();
 
 	doALUTarget(ParseExpression());
 
@@ -1041,12 +1053,14 @@ void Parser::assembleMUL(int mul_op)
 	}
  cont:
 	Instruct.OpM = (Inst::opmul)mul_op;
+	if (mul_op & ~0xff)
+		Flags() |= IF_NOASWAP;
 	UseRot = UseUnpack = 0;
 
 	doInstrExt();
 
-	if (mul_op == Inst::M_NOP)
-		return;
+	if (Instruct.OpM == Inst::M_NOP)
+		return doNOP();
 
 	doALUTarget(ParseExpression());
 
@@ -1060,9 +1074,8 @@ void Parser::assembleMOV(int mode)
 	if (Instruct.Sig == Inst::S_BRANCH)
 		Fail("Cannot use MOV together with branch instruction.");
 	bool isLDI = Instruct.Sig == Inst::S_LDI;
-	InstCtx = IC_CANSWAP
-		| ( (Flags() & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP)
-			? IC_MUL : IC_ADD );
+	InstCtx = (Flags() & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP)
+		? IC_MUL : IC_ADD;
 	if ((InstCtx & IC_MUL) && (Instruct.WAddrM != Inst::R_NOP || (!isLDI && Instruct.OpM != Inst::M_NOP)))
 		Fail("Both ALUs are already used by the current instruction.");
 	UseRot = UseUnpack = 0;
@@ -1088,7 +1101,8 @@ void Parser::assembleMOV(int mode)
 			: (Instruct.WAddrM != Inst::R_NOP || (!isLDI && Instruct.OpM != Inst::M_NOP)) )
 			Fail("ALU instruction with two targets can only be used if both ALUs are available.");
 
-		InstCtx = (InstCtx & ~IC_CANSWAP) ^ (IC_ADD|IC_MUL); // switch ALU
+		Flags() |= IF_NOASWAP;
+		InstCtx ^= IC_ADD|IC_MUL; // switch ALU
 		doALUTarget(param);
 		// From here we are double ALU
 		InstCtx |= IC_ADD|IC_MUL; // now we are at both ALUs
@@ -1188,15 +1202,14 @@ void Parser::assembleREAD(int)
 	if (Instruct.Sig == Inst::S_LDI || Instruct.Sig == Inst::S_BRANCH)
 		Fail("read cannot be combined with load immediate, semaphore or branch instruction.");
 
-	switch (NextToken())
+	switch (PeekNextChar())
 	{case DOT:
 		Fail("read does not support instruction extensions.");
 	 case END:
+	 case COMMENT:
 	 case COMMA:
 	 case SEMI:
 		Fail("Expected source register or small immediate value after read.");
-	 default:
-		At -= Token.size();
 	}
 
 	exprValue param = ParseExpression();

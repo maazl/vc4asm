@@ -116,12 +116,14 @@ void Disassembler::DoADD()
 		opa = 32;
 
 	append(cOpA[opa]);
-	if (opa == Inst::A_NOP)
+
+	if (Instruct.isSFADD())
+		append(".setf");
+
+	if (opa == Inst::A_NOP && Instruct.WAddrA == Inst::R_NOP)
 		return;
 
 	append(cCC[Instruct.CondA]);
-	if (Instruct.isSFADD())
-		append(".setf");
 	append(" ");
 
 	// Parameters for ADD ALU
@@ -133,8 +135,12 @@ void Disassembler::DoADD()
 	else
 		appendPack(false);
 
-	if (opa == 32)
-	{	switch (Instruct.OpA)
+	switch (opa)
+	{case Inst::A_NOP:
+		return;
+
+	 case 32:
+		switch (Instruct.OpA)
 		{case Inst::A_SUB:
 		 case Inst::A_XOR:
 		 case Inst::A_V8SUBS:
@@ -177,9 +183,12 @@ void Disassembler::DoMUL()
 
 	append(";  ");
 	append(cOpM[opm]);
-	append(cCC[Instruct.CondM]);
+
 	if (Instruct.isSFMUL())
 		append(".setf");
+
+	append(cCC[Instruct.CondM]);
+
 	append(" ");
 	append(cWreg[!Instruct.WS][Instruct.WAddrM]);
 	bool unpack = false;
@@ -188,8 +197,16 @@ void Disassembler::DoMUL()
 	else
 		appendPack(true);
 
-	if (opm == 8)
-	{	if (Instruct.OpM == Inst::M_V8SUBS)
+	switch (opm)
+	{case Inst::M_NOP:
+		return;
+
+	 default:
+		appendMULSource(Instruct.MuxMA);
+		break;
+
+	 case 8:
+		if (Instruct.OpM == Inst::M_V8SUBS)
 			return append(", 0");
 		if (isSMI)
 		{	// constant => evaluate
@@ -201,8 +218,7 @@ void Disassembler::DoMUL()
 			appendImmd(value);
 			return;
 		}
-	} else
-		appendMULSource(Instruct.MuxMA);
+	}
 	appendMULSource(Instruct.MuxMB);
 }
 
