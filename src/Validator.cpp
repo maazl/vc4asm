@@ -273,16 +273,21 @@ void Validator::ProcessItem(state& st)
 		if ((regRA == 42 || regRB == 42) && At - st.LastWreg[0][44] <= 2)
 			Message(st.LastWreg[0][44], "Cannot read multisample mask (ms_flags) in the two instructions after TLB Z write.");
 		// Combined peripheral access
-		if (( ((0xfff09e0000000000ULL & (1ULL << regWA)) != 0)
+		if (( ((0xfff09e0000000000ULL & (1ULL << regWA)) != 0) // TMU, TLB, SFU or Mutex write
 			+ ((0xfff09e0000000000ULL & (1ULL << regWB)) != 0 && !(regWA == regWB && Inst::isWRegAB(regWA)))
-			+ ((0x0008060000000000ULL & (1ULL << regRA)) != 0)
+			+ ((0x0008060000000000ULL & (1ULL << regRA)) != 0)   // TLB or Mutex read
 			+ ((0x0008060000000000ULL & (1ULL << regRB)) != 0 && !(regRA == regRB && Inst::isRRegAB(regRA)))
-			+ ( (Instruct.Sig >= Inst::S_LOADCV && Instruct.Sig <= Inst::S_LOADAM)
-				|| (Instruct.Sig == Inst::S_LDI && (Instruct.LdMode & Inst::L_SEMA)) )
-			+ (regWA == 45 || regWA == 46 || regWB == 45 || regWB == 46 || Instruct.Sig == Inst::S_LOADC || Instruct.Sig == Inst::S_LDCEND) ) > 1 )
-			Message(At, "More than one access to TMU, TLB or mutex/semaphore within one instruction.");
+			+ ( (Instruct.Sig >= Inst::S_LOADCV && Instruct.Sig <= Inst::S_LOADAM) // TLB read
+				|| (Instruct.Sig == Inst::S_LDI && (Instruct.LdMode & Inst::L_SEMA)) ) // Semaphore access
+			+ (regWA == 45 || regWA == 46 || regWB == 45 || regWB == 46 || Instruct.Sig == Inst::S_LOADC || Instruct.Sig == Inst::S_LDCEND) ) > 1 ) // combined TLB color read/write
+			Message(At, "More than one access to TMU, TLB, SFU or mutex/semaphore within one instruction.");
+		// combined VPM access
 		if (regWA == 49 && regWB == 49)
 			Message(At, "Concurrent write to VPM read and write setup does not work.");
+		else if ((regWA == 49 || regWB == 49) && (regRA == 48 || regRB == 48))
+			Message(At, "Concurrent VPM read with VPM setup does not work.");
+		if ((regWA == 49 && regWB == 48) || (regWB == 49 && regWA == 48))
+			Message(At, "Concurrent VPM write with VPM setup does not work.");
 		// Some combinations that do not work
 		if (Instruct.Sig != Inst::S_BRANCH)
 		{	if ( !(Instruct.WAddrA == Instruct.WAddrM && (Instruct.CondA ^ Instruct.CondM) == 1) // No problem if both ALUs write conditionally to the same register with opposite conditions.

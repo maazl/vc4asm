@@ -105,6 +105,9 @@
     <p>The MUL ALU pack modes that write only a single byte are not available
       for I/O register targets. The write only hardware registers cannot write
       slices of a word.</p>
+    <h3>Concurrent access to VPM registers</h3>
+    <p>While VPM read and VPM write can coexist <em>no</em> other <em>concurrent
+        VPM access in one instruction</em> is reliable.</p>
     <h2>Undocumented features</h2>
     <h3>Section 3: Horizontal vector rotation</h3>
     <p>Both source operands must be from accumulator <tt>r0</tt>..<tt>r3</tt>
