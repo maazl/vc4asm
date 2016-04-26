@@ -35,12 +35,12 @@
     <p>vc4asm reports a warning when a branch instruction is used with an odd
       source register. You can use explicit <tt>.setf</tt> to suppress the
       warning.</p>
-    <pre>and.setf -,  elem_num, 1<br>bra      -,  ra1        # implies .setf<br>mov.ifz  r0, 1<br>...</pre>
+    <pre>and.setf -,  elem_num, 1<br>bra      -,  ra1        # implies .setf =&gt; warning<br>mov.ifz  r0, 1<br>...</pre>
     <p>Since a branch target will never be at the physical address 0 the <tt>mov.ifz</tt>
       instruction in the above example will never assign a value.</p>
     <h3>Section 3: Branch instruction - register source</h3>
     <p>The <em>branch target</em> is taken from <em>SIMD element <b>15</b></em>
-      if <tt>reg</tt> is set rather than element 0. This is wrong at several
+      if <tt>reg</tt> is set (rather than element 0). This is wrong at several
       places in the documentation.<br>
       However, this can particularly useful to use an A register as branch
       target and for VPM/VCD setup and concurrently since the latter will only
@@ -88,7 +88,7 @@
       You should also not write to the same register from both ALUs with inverse
       condition flags. E.g. <tt>mov.ifz vpm, 0; mov.ifnz vpm, 1</tt> will write
       an undefined value from the MUL ALU.<br>
-      Probably any other peripheral register share the same problems.</p>
+      Probably any other peripheral register share the same problem.</p>
     <p>vc4asm warns about this kind of access in verify mode.</p>
     <h3>Distance of branch instructions</h3>
     <p>There must be at least two non branch instructions between every two

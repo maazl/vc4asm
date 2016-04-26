@@ -16,22 +16,24 @@
     <h2>General rules</h2>
     <ul>
       <li>Each line of code with QPU assembler instructions generates exactly
-        one 64 bit OP code for the QPU.</li>
+        one 64 bit opcode for the QPU.</li>
       <li>Multiple logical instructions can be placed in one line as long as
-        their combination still fits into one OP code. The delimiter is <tt>;</tt>.
-        Example:<br>
+        their combination still fits into one opcode. The delimiter is <tt>;</tt>
+        (semicolon). Example:<br>
         <tt>mov ra11, rb11;&nbsp; mov rb11, ra11;&nbsp; ldtmu0</tt></li>
       <li>The sequence of the instructions in one line is normally not
         significant. Only if an instruction can be realized by the ADD and the
         MUL ALU then the ADD ALU is preferred as long as it has not already been
         used in the current line. You might use <tt>nop</tt> to explicitly mark
         the ADD ALU as used and place the second ALU instruction to the MUL ALU.</li>
+      <li>Operands are delimited by <tt>,</tt> (comma), destination operands
+        first.</li>
     </ul>
     <h2>Optimizations</h2>
     <h3>Instruction joining</h3>
     <p>A trailing <tt>;</tt> indicates that the assembler my try to merge the
       current instruction with the next one if next instruction is preceded with
-      <tt>;</tt> and the two instructions fit into a single OP code. E.g.</p>
+      <tt>;</tt> and the two instructions fit into a single opcode. E.g.</p>
     <pre>add r0, r0, 1;<br>;mov r2, 64</pre>
     <p>generates the same code as</p>
     <pre>add r0, r0, 1;  mov r2, 64</pre>
@@ -63,8 +65,8 @@
               <td><tt>fadd</tt></td>
               <td><tt>destination = source1 + source2</tt></td>
               <td><tt>v8adds</tt></td>
-              <td><tt>destination[4] = min(max(source1[4] + source2[4]), 255),
-                  0)</tt></td>
+              <td><tt>destination[0:3] = min(max(source1[</tt><tt><tt>0:3</tt>]
+                  + source2[</tt><tt><tt>0:3</tt>]), 255), 0)</tt></td>
             </tr>
             <tr>
               <td><tt>sub</tt></td>
@@ -72,8 +74,8 @@
               <td><tt>fsub</tt></td>
               <td><tt>destination = source1 - source2</tt></td>
               <td><tt>v8subs</tt></td>
-              <td><tt>destination[4] = min(max(source1[4] - source2[4]), 255),
-                  0)</tt></td>
+              <td><tt>destination[</tt><tt><tt>0:3</tt>] = min(max(source1[</tt><tt><tt>0:3</tt>]
+                  - source2[</tt><tt><tt>0:3</tt>]), 255), 0)</tt></td>
             </tr>
             <tr>
               <td><tt>min</tt></td>
@@ -161,7 +163,7 @@
     <pre>add r3, ra0, unif<var></var></pre>
     <h2><a id="MUL" name="MUL"></a>MUL ALU instruction</h2>
     <pre><var>opcode destination, source1, source2
-</var><var>opcode</var>.setf <var>destination, source1, source2</var><br><var>opcode</var>.rot <var>count, destination, source1, source2</var> </pre>
+</var><var>opcode</var>.setf <var>destination, source1, source2</var></pre>
     <dl>
       <dt><var><tt>opcode</tt></var></dt>
       <dd>
@@ -176,12 +178,14 @@
           <tbody>
             <tr>
               <td><tt>mul24</tt></td>
-              <td><tt>destination = source1 * source2</tt></td>
+              <td><tt>destination = (source1 &amp; 0xffffff)<br>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  * (source2 &amp; 0xffffff)</tt></td>
               <td><tt>fmul</tt></td>
-              <td><tt>destination = source1 + source2</tt></td>
+              <td><tt>destination = source1 * source2</tt></td>
               <td><tt>v8mul</tt></td>
-              <td><tt>destination[4] = min(max(source1[4] * source2[4] / 255),
-                  255), 0)</tt></td>
+              <td><tt>destination[</tt><tt><tt>0:3</tt>] = source1[</tt><tt><tt>0:3</tt>]
+                  * source2[</tt><tt><tt>0:3</tt>] / 255</tt></td>
             </tr>
             <tr>
               <td colspan="2" rowspan="4"><br>
@@ -189,21 +193,23 @@
               <td colspan="2" rowspan="4"><br>
               </td>
               <td><tt>v8adds</tt></td>
-              <td><tt>destination[4] = min(max(source1[4] + source2[4]), 255),
-                  0)</tt></td>
+              <td><tt>destination[</tt><tt><tt>0:3</tt>] = min(source1[</tt><tt><tt>0:3</tt>]
+                  + source2[</tt><tt><tt>0:3</tt>]), 255)</tt></td>
             </tr>
             <tr>
               <td><tt>v8subs</tt></td>
-              <td><tt>destination[4] = min(max(source1[4] + source2[4]), 255),
-                  0)</tt></td>
+              <td><tt>destination[</tt><tt><tt>0:3</tt>] = max(min(source1[</tt><tt><tt>0:3</tt>]
+                  - source2[</tt><tt><tt>0:3</tt>]), 255), 0)</tt></td>
             </tr>
             <tr>
               <td><tt>v8min</tt></td>
-              <td><tt>destination[4] = min(source1[4], source2[4])</tt></td>
+              <td><tt>destination[</tt><tt><tt>0:3</tt>] = min(source1[</tt><tt><tt>0:3</tt>],
+                  source2[</tt><tt><tt>0:3</tt>])</tt></td>
             </tr>
             <tr>
               <td><tt>v8max</tt></td>
-              <td><tt>destination[4] = min(source1[4], source2[4])</tt></td>
+              <td><tt>destination[</tt><tt><tt>0:3</tt>] = max(source1[</tt><tt><tt>0:3</tt>],
+                  source2[</tt><tt><tt>0:3</tt>])</tt></td>
             </tr>
           </tbody>
         </table>
@@ -277,7 +283,7 @@
     ALU output.<br>
     <h3>Example</h3>
     <pre>ldi ra7, 0xffff0000</pre>
-    <h2><a id="read" name="read"></a>Read instruction</h2>
+    <h2><a id="read" name="read"></a>Read pseudo instruction</h2>
     <pre><tt>read <var>source</var></tt></pre>
     <dl>
       <dt><var><tt>source</tt></var></dt>
@@ -289,11 +295,10 @@
       ALU instruction. Semantically it is identical to <tt>mov -, <var>source</var></tt>,
       but it will <i>not</i> crate any opcode to one of the ALUs. Instead only
       the <tt>raddr_a</tt> or <tt>raddr_b</tt> field is assigned. You can
-      combine up to two <tt>read</tt>s with up to two ALU instructions into a
+      combine up to two <tt>read</tt> with up to two ALU instructions into a
       single instruction word as long as they do not require the particular
       register file source.</p>
-    <h3>Examples</h3>
-    <p>The read pseudo instruction can be particularly useful in some cases:</p>
+    <h3>Use cases</h3>
     <dl>
       <dt>
         <h4>Wait for peripheral register</h4>
@@ -558,7 +563,7 @@ opcode.unpack<var>yy</var> <var>destination</var>, ...<br>opcode<var></var> <var
     </dl>
     <p>All patterns are nibbles in little endian memory order.</p>
     <h2><a id="sema" name="sema"></a>Semaphore instruction</h2>
-    <pre>sacq <var>destination, number</var><br>srel <var>destination, number</var><br>mov <var>destination, sacqnumber</var><br>mov <var>destination, srelnumber</var></pre>
+    <pre>sacq <var>destination, number</var><br>srel <var>destination, number</var><br>mov <var>destination</var>, sacq<var>number</var><br>mov <var>destination</var>, srel<var>number</var></pre>
     <dl>
       <dt><var><tt>destination</tt></var></dt>
       <dd>Target <a href="expressions.html#register">register</a>, usually <tt>-</tt>,
