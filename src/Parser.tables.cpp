@@ -1002,7 +1002,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0x7f7f7f7f, 57, Inst::A_SHR,   Inst::P_8abcd }
 ,	{ 0x7f7f7f7f, 59, Inst::A_ROR,   Inst::P_8abcd }
 ,	{ 0x7f7f7f7f, 57, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x7f800000, 16, Inst::A_FSUB } // NaN
+,	{ 0x7f800000, 16, Inst::A_FSUB } // +Inf
 ,	{ 0x7f800000, 16, Inst::M_FMUL }
 ,	{ 0x7f800000, 17, Inst::A_FSUB }
 ,	{ 0x7f800000, 17, Inst::M_FMUL }
@@ -1286,7 +1286,7 @@ const Parser::smiEntry Parser::smiMap[] =
 ,	{ 0xfefefefe, 63, Inst::A_ADD,   Inst::P_8abcd }
 ,	{ 0xff400000, 20, Inst::A_SHL }
 ,	{ 0xff400000, 32, Inst::A_SHL }
-,	{ 0xff800000, 16, Inst::A_FADD } // -NaN
+,	{ 0xff800000, 16, Inst::A_FADD } // -Inf
 ,	{ 0xff800000, 17, Inst::A_FADD }
 ,	{ 0xff800000, 18, Inst::A_FADD }
 ,	{ 0xff800000, 19, Inst::A_FADD }

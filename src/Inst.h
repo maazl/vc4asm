@@ -220,11 +220,13 @@ struct Inst
 	/// @param l Left operand and result
 	/// @param r Right operand
 	/// @return false: Invalid operator
+	/// @remarks The function also emulates faulty behavior of the ALU.
 	bool       evalADD(qpuValue& l, qpuValue r);
 	/// Simulate a MUL ALU operation of the current instruction.
 	/// @param l Left operand and result
 	/// @param r Right operand
 	/// @return false: Invalid operator
+	/// @remarks The function also emulates faulty behavior of the ALU.
 	bool       evalMUL(qpuValue& l, qpuValue r);
 	/// Simulate pack operation of the current instruction.
 	bool       evalPack(qpuValue& r, qpuValue v, bool mul);

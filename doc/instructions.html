@@ -9,10 +9,10 @@
   </head>
   <body>
     <h1>VC4ASM - Assembler instructions</h1>
-    <p><a href="index.html">&uarr; Top</a>, <a href="#ADD">ADD ALU</a>, <a href="#MUL">MUL
-        ALU</a>, <tt><a href="#mov">mov</a></tt>, <tt><a href="#ldi">ldi</a></tt>,
-      <tt><a href="#read">read</a></tt>, <a href="#ifcc">Conditional assign</a>,
-      <a href="#sema">Semaphore</a>, <a href="#bra">Branch</a>, <a href="#sig">Signal</a></p>
+    <p><a href="index.html">&uarr; Top</a>, <a href="#ALU">ALU</a>,&nbsp;<tt><a
+          href="#mov">mov</a></tt>, <tt><a href="#ldi">ldi</a></tt>, <tt><a href="#read">read</a></tt>,
+      <a href="#ifcc">Conditional assign</a>, <a href="#sema">Semaphore</a>, <a
+        href="#bra">Branch</a>, <a href="#sig">Signal</a></p>
     <h2>General rules</h2>
     <ul>
       <li>Each line of code with QPU assembler instructions generates exactly
@@ -45,184 +45,352 @@
       instruction joining over this point. Ordinary labels will do the same.</p>
     <ul>
     </ul>
-    <h2><a id="ADD" name="ADD"></a>ADD ALU instruction</h2>
+    <h2><a id="ALU" name="ADD"></a>ADD ALU instruction</h2>
     <pre><var>binaryopcode destination, source1, source2</var><br><var>unaryopcode destination, source1<br>opcode</var>.setf ...</pre>
     <dl>
-      <dt><var><tt>binaryopcode</tt></var></dt>
-      <dd>
-        <table border="1" cellpadding="2" cellspacing="0">
-          <thead>
-            <tr>
-              <th colspan="2" rowspan="1">Integer instruction</th>
-              <th colspan="2" rowspan="1">Floating point instruction</th>
-              <th colspan="2" rowspan="1">8 bit instruction</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><tt>add</tt></td>
-              <td><tt>destination = source1 + source2</tt></td>
-              <td><tt>fadd</tt></td>
-              <td><tt>destination = source1 + source2</tt></td>
-              <td><tt>v8adds</tt></td>
-              <td><tt>destination[0:3] = min(max(source1[</tt><tt><tt>0:3</tt>]
-                  + source2[</tt><tt><tt>0:3</tt>]), 255), 0)</tt></td>
-            </tr>
-            <tr>
-              <td><tt>sub</tt></td>
-              <td><tt>destination = source1 - source2</tt></td>
-              <td><tt>fsub</tt></td>
-              <td><tt>destination = source1 - source2</tt></td>
-              <td><tt>v8subs</tt></td>
-              <td><tt>destination[</tt><tt><tt>0:3</tt>] = min(max(source1[</tt><tt><tt>0:3</tt>]
-                  - source2[</tt><tt><tt>0:3</tt>]), 255), 0)</tt></td>
-            </tr>
-            <tr>
-              <td><tt>min</tt></td>
-              <td><tt>destination = min(source1, source2)</tt></td>
-              <td><tt>fmin</tt></td>
-              <td><tt>destination = min(source1, source2)</tt></td>
-              <td colspan="2" rowspan="9"><br>
-              </td>
-            </tr>
-            <tr>
-              <td><tt>max</tt></td>
-              <td><tt>destination = max(source1, source2)</tt></td>
-              <td><tt>fmax</tt></td>
-              <td><tt>destination = max(source1, source2)</tt></td>
-            </tr>
-            <tr>
-              <td><tt>and</tt></td>
-              <td><tt>destination = source1 &amp; source2</tt></td>
-              <td><tt>fminabs</tt></td>
-              <td><tt>destination = min(abs(source1), abs(source2))</tt></td>
-            </tr>
-            <tr>
-              <td><tt>or</tt></td>
-              <td><tt>destination = source1 | source2</tt></td>
-              <td><tt>fmaxabs</tt></td>
-              <td><tt>destination = max(abs(source1), abs(source2))</tt></td>
-            </tr>
-            <tr>
-              <td><tt>xor</tt></td>
-              <td><tt>destination = source1 ^ source2</tt></td>
-              <td colspan="2" rowspan="5"><br>
-              </td>
-            </tr>
-            <tr>
-              <td><tt>shl</tt></td>
-              <td><tt>destination = source1 &lt;&lt;&lt; source2</tt></td>
-            </tr>
-            <tr>
-              <td><tt>shr</tt></td>
-              <td><tt>destination = source1 &gt;&gt;&gt; source2</tt></td>
-            </tr>
-            <tr>
-              <td><tt>asr</tt></td>
-              <td><tt>destination = source1 &gt;&gt; source2</tt></td>
-            </tr>
-            <tr>
-              <td><tt>ror</tt></td>
-              <td><tt>destination = rotate(source, source2)</tt></td>
-            </tr>
-          </tbody>
-        </table>
-      </dd>
-      <dt><var><tt>unaryopcode</tt></var></dt>
-      <dd>
-        <table border="1" cellpadding="2" cellspacing="0">
-          <thead>
-            <tr>
-              <th colspan="2" rowspan="1">Integer instruction</th>
-              <th colspan="2" rowspan="1">Conversion instruction</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><tt>not</tt></td>
-              <td><tt>destination = ~source2</tt></td>
-              <td><tt>itof</tt></td>
-              <td><tt>destination = (float)source2</tt></td>
-            </tr>
-            <tr>
-              <td><tt>clz</tt></td>
-              <td><tt>destination = 32-floor(log<sub><font size="-1">2</font></sub>(2*source2+1))</tt></td>
-              <td><tt>ftoi</tt></td>
-              <td><tt>destination = (int)source2</tt></td>
-            </tr>
-          </tbody>
-        </table>
-      </dd>
+      <dt><var><tt>binaryopcode, unaryopcode</tt></var></dt>
+      <dd>ALU opcode, see below.</dd>
       <dt><var><tt>destination</tt></var></dt>
       <dd>Target <a href="expressions.html#register">register</a>.</dd>
       <dt><var><tt>source1, source2</tt></var></dt>
       <dd>Source <a href="expressions.html#register">register</a> or <a href="expressions.html#SMI">small
           immediate value</a>.</dd>
+    </dl>
+    <h3>Opcodes</h3>
+    <dl>
+    </dl>
+    <dl>
+      <table border="1" cellpadding="2" cellspacing="0">
+        <thead>
+          <tr>
+            <th rowspan="2">op<wbr>code</th>
+            <th>source1</th>
+            <th>source2<br>
+            </th>
+            <th colspan="2" rowspan="1">destination<br>
+            </th>
+            <th colspan="3" rowspan="1">flags<br>
+            </th>
+          </tr>
+          <tr>
+            <th>type<br>
+            </th>
+            <th>type<br>
+            </th>
+            <th>type<br>
+            </th>
+            <th>value<br>
+            </th>
+            <th>Z<br>
+            </th>
+            <th>N</th>
+            <th>C</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="th"><tt>add</tt> </td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>source1 + source2</tt> </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
+            <td><tt>source1 + source2 &gt; 0xffffffff</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>sub</tt> </td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>source1 - source2</tt> </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>source1 &lt; source2</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>min</tt> </td>
+            <td><tt>int32
+              </tt> </td>
+            <td><tt>int32
+              </tt> </td>
+            <td><tt>int32
+              </tt> </td>
+            <td><tt>source1 &gt; source2 ? source2 : source1</tt> </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
+            <td><tt>source1 &gt; source2</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>max</tt> </td>
+            <td><tt>int32
+              </tt> </td>
+            <td><tt>int32
+              </tt> </td>
+            <td><tt>int32
+              </tt> </td>
+            <td><tt>source1 &gt; source2 ? source1 : source2</tt> </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
+            <td><tt>source1 &gt; source2</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>and</tt> </td>
+            <td><tt>uint32
+              </tt> </td>
+            <td><tt>uint32
+              </tt> </td>
+            <td><tt>uint32
+              </tt> </td>
+            <td><tt>source1 &amp; source2</tt> </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
+            <td><tt>0</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>or</tt> </td>
+            <td><tt>uint32
+              </tt> </td>
+            <td><tt>uint32
+              </tt> </td>
+            <td><tt>uint32
+              </tt> </td>
+            <td><tt>source1 | source2</tt> </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
+            <td><tt>0</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>xor</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>source1 ^ source2</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>shl</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>source1 &lt;&lt;&lt; (source2 &amp; 32)</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>source1 &gt;&gt;&gt; 32-source2 &amp; 1</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>shr</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>source1 &gt;&gt;&gt; (source2 &amp; 31)</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>source1 &gt;&gt;&gt; (source2 &amp; 31)-1 &amp; 1</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>asr</tt></td>
+            <td><tt>int32</tt></td>
+            <td><tt>int32</tt></td>
+            <td><tt>int32</tt></td>
+            <td><tt>source1 &gt;&gt; (source2 &amp; 31)</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>source1 &gt;&gt;&gt; (source2 &amp; 31)-1 &amp; 1</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>ror</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>source1 &gt;&gt;&lt; (source2 &amp; 31)</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>not </tt></td>
+            <td><tt>uint32 </tt></td>
+            <td><tt>uint32 </tt></td>
+            <td><tt> </tt><br>
+            </td>
+            <td><tt>~source1</tt> </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
+            <td><tt>0</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>clz </tt></td>
+            <td><tt>uint32 </tt></td>
+            <td><tt>uint32 </tt></td>
+            <td><tt> </tt><br>
+            </td>
+            <td><tt>32 - floor(log&#8322;(source1))</tt> </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>0</tt><br>
+            </td>
+            <td><tt>0</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>mul24</tt></td>
+            <td><tt>uint24</tt></td>
+            <td><tt>uint24</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>source1 * source2</tt></td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>source1 * source2 &gt; 0xffffff</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>fadd</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>source1 + source2</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>destination &gt; 0</tt> (incl. <tt>+NaN</tt>)<tt> </tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>fsub</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>source1 - source2</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>destination &gt; 0</tt> (incl. <tt>+NaN</tt>)<tt> </tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>fmin</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>source1 &gt; source2 ? source2 : source1</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>source1 &gt; source2</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>fmax</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>source1 &gt; source2 ? source1 : source2</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>source1 &gt; source2</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>fminabs </tt></td>
+            <td><tt>float32 </tt></td>
+            <td><tt>float32 </tt></td>
+            <td><tt>float32 </tt></td>
+            <td><tt>abs(source1) &gt; abs(source2) ? abs(source2) : abs(source1)</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>abs(source1) &gt; abs(source2)</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>fmaxabs </tt></td>
+            <td><tt>float32 </tt></td>
+            <td><tt>float32 </tt></td>
+            <td><tt>float32 </tt></td>
+            <td><tt>abs(source1) &gt; abs(source2) ? abs(source1) : abs(source2)</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>abs(source1) &gt; abs(source2)</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>fmul</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>source1 * source2</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>itof</tt> </td>
+            <td><tt>int32 </tt></td>
+            <td><tt>float32 </tt></td>
+            <td><tt> </tt><br>
+            </td>
+            <td><tt>source1</tt> </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
+            <td><tt>0</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>ftoi</tt> </td>
+            <td><tt>float32 </tt></td>
+            <td><tt>int32 </tt></td>
+            <td><tt> </tt><br>
+            </td>
+            <td><tt>source1</tt> </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
+            <td><tt>0</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>v8adds</tt> </td>
+            <td><tt>uint8[4] </tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>min(source1[] + source2[], 255)</tt><br>
+            </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
+            <td><tt>0</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>v8subs</tt> </td>
+            <td><tt>uint8[4] </tt></td>
+            <td><tt><tt>uint8[4]</tt> </tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>max(min(source1[] - source2[], 255), 0)</tt> </td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
+            <td><tt>0</tt> </td>
+          </tr>
+          <tr>
+            <td class="th"><tt>v8min</tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>min(source1[], source2[])</tt></td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>v8max</tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>max(source1[], source2[])</tt></td>
+            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>v8muld</tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>(source1 * source2 + 127) / 255</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
+          </tr>
+        </tbody>
+      </table>
     </dl>
     <h3> Example</h3>
-    <pre>add r3, ra0, unif<var></var></pre>
-    <h2><a id="MUL" name="MUL"></a>MUL ALU instruction</h2>
-    <pre><var>opcode destination, source1, source2
-</var><var>opcode</var>.setf <var>destination, source1, source2</var></pre>
-    <dl>
-      <dt><var><tt>opcode</tt></var></dt>
-      <dd>
-        <table border="1" cellpadding="2" cellspacing="0">
-          <thead>
-            <tr>
-              <th colspan="2" rowspan="1">Integer instruction</th>
-              <th colspan="2" rowspan="1">Floating point instruction</th>
-              <th colspan="2" rowspan="1">8 bit instruction</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><tt>mul24</tt></td>
-              <td><tt>destination = (source1 &amp; 0xffffff)<br>
-                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  * (source2 &amp; 0xffffff)</tt></td>
-              <td><tt>fmul</tt></td>
-              <td><tt>destination = source1 * source2</tt></td>
-              <td><tt>v8mul</tt></td>
-              <td><tt>destination[</tt><tt><tt>0:3</tt>] = source1[</tt><tt><tt>0:3</tt>]
-                  * source2[</tt><tt><tt>0:3</tt>] / 255</tt></td>
-            </tr>
-            <tr>
-              <td colspan="2" rowspan="4"><br>
-              </td>
-              <td colspan="2" rowspan="4"><br>
-              </td>
-              <td><tt>v8adds</tt></td>
-              <td><tt>destination[</tt><tt><tt>0:3</tt>] = min(source1[</tt><tt><tt>0:3</tt>]
-                  + source2[</tt><tt><tt>0:3</tt>]), 255)</tt></td>
-            </tr>
-            <tr>
-              <td><tt>v8subs</tt></td>
-              <td><tt>destination[</tt><tt><tt>0:3</tt>] = max(min(source1[</tt><tt><tt>0:3</tt>]
-                  - source2[</tt><tt><tt>0:3</tt>]), 255), 0)</tt></td>
-            </tr>
-            <tr>
-              <td><tt>v8min</tt></td>
-              <td><tt>destination[</tt><tt><tt>0:3</tt>] = min(source1[</tt><tt><tt>0:3</tt>],
-                  source2[</tt><tt><tt>0:3</tt>])</tt></td>
-            </tr>
-            <tr>
-              <td><tt>v8max</tt></td>
-              <td><tt>destination[</tt><tt><tt>0:3</tt>] = max(source1[</tt><tt><tt>0:3</tt>],
-                  source2[</tt><tt><tt>0:3</tt>])</tt></td>
-            </tr>
-          </tbody>
-        </table>
-      </dd>
-      <dt><var><tt>destination</tt></var></dt>
-      <dd>Target <a href="expressions.html#register">register</a>.</dd>
-      <dt><var><tt>source1, source2</tt></var></dt>
-      <dd>Source <a href="expressions.html#register">register</a> or <a href="expressions.html#SMI">small
-          immediate value</a>.</dd>
-      <dt><var><tt>count</tt></var></dt>
-      <dd>Number of QPU elements the result should be rotated before assignment
-        [0 to 15] or register <tt>r5</tt>.</dd>
-    </dl>
+    <pre>add.setf r3, ra0, unif<br>mul24 r0, r1, r2<var></var></pre>
     <dl>
     </dl>
     <h2><a id="mov" name="mov"></a>Move instruction</h2>

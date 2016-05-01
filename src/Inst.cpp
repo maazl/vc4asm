@@ -32,7 +32,7 @@ qpuValue& qpuValue::operator=(const exprValue& value)
 		break;
 
 	 case V_FLOAT:
-		if (fabs(value.fValue) > FLT_MAX)
+		if (fabs(value.fValue) > FLT_MAX && !::isinf(value.fValue))
 			throw stringf("Floating point constant %f does not fit into 32 bit float.", value.fValue);
 		fValue = (float)value.fValue;
 	}
@@ -47,8 +47,7 @@ static inline void subs(uint8_t& l, uint8_t r)
 {	l = (uint8_t)max(0, (l-r));
 }
 static inline void muld(uint8_t& l, uint8_t r)
-{	// TODO: what are the rounding rules of VideoCore IV
-	l = (uint8_t)((l * r) / 65025);
+{	l = (uint8_t)((l*r + 127) / 255);
 }
 
 bool Inst::evalADD(qpuValue& l, qpuValue r)
@@ -57,21 +56,38 @@ bool Inst::evalADD(qpuValue& l, qpuValue r)
 	{default:
 		return false;
 	 case A_FADD:
-		l.fValue += r.fValue; break;
+		if (!isfinite(r.fValue)) // Emulate broken inf/nan support
+			l.uValue = (r.uValue & 0x80000000) | 0x7f800000;
+		else if (!isfinite(l.fValue))
+			l.uValue = (l.uValue & 0x80000000) | 0x7f800000;
+		else
+			l.fValue += r.fValue;
+		break;
 	 case A_FSUB:
-		l.fValue += r.fValue; break;
-	 case A_FMIN:
-		l.fValue = min(l.fValue, r.fValue); break;
-	 case A_FMAX:
-		l.fValue = max(l.fValue, r.fValue); break;
+		if (!isfinite(r.fValue)) // Emulate broken inf/nan support
+			l.uValue = (~r.uValue & 0x80000000) | 0x7f800000;
+		else if (!isfinite(l.fValue))
+			l.uValue = (l.uValue & 0x80000000) | 0x7f800000;
+		else
+		l.fValue += r.fValue;
+		break;
 	 case A_FMINABS:
-		l.fValue = min(fabsf(l.fValue), fabsf(r.fValue)); break;
+		l.uValue &= 0x7fffffff;
+		r.uValue &= 0x7fffffff;
+	 case A_FMIN:
+		l.fValue = l.fValue > r.fValue ? r.fValue : l.fValue;
+		break;
 	 case A_FMAXABS:
-		l.fValue = max(fabsf(l.fValue), fabsf(r.fValue)); break;
+		l.uValue &= 0x7fffffff;
+		r.uValue &= 0x7fffffff;
+	 case A_FMAX:
+		l.fValue = l.fValue > r.fValue ? l.fValue : r.fValue;
+		break;
 	 case A_FTOI:
-		l.iValue = (int)floorf(r.fValue + .5); break;
+		l.iValue = !isnormal(l.fValue) ? 0 : (int)floorf(l.fValue + .5);
+		break;
 	 case A_ITOF:
-		l.fValue = r.iValue; break;
+		l.fValue = l.iValue; break;
 	 case A_ADD:
 		l.iValue += r.iValue; break;
 	 case A_SUB:
@@ -82,7 +98,8 @@ bool Inst::evalADD(qpuValue& l, qpuValue r)
 		l.iValue >>= r.iValue & 0x1f; break;
 	 case A_ROR:
 		r.iValue &= 0x1f;
-		l.uValue = l.uValue >> r.iValue | l.uValue << (32-r.iValue); break;
+		l.uValue = l.uValue >> r.iValue | l.uValue << (32-r.iValue);
+		break;
 	 case A_SHL:
 		l.iValue <<= r.iValue & 0x1f; break;
 	 case A_MIN:
@@ -96,10 +113,10 @@ bool Inst::evalADD(qpuValue& l, qpuValue r)
 	 case A_XOR:
 		l.uValue ^= r.uValue; break;
 	 case A_NOT:
-		l.iValue = ~r.iValue; break;
+		l.iValue = ~l.iValue; break;
 	 case A_CLZ:
 		if (r.uValue)
-		{	l.fValue = r.uValue;
+		{	l.fValue = l.uValue;
 			l.iValue = 0x9e - (l.uValue >> 23); // get float exponent
 		} else
 			l.iValue = 32;
@@ -124,11 +141,18 @@ bool Inst::evalMUL(qpuValue& l, qpuValue r)
 	{default:
 		return false;
 	 case M_FMUL:
-		l.fValue *= r.fValue; break;
+		if (!(r.uValue & 0x7f800000) || !(l.uValue & 0x7f800000)) // Emulate broken inf/nan support
+			l.fValue = 0.;
+		else if (!isfinite(r.fValue) || !isfinite(l.fValue))
+			l.uValue = ((l.uValue ^ r.uValue) & 0x80000000) | 0x7f800000;
+		else
+			l.fValue *= r.fValue;
+		break;
 	 case M_MUL24:
 		r.iValue &= 0xFFFFFF;
 		l.iValue &= 0xFFFFFF;
-		l.iValue *= r.iValue; break;
+		l.iValue *= r.iValue;
+		break;
 	 case M_V8MULD:
 		muld(l.cValue[0], r.cValue[0]);
 		muld(l.cValue[1], r.cValue[1]);
@@ -359,14 +383,14 @@ void Inst::optimize()
 	switch (Sig)
 	{case S_SMI:
 		if ((1 << Pack) & 0x0909) // only pack modes that write the entire word
-		{	if (WAddrM == R_NOP && MuxAA == X_RB && MuxAB == X_RB && SImmd < 48)
+		{	if (WAddrM == R_NOP && OpM == M_NOP && MuxAA == X_RB && MuxAB == X_RB && !SF)
 			{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
 				val = SMIValue();
 				if (evalADD(val, val) && evalPack(val, val, false))
 					goto mkLDI;
 			}
-			if (OpA == A_NOP && MuxMA == X_RB && MuxMB == X_RB && SImmd < 48)
-			{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
+			if (OpA == A_NOP && MuxMA == X_RB && MuxMB == X_RB && !SF)
+			{	// convert MUL ALU small immediate loads to LDI if ADD ALU is unused.
 				val = SMIValue();
 				if (evalMUL(val, val) && evalPack(val, val, true))
 					goto mkLDI;
