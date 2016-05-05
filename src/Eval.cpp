@@ -303,7 +303,6 @@ bool Eval::operate::Apply(bool unary)
 			lhs.iValue += rhs.iValue; break;
 		 case 1<<V_REG | 1<<V_INT:
 			{	unsigned r = lhs.Type == V_REG ? lhs.rValue.Num + rhs.iValue : rhs.rValue.Num + lhs.iValue;
-								if (lhs.Type == V_REG)
 				if (r > 63 || ((lhs.rValue.Type & R_SEMA) && r > 15))
 					throw Fail("Register number out of range.");
 				lhs.rValue.Num = r;
@@ -337,12 +336,21 @@ bool Eval::operate::Apply(bool unary)
 			} break;
 		} break;
 	 case ASL:
+	 case ROL32:
 		switch (types)
 		{case 1<<V_INT:
-			if (rhs.iValue < 0)
+			if (lhs.Op == ROL32)
+			{	unsigned s = rhs.iValue & 31;
+				lhs.iValue = (uint32_t)lhs.iValue << s | (uint32_t)lhs.iValue >> (32-s);
+			} else if (rhs.iValue < 0)
 				lhs.iValue >>= -rhs.iValue;
 			else
 				lhs.iValue <<= rhs.iValue;
+			break;
+		 case 1<<V_FLOAT | 1<<V_INT:
+			if (lhs.Type != V_FLOAT || lhs.Op != ASL)
+				TypesFail();
+			lhs.fValue = ldexp(lhs.fValue, rhs.iValue > 5000 ? 5000 : rhs.iValue < -5000 ? -5000 : (int)rhs.iValue);
 			break;
 		 case 1 << V_REG:
 			if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate)
@@ -351,29 +359,43 @@ bool Eval::operate::Apply(bool unary)
 			break;
 		 case 1<<V_REG | 1<<V_INT:
 			if (lhs.Type == V_REG)
-			{	// curious syntax ...
-				if (lhs.rValue.Rotate & ~0xf)
+			{	if (lhs.rValue.Rotate & ~0xf)
 					Fail("Cannot apply additional offset to r5 vector rotation");
 				lhs.rValue.Rotate = (lhs.rValue.Rotate + rhs.iValue) & 0xf;
-			} break;
+				break;
+			}
 		 default:
 			TypesFail();
 		} break;
 	 case ASR:
+	 case ROR32:
 		switch (types)
 		{case 1<<V_INT:
-			if (rhs.iValue < 0)
+			if (lhs.Op == ROR32)
+			{	unsigned s = rhs.iValue & 31;
+				lhs.iValue = (uint32_t)lhs.iValue >> s | (uint32_t)lhs.iValue << (32-s);
+			} else if (rhs.iValue < 0)
 				lhs.iValue <<= -rhs.iValue;
 			else
 				lhs.iValue >>= rhs.iValue;
 			break;
+		 case 1<<V_FLOAT | 1<<V_INT:
+			if (lhs.Type != V_FLOAT || lhs.Op != ASL)
+				TypesFail();
+			lhs.fValue = ldexp(lhs.fValue, rhs.iValue > 5000 ? -5000 : rhs.iValue < -5000 ? 5000 : -(int)rhs.iValue);
+			break;
+		 case 1<<V_REG:
+			if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate)
+				Fail("Vector rotation are only allowed by constant or by r5");
+			lhs.rValue.Rotate = -16;
+			break;
 		 case 1<<V_REG | 1<<V_INT:
 			if (lhs.Type == V_REG)
-			{	// curious syntax ...
-				if (lhs.rValue.Rotate & ~0xf)
+			{	if (lhs.rValue.Rotate & ~0xf)
 					Fail("Cannot apply additional offset to r5 vector rotation");
 				lhs.rValue.Rotate = (lhs.rValue.Rotate - rhs.iValue) & 0xf;
-			} break;
+				break;
+			}
 		 default:
 			TypesFail();
 		} break;
@@ -385,6 +407,16 @@ bool Eval::operate::Apply(bool unary)
 		CheckInt();
 		(uint64_t&)lhs.iValue >>= rhs.iValue;
 		break;
+	 case ROL64:
+		CheckInt();
+		{	unsigned s = rhs.iValue & 63;
+			lhs.iValue = lhs.iValue << s | (uint64_t)lhs.iValue >> (64-s);
+		} break;
+	 case ROR64:
+		CheckInt();
+		{	unsigned s = rhs.iValue & 63;
+			lhs.iValue = (uint64_t)lhs.iValue >> s | lhs.iValue << (64-s);
+		} break;
 	 case GT:
 		lhs.iValue = Compare() == 1; break;
 	 case GE:
@@ -585,6 +617,10 @@ const char* Eval::op2string(mathOp op)
 	 case ASR:  return ">>";
 	 case SHL:  return "<<<";
 	 case SHR:  return ">>>";
+	 case ROL32:return "><<";
+	 case ROR32:return ">><";
+	 case ROL64:return "><<<";
+	 case ROR64:return ">>><";
 	 case GT:   return ">";
 	 case GE:   return ">=";
 	 case LT:   return "<";

@@ -140,39 +140,22 @@ Parser::token_t Parser::NextToken()
 	 case '\n':
 		At += strspn(At, " \t\r\n");
 		goto restart;
-	 case '*':
 	 case '>':
 	 case '<':
 	 case '&':
 	 case '^':
 	 case '|':
-		if (At[1] == At[0])
-		{op2:
-			if (At[2] == At[1])
-			{	Token.assign(At, 3);
-				At += 3;
-				return OP;
-			}
-			Token.assign(At, 2);
-			At += 2;
-			return OP;
-		}
-		goto opg;
 	 case '!':
-		if (At[1] == '^')
-			goto op2;
 	 case '=':
-	 opg:
-		if (At[1] == '=')
-			goto op2;
 	 case '+':
 	 case '-':
+	 case '*':
 	 case '/':
 	 case '%':
 	 case '~':
-		Token.assign(At, 1);
-		++At;
-		return OP;
+		i = strspn(At+1, "><&^|!=+-*/%~");
+		ret = OP;
+		break;
 	 case '(':
 	 case ')':
 	 case '[':
@@ -193,14 +176,14 @@ Parser::token_t Parser::NextToken()
 	 case '7':
 	 case '8':
 	 case '9':
-		i = strcspn(At + 1, ",;:+-*/%()[]&|^~!=<># \t\r\n") + 1;
+		i = strcspn(At+1, ",;:+-*/%()[]&|^~!=<># \t\r\n");
 		ret = NUM;
 		break;
 	 default:
-		i = strcspn(At + 1, ".,;:+-*/%()[]&|^~!=<># \t\r\n") + 1;
+		i = strcspn(At+1, ".,;:+-*/%()[]&|^~!=<># \t\r\n");
 		ret = WORD;
 	}
-	Token.assign(At, i);
+	Token.assign(At, ++i);
 	At += i;
 	return ret;
 }

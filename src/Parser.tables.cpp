@@ -9,37 +9,41 @@
 
 // MUST BE ORDERED!
 const Parser::opInfo Parser::operatorMap[] =
-{	{ "!",  Eval::lNOT }
-,	{ "!=", Eval::NE }
-,	{ "!==",Eval::NIDNT }
-,	{ "!^", Eval::XNOR }
-,	{ "!^^",Eval::lXNOR }
-,	{ "%",  Eval::MOD }
-,	{ "&",  Eval::AND }
-,	{ "&&", Eval::lAND }
-,	{ "(",  Eval::BRO }
-,	{ ")",  Eval::BRC }
-,	{ "*",  Eval::MUL }
-,	{ "**", Eval::POW }
-,	{ "+",  Eval::ADD } // also unary NOP
-,	{ "-",  Eval::SUB } // also unary NEG
-,	{ "/",  Eval::DIV }
-,	{ "<",  Eval::LT }
-,	{ "<<", Eval::ASL }
-,	{ "<<<",Eval::SHL }
-,	{ "<=", Eval::LE }
-,	{ "<=>",Eval::CMP }
-,	{ "===",Eval::IDNT }
-,	{ "==", Eval::EQ }
-,	{ ">",  Eval::GT }
-,	{ ">=", Eval::GE }
-,	{ ">>", Eval::ASR }
-,	{ ">>>",Eval::SHR }
-,	{ "^",  Eval::XOR }
-,	{ "^^", Eval::lXOR }
-,	{ "|",  Eval::OR }
-,	{ "||", Eval::lOR }
-,	{ "~",  Eval::NOT }
+{	{ "!",   Eval::lNOT }
+,	{ "!=",  Eval::NE }
+,	{ "!==", Eval::NIDNT }
+,	{ "!^",  Eval::XNOR }
+,	{ "!^^", Eval::lXNOR }
+,	{ "%",   Eval::MOD }
+,	{ "&",   Eval::AND }
+,	{ "&&",  Eval::lAND }
+,	{ "(",   Eval::BRO }
+,	{ ")",   Eval::BRC }
+,	{ "*",   Eval::MUL }
+,	{ "**",  Eval::POW }
+,	{ "+",   Eval::ADD } // also unary NOP
+,	{ "-",   Eval::SUB } // also unary NEG
+,	{ "/",   Eval::DIV }
+,	{ "<",   Eval::LT }
+,	{ "<<",  Eval::ASL }
+,	{ "<<<", Eval::SHL }
+,	{ "<=",  Eval::LE }
+,	{ "<=>", Eval::CMP }
+,	{ "==",  Eval::EQ }
+,	{ "===", Eval::IDNT }
+,	{ ">",   Eval::GT }
+,	{ "><<", Eval::ROL32 }
+,	{ "><<<",Eval::ROL64 }
+,	{ ">=",  Eval::GE }
+,	{ ">>",  Eval::ASR }
+,	{ ">><", Eval::ROR32 }
+,	{ ">>>", Eval::SHR }
+,	{ ">>><",Eval::ROR64 }
+,	{ "^",   Eval::XOR }
+,	{ "^^",  Eval::lXOR }
+,	{ "|",   Eval::OR }
+,	{ "||",  Eval::lOR }
+,	{ "~",   Eval::NOT }
 };
 // MUST BE ORDERED!
 const Parser::opInfo Parser::operatorMap2[] =

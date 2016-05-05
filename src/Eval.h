@@ -64,6 +64,10 @@ class Eval
 	,	ASR  = 0x91 ///< \c >> : arithmetic shift right
 	,	SHL  = 0x92 ///< \c <<< : logical shift left
 	,	SHR  = 0x93 ///< \c >>> : logical shift right
+	,	ROL32= 0x94 ///< \c ><< : 32 bit rotate left
+	,	ROR32= 0x95 ///< \c >>< : 32 bit rotate right
+	,	ROL64= 0x96 ///< \c ><<< : 64 bit rotate left
+	,	ROR64= 0x97 ///< \c >>>< : 64 bit rotate right
 	,	GT   = 0x80 ///< \c > : greater than
 	,	GE   = 0x81 ///< \c >= : greater or equal
 	,	LT   = 0x82 ///< \c < : less than

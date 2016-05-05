@@ -622,8 +622,7 @@
             register type. The operation never changes the type of a register.</td>
         </tr>
         <tr>
-          <td colspan="1" rowspan="4">6<br>
-          </td>
+          <td colspan="1" rowspan="8">6 </td>
           <td colspan="1" rowspan="4">binary<br>
             bit shift</td>
           <td><tt>&lt;&lt; </tt></td>
@@ -640,7 +639,7 @@
             operand.<br>
             If the left operand is a register, the rotate unit of the MUL ALU is
             activated by small immediate values &ge; 48. The right operand need
-            to be a constant in the range [-15,15] or register <tt>r5</tt>.</td>
+            to be an integer constant or register <tt>r5</tt>.</td>
         </tr>
         <tr>
           <td><tt>&gt;&gt; </tt></td>
@@ -650,7 +649,7 @@
             operand.<br>
             If the left operand is a register, the rotate unit of the MUL ALU is
             activated by small immediate values &ge; 48. The right operand need
-            to be a constant in the range [-15,15] or register <tt>r5</tt>.</td>
+            to be an integer constant or register <tt>r5</tt>.</td>
         </tr>
         <tr>
           <td><tt>&lt;&lt;&lt;</tt></td>
@@ -663,6 +662,25 @@
         <tr>
           <td><tt>&gt;&gt;&gt;</tt></td>
           <td>logical shift right (unsigned shifted by signed)</td>
+        </tr>
+        <tr>
+          <td colspan="1" rowspan="4">binary<br>
+            rotate</td>
+          <td><tt>&gt;&lt;&lt;</tt></td>
+          <td colspan="1" rowspan="4">int, int &rarr; int</td>
+          <td>32 bit rotate left</td>
+        </tr>
+        <tr>
+          <td><tt>&gt;&gt;&lt;</tt></td>
+          <td>32 bit rotate right</td>
+        </tr>
+        <tr>
+          <td><tt>&gt;&lt;&lt;&lt;</tt></td>
+          <td>64 bit rotate left</td>
+        </tr>
+        <tr>
+          <td><tt>&gt;&gt;&gt;&lt;</tt></td>
+          <td>64 bit rotate right</td>
         </tr>
         <tr>
           <td colspan="1" rowspan="5">7</td>
