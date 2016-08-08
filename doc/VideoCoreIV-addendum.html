@@ -53,12 +53,16 @@
       labels into a register. What a pity!</p>
     <h3>Section 3: QPU Instruction Set - no inf, nan, denormal support</h3>
     <p>The handling of <tt>Inf</tt> and <tt>NaN</tt> seems to be broken or
-      just <em>not implemented</em> in Videocore IV. I.e. <tt>0. + NaN = +Inf</tt>.
+      just <em>not implemented</em> in Videocore IV. I.e. <tt>0.0 + NaN = +Inf</tt>.
       In fact it only seems to support something like <tt>NaN</tt> but it uses
       the binary representation of <tt>&plusmn;Inf</tt>. So be careful when
       interacting between the GPU and the ARM core with such numbers.</p>
     <p>There is also no support for denormal numbers. They are just truncated to
       0. Not that uncommon for GPUs.</p>
+    <h3>Section 3: Register-Mapped Input/Output - Host Interrupt</h3>
+    <p>You need to write a <em>non-zero value</em> to the interrupt register
+      otherwise nothing happens. But conditional write access seems to work as
+      expected.</p>
     <h3>Section 4: TMU FIFO</h3>
     <p>When using direct memory access the TFREQ FIFO can hold up to 8 slots
       supposedly. It turned out to be <em>unreliable to use more than 4</em> of
