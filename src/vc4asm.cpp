@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 	Parser parser;
 
 	int c;
-	while ((c = getopt(argc, argv, "o:c:e:C:E:I:V")) != -1)
+	while ((c = getopt(argc, argv, "o:c:e:C:E:I:Vi")) != -1)
 	{	switch (c)
 		{case 'o':
 			writeBIN = optarg; break;
@@ -51,13 +51,15 @@ int main(int argc, char **argv)
 			parser.IncludePaths.push_back(optarg); break;
 		 case 'V':
 			check = true; break;
+		 case 'i':
+			parser.OperationMode = Parser::IRGNOREERRORS; break;
 		 case 'P':
 			writePRE = optarg; break;
 		}
 	}
 
-	if (!writeBIN && !writeCPP && !writeCPP2 && !writePRE && !writeELF) {
-		fputs("vc4asm V0.2.2\n"
+	if (!writeBIN && !writeCPP && !writeCPP2 && !writePRE && !writeELF && parser.OperationMode != Parser::PASS1ONLY)
+	{	fputs("vc4asm V0.2.2\n"
 			"Usage: vc4asm [-o <bin-output>] [-{c|C} <c-output>] [-V] <qasm-file(s)>\n"
 			" -o<file> Binary output file.\n"
 			" -c<file> C output file with trailing ','.\n"
@@ -81,14 +83,22 @@ int main(int argc, char **argv)
 	}
 
 	try
-	{	while (optind < argc)
+	{	// Pass 1
+		while (optind < argc)
 		{	parser.ParseFile(argv[optind]);
 			++optind;
 		}
+		switch (parser.OperationMode)
+		{case Parser::PASS1ONLY:
+			return !parser.Success;
+		 case Parser::NORMAL:
+			if (!parser.Success)
+				throw string("Aborted because of earlier errors.");
+		 default:;
+		}
+		// Pass 2
 		parser.EnsurePass2();
-		if (!parser.Success)
-			throw string("Aborted because of earlier errors.");
-
+		// Validate
 		if (check)
 		{	Validator v;
 			v.Instructions = &parser.Instructions;
@@ -96,6 +106,9 @@ int main(int argc, char **argv)
 			v.Validate();
 		}
 
+		if (!parser.Success && parser.OperationMode != Parser::IRGNOREERRORS)
+			throw string("Aborted because of earlier errors.");
+		// Write results
 		if (writeCPP)
 		{	FILE* of = fopen(writeCPP, "wt");
 			if (of == NULL)

@@ -50,10 +50,12 @@ class Disassembler
 	static const char cOpL[8][7];
 	/// Write condition codes
 	static const char cCC[8][7];
-	/// Write pack codes, cPack[MUL!ADD][pack]
+	/// Write pack codes, cPack[MUL!ADD][pack&15]
 	static const char cPack[2][16][8];
 	/// Unpack codes
 	static const char cUnpack[8][5];
+	/// Pack/Unpack code extensions, cPUPX[pack>>Inst::P_INT]
+	static const char cPUPX[4][2];
 	/// Small immediate values
 	static const char cSMI[64][7];
 	/// Branch conditions

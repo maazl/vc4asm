@@ -82,6 +82,10 @@ const char Disassembler::cUnpack[8][5] =
 {	"", ".16a", ".16b", ".8dr", ".8a", ".8b", ".8c", ".8d"
 };
 
+const char Disassembler::cPUPX[4][2] =
+{	"", "i", "f", "?"
+};
+
 const char Disassembler::cBCC[16][7] =
 {	".allz", ".allnz", ".anyz", ".anynz", ".alln", ".allnn", ".anyn", ".anynn",
 	".allc", ".allnc", ".anyc", ".anync", ".cc12?", ".cc13?", ".cc14?", ""

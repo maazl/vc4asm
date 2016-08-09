@@ -24,6 +24,28 @@ using namespace std;
 #define NORETURNATTR
 #endif
 
+struct unspecified_type;
+typedef unspecified_type* bool_only;
+
+/// Declare an enumeration type as flags, i.e. allow the bitwise operators
+/// on this type.
+#define CLASSFLAGSENUM(T,t) \
+inline constexpr friend T operator|(T l, T r) \
+{ return (T)((t)l|r); } \
+inline constexpr friend T operator&(T l, T r) \
+{ return (T)((t)l&r); } \
+inline constexpr friend T operator^(T l, T r) \
+{ return (T)((t)l^r); } \
+inline friend T& operator|=(T& l, T r) \
+{ return l = (T)((t)l|r); } \
+inline friend T& operator&=(T& l, T r) \
+{ return l = (T)((t)l&r); } \
+inline friend T& operator^=(T& l, T r) \
+{ return l = (T)((t)l^r); } \
+inline constexpr friend T operator~(T a) \
+{ return (T)~(t)a; }
+
+
 /// Like \c vsprintf into std::string.
 string vstringf(const char* format, va_list va);
 /// Like \c sprintf into std::string.

@@ -40,7 +40,7 @@ string exprValue::toString() const
 	 case V_FLOAT:
 		return stringf("%g", fValue);
 	 case V_REG:
-		return stringf(rValue.Rotate ? ":[%i,%i,%i]" : ":[%i,%i]", rValue.Num, rValue.Type, rValue.Rotate);
+		return stringf(rValue.Pack.Mode ? ":[%i,%i,%i,%i]" : rValue.Rotate ? ":[%i,%i,%i]" : ":[%i,%i]", rValue.Num, rValue.Type, rValue.Rotate, rValue.Pack.Mode);
 	}
 }
 
@@ -54,7 +54,8 @@ bool operator==(const exprValue& l, const exprValue& r)
 	 case V_REG:
 		return l.rValue.Type == r.rValue.Type
 			&& l.rValue.Rotate == r.rValue.Rotate
-			&& l.rValue.Num == r.rValue.Num;
+			&& l.rValue.Num == r.rValue.Num
+			&& l.rValue.Pack.Mode == r.rValue.Pack.Mode;
 	 default:
 		return l.iValue == r.iValue;
 	}

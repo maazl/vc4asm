@@ -9,11 +9,13 @@
 #define PARSER_H_
 
 #include "Eval.h"
-#include "Inst.h"
+#include "AssembleInst.h"
 #include "DebugInfo.h"
+#include "Message.h"
 #include "utils.h"
 
 #include <inttypes.h>
+#include <climits>
 #include <vector>
 #include <string>
 #include <memory>
@@ -23,30 +25,33 @@ using namespace std;
 
 
 /// Core class that does the assembly process.
-class Parser : public DebugInfo
+class Parser : private AssembleInst, public DebugInfo
 {public:
-	/// Severity of assembler messages.
-	enum severity : unsigned char
-	{	ERROR
-	,	WARNING
-	,	INFO
+	/// Operation mode.
+	enum mode : unsigned char
+	{	PASS1ONLY    ///< Run pass 1 only. (Do not resolve branch labels.) @remarks Show all messages in pass 1.
+	,	NORMAL       ///< Break after pass 1 in case of errors. @remarks Causes Warnings to be suppressed during pass 1.
+	,	IRGNOREERRORS///< Always enter pass 2, even in case of errors. @remarks Show no messages in pass 1.
 	};
 
  public: // Input
 	/// List of path prefixes to search for include files.
 	vector<string> IncludePaths;
 	/// The assembly process did not fail so far and can produce reasonable output.
-	bool Success = true;
+	bool           Success = true;
 	/// Output preprocessed code to this file stream in not NULL.
 	/// This is for internal use only and does not guarantee a specific result.
-	FILE* Preprocessed = NULL;
+	FILE*          Preprocessed = NULL;
 	/// Display only messages with higher or same severity.
-	severity Verbose = WARNING;
+	severity       Verbose = WARNING;
+	/// See \see mode.
+	mode           OperationMode = NORMAL;
  public: // Result
 	/// Assembled result. The index is PC.
 	/// This is only valid after EnsurePass2 has been called.
 	vector<uint64_t> Instructions;
- private:
+
+ private: // types...
 	/// Type of a parser token.
 	enum token_t : char
 	{	END    =  0  ///< End of line
@@ -77,68 +82,6 @@ class Parser : public DebugInfo
 	{	char        Name[16];///< Name of the register
 		reg_t       Value;   ///< Register or register group, see \ref reg_t
 	}             regMap[];///< Register lookup table, ordered by Name.
-	/// Reference to a ADD \e or MUL ALU operator.
-	class opAddMul
-	{	const int8_t Op;     ///< ADD or MUL ALU opcode, bit 7 set: MUL ALU
-	 public:
-		/// Create from ADD ALU OP code.
-		constexpr   opAddMul(Inst::opadd op) : Op(op) {}
-		/// Create from MUL ALU OP code.
-		constexpr   opAddMul(Inst::opmul op) : Op(op|0x80) {}
-		/// true if the class instance represents a MUL ALU opcode
-		/// false if it is an ADD ALU OP code.
-		bool        isMul() const { return Op < 0; }
-		/// Convert to Inst::opadd.
-		/// @pre isMul() == false
-		/// @return ADD ALU OP code.
-		Inst::opadd asAdd() const { return (Inst::opadd)Op; }
-		/// Convert to Inst::opmul.
-		/// @pre isMul() == true
-		/// @return MUL ALU OP code.
-		Inst::opmul asMul() const { return (Inst::opmul)(Op & 0x7); }
-	};
-	/// Pack mode reference
-	class packRaMul
-	{	const int8_t Pack;   ///< Bit 0..3: desired pack mode, bit 7: PM.
-	 public:
-		/// Default constructor: do not require a pack mode.
-		constexpr   packRaMul() : Pack(Inst::P_32) {}
-		/// Require a pack mode.
-		/// @param pack Pack mode, see Inst::pack. If you intend PM = 1 precede the pack mode with a minus sign.
-		constexpr   packRaMul(int pack) : Pack((int8_t)(pack < 0 ? (-pack|0x80) : pack)) {}
-		/// Check whether this instance requires any pack mode.
-		bool        operator!() const { return !Pack; }
-		/// Get the required pack mode for Inst::Pack.
-		Inst::pack  pack() const { return (Inst::pack)(Pack & 0xf); }
-		/// Get the required PM flag for Inst::PM.
-		bool        mode() const { return Pack < 0; }
-	};
-	/// Entry of the immediate value lookup table, POD, compatible with binary_search().
-	static const struct smiEntry
-	{	uint32_t    Value;   ///< Desired immediate value (result)
-		uint8_t     SImmd;   ///< Small immediate required to achieve this result.
-		opAddMul    OpCode;  ///< ALU opcode to achieve this result.
-		packRaMul   Pack;    ///< Pack mode to achieve the desired result.
-	}             smiMap[];///< Immediate value lookup table used for <tt>mov rx, immd</tt>.
-	/// Context of a current expression during parse, bit vector.
-	enum InstContext : unsigned char
-	{	IC_NONE     = 0      ///< No argument context, i.e. currently at the instruction itself.
-	,	IC_SRC      = 1      ///< Bit test: currently at a source argument to an OP code; assignment: currently at the first source argument to an ADD ALU OP code.
-	,	IC_DST      = 2      ///< Bit test: currently at the destination argument to an OP code; assignment: currently at the destination argument to an ADD ALU OP code.
-	,	IC_B        = 4      ///< Bit test: currently at the second argument to an OP code.
-	,	IC_SRCB     = 5      ///< Assignment: currently at the second source argument to an ADD ALU OP code.
-	,	IC_ADD      = 8      ///< Bit test: currently at a ADD ALU instruction.
-	,	IC_MUL      = 16     ///< Bit test: currently at a MUL ALU instruction.
-	,	IC_BOTH     = 24     ///< Context of both ALUs, i.e branch or mov instruction with two targets.
-	};
-	/// State of extensions to the current OP code, bit vector.
-	enum ExtReq : unsigned char
-	{	XR_NONE = 0          ///< No request by this ALU.
-	,	XR_OP   = 1<<IC_NONE ///< Request at opcode level, mutual exclusive with UR_SRC*.
-	,	XR_SRCA = 1<<IC_SRC  ///< Request for first source argument.
-	,	XR_SRCB = 1<<IC_SRCB ///< Request for second source argument.
-	,	XR_NEW  = 1<<IC_DST  ///< New request => check for interaction with other ALU.
-	};
 
 	/// Type of parser call stack entry.
 	enum contextType : unsigned char
@@ -166,20 +109,12 @@ class Parser : public DebugInfo
 	};
 	///< OP code lookup table, ordered by Name.
 	static const opEntry<8> opcodeMap[];
-	///< Flags for OP code extensions, bit vector
-	enum opExtFlags : unsigned char
-	{	E_SRC   = 0x01       ///< Extension is valid for source arguments.
-	,	E_DST   = 0x02       ///< Extension is valid for destination arguments.
-	,	E_OP    = 0x04       ///< Extension can be applied directly to the OP code.
-	,	E_SRCOP = 0x05       ///< Extension is valid for a source argument or the OP code directly.
-	,	E_DSTOP = 0x06       ///< Extension is valid for the destination argument or the OP code directly.
-	};
 	/// Entry of the OP code extension lookup table, POD, compatible with binary_search().
 	struct opExtEntry
 	{	char           Name[16];///< Name of the extension
+		instContext    Where;///< Flags, define the contexts where an extension may be used.
 		void (Parser::*Func)(int);///< Parser function to call, receives an arbitrary argument.
 		int            Arg;  ///< Arbitrary argument to the parser function. See documentation of the parser functions.
-		opExtFlags     Flags;///< Flags, define the contexts where an extension may be used.
 	};
 	///< OP code extension lookup table, ordered by Name.
 	static const opExtEntry extMap[];
@@ -304,37 +239,24 @@ class Parser : public DebugInfo
 		/// Leave the entered file context and restore the current source line and parser position.
 		~saveLineContext();
 	};
-	/// Instruction optimization flags, bit vector
-	enum InstFlags : unsigned char
-	{	IF_NONE          = 0      ///< no flags, none of the conditions below is met
-	,	IF_HAVE_NOP      = 1      ///< at least one NOP in the current instruction so far
-	,	IF_CMB_ALLOWED   = 2      ///< Instruction of the following line could be merged
-	,	IF_BRANCH_TARGET = 4      ///< This instruction is a branch target and should not be merged
-	,	IF_DATA          = 8      ///< Result of .data directive, do not optimize
-	,	IF_NORSWAP       = 16     ///< Do not swap regfile A and regfile B peripheral register
-	,	IF_NOASWAP       = 32     ///< Do not swap ADD and MUL ALU
-	};
 
-	// parser working set
+ private: // parser working set
 	/// Are we already in the second pass?
 	bool             Pass2 = false;
 
 	/// @brief Current source line to be parsed.
 	/// @remarks Well, static size ... todo
 	char             Line[1024];
+ private: // items valid per parser token...
 	/// @brief Current location within Line
 	/// This Pointer always points to the next character to be parsed in Line.
 	char*            At = NULL;
 	/// Last token captured by NextToken().
 	string           Token;
-	/// Buffer to build up the current instruction word for the GPU.
-	Inst             Instruct;
-	/// Current expression context. Type InstContext.
-	unsigned char    InstCtx;
-	/// Unpack mode used by the current instruction. See toExtReq.
-	unsigned char    UseUnpack;
-	/// Vector rotation used by the current instruction. See toExtReq.
-	unsigned char    UseRot;
+ private: // items valid per expression...
+	/// Current expression.
+	exprValue        ExprValue;
+ private: // items valid per QPU instruction word...
 	/// Current program counter in GPU words. Relative to the start of the assembly.
 	unsigned         PC;
 	/// @brief Offset in bits in the current instruction word.
@@ -342,7 +264,7 @@ class Parser : public DebugInfo
 	/// A non-zero value implies that the instruction slot at PC already has been allocated.
 	unsigned         BitOffset;
 
-	// context
+ private: // context
 	/// Points to an entry of \ref Macros if we are currently inside a macro definition block. NULL otherwise.
 	macro*           AtMacro = NULL;
 	/// Insert the next instruction # GPU instructions before the actual \ref PC.
@@ -381,7 +303,7 @@ class Parser : public DebugInfo
 
 	/// Flags for the above instructions.
 	/// @remarks The flags are kept in a separate array to keep the Instructions array a binary blob that can directly be written to disk.
-	vector_safe<uint8_t,IF_NONE> InstFlags;
+	vector_safe<instFlags,IF_NONE> InstFlags;
 
  private:
 	/// Get name of file ID.
@@ -389,21 +311,25 @@ class Parser : public DebugInfo
 	/// Enrich an assembler message with file and line context including the context stack.
 	string           enrichMsg(string msg);
 	/// Enrich the formatted message and throws the result as std::string.
-	void             Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR;
+	/// @param fmt printf like format string.
+	virtual void     Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR;
+	/// Log thrown exception from Fail() as error message.
+	/// @param msg Already enriched message.
+	void             CaughtMsg(const char* msg);
 	/// Enrich the formatted message and write the result to stderr.
-	void             Msg(severity level, const char* fmt, ...) PRINTFATTR(3);
+	/// @param level Severity level.
+	/// @param fmt printf like format string.
+	virtual void     Msg(severity level, const char* fmt, ...) PRINTFATTR(3);
 
 	/// Ensure minimum size of InstFlags array.
 	void             FlagsSize(size_t min);
-	/// Return a reference to the instruction flags of the current instruction.
-	uint8_t&         Flags() { return InstFlags[PC]; }
 	/// Store instruction word and take care of .back block if any.
 	/// @param value Instruction to store.
 	void             StoreInstruction(uint64_t value);
 
-	/// Check whether the next token is instruction or line end.
-	/// @return Next non whitespace character or 0 in case of line end.
-	char             PeekNextChar() const { return At[strspn(At, " \t\r\n")]; }
+	/// Move At to the next non whitespace character or the end of the line.
+	/// @post At points to non whitespace character or 0 in case of line end.
+	void             ToNextChar() { At += strspn(At, " \t\r\n"); }
 	/// Parse the next token from the current line and store the result in \ref Token.
 	/// @return Type of the token just parsed.
 	token_t          NextToken();
@@ -417,13 +343,19 @@ class Parser : public DebugInfo
 	/// The value is reliable only in pass 2.
 	label&           labelRef(string name, bool forward = false);
 
-	/// @brief Parse immediate value per QPU element in the [a,b,{...14}] syntax.
-	/// @details The function has to be called after the opening bracket.
-	/// When it returns the matching closing bracket has been read from the input.
-	/// @return Integer expression compatible with ldi per element.
+	/// Parse immediate value per QPU element in the [x0,x1...x15] syntax.
+	/// @pre \see At must be after the opening square brace.
+	/// @post \see ExprValue is assigned to an integer compatible with \c ldi per element.
 	/// Depending on the values between the brackets the expression has the signed or unsigned flag set.
+	/// \see At is after the closing square brace.
 	/// @exception std::string Syntax error.
-	exprValue        parseElemInt();
+	void             parseElemInt();
+	/// @brief Parse internal register expression. Syntax: :[regnum,regtype,rotate,pack]
+	/// @pre \see At must be after the opening square brace.
+	/// @post \see ExprValue is assigned to a register expression.
+	/// \see At is after the closing square brace.
+	/// @exception std::string Syntax error.
+	void             parseRegister();
 	/// @brief Parse any expression and return its value.
 	/// @details The parser will eat any expression and read until the next token cannot be part of the expression.
 	/// It stops e.g. at a closing brace that is not opened within this function call.
@@ -432,77 +364,35 @@ class Parser : public DebugInfo
 	/// Anything else is an error. But some runtime evaluations that are directly supported
 	/// by the hardware, e.g. QPU element rotation, will work.
 	/// @par The expansion of constants, functions and functional macros is also handled here.
-	/// @return The expression value
+	/// @post ExprValue is assigned the resulting expression value.
+	/// @par NextToken does not return WORD, COLON, OP, BRACE1, SQBRC1 or NUM on the next invocation.
+	/// I.e. only END, BRACE2, SQBRC2, COMMA and SEMI are left.
 	/// @exception std::string Syntax error.
-	/// @post NextToken does not return WORD, COLON, OP, BRACE1, SQBRC1 or NUM on the next invocation.
-	/// I.e. only END, BRACE2, SQBRC2 and SEMI are left.
-	exprValue        ParseExpression();
-	/// Check the current location whether there are further arguments,
-	/// i.e. the next ',' comes before any termination of the instruction or expression block.
+	void             ParseExpression();
+	/// @brief Count the number of Arguments
 	/// @param rem Remaining text in the line, usually At.
-	/// @return true: there are more arguments in the current block.
-	/// @pre The function should only be called after ParseExpression.
-	/// It cannot deal with expressions and braces.
-	static bool      HaveMoreOperands(const char* rem) { return rem[strcspn(rem, ",;)]#")] == ','; }
-
-	/// @brief Find the first potential match for an ALU instruction that can assign an immediate value using small immediates.
-	/// @details The function does not only seek for an exactly match small immediate value but also for small immediate values
-	/// that	can be transformed to the wanted value by applying an ADD or MUL ALU instruction to it.
-	/// The ALU instruction always takes the small immediate value for all of its arguments.
-	/// @param i Requested immediate value.
-	/// @return First potential match in the small immediate table.
-	/// The table may have further potential matches in consecutive entries. So you need to seek
-	/// until the Value property of the smiEntry changes. It is guaranteed that this happens before the end of the list.
-	/// If no match is found the returned entry is still valid but it's Value property does not match.
-	/// @remarks This function can significantly increase code density,
-	/// because <tt>mov xx, immediate</tt> instructions often can be packed with other instruction this way.
-	static const smiEntry* getSmallImmediateALU(uint32_t i);
-	/// @brief Get input mux for a register read access.
-	/// @details Besides choosing the right multiplexer value this function also patches the register number
-	/// into the current instruction and ensures that the value does not conflict with a previous usage of the same register file.
-	/// While doing this job the function takes care of choosing regfile A or B respectively if the IO register
-	/// is available in both register files. In doubt regfile A is preferred to keep the regfile B field free
-	/// for small immediate values.
-	/// @param reg Register to read.
-	/// @return Matching multiplexer value.
-	/// @exception std::string Error, i.e. no valid register or the current instruction cannot read this register because of conflicts
-	/// with other parts of the same instruction word.
-	Inst::mux        muxReg(reg_t reg);
-	/// Set small immediate value. Fail if impossible.
-	/// @param si desired value.
-	/// @exception std::string Failed because of conflicts with other components of the current instruction word.
-	void             doSMI(uint8_t si);
-	/// Checks whether the given input mux may be the source of a unpack instruction, i.e. r4 or regfile A.
-	/// @param input mux to check. If the mux points to regfile A The read address is also check not to address an IO register.
-	/// @return PM flag for the instruction, i.e. 1 for r4 and 0 for regfile A or -1 if not possible.
-	int              isUnpackable(Inst::mux mux) { if (mux == Inst::X_R4) return true; if (mux == Inst::X_RA && Instruct.RAddrA < 32) return false; return -1; }
-	/// Convert instruction context to bit vector for UseUnpack or UseRot.
-	/// @param ctx Context, type InstContext.
-	/// @remarks Bit 0: operator level, bit 1: source arg 1, bit 5: source arg 2
-	static constexpr unsigned char toExtReq(unsigned char ctx) { return 1 << (ctx&IC_SRCB); }
-	/// Swap ADD and MUL ALU of current instruction if allowed by InstCtx, adjust InstCtx.
-	/// @pre Instruct.Sig < Inst::S_BRANCH
-	/// @return true: swap succeeded, false: swap failed
-	/// @post InstCtx & IC_MUL is inverted on success.
-	bool             trySwap();
-	/// Apply vector rotation to the current context.
-	/// @param count Desired rotation: 0 = none, 1 = one element right ... 15 = one element left, -16 = rotate by r5
-	void             applyRot(int count);
+	/// @param max Scan for at most \a max arguments.
+	/// @return Number of arguments found, at most max.
+	/// @details The function in fact counts the number of commas at the current expression level.
+	/// I.e. any comma in a nested level (enclosed by round or square braces) does not count.
+	/// The number of arguments is the number of commas +1.
+	/// Scanning stops if any of the following conditions is met:
+	/// - end of line,
+	/// - comment, i.e. '#',
+	/// - semicolon,
+	/// - an unmatched closing brace within this context or
+	/// - \a max is reached.
+	static int       ArgumentCount(const char* rem, int max = INT_MAX);
 
 	// OP code extensions
 	/// Handle \c .if opcode extension
 	/// @param cond Requested condition code, must be of type Inst::conda.
 	/// @exception std::string Failed, error message.
 	void             addIf(int cond);
-	/// @brief Handle \c .unpack extensions
-	/// @details Besides .unpack* this method can also handle the short hand form like .8a applied to source arguments.
-	/// @param mode Unpack mode, must be of type Inst::unpack.
+	/// Handle \c .pack or \c .unpack extensions
+	/// @param mode Pack or unpack mode, see \see rPUp.
 	/// @exception std::string Failed, error message.
-	void             addUnpack(int mode);
-	/// Handle \c .pack extensions
-	/// @param mode Unpack mode, must be of type Inst::pack.
-	/// @exception std::string Failed, error message.
-	void             addPack(int mode);
+	void             addPUp(int mode);
 	/// Handle \c .setf opcode extension
 	/// @exception std::string Failed, error message.
 	void             addSetF(int);
@@ -522,29 +412,17 @@ class Parser : public DebugInfo
 	/// See extMap table for valid extensions and their matching handlers.
 	/// @exception std::string Failed, error message.
 	void             doInstrExt();
-	/// Apply value in UseUnpack to current instruction after source expression.
-	/// @param mux Multiplexer value of current source instruction.
-	/// Could be extracted from Instruct by InstCtx, but this is easier.
-	void             check4Unpack(Inst::mux mux);
 
 	/// @brief Assemble an expression as ALU target.
 	/// @details The function will also try to read instruction extensions if any.
-	/// @param param Expression value
+	/// @pre ExprValue contains the expression value to be used for the ALU target.
+	/// @par The ALU selected by InstCtx must be available.
 	/// @exception std::string Failed, error message.
-	/// @pre The ALU selected by InstCtx must be available.
-	void             doALUTarget(exprValue param);
+	void             doALUTarget();
 	/// Handle an ALU source expression.
 	/// @exception std::string Failed, error message.
 	void             doALUExpr();
-	/// Handle source argument of branch instruction.
-	/// @param param Expression value
-	/// @exception std::string Failed, error message.
-	void             doBRASource(exprValue param);
-	/// Try to get immediate value at mov by a small immediate value and an availabe ALU.
-	/// @param value requested immediate value.
-	/// @return true: succeeded.
-	/// @exception std::string Failed, error message.
-	bool             trySmallImmd(uint32_t value);
+	/// Try to get immediate value at mov by
 	/// Handle nop instruction, ADD or MUL ALU.
 	void             doNOP();
 
@@ -571,6 +449,7 @@ class Parser : public DebugInfo
 	/// then it first tries to load the desired value from any small immediate value
 	/// using any ALU operator of any available ALU. If this fails a load immediate instruction is created.
 	/// @param mode Value for Inst::LdMode or < 0 to choose automatically.
+	/// Bit 7 is the acquire flag in case of L_SEMA.
 	/// @exception std::string Failed, error message.
 	void             assembleMOV(int mode);
 	/// @brief Assemble \c read pseudo instruction.
@@ -583,7 +462,7 @@ class Parser : public DebugInfo
 	/// Assemble semaphore instruction.
 	/// @param type zero => \c srel, non-zero => \c sacq
 	/// @exception std::string Failed, error message.
-	void             assembleSEMA(int type);
+	//void             assembleSEMA(int type);
 	/// Assemble signalling instruction like \c thrend.
 	/// @param bits Signalling bits, must be of type Inst::sig.
 	/// @exception std::string Failed, error message.
@@ -599,7 +478,7 @@ class Parser : public DebugInfo
 	void             defineLabel();
 	/// @brief Handle label definition with trailing colon.
 	/// @details The function is intended to be invoked after NextToken returned a colon at the start of a line.
-	/// It parses the label name and leaves the rest of the line untouched for further persing.
+	/// It parses the label name and leaves the rest of the line untouched for further parsing.
 	/// @exception std::string Failed, error message.
 	void             parseLabel();
 
@@ -705,25 +584,25 @@ class Parser : public DebugInfo
 	/// @exception std::string Failed, error message.
 	void             doMACRO(macros_t::const_iterator m);
 	/// @brief Invoke a functional macro defined by \c .func.
-	/// @details The function is intended to be called immediately after the macro name.
-	/// It reads the optional macro arguments and invokes the function.
+	/// @details It reads the optional macro arguments and invokes the function.
 	/// @par Executing a function macro also creates a new invocation context.
 	/// In contrast to non function contexts also the current Line and the current location in this line is preserved.
+	/// @pre The function should be called immediately after the macro name.
+	/// @post ExprValue receives the value to which the functional macro evaluated after passing arguments.
 	/// @param m Iterator that points to the functional macro to invoke.
 	/// This is an iterator to an entry in \ref MacroFuncs to get access to the macro name for error messages too.
-	/// @return Expression to which the functional macro evaluated after passing arguments.
 	/// @exception std::string Failed, error message.
-	exprValue        doFUNCMACRO(macros_t::const_iterator m);
+	void             doFUNCMACRO(macros_t::const_iterator m);
 	/// @brief Invoke inline function, i.e. function defined by \c .set or similar.
-	/// @details The function is intended to be called immediately after the function name.
-	/// It reads the arguments and invokes the function.
+	/// @details It reads the arguments and invokes the function.
 	/// @par Executing a function also creates a new invocation context.
 	/// In contrast to non function contexts also the current Line and the current location in this line is preserved.
 	/// @param f Iterator that points to the function to invoke.
 	/// This is an iterator to an entry in \ref Funcs to get access to the function name for error messages too.
-	/// @return Expression to which the functional macro evaluated after passing arguments.
+	/// @pre The function should be called immediately after the function name.
+	/// @post ExprValue receives the value to which the function evaluated after passing arguments.
 	/// @exception std::string Failed, error message.
-	exprValue        doFUNC(funcs_t::const_iterator f);
+	void             doFUNC(funcs_t::const_iterator f);
 	/// Handle code segment directive
 	/// @param flags see \ref SegFlags.
 	void             doSEGMENT(int flags);

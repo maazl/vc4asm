@@ -9,6 +9,7 @@
 #define EVAL_H_
 
 #include "expr.h"
+#include "Message.h"
 #include <vector>
 
 
@@ -19,7 +20,7 @@
 /// - Call \ref Evaluate to get the final expression value.
 /// @par The class takes care of the operator precedence.
 /// Precedence and evaluation order are the same as for the C language.
-/// @par If something went wrong Eval::Fail with an error message is thrown.
+/// @par If something went wrong Fail with an error message is thrown.
 /// It derives from std::string which carries the message.
 class Eval
 {public:
@@ -88,12 +89,6 @@ class Eval
 	,	BRC  = 0x00 ///< \c ) : closing brace
 	,	EVAL = 0x01 ///< done : evaluate all
 	};
-	/// Exception thrown when evaluation Fails
-	/// @remarks This is only a typed string so far.
-	/// Future versions might add additional error information.
-	struct Fail : string
-	{	Fail(const char* fmt, ...);
-	};
  private:
 	/// Check whether \a op is an unary operator.
 	static bool isUnary(mathOp op) { return op >= 0xd0; }
@@ -133,7 +128,7 @@ class Eval
 		/// Raise an error messages because the current operator is not applicable
 		/// to the expression types provided.
 		/// @exception Fail The function always throws.
-		void      TypesFail();
+		void      TypesFail() NORETURNATTR;
 		/// Check whether all operands are of type integer (V_INT).
 		/// Raise an error otherwise.
 		/// @exception Fail At least one operand is not an integer.
@@ -234,6 +229,8 @@ class Eval
 	/// It is up to the parser to enrich this message with the source code location.
 	/// @details This will immediately evaluate all unary operators on top of the stack.
 	void        PushValue(const exprValue& value);
+	/// Apply pack or unpack operation to the current value.
+	void        PushPackUnpack(rPUp pup);
 	/// @brief Evaluate the expression.
 	/// @details This functions enforces all operators on the call stack to evaluate.
 	/// The expression must be complete to succeed, i.e no unmatched opening brace should be left
@@ -243,9 +240,6 @@ class Eval
 	/// It is up to the parser to enrich this message with the source code location.
 	exprValue   Evaluate();
  public:
-	/// Convert value to half precision floating point value.
-	/// @exception Fail Cannot convert to half precision float.
-	static unsigned toFloat16(exprValue value);
 	/// Human readable string for an operator.
 	static const char* op2string(mathOp op);
 };

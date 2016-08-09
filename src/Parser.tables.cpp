@@ -327,1431 +327,219 @@ const Parser::regEntry Parser::regMap[] =
 ,	{ "y_pixel_coord",  { 41, R_RWB  } }
 };
 
-// Ordered by value and priority descending
-const Parser::smiEntry Parser::smiMap[] =
-{	{ 0x00000000,  0, Inst::A_XOR }
-,	{ 0x00000000,  0, Inst::M_V8SUBS }
-,	{ 0x00000001,  1, Inst::A_OR }
-,	{ 0x00000001, 32, Inst::A_FTOI }
-,	{ 0x00000001, 30, Inst::A_NOT }
-,	{ 0x00000001, 31, Inst::A_SHR }
-,	{ 0x00000001,  1, Inst::M_V8MIN }
-,	{ 0x00000001, 12, Inst::M_V8MULD }
-,	{ 0x00000001, 13, Inst::M_V8MULD }
-,	{ 0x00000001, 14, Inst::M_V8MULD }
-,	{ 0x00000001, 15, Inst::M_V8MULD }
-,	{ 0x00000001, 33, Inst::A_CLZ }
-,	{ 0x00000001, 34, Inst::A_CLZ }
-,	{ 0x00000001, 35, Inst::A_CLZ }
-,	{ 0x00000001, 36, Inst::A_CLZ }
-,	{ 0x00000001, 37, Inst::A_CLZ }
-,	{ 0x00000001, 38, Inst::A_CLZ }
-,	{ 0x00000001, 39, Inst::A_CLZ }
-,	{ 0x00000001, 62, Inst::A_NOT }
-,	{ 0x00000001, 63, Inst::A_SHR }
-,	{ 0x00000002,  2, Inst::A_OR }
-,	{ 0x00000002, 33, Inst::A_FTOI }
-,	{ 0x00000002,  1, Inst::A_ADD }
-,	{ 0x00000002, 29, Inst::A_NOT }
-,	{ 0x00000002,  2, Inst::M_V8MIN }
-,	{ 0x00000002,  1, Inst::M_V8ADDS }
-,	{ 0x00000002, 32, Inst::A_CLZ }
-,	{ 0x00000002, 40, Inst::A_CLZ }
-,	{ 0x00000002, 41, Inst::A_CLZ }
-,	{ 0x00000002, 42, Inst::A_CLZ }
-,	{ 0x00000002, 43, Inst::A_CLZ }
-,	{ 0x00000002, 44, Inst::A_CLZ }
-,	{ 0x00000002, 45, Inst::A_CLZ }
-,	{ 0x00000002, 46, Inst::A_CLZ }
-,	{ 0x00000002, 47, Inst::A_CLZ }
-,	{ 0x00000002, 61, Inst::A_NOT }
-,	{ 0x00000003,  3, Inst::A_OR }
-,	{ 0x00000003, 28, Inst::A_NOT }
-,	{ 0x00000003, 30, Inst::A_SHR }
-,	{ 0x00000003,  3, Inst::M_V8MIN }
-,	{ 0x00000003, 60, Inst::A_NOT }
-,	{ 0x00000003, 62, Inst::A_SHR }
-,	{ 0x00000004,  4, Inst::A_OR }
-,	{ 0x00000004,  2, Inst::A_ADD }
-,	{ 0x00000004, 34, Inst::A_FTOI }
-,	{ 0x00000004, 27, Inst::A_NOT }
-,	{ 0x00000004,  4, Inst::M_V8MIN }
-,	{ 0x00000004,  2, Inst::M_MUL24 }
-,	{ 0x00000004, 59, Inst::A_NOT }
-,	{ 0x00000005,  5, Inst::A_OR }
-,	{ 0x00000005, 26, Inst::A_NOT }
-,	{ 0x00000005,  5, Inst::M_V8MIN }
-,	{ 0x00000005, 58, Inst::A_NOT }
-,	{ 0x00000006,  6, Inst::A_OR }
-,	{ 0x00000006,  3, Inst::A_ADD }
-,	{ 0x00000006, 25, Inst::A_NOT }
-,	{ 0x00000006,  6, Inst::M_V8MIN }
-,	{ 0x00000006,  3, Inst::M_V8ADDS }
-,	{ 0x00000006, 57, Inst::A_NOT }
-,	{ 0x00000007,  7, Inst::A_OR }
-,	{ 0x00000007, 24, Inst::A_NOT }
-,	{ 0x00000007, 29, Inst::A_SHR }
-,	{ 0x00000007,  7, Inst::M_V8MIN }
-,	{ 0x00000007, 56, Inst::A_NOT }
-,	{ 0x00000007, 61, Inst::A_SHR }
-,	{ 0x00000008,  8, Inst::A_OR }
-,	{ 0x00000008,  4, Inst::A_ADD }
-,	{ 0x00000008,  2, Inst::A_SHL }
-,	{ 0x00000008, 35, Inst::A_FTOI }
-,	{ 0x00000008, 23, Inst::A_NOT }
-,	{ 0x00000008,  8, Inst::M_V8MIN }
-,	{ 0x00000008,  4, Inst::M_V8ADDS }
-,	{ 0x00000008, 55, Inst::A_NOT }
-,	{ 0x00000009,  9, Inst::A_OR }
-,	{ 0x00000009, 22, Inst::A_NOT }
-,	{ 0x00000009,  9, Inst::M_V8MIN }
-,	{ 0x00000009,  3, Inst::M_MUL24 }
-,	{ 0x00000009, 54, Inst::A_NOT }
-,	{ 0x0000000a, 10, Inst::A_OR }
-,	{ 0x0000000a,  5, Inst::A_ADD }
-,	{ 0x0000000a, 21, Inst::A_NOT }
-,	{ 0x0000000a, 10, Inst::M_V8MIN }
-,	{ 0x0000000a,  5, Inst::M_V8ADDS }
-,	{ 0x0000000a, 53, Inst::A_NOT }
-,	{ 0x0000000b, 11, Inst::A_OR }
-,	{ 0x0000000b, 20, Inst::A_NOT }
-,	{ 0x0000000b, 11, Inst::M_V8MIN }
-,	{ 0x0000000b, 52, Inst::A_NOT }
-,	{ 0x0000000c, 12, Inst::A_OR }
-,	{ 0x0000000c,  6, Inst::A_ADD }
-,	{ 0x0000000c, 19, Inst::A_NOT }
-,	{ 0x0000000c, 12, Inst::M_V8MIN }
-,	{ 0x0000000c,  6, Inst::M_V8ADDS }
-,	{ 0x0000000c, 51, Inst::A_NOT }
-,	{ 0x0000000d, 13, Inst::A_OR }
-,	{ 0x0000000d, 18, Inst::A_NOT }
-,	{ 0x0000000d, 13, Inst::M_V8MIN }
-,	{ 0x0000000d, 50, Inst::A_NOT }
-,	{ 0x0000000e, 14, Inst::A_OR }
-,	{ 0x0000000e,  7, Inst::A_ADD }
-,	{ 0x0000000e, 17, Inst::A_NOT }
-,	{ 0x0000000e, 14, Inst::M_V8MIN }
-,	{ 0x0000000e,  7, Inst::M_V8ADDS }
-,	{ 0x0000000e, 49, Inst::A_NOT }
-,	{ 0x0000000f, 15, Inst::A_OR }  // 15
-,	{ 0x0000000f, 16, Inst::A_NOT }
-,	{ 0x0000000f, 28, Inst::A_SHR }
-,	{ 0x0000000f, 15, Inst::M_V8MIN }
-,	{ 0x0000000f, 48, Inst::A_NOT }
-,	{ 0x0000000f, 60, Inst::A_SHR }
-,	{ 0x00000010,  8, Inst::A_ADD } // 16
-,	{ 0x00000010,  4, Inst::M_MUL24 }
-,	{ 0x00000010, 36, Inst::A_FTOI }
-,	{ 0x00000010,  8, Inst::M_V8ADDS }
-,	{ 0x00000012,  9, Inst::A_ADD } // 18
-,	{ 0x00000012,  9, Inst::M_V8ADDS }
-,	{ 0x00000014, 10, Inst::A_ADD } // 20
-,	{ 0x00000014, 10, Inst::M_V8ADDS }
-,	{ 0x00000016, 11, Inst::A_ADD } // 22
-,	{ 0x00000016, 11, Inst::M_V8ADDS }
-,	{ 0x00000018, 12, Inst::A_ADD } // 24
-,	{ 0x00000018,  3, Inst::A_SHL }
-,	{ 0x00000018, 12, Inst::M_V8ADDS }
-,	{ 0x00000019,  5, Inst::M_MUL24 } // 25
-,	{ 0x0000001a, 13, Inst::A_ADD } // 26
-,	{ 0x0000001a, 13, Inst::M_V8ADDS }
-,	{ 0x0000001c, 14, Inst::A_ADD } // 28
-,	{ 0x0000001c, 14, Inst::M_V8ADDS }
-,	{ 0x0000001c,  8, Inst::A_CLZ }
-,	{ 0x0000001c,  9, Inst::A_CLZ }
-,	{ 0x0000001c, 10, Inst::A_CLZ }
-,	{ 0x0000001c, 11, Inst::A_CLZ }
-,	{ 0x0000001c, 12, Inst::A_CLZ }
-,	{ 0x0000001c, 13, Inst::A_CLZ }
-,	{ 0x0000001c, 15, Inst::A_CLZ }
-,	{ 0x0000001d,  4, Inst::A_CLZ } // 29
-,	{ 0x0000001d,  5, Inst::A_CLZ }
-,	{ 0x0000001d,  6, Inst::A_CLZ }
-,	{ 0x0000001d,  7, Inst::A_CLZ }
-,	{ 0x0000001e, 15, Inst::A_ADD } // 30
-,	{ 0x0000001e,  2, Inst::A_CLZ }
-,	{ 0x0000001e,  3, Inst::A_CLZ }
-,	{ 0x0000001e, 15, Inst::M_V8ADDS }
-,	{ 0x0000001f,  1, Inst::A_CLZ } // 31
-,	{ 0x0000001f, 27, Inst::A_SHR }
-,	{ 0x0000001f, 59, Inst::A_SHR }
-,	{ 0x00000020, 37, Inst::A_FTOI } // 32
-,	{ 0x00000020,  0, Inst::A_CLZ }
-,	{ 0x00000024,  6, Inst::M_MUL24 } // 36
-,	{ 0x00000031,  7, Inst::M_MUL24 } // 49
-,	{ 0x0000003f, 26, Inst::A_SHR }   // 63
-,	{ 0x0000003f, 58, Inst::A_SHR }
-,	{ 0x00000040, 38, Inst::A_FTOI }  // 64
-,	{ 0x00000040,  4, Inst::A_SHL }
-,	{ 0x00000040,  8, Inst::M_MUL24 }
-,	{ 0x00000051,  9, Inst::M_MUL24 } // 81
-,	{ 0x00000064, 10, Inst::M_MUL24 } // 100
-,	{ 0x00000079, 11, Inst::M_MUL24 } // 121
-,	{ 0x0000007f, 25, Inst::A_SHR }   // 127
-,	{ 0x0000007f, 57, Inst::A_SHR }
-,	{ 0x00000080, 39, Inst::A_FTOI }  // 128
-,	{ 0x00000090, 12, Inst::M_MUL24 } // 144
-,	{ 0x000000a0,  5, Inst::A_SHL }   // 160
-,	{ 0x000000a9, 13, Inst::M_MUL24 } // 169
-,	{ 0x000000c4, 14, Inst::M_MUL24 } // 196
-,	{ 0x000000e1, 15, Inst::M_MUL24 } // 225
-,	{ 0x000000ff, 24, Inst::A_SHR } // 255
-,	{ 0x000000ff, 56, Inst::A_SHR }
-,	{ 0x00000180,  6, Inst::A_SHL } // 384
-,	{ 0x000001ff, 23, Inst::A_SHR } // 511
-,	{ 0x000001ff, 55, Inst::A_SHR }
-,	{ 0x00000380,  7, Inst::A_SHL } // 896
-,	{ 0x000003ff, 22, Inst::A_SHR } // 1023
-,	{ 0x000003ff, 54, Inst::A_SHR }
-,	{ 0x000007ff, 21, Inst::A_SHR } // 2047
-,	{ 0x000007ff, 53, Inst::A_SHR }
-,	{ 0x00000800,  8, Inst::A_SHL } // 2048
-,	{ 0x00000fff, 20, Inst::A_SHR } // 4095
-,	{ 0x00000fff, 52, Inst::A_SHR }
-,	{ 0x00001200,  9, Inst::A_SHL } // 4608
-,	{ 0x00001fff, 19, Inst::A_SHR } // 8191
-,	{ 0x00001fff, 51, Inst::A_SHR }
-,	{ 0x00002800, 10, Inst::A_SHL } // 10240
-,	{ 0x00003fff, 18, Inst::A_SHR } // 16383
-,	{ 0x00003fff, 50, Inst::A_SHR }
-,	{ 0x00005800, 11, Inst::A_SHL } // 22528
-,	{ 0x00007fff, 17, Inst::A_SHR } // 32767
-,	{ 0x00007fff, 49, Inst::A_SHR }
-,	{ 0x0000c000, 12, Inst::A_SHL } // 49152
-,	{ 0x0000ffff, 16, Inst::A_SHR } // 65535
-,	{ 0x0000ffff, 48, Inst::A_SHR }
-,	{ 0x0001a000, 13, Inst::A_SHL } // 106496
-,	{ 0x00038000, 14, Inst::A_SHL } // 229376
-,	{ 0x00078000, 15, Inst::A_SHL } // 491520
-,	{ 0x001e0000, 15, Inst::A_ROR }
-,	{ 0x00380000, 14, Inst::A_ROR }
-,	{ 0x00680000, 13, Inst::A_ROR }
-,	{ 0x00c00000, 12, Inst::A_ROR }
-,	{ 0x01010101,  1, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x01010101, 30, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x01010101, 31, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x01010101,  1, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x01010101, 31, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x01010101, 12, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0x01010101, 13, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0x01010101, 14, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0x01010101, 15, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0x01010101, 32, Inst::A_FTOI,  Inst::P_8abcd }
-,	{ 0x01010101, 33, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x01010101, 34, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x01010101, 35, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x01010101, 36, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x01010101, 37, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x01010101, 38, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x01010101, 39, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x01010101, 40, Inst::M_V8MIN, -Inst::P_8abcd }
-,	{ 0x01010101, 44, Inst::M_FMUL,  -Inst::P_8abcd }
-,	{ 0x01010101,  1, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x01010101, 30, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x01010101, 31, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x01010101,  1, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x01010101, 12, Inst::M_V8MULD,Inst::P_8abcdS }
-,	{ 0x01010101, 13, Inst::M_V8MULD,Inst::P_8abcdS }
-,	{ 0x01010101, 14, Inst::M_V8MULD,Inst::P_8abcdS }
-,	{ 0x01010101, 15, Inst::M_V8MULD,Inst::P_8abcdS }
-,	{ 0x01010101, 32, Inst::A_FTOI,  Inst::P_8abcdS }
-,	{ 0x01010101, 33, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x01010101, 34, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x01010101, 35, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x01010101, 36, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x01010101, 37, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x01010101, 38, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x01010101, 39, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x01010101, 62, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x01010101, 63, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x01010101, 62, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x01010101, 63, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x01600000, 11, Inst::A_ROR }
-,	{ 0x02020202,  2, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x02020202, 33, Inst::A_FTOI,  Inst::P_8abcd }
-,	{ 0x02020202,  1, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x02020202, 29, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x02020202,  2, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x02020202,  1, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x02020202, 32, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x02020202, 40, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x02020202, 41, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x02020202, 42, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x02020202, 43, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x02020202, 44, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x02020202, 45, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x02020202, 46, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x02020202, 47, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x02020202, 41, Inst::M_V8MIN, -Inst::P_8abcd }
-,	{ 0x02020202,  2, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x02020202, 33, Inst::A_FTOI,  Inst::P_8abcdS }
-,	{ 0x02020202,  1, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x02020202, 29, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x02020202,  2, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x02020202,  1, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x02020202, 32, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x02020202, 40, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x02020202, 41, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x02020202, 42, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x02020202, 43, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x02020202, 44, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x02020202, 45, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x02020202, 46, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x02020202, 47, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x02020202, 61, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x02020202, 61, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x02800000, 10, Inst::A_ROR }
-,	{ 0x03030303,  3, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x03030303, 28, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x03030303, 30, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x03030303,  3, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x03030303,  3, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x03030303, 28, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x03030303, 30, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x03030303,  3, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x03030303, 60, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x03030303, 62, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x03030303, 60, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x03030303, 62, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x04040404,  4, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x04040404,  2, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x04040404, 34, Inst::A_FTOI,  Inst::P_8abcd }
-,	{ 0x04040404, 27, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x04040404,  4, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x04040404,  2, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x04040404, 30, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x04040404, 42, Inst::M_V8MIN, -Inst::P_8abcd }
-,	{ 0x04040404, 45, Inst::M_FMUL,  -Inst::P_8abcd }
-,	{ 0x04040404,  4, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x04040404,  2, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x04040404, 34, Inst::A_FTOI,  Inst::P_8abcdS }
-,	{ 0x04040404, 27, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x04040404,  4, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x04040404,  2, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0x04040404, 59, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x04040404, 59, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x04800000,  9, Inst::A_ROR }
-,	{ 0x05050505,  5, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x05050505, 26, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x05050505,  5, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x05050505,  5, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x05050505, 26, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x05050505,  5, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x05050505, 58, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x05050505, 58, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x06060606,  6, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x06060606,  3, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x06060606, 25, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x06060606,  6, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x06060606,  3, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x06060606,  6, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x06060606,  3, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x06060606, 25, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x06060606,  6, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x06060606,  3, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x06060606, 57, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x06060606, 57, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x07070707,  7, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x07070707, 24, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x07070707, 29, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x07070707,  7, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x07070707,  7, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x07070707, 24, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x07070707, 29, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x07070707,  7, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x07070707, 56, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x07070707, 61, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x07070707, 56, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x07070707, 61, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x08000000,  8, Inst::A_ROR }
-,	{ 0x08080808,  8, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x08080808,  4, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x08080808,  2, Inst::A_SHL,   Inst::P_8abcd }
-,	{ 0x08080808, 35, Inst::A_FTOI,  Inst::P_8abcd }
-,	{ 0x08080808, 23, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x08080808,  8, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x08080808,  4, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x08080808, 43, Inst::M_V8MIN, -Inst::P_8abcd }
-,	{ 0x08080808,  8, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x08080808,  4, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x08080808,  2, Inst::A_SHL,   Inst::P_8abcdS }
-,	{ 0x08080808, 35, Inst::A_FTOI,  Inst::P_8abcdS }
-,	{ 0x08080808, 23, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x08080808,  8, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x08080808,  4, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x08080808, 55, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x08080808, 55, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x09090909,  9, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x09090909, 22, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x09090909,  9, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x09090909,  3, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x09090909, 29, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x09090909,  9, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x09090909, 22, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x09090909,  9, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x09090909,  3, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0x09090909, 54, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x09090909, 54, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0a0a0a0a, 10, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x0a0a0a0a,  5, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x0a0a0a0a, 21, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0a0a0a0a, 10, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x0a0a0a0a,  5, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x0a0a0a0a, 10, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x0a0a0a0a,  5, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x0a0a0a0a, 21, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0a0a0a0a, 10, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x0a0a0a0a,  5, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x0a0a0a0a, 53, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0a0a0a0a, 53, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0b0b0b0b, 11, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x0b0b0b0b, 20, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0b0b0b0b, 11, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x0b0b0b0b, 11, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x0b0b0b0b, 20, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0b0b0b0b, 11, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x0b0b0b0b, 52, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0b0b0b0b, 52, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0c0c0c0c, 12, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x0c0c0c0c,  6, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x0c0c0c0c, 19, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0c0c0c0c, 12, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x0c0c0c0c,  6, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x0c0c0c0c, 12, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x0c0c0c0c,  6, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x0c0c0c0c, 19, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0c0c0c0c, 12, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x0c0c0c0c,  6, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x0c0c0c0c, 51, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0c0c0c0c, 51, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0d0d0d0d, 13, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x0d0d0d0d, 18, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0d0d0d0d, 13, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x0d0d0d0d, 13, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x0d0d0d0d, 18, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0d0d0d0d, 13, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x0d0d0d0d, 50, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0d0d0d0d, 50, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0e000000,  7, Inst::A_ROR }
-,	{ 0x0e000000, 41, Inst::M_V8MULD }
-,	{ 0x0e0e0e0e, 14, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x0e0e0e0e,  7, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x0e0e0e0e, 17, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0e0e0e0e, 14, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x0e0e0e0e,  7, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x0e0e0e0e, 14, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x0e0e0e0e,  7, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x0e0e0e0e, 17, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0e0e0e0e, 14, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x0e0e0e0e,  7, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x0e0e0e0e, 49, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0e0e0e0e, 49, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0e400000, 40, Inst::M_V8MULD }
-,	{ 0x0e400000, 42, Inst::M_V8MULD }
-,	{ 0x0f000000, 43, Inst::M_V8MULD }
-,	{ 0x0f000000, 45, Inst::M_V8MULD }
-,	{ 0x0f0f0f0f, 15, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0x0f0f0f0f, 16, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0f0f0f0f, 28, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x0f0f0f0f, 15, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0x0f0f0f0f, 15, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0x0f0f0f0f, 16, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0f0f0f0f, 28, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x0f0f0f0f, 15, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0x0f0f0f0f, 48, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0x0f0f0f0f, 48, Inst::A_NOT,   Inst::P_8abcdS }
-,	{ 0x0f400000, 44, Inst::M_V8MULD }
-,	{ 0x0f400000, 46, Inst::M_V8MULD }
-,	{ 0x10000000, 47, Inst::M_V8MULD }
-,	{ 0x10000000, 33, Inst::M_V8MULD }
-,	{ 0x10101010,  8, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x10101010, 36, Inst::A_FTOI,  Inst::P_8abcd }
-,	{ 0x10101010,  8, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x10101010,  4, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x10101010, 28, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x10101010, 44, Inst::M_V8MIN, -Inst::P_8abcd }
-,	{ 0x10101010, 46, Inst::M_FMUL,  -Inst::P_8abcd }
-,	{ 0x10101010,  4, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0x10101010, 36, Inst::A_FTOI,  Inst::P_8abcdS }
-,	{ 0x10101010,  8, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x10400000, 32, Inst::M_V8MULD }
-,	{ 0x10400000, 34, Inst::M_V8MULD }
-,	{ 0x11000000, 35, Inst::M_V8MULD }
-,	{ 0x11000000, 37, Inst::M_V8MULD }
-,	{ 0x11400000, 36, Inst::M_V8MULD }
-,	{ 0x11400000, 38, Inst::M_V8MULD }
-,	{ 0x12000000, 39, Inst::M_V8MULD }
-,	{ 0x12121212,  9, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x12121212,  9, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x12121212,  9, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x12121212,  9, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x14141414, 10, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x14141414, 10, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x14141414, 10, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x14141414, 10, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x16161616, 11, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x16161616, 11, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x16161616, 11, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x16161616, 11, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x18000000,  6, Inst::A_ROR }
-,	{ 0x18181818, 12, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x18181818,  3, Inst::A_SHL,   Inst::P_8abcd }
-,	{ 0x18181818, 12, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x18181818, 12, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x18181818,  3, Inst::A_SHL,   Inst::P_8abcdS }
-,	{ 0x18181818, 12, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x19191919,  5, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x19191919, 27, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x19191919,  5, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0x1a1a1a1a, 13, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x1a1a1a1a, 13, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x1a1a1a1a, 13, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x1a1a1a1a, 13, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x1c1c1c1c, 14, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x1c1c1c1c, 14, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x1c1c1c1c,  8, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1c1c1c1c,  9, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1c1c1c1c, 10, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1c1c1c1c, 11, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1c1c1c1c, 12, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1c1c1c1c, 13, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1c1c1c1c, 15, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1c1c1c1c, 14, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x1c1c1c1c, 14, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x1c1c1c1c,  8, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1c1c1c1c,  9, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1c1c1c1c, 10, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1c1c1c1c, 11, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1c1c1c1c, 12, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1c1c1c1c, 13, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1c1c1c1c, 15, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1d1d1d1d,  4, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1d1d1d1d,  5, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1d1d1d1d,  6, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1d1d1d1d,  7, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1d1d1d1d,  4, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1d1d1d1d,  5, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1d1d1d1d,  6, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1d1d1d1d,  7, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1e1e1e1e, 15, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0x1e1e1e1e,  2, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1e1e1e1e,  3, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1e1e1e1e, 15, Inst::M_V8ADDS,Inst::P_8abcd }
-,	{ 0x1e1e1e1e, 15, Inst::A_ADD,   Inst::P_8abcdS }
-,	{ 0x1e1e1e1e,  2, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1e1e1e1e,  3, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1e1e1e1e, 15, Inst::M_V8ADDS,Inst::P_8abcdS }
-,	{ 0x1f1f1f1f,  1, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x1f1f1f1f, 27, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x1f1f1f1f,  1, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x1f1f1f1f, 27, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x1f1f1f1f, 59, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x1f1f1f1f, 59, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x20202020, 37, Inst::A_FTOI,  Inst::P_8abcd }
-,	{ 0x20202020,  0, Inst::A_CLZ,   Inst::P_8abcd }
-,	{ 0x20202020, 45, Inst::M_V8MIN, -Inst::P_8abcd }
-,	{ 0x20202020, 37, Inst::A_FTOI,  Inst::P_8abcdS }
-,	{ 0x20202020,  0, Inst::A_CLZ,   Inst::P_8abcdS }
-,	{ 0x24242424,  6, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x24242424, 26, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x24242424,  6, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0x28000000,  5, Inst::A_ROR }
-,	{ 0x31313131,  7, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x31313131, 25, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x31313131,  7, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0x37800000, 40, Inst::M_FMUL } // 1/65536.
-,	{ 0x38800000, 41, Inst::M_FMUL } // 1/16384.
-,	{ 0x39800000, 42, Inst::M_FMUL } // 1/4096.
-,	{ 0x3a800000, 43, Inst::M_FMUL } // 1/1024.
-,	{ 0x3b800000, 40, Inst::A_OR }   // 1/256.
-,	{ 0x3b800000, 40, Inst::M_V8MIN }
-,	{ 0x3b800000, 44, Inst::M_FMUL }
-,	{ 0x3c000000, 41, Inst::A_OR }   // 1/128.
-,	{ 0x3c000000, 40, Inst::A_FADD }
-,	{ 0x3c000000, 41, Inst::M_V8MIN }
-,	{ 0x3c800000, 42, Inst::A_OR }   // 1/64.
-,	{ 0x3c800000, 41, Inst::A_FADD }
-,	{ 0x3c800000, 42, Inst::M_V8MIN }
-,	{ 0x3c800000, 45, Inst::M_FMUL }
-,	{ 0x3d000000, 43, Inst::A_OR }   // 1/32.
-,	{ 0x3d000000, 42, Inst::A_FADD }
-,	{ 0x3d000000, 43, Inst::M_V8MIN }
-,	{ 0x3d800000, 44, Inst::A_OR }   // 1/16.
-,	{ 0x3d800000, 43, Inst::A_FADD }
-,	{ 0x3d800000, 44, Inst::M_V8MIN }
-,	{ 0x3d800000, 46, Inst::M_FMUL }
-,	{ 0x3e000000, 45, Inst::A_OR }   // 1/8.
-,	{ 0x3e000000, 44, Inst::A_FADD }
-,	{ 0x3e000000, 45, Inst::M_V8MIN }
-,	{ 0x3e800000, 46, Inst::A_OR }   // 1/4.
-,	{ 0x3e800000, 45, Inst::A_FADD }
-,	{ 0x3e800000, 46, Inst::M_V8MIN }
-,	{ 0x3e800000, 47, Inst::M_FMUL }
-,	{ 0x3f000000, 47, Inst::A_OR }   // 1/2.
-,	{ 0x3f000000, 46, Inst::A_FADD }
-,	{ 0x3f000000, 47, Inst::M_V8MIN }
-,	{ 0x3f3f3f3f, 26, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x3f3f3f3f, 26, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x3f3f3f3f, 58, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x3f3f3f3f, 58, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x3f800000, 32, Inst::A_OR }   // 1.0
-,	{ 0x3f800000,  1, Inst::A_ITOF }
-,	{ 0x3f800000, 47, Inst::A_FADD }
-,	{ 0x3f800000, 32, Inst::M_V8MIN }
-,	{ 0x40000000, 33, Inst::A_OR }   // 2.0
-,	{ 0x40000000,  2, Inst::A_ITOF }
-,	{ 0x40000000, 32, Inst::A_FADD }
-,	{ 0x40000000,  4, Inst::A_ROR }
-,	{ 0x40000000, 33, Inst::M_V8MIN }
-,	{ 0x40400000,  3, Inst::A_ITOF } // 3.0
-,	{ 0x40404040, 38, Inst::A_FTOI,  Inst::P_8abcd }
-,	{ 0x40404040,  4, Inst::A_SHL,   Inst::P_8abcd }
-,	{ 0x40404040,  8, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x40404040, 24, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x40404040, 46, Inst::M_V8MIN, -Inst::P_8abcd }
-,	{ 0x40404040, 47, Inst::M_FMUL,  -Inst::P_8abcd }
-,	{ 0x40404040, 38, Inst::A_FTOI,  Inst::P_8abcdS }
-,	{ 0x40404040,  4, Inst::A_SHL,   Inst::P_8abcdS }
-,	{ 0x40404040,  8, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0x40800000, 34, Inst::A_OR }   // 4.0
-,	{ 0x40800000,  4, Inst::A_ITOF }
-,	{ 0x40800000, 33, Inst::A_FADD }
-,	{ 0x40800000, 34, Inst::M_V8MIN }
-,	{ 0x40800000, 33, Inst::M_FMUL }
-,	{ 0x40a00000,  5, Inst::A_ITOF } // 5.0
-,	{ 0x40c00000,  6, Inst::A_ITOF } // 6.0
-,	{ 0x40e00000,  7, Inst::A_ITOF } // 7.0
-,	{ 0x41000000, 35, Inst::A_OR }   // 8.0
-,	{ 0x41000000,  8, Inst::A_ITOF }
-,	{ 0x41000000, 34, Inst::A_FADD }
-,	{ 0x41000000, 35, Inst::M_V8MIN }
-,	{ 0x41100000,  9, Inst::A_ITOF } // 9.0
-,	{ 0x41200000, 10, Inst::A_ITOF } // 10.0
-,	{ 0x41300000, 11, Inst::A_ITOF } // 11.0
-,	{ 0x41400000, 12, Inst::A_ITOF } // 12.0
-,	{ 0x41500000, 13, Inst::A_ITOF } // 13.0
-,	{ 0x41600000, 14, Inst::A_ITOF } // 14.0
-,	{ 0x41700000, 15, Inst::A_ITOF } // 15.0
-,	{ 0x41800000, 36, Inst::A_OR }   // 16.0
-,	{ 0x41800000, 35, Inst::A_FADD }
-,	{ 0x41800000, 36, Inst::M_V8MIN }
-,	{ 0x41800000, 34, Inst::M_FMUL }
-,	{ 0x42000000, 37, Inst::A_OR }   // 32.0
-,	{ 0x42000000, 36, Inst::A_FADD }
-,	{ 0x42000000, 37, Inst::M_V8MIN }
-,	{ 0x42800000, 38, Inst::A_OR }   // 64.0
-,	{ 0x42800000, 37, Inst::A_FADD }
-,	{ 0x42800000, 38, Inst::M_V8MIN }
-,	{ 0x42800000, 35, Inst::M_FMUL }
-,	{ 0x43000000, 39, Inst::A_OR }   // 128.0
-,	{ 0x43000000, 38, Inst::A_FADD }
-,	{ 0x43000000, 39, Inst::M_V8MIN }
-,	{ 0x43800000, 39, Inst::A_FADD } // 256.0
-,	{ 0x43800000, 36, Inst::M_FMUL }
-,	{ 0x44800000, 37, Inst::M_FMUL } // 1024.0
-,	{ 0x45800000, 38, Inst::M_FMUL } // 4096.0
-,	{ 0x46800000, 39, Inst::M_FMUL } // 16384.0
-,	{ 0x4e6e0000, 40, Inst::A_ITOF }
-,	{ 0x4e700000, 41, Inst::A_ITOF }
-,	{ 0x4e720000, 42, Inst::A_ITOF }
-,	{ 0x4e740000, 43, Inst::A_ITOF }
-,	{ 0x4e760000, 44, Inst::A_ITOF }
-,	{ 0x4e780000, 45, Inst::A_ITOF }
-,	{ 0x4e7a0000, 46, Inst::A_ITOF }
-,	{ 0x4e7c0000, 47, Inst::A_ITOF }
-,	{ 0x4e7e0000, 32, Inst::A_ITOF }
-,	{ 0x4e800000, 33, Inst::A_ITOF }
-,	{ 0x4e810000, 34, Inst::A_ITOF }
-,	{ 0x4e820000, 35, Inst::A_ITOF }
-,	{ 0x4e830000, 36, Inst::A_ITOF }
-,	{ 0x4e840000, 37, Inst::A_ITOF }
-,	{ 0x4e850000, 38, Inst::A_ITOF }
-,	{ 0x4e860000, 39, Inst::A_ITOF }
-,	{ 0x51515151,  9, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x51515151, 23, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x51515151,  9, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0x60000000,  3, Inst::A_ROR }
-,	{ 0x64646464, 10, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x64646464, 22, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x64646464, 10, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0x76ff0000, 40, Inst::M_V8ADDS }
-,	{ 0x76ff0000, 40, Inst::A_V8ADDS }
-,	{ 0x77000000, 40, Inst::A_ADD }
-,	{ 0x78000000, 41, Inst::M_V8ADDS }
-,	{ 0x78000000, 41, Inst::A_ADD }
-,	{ 0x78ff0000, 42, Inst::M_V8ADDS }
-,	{ 0x78ff0000, 42, Inst::A_V8ADDS }
-,	{ 0x79000000, 42, Inst::A_ADD }
-,	{ 0x79797979, 11, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x79797979, 21, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x79797979, 11, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0x7a000000, 43, Inst::M_V8ADDS }
-,	{ 0x7a000000, 43, Inst::A_ADD }
-,	{ 0x7aff0000, 44, Inst::M_V8ADDS }
-,	{ 0x7aff0000, 44, Inst::A_V8ADDS }
-,	{ 0x7b000000, 44, Inst::A_ADD }
-,	{ 0x7c000000, 45, Inst::M_V8ADDS }
-,	{ 0x7c000000, 45, Inst::A_ADD }
-,	{ 0x7cff0000, 46, Inst::M_V8ADDS }
-,	{ 0x7cff0000, 46, Inst::A_V8ADDS }
-,	{ 0x7d000000, 46, Inst::A_ADD }
-,	{ 0x7e000000, 47, Inst::M_V8ADDS }
-,	{ 0x7e000000, 47, Inst::A_ADD }
-,	{ 0x7eff0000, 32, Inst::M_V8ADDS }
-,	{ 0x7eff0000, 32, Inst::A_V8ADDS }
-,	{ 0x7f000000, 32, Inst::A_ADD }
-,	{ 0x7f7f7f7f, 25, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x7f7f7f7f, 27, Inst::A_ROR,   Inst::P_8abcd }
-,	{ 0x7f7f7f7f, 25, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x7f7f7f7f, 57, Inst::A_SHR,   Inst::P_8abcd }
-,	{ 0x7f7f7f7f, 59, Inst::A_ROR,   Inst::P_8abcd }
-,	{ 0x7f7f7f7f, 57, Inst::A_SHR,   Inst::P_8abcdS }
-,	{ 0x7f800000, 16, Inst::A_FSUB } // +Inf
-,	{ 0x7f800000, 16, Inst::M_FMUL }
-,	{ 0x7f800000, 17, Inst::A_FSUB }
-,	{ 0x7f800000, 17, Inst::M_FMUL }
-,	{ 0x7f800000, 18, Inst::A_FSUB }
-,	{ 0x7f800000, 18, Inst::M_FMUL }
-,	{ 0x7f800000, 19, Inst::A_FSUB }
-,	{ 0x7f800000, 19, Inst::M_FMUL }
-,	{ 0x7f800000, 20, Inst::A_FSUB }
-,	{ 0x7f800000, 20, Inst::M_FMUL }
-,	{ 0x7f800000, 21, Inst::A_FSUB }
-,	{ 0x7f800000, 21, Inst::M_FMUL }
-,	{ 0x7f800000, 22, Inst::A_FSUB }
-,	{ 0x7f800000, 22, Inst::M_FMUL }
-,	{ 0x7f800000, 23, Inst::A_FSUB }
-,	{ 0x7f800000, 23, Inst::M_FMUL }
-,	{ 0x7f800000, 24, Inst::A_FSUB }
-,	{ 0x7f800000, 24, Inst::M_FMUL }
-,	{ 0x7f800000, 25, Inst::A_FSUB }
-,	{ 0x7f800000, 25, Inst::M_FMUL }
-,	{ 0x7f800000, 26, Inst::A_FSUB }
-,	{ 0x7f800000, 26, Inst::M_FMUL }
-,	{ 0x7f800000, 27, Inst::A_FSUB }
-,	{ 0x7f800000, 27, Inst::M_FMUL }
-,	{ 0x7f800000, 28, Inst::A_FSUB }
-,	{ 0x7f800000, 28, Inst::M_FMUL }
-,	{ 0x7f800000, 29, Inst::A_FSUB }
-,	{ 0x7f800000, 29, Inst::M_FMUL }
-,	{ 0x7f800000, 30, Inst::A_FSUB }
-,	{ 0x7f800000, 30, Inst::M_FMUL }
-,	{ 0x7f800000, 31, Inst::A_FSUB }
-,	{ 0x7f800000, 31, Inst::M_FMUL }
-,	{ 0x7f800000, 48, Inst::A_FSUB }
-,	{ 0x7f800000, 49, Inst::A_FSUB }
-,	{ 0x7f800000, 50, Inst::A_FSUB }
-,	{ 0x7f800000, 51, Inst::A_FSUB }
-,	{ 0x7f800000, 52, Inst::A_FSUB }
-,	{ 0x7f800000, 53, Inst::A_FSUB }
-,	{ 0x7f800000, 54, Inst::A_FSUB }
-,	{ 0x7f800000, 55, Inst::A_FSUB }
-,	{ 0x7f800000, 56, Inst::A_FSUB }
-,	{ 0x7f800000, 57, Inst::A_FSUB }
-,	{ 0x7f800000, 58, Inst::A_FSUB }
-,	{ 0x7f800000, 59, Inst::A_FSUB }
-,	{ 0x7f800000, 60, Inst::A_FSUB }
-,	{ 0x7f800000, 61, Inst::A_FSUB }
-,	{ 0x7f800000, 62, Inst::A_FSUB }
-,	{ 0x7f800000, 63, Inst::A_FSUB }
-,	{ 0x80000000,  1, Inst::A_ROR } // INT_MIN
-,	{ 0x80000000, 33, Inst::M_V8ADDS }
-,	{ 0x80000000, 33, Inst::A_ADD }
-,	{ 0x80000000, 30, Inst::A_SHL }
-,	{ 0x80000000, 62, Inst::A_SHL }
-,	{ 0x80808080, 39, Inst::A_FTOI,  Inst::P_8abcd }
-,	{ 0x80808080,  6, Inst::A_SHL,   Inst::P_8abcd }
-,	{ 0x80808080,  7, Inst::A_SHL,   Inst::P_8abcd }
-,	{ 0x80808080, 47, Inst::M_V8MIN, -Inst::P_8abcd }
-,	{ 0x80808080, 39, Inst::A_FTOI,  Inst::P_8abcdS }
-,	{ 0x80ff0000, 34, Inst::M_V8ADDS }
-,	{ 0x80ff0000, 34, Inst::A_V8ADDS }
-,	{ 0x81000000, 34, Inst::A_ADD }
-,	{ 0x82000000, 35, Inst::M_V8ADDS }
-,	{ 0x82000000, 35, Inst::A_ADD }
-,	{ 0x82ff0000, 36, Inst::M_V8ADDS }
-,	{ 0x82ff0000, 36, Inst::A_V8ADDS }
-,	{ 0x83000000, 36, Inst::A_ADD }
-,	{ 0x84000000, 37, Inst::M_V8ADDS }
-,	{ 0x84000000, 37, Inst::A_ADD }
-,	{ 0x84ff0000, 38, Inst::M_V8ADDS }
-,	{ 0x84ff0000, 38, Inst::A_V8ADDS }
-,	{ 0x85000000, 38, Inst::A_ADD }
-,	{ 0x86000000, 39, Inst::M_V8ADDS }
-,	{ 0x86000000, 39, Inst::A_ADD }
-,	{ 0x90909090, 12, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x90909090, 20, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0x90909090, 12, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0xa0000000, 29, Inst::A_SHL }
-,	{ 0xa0000000, 61, Inst::A_SHL }
-,	{ 0xa0a0a0a0,  5, Inst::A_SHL,   Inst::P_8abcd }
-,	{ 0xa0a0a0a0,  5, Inst::A_SHL,   Inst::P_8abcdS }
-,	{ 0xa9a9a9a9, 13, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0xa9a9a9a9, 19, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0xa9a9a9a9, 13, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0xbcffffff, 39, Inst::A_NOT }
-,	{ 0xbd7fffff, 38, Inst::A_NOT }
-,	{ 0xbdffffff, 37, Inst::A_NOT }
-,	{ 0xbe7fffff, 36, Inst::A_NOT }
-,	{ 0xbeffffff, 35, Inst::A_NOT }
-,	{ 0xbf7fffff, 34, Inst::A_NOT }
-,	{ 0xbf800000, 31, Inst::A_ITOF } // -1.0
-,	{ 0xbf800000, 63, Inst::A_ITOF }
-,	{ 0xbfbfbfbf, 26, Inst::A_ROR,  Inst::P_8abcd }
-,	{ 0xbfbfbfbf, 58, Inst::A_ROR,  Inst::P_8abcd }
-,	{ 0xbfffffff, 33, Inst::A_NOT }
-,	{ 0xc0000000, 30, Inst::A_ITOF } // -2.0
-,	{ 0xc0000000, 28, Inst::A_SHL }
-,	{ 0xc0000000, 62, Inst::A_ITOF }
-,	{ 0xc0000000, 60, Inst::A_SHL }
-,	{ 0xc0400000, 29, Inst::A_ITOF } // -3.0
-,	{ 0xc0400000, 61, Inst::A_ITOF }
-,	{ 0xc07fffff, 32, Inst::A_NOT }
-,	{ 0xc0800000, 28, Inst::A_ITOF } // -4.0
-,	{ 0xc0800000, 60, Inst::A_ITOF }
-,	{ 0xc0a00000, 27, Inst::A_ITOF } // -5.0
-,	{ 0xc0a00000, 59, Inst::A_ITOF }
-,	{ 0xc0c00000, 26, Inst::A_ITOF } // -6.0
-,	{ 0xc0c00000, 58, Inst::A_ITOF }
-,	{ 0xc0e00000, 25, Inst::A_ITOF } // -7.0
-,	{ 0xc0e00000, 57, Inst::A_ITOF }
-,	{ 0xc0ffffff, 47, Inst::A_NOT }
-,	{ 0xc1000000, 24, Inst::A_ITOF } // -8.0
-,	{ 0xc1000000, 56, Inst::A_ITOF }
-,	{ 0xc1100000, 23, Inst::A_ITOF } // -9.0
-,	{ 0xc1100000, 55, Inst::A_ITOF }
-,	{ 0xc1200000, 22, Inst::A_ITOF } // -10.0
-,	{ 0xc1200000, 54, Inst::A_ITOF }
-,	{ 0xc1300000, 21, Inst::A_ITOF } // -11.0
-,	{ 0xc1300000, 53, Inst::A_ITOF }
-,	{ 0xc1400000, 20, Inst::A_ITOF } // -12.0
-,	{ 0xc1400000, 52, Inst::A_ITOF }
-,	{ 0xc1500000, 19, Inst::A_ITOF } // -13.0
-,	{ 0xc1500000, 51, Inst::A_ITOF }
-,	{ 0xc1600000, 18, Inst::A_ITOF } // -14.0
-,	{ 0xc1600000, 50, Inst::A_ITOF }
-,	{ 0xc1700000, 17, Inst::A_ITOF } // -15.0
-,	{ 0xc1700000, 49, Inst::A_ITOF }
-,	{ 0xc17fffff, 46, Inst::A_NOT }
-,	{ 0xc1800000, 16, Inst::A_ITOF } // -16.0
-,	{ 0xc1800000, 48, Inst::A_ITOF }
-,	{ 0xc1ffffff, 45, Inst::A_NOT }
-,	{ 0xc27fffff, 44, Inst::A_NOT }
-,	{ 0xc2ffffff, 43, Inst::A_NOT }
-,	{ 0xc37fffff, 42, Inst::A_NOT }
-,	{ 0xc3ffffff, 41, Inst::A_NOT }
-,	{ 0xc4c4c4c4, 14, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0xc4c4c4c4, 18, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0xc4c4c4c4, 14, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0xc47fffff, 40, Inst::A_NOT }
-,	{ 0xcfcfcfcf, 28, Inst::A_ROR,   Inst::P_8abcd }
-,	{ 0xcfcfcfcf, 60, Inst::A_ROR,   Inst::P_8abcd }
-,	{ 0xd8000000, 27, Inst::A_SHL }
-,	{ 0xd8000000, 59, Inst::A_SHL }
-,	{ 0xe0000100, 16, Inst::M_MUL24 }
-,	{ 0xe0e0e0e0, 16, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xe0e0e0e0, 48, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xe1e1e1e1, 15, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0xe1e1e1e1, 17, Inst::M_MUL24, Inst::P_8abcd }
-,	{ 0xe1e1e1e1, 15, Inst::M_MUL24, Inst::P_8abcdS }
-,	{ 0xe20000e1, 17, Inst::M_MUL24 }
-,	{ 0xe2e2e2e2, 17, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xe2e2e2e2, 16, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xe2e2e2e2, 49, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xe40000c4, 18, Inst::M_MUL24 }
-,	{ 0xe4e4e4e4, 18, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xe4e4e4e4, 17, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xe4e4e4e4, 50, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xe60000a9, 19, Inst::M_MUL24 }
-,	{ 0xe6e6e6e6, 19, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xe6e6e6e6, 18, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xe6e6e6e6, 51, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xe8000000, 26, Inst::A_SHL }
-,	{ 0xe8000000, 58, Inst::A_SHL }
-,	{ 0xe8000090, 20, Inst::M_MUL24 }
-,	{ 0xe8e8e8e8, 20, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xe8e8e8e8, 19, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xe8e8e8e8, 52, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xe9e9e9e9, 20, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xea000079, 21, Inst::M_MUL24 }
-,	{ 0xeaeaeaea, 21, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xeaeaeaea, 53, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xebebebeb, 21, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xec000064, 22, Inst::M_MUL24 }
-,	{ 0xecececec, 22, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xecececec, 54, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xedededed, 22, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xee000051, 23, Inst::M_MUL24 }
-,	{ 0xeeeeeeee, 23, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xeeeeeeee, 55, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xefefefef, 29, Inst::A_ROR,   Inst::P_8abcd }
-,	{ 0xefefefef, 23, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xefefefef, 61, Inst::A_ROR,   Inst::P_8abcd }
-,	{ 0xf0000040, 24, Inst::M_MUL24 }
-,	{ 0xf0f0f0f0, 16, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf0f0f0f0, 24, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xf0f0f0f0, 15, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xf0f0f0f0, 16, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xf0f0f0f0, 48, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf0f0f0f0, 56, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xf1f1f1f1, 17, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf1f1f1f1, 14, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xf1f1f1f1, 17, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xf1f1f1f1, 24, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xf1f1f1f1, 49, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf2000000, 25, Inst::A_SHL }
-,	{ 0xf2000000, 57, Inst::A_SHL }
-,	{ 0xf2000031, 25, Inst::M_MUL24 }
-,	{ 0xf2f2f2f2, 18, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf2f2f2f2, 25, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xf2f2f2f2, 13, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xf2f2f2f2, 18, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xf2f2f2f2, 50, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf2f2f2f2, 57, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xf3f3f3f3, 19, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf3f3f3f3, 12, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xf3f3f3f3, 19, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xf3f3f3f3, 25, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xf3f3f3f3, 51, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf4000024, 26, Inst::M_MUL24 }
-,	{ 0xf4f4f4f4, 20, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf4f4f4f4, 26, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xf4f4f4f4, 11, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xf4f4f4f4, 20, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xf4f4f4f4, 52, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf4f4f4f4, 58, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xf5f5f5f5, 21, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf5f5f5f5, 10, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xf5f5f5f5, 21, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xf5f5f5f5, 26, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xf5f5f5f5, 53, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf6000019, 27, Inst::M_MUL24 }
-,	{ 0xf6f6f6f6, 22, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf6f6f6f6, 27, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xf6f6f6f6,  9, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xf6f6f6f6, 22, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xf6f6f6f6, 54, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf6f6f6f6, 59, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xf7f7f7f7, 23, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf7f7f7f7,  8, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xf7f7f7f7, 23, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xf7f7f7f7, 27, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xf7f7f7f7, 55, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf8000000, 24, Inst::A_SHL }
-,	{ 0xf8000000, 56, Inst::A_SHL }
-,	{ 0xf8000010, 28, Inst::M_MUL24 }
-,	{ 0xf8f8f8f8, 24, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf8f8f8f8, 28, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xf8f8f8f8,  7, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xf8f8f8f8, 24, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xf8f8f8f8, 56, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf8f8f8f8, 60, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xf9f9f9f9, 25, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xf9f9f9f9,  6, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xf9f9f9f9, 25, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xf9f9f9f9, 28, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xf9f9f9f9, 57, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xfa000009, 29, Inst::M_MUL24 }
-,	{ 0xfafafafa, 26, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xfafafafa, 29, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xfafafafa,  5, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xfafafafa, 26, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xfafafafa, 58, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xfafafafa, 61, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xfb800000, 23, Inst::A_SHL }
-,	{ 0xfbfbfbfb, 27, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xfbfbfbfb,  4, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xfbfbfbfb, 30, Inst::A_ROR,   Inst::P_8abcd }
-,	{ 0xfbfbfbfb, 27, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xfbfbfbfb, 29, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xfbfbfbfb, 59, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xfc000004, 30, Inst::M_MUL24 }
-,	{ 0xfcfcfcfc, 28, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xfcfcfcfc, 30, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xfcfcfcfc,  3, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xfcfcfcfc, 28, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xfcfcfcfc, 60, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xfcfcfcfc, 62, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xfd800000, 22, Inst::A_SHL }
-,	{ 0xfd800000, 54, Inst::A_SHL }
-,	{ 0xfdfdfdfd, 29, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xfdfdfdfd,  2, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xfdfdfdfd, 29, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xfdfdfdfd, 30, Inst::M_V8MULD,Inst::P_8abcd }
-,	{ 0xfdfdfdfd, 61, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xfe000001, 31, Inst::M_MUL24 }
-,	{ 0xfea00000, 21, Inst::A_SHL }
-,	{ 0xfea00000, 53, Inst::A_SHL }
-,	{ 0xfefefefe, 30, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xfefefefe, 30, Inst::M_V8MIN, Inst::P_8abcd }
-,	{ 0xfefefefe, 31, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xfefefefe,  1, Inst::A_NOT,   Inst::P_8abcd }
-,	{ 0xfefefefe, 62, Inst::A_OR,    Inst::P_8abcd }
-,	{ 0xfefefefe, 63, Inst::A_ADD,   Inst::P_8abcd }
-,	{ 0xff400000, 20, Inst::A_SHL }
-,	{ 0xff400000, 32, Inst::A_SHL }
-,	{ 0xff800000, 16, Inst::A_FADD } // -Inf
-,	{ 0xff800000, 17, Inst::A_FADD }
-,	{ 0xff800000, 18, Inst::A_FADD }
-,	{ 0xff800000, 19, Inst::A_FADD }
-,	{ 0xff800000, 20, Inst::A_FADD }
-,	{ 0xff800000, 21, Inst::A_FADD }
-,	{ 0xff800000, 22, Inst::A_FADD }
-,	{ 0xff800000, 23, Inst::A_FADD }
-,	{ 0xff800000, 24, Inst::A_FADD }
-,	{ 0xff800000, 25, Inst::A_FADD }
-,	{ 0xff800000, 26, Inst::A_FADD }
-,	{ 0xff800000, 27, Inst::A_FADD }
-,	{ 0xff800000, 28, Inst::A_FADD }
-,	{ 0xff800000, 29, Inst::A_FADD }
-,	{ 0xff800000, 30, Inst::A_FADD }
-,	{ 0xff800000, 31, Inst::A_FADD }
-,	{ 0xff800000, 48, Inst::A_FADD }
-,	{ 0xff800000, 49, Inst::A_FADD }
-,	{ 0xff800000, 50, Inst::A_FADD }
-,	{ 0xff800000, 51, Inst::A_FADD }
-,	{ 0xff800000, 52, Inst::A_FADD }
-,	{ 0xff800000, 53, Inst::A_FADD }
-,	{ 0xff800000, 54, Inst::A_FADD }
-,	{ 0xff800000, 55, Inst::A_FADD }
-,	{ 0xff800000, 56, Inst::A_FADD }
-,	{ 0xff800000, 57, Inst::A_FADD }
-,	{ 0xff800000, 58, Inst::A_FADD }
-,	{ 0xff800000, 59, Inst::A_FADD }
-,	{ 0xff800000, 60, Inst::A_FADD }
-,	{ 0xff800000, 61, Inst::A_FADD }
-,	{ 0xff800000, 62, Inst::A_FADD }
-,	{ 0xff800000, 63, Inst::A_FADD }
-,	{ 0xff980000, 19, Inst::A_SHL }
-,	{ 0xff980000, 51, Inst::A_SHL }
-,	{ 0xffc80000, 18, Inst::A_SHL }
-,	{ 0xffc80000, 50, Inst::A_SHL }
-,	{ 0xffe20000, 17, Inst::A_SHL }
-,	{ 0xffe20000, 49, Inst::A_SHL }
-,	{ 0xfff00000, 16, Inst::A_SHL }
-,	{ 0xfff00000, 48, Inst::A_SHL }
-,	{ 0xfff0ffff, 16, Inst::A_ROR }
-,	{ 0xfff0ffff, 48, Inst::A_ROR }
-,	{ 0xfff8ffff, 17, Inst::A_ROR }
-,	{ 0xfff8ffff, 49, Inst::A_ROR }
-,	{ 0xfffcbfff, 18, Inst::A_ROR }
-,	{ 0xfffcbfff, 50, Inst::A_ROR }
-,	{ 0xfffe7fff, 19, Inst::A_ROR }
-,	{ 0xfffe7fff, 51, Inst::A_ROR }
-,	{ 0xffff4fff, 20, Inst::A_ROR }
-,	{ 0xffff4fff, 52, Inst::A_ROR }
-,	{ 0xffffafff, 21, Inst::A_ROR }
-,	{ 0xffffafff, 53, Inst::A_ROR }
-,	{ 0xffffdbff, 22, Inst::A_ROR }
-,	{ 0xffffdbff, 54, Inst::A_ROR }
-,	{ 0xffffefff, 23, Inst::A_ROR } // -4097
-,	{ 0xffffefff, 55, Inst::A_ROR }
-,	{ 0xfffff8ff, 24, Inst::A_ROR } // -1793
-,	{ 0xfffff8ff, 56, Inst::A_ROR }
-,	{ 0xfffffcff, 25, Inst::A_ROR } // -769
-,	{ 0xfffffcff, 57, Inst::A_ROR }
-,	{ 0xfffffebf, 26, Inst::A_ROR } // -321
-,	{ 0xfffffebf, 58, Inst::A_ROR }
-,	{ 0xffffff7f, 27, Inst::A_ROR } // -129
-,	{ 0xffffff7f, 59, Inst::A_ROR }
-,	{ 0xffffffcf, 28, Inst::A_ROR } // -49
-,	{ 0xffffffcf, 60, Inst::A_ROR }
-,	{ 0xffffffe0, 16, Inst::A_ADD } // -32
-,	{ 0xffffffe0, 48, Inst::A_ADD }
-,	{ 0xffffffe2, 17, Inst::A_ADD } // -30
-,	{ 0xffffffe2, 16, Inst::M_V8MULD }
-,	{ 0xffffffe2, 49, Inst::A_ADD }
-,	{ 0xffffffe4, 18, Inst::A_ADD } // -28
-,	{ 0xffffffe4, 17, Inst::M_V8MULD }
-,	{ 0xffffffe4, 50, Inst::A_ADD }
-,	{ 0xffffffe6, 19, Inst::A_ADD } // -26
-,	{ 0xffffffe6, 18, Inst::M_V8MULD }
-,	{ 0xffffffe6, 51, Inst::A_ADD }
-,	{ 0xffffffe8, 20, Inst::A_ADD } // -24
-,	{ 0xffffffe8, 19, Inst::M_V8MULD }
-,	{ 0xffffffe8, 52, Inst::A_ADD }
-,	{ 0xffffffe9, 20, Inst::M_V8MULD } // -23
-,	{ 0xffffffea, 21, Inst::A_ADD }    // -22
-,	{ 0xffffffea, 53, Inst::A_ADD }
-,	{ 0xffffffeb, 21, Inst::M_V8MULD } // -21
-,	{ 0xffffffec, 22, Inst::A_ADD }    // -20
-,	{ 0xffffffec, 54, Inst::A_ADD }
-,	{ 0xffffffed, 22, Inst::M_V8MULD } // -19
-,	{ 0xffffffee, 23, Inst::A_ADD }    // -18
-,	{ 0xffffffee, 55, Inst::A_ADD }
-,	{ 0xffffffef, 29, Inst::A_ROR }    // -17
-,	{ 0xffffffef, 23, Inst::M_V8MULD }
-,	{ 0xffffffef, 61, Inst::A_ROR }
-,	{ 0xfffffff0, 16, Inst::A_OR }     // -16
-,	{ 0xfffffff0, 24, Inst::A_ADD }
-,	{ 0xfffffff0, 15, Inst::A_NOT }
-,	{ 0xfffffff0, 16, Inst::M_V8MIN }
-,	{ 0xfffffff0, 48, Inst::A_OR }
-,	{ 0xfffffff0, 56, Inst::A_ADD }
-,	{ 0xfffffff1, 17, Inst::A_OR }  // -15
-,	{ 0xfffffff1, 17, Inst::M_V8MIN }
-,	{ 0xfffffff1, 14, Inst::A_NOT }
-,	{ 0xfffffff1, 24, Inst::M_V8MULD }
-,	{ 0xfffffff1, 49, Inst::A_OR }
-,	{ 0xfffffff2, 18, Inst::A_OR }  // -14
-,	{ 0xfffffff2, 18, Inst::M_V8MIN }
-,	{ 0xfffffff2, 25, Inst::A_ADD }
-,	{ 0xfffffff2, 13, Inst::A_NOT }
-,	{ 0xfffffff2, 50, Inst::A_OR }
-,	{ 0xfffffff2, 57, Inst::A_ADD }
-,	{ 0xfffffff3, 19, Inst::A_OR }  // -13
-,	{ 0xfffffff3, 19, Inst::M_V8MIN }
-,	{ 0xfffffff3, 12, Inst::A_NOT }
-,	{ 0xfffffff3, 25, Inst::M_V8MULD }
-,	{ 0xfffffff3, 51, Inst::A_OR }
-,	{ 0xfffffff4, 20, Inst::A_OR }  // -12
-,	{ 0xfffffff4, 20, Inst::M_V8MIN }
-,	{ 0xfffffff4, 26, Inst::A_ADD }
-,	{ 0xfffffff4, 11, Inst::A_NOT }
-,	{ 0xfffffff4, 52, Inst::A_OR }
-,	{ 0xfffffff4, 58, Inst::A_ADD }
-,	{ 0xfffffff5, 21, Inst::A_OR }  // -11
-,	{ 0xfffffff5, 21, Inst::M_V8MIN }
-,	{ 0xfffffff5, 10, Inst::A_NOT }
-,	{ 0xfffffff5, 26, Inst::M_V8MULD }
-,	{ 0xfffffff5, 53, Inst::A_OR }
-,	{ 0xfffffff6, 22, Inst::A_OR }  // -10
-,	{ 0xfffffff6, 22, Inst::M_V8MIN }
-,	{ 0xfffffff6, 27, Inst::A_ADD }
-,	{ 0xfffffff6,  9, Inst::A_NOT }
-,	{ 0xfffffff6, 54, Inst::A_OR }
-,	{ 0xfffffff6, 59, Inst::A_ADD }
-,	{ 0xfffffff7, 23, Inst::A_OR }  // -9
-,	{ 0xfffffff7, 23, Inst::M_V8MIN }
-,	{ 0xfffffff7,  8, Inst::A_NOT }
-,	{ 0xfffffff7, 27, Inst::M_V8MULD }
-,	{ 0xfffffff7, 55, Inst::A_OR }
-,	{ 0xfffffff8, 24, Inst::A_OR }  // -8
-,	{ 0xfffffff8, 24, Inst::M_V8MIN }
-,	{ 0xfffffff8, 28, Inst::A_ADD }
-,	{ 0xfffffff8,  7, Inst::A_NOT }
-,	{ 0xfffffff8, 56, Inst::A_OR }
-,	{ 0xfffffff8, 60, Inst::A_ADD }
-,	{ 0xfffffff9, 25, Inst::A_OR }  // -7
-,	{ 0xfffffff9, 25, Inst::M_V8MIN }
-,	{ 0xfffffff9,  6, Inst::A_NOT }
-,	{ 0xfffffff9, 28, Inst::M_V8MULD }
-,	{ 0xfffffff9, 57, Inst::A_OR }
-,	{ 0xfffffffa, 26, Inst::A_OR }  // -6
-,	{ 0xfffffffa, 26, Inst::M_V8MIN }
-,	{ 0xfffffffa, 29, Inst::A_ADD }
-,	{ 0xfffffffa,  5, Inst::A_NOT }
-,	{ 0xfffffffa, 58, Inst::A_OR }
-,	{ 0xfffffffa, 61, Inst::A_ADD }
-,	{ 0xfffffffb, 27, Inst::A_OR }  // -5
-,	{ 0xfffffffb, 27, Inst::M_V8MIN }
-,	{ 0xfffffffb,  4, Inst::A_NOT }
-,	{ 0xfffffffb, 30, Inst::A_ROR }
-,	{ 0xfffffffb, 29, Inst::M_V8MULD }
-,	{ 0xfffffffb, 59, Inst::A_OR }
-,	{ 0xfffffffb, 62, Inst::A_ROR }
-,	{ 0xfffffffc, 28, Inst::A_OR }  // -4
-,	{ 0xfffffffc, 28, Inst::M_V8MIN }
-,	{ 0xfffffffc, 30, Inst::A_ADD }
-,	{ 0xfffffffc,  3, Inst::A_NOT }
-,	{ 0xfffffffc, 60, Inst::A_OR }
-,	{ 0xfffffffc, 62, Inst::A_ADD }
-,	{ 0xfffffffd, 29, Inst::A_OR }  // -3
-,	{ 0xfffffffd, 29, Inst::M_V8MIN }
-,	{ 0xfffffffd,  2, Inst::A_NOT }
-,	{ 0xfffffffd, 30, Inst::M_V8MULD }
-,	{ 0xfffffffd, 61, Inst::A_OR }
-,	{ 0xfffffffe, 30, Inst::A_OR }  // -2
-,	{ 0xfffffffe, 30, Inst::M_V8MIN }
-,	{ 0xfffffffe, 31, Inst::A_ADD }
-,	{ 0xfffffffe,  1, Inst::A_NOT }
-,	{ 0xfffffffe, 62, Inst::A_OR }  // -2
-,	{ 0xfffffffe, 63, Inst::A_ADD }
-,	{ 0xffffffff, 31, Inst::A_OR }  // -1
-,	{ 0xffffffff, 31, Inst::M_V8MIN }
-,	{ 0xffffffff,  0, Inst::A_NOT }
-,	{ 0xffffffff, 16, Inst::A_V8ADDS }
-,	{ 0xffffffff, 17, Inst::A_V8ADDS }
-,	{ 0xffffffff, 18, Inst::A_V8ADDS }
-,	{ 0xffffffff, 19, Inst::A_V8ADDS }
-,	{ 0xffffffff, 20, Inst::A_V8ADDS }
-,	{ 0xffffffff, 21, Inst::A_V8ADDS }
-,	{ 0xffffffff, 22, Inst::A_V8ADDS }
-,	{ 0xffffffff, 23, Inst::A_V8ADDS }
-,	{ 0xffffffff, 24, Inst::A_V8ADDS }
-,	{ 0xffffffff, 25, Inst::A_V8ADDS }
-,	{ 0xffffffff, 26, Inst::A_V8ADDS }
-,	{ 0xffffffff, 27, Inst::A_V8ADDS }
-,	{ 0xffffffff, 28, Inst::A_V8ADDS }
-,	{ 0xffffffff, 29, Inst::A_V8ADDS }
-,	{ 0xffffffff, 30, Inst::A_V8ADDS }
-,	{ 0xffffffff, 16, Inst::M_V8ADDS }
-,	{ 0xffffffff, 17, Inst::M_V8ADDS }
-,	{ 0xffffffff, 18, Inst::M_V8ADDS }
-,	{ 0xffffffff, 19, Inst::M_V8ADDS }
-,	{ 0xffffffff, 20, Inst::M_V8ADDS }
-,	{ 0xffffffff, 21, Inst::M_V8ADDS }
-,	{ 0xffffffff, 22, Inst::M_V8ADDS }
-,	{ 0xffffffff, 23, Inst::M_V8ADDS }
-,	{ 0xffffffff, 24, Inst::M_V8ADDS }
-,	{ 0xffffffff, 25, Inst::M_V8ADDS }
-,	{ 0xffffffff, 26, Inst::M_V8ADDS }
-,	{ 0xffffffff, 27, Inst::M_V8ADDS }
-,	{ 0xffffffff, 28, Inst::M_V8ADDS }
-,	{ 0xffffffff, 29, Inst::M_V8ADDS }
-,	{ 0xffffffff, 30, Inst::M_V8ADDS }
-,	{ 0xffffffff,  1, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff,  2, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff,  3, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff,  4, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff,  5, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff,  6, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff,  7, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff,  8, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff,  9, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff, 10, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff, 11, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff, 12, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff, 13, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff, 14, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff, 15, Inst::A_ITOF,  Inst::P_8abcdS }
-,	{ 0xffffffff, 32, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 33, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 34, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 35, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 36, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 37, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 38, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 39, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 40, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 41, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 42, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 43, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 44, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 45, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 46, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 47, Inst::A_OR,    Inst::P_8abcdS }
-,	{ 0xffffffff, 32, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 33, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 34, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 35, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 36, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 37, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 38, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 39, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 40, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 41, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 42, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 43, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 44, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 45, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 46, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 47, Inst::M_V8MIN, Inst::P_8abcdS }
-,	{ 0xffffffff, 63, Inst::A_OR }  // -1
-,	{ 0xffffffff, 48, Inst::A_V8ADDS }
-,	{ 0xffffffff, 49, Inst::A_V8ADDS }
-,	{ 0xffffffff, 50, Inst::A_V8ADDS }
-,	{ 0xffffffff, 51, Inst::A_V8ADDS }
-,	{ 0xffffffff, 52, Inst::A_V8ADDS }
-,	{ 0xffffffff, 53, Inst::A_V8ADDS }
-,	{ 0xffffffff, 54, Inst::A_V8ADDS }
-,	{ 0xffffffff, 55, Inst::A_V8ADDS }
-,	{ 0xffffffff, 56, Inst::A_V8ADDS }
-,	{ 0xffffffff, 57, Inst::A_V8ADDS }
-,	{ 0xffffffff, 58, Inst::A_V8ADDS }
-,	{ 0xffffffff, 59, Inst::A_V8ADDS }
-,	{ 0xffffffff, 60, Inst::A_V8ADDS }
-,	{ 0xffffffff, 61, Inst::A_V8ADDS }
-,	{ 0xffffffff, 62, Inst::A_V8ADDS }
-,	{ 0,           0, Inst::A_NOP } // dummy entry for termination
-};
-
 /// Map with opcode tokens, must be ordered.
 const Parser::opEntry<8> Parser::opcodeMap[] =
-{	{"add",    &Parser::assembleADD, Inst::A_ADD }
-,	{"and",    &Parser::assembleADD, Inst::A_AND }
-,	{"anop",   &Parser::assembleADD, Inst::A_NOP|0x100 }
-,	{"asr",    &Parser::assembleADD, Inst::A_ASR }
-,	{"av8adds",&Parser::assembleADD, Inst::A_V8ADDS|0x100 }
-,	{"av8subs",&Parser::assembleADD, Inst::A_V8SUBS|0x100 }
-,	{"bpkt",   &Parser::assembleSIG, Inst::S_BREAK }
-,	{"bra",    &Parser::assembleBRANCH, false }
-,	{"break",  &Parser::assembleSIG, Inst::S_BREAK }
-,	{"brr",    &Parser::assembleBRANCH, true }
-,	{"clz",    &Parser::assembleADD, Inst::A_CLZ }
-,	{"fadd",   &Parser::assembleADD, Inst::A_FADD }
-,	{"fmax",   &Parser::assembleADD, Inst::A_FMAX }
-,	{"fmaxabs",&Parser::assembleADD, Inst::A_FMAXABS }
-,	{"fmin",   &Parser::assembleADD, Inst::A_FMIN }
-,	{"fminabs",&Parser::assembleADD, Inst::A_FMINABS }
-,	{"fmul",   &Parser::assembleMUL, Inst::M_FMUL }
-,	{"fsub",   &Parser::assembleADD, Inst::A_FSUB }
-,	{"ftoi",   &Parser::assembleADD, Inst::A_FTOI }
-,	{"itof",   &Parser::assembleADD, Inst::A_ITOF }
-,	{"ldaltlb",&Parser::assembleSIG, Inst::S_LOADAM }
-,	{"ldcend", &Parser::assembleSIG, Inst::S_LDCEND }
-,	{"ldcoend",&Parser::assembleSIG, Inst::S_LDCEND }
-,	{"ldcotlb",&Parser::assembleSIG, Inst::S_LOADC }
-,	{"ldcvtlb",&Parser::assembleSIG, Inst::S_LOADCV }
-,	{"ldi",    &Parser::assembleMOV, Inst::L_LDI }
-,	{"ldipes", &Parser::assembleMOV, Inst::L_PES }
-,	{"ldipeu", &Parser::assembleMOV, Inst::L_PEU }
-,	{"ldtmu0", &Parser::assembleSIG, Inst::S_LDTMU0 }
-,	{"ldtmu1", &Parser::assembleSIG, Inst::S_LDTMU1 }
-,	{"loadam", &Parser::assembleSIG, Inst::S_LOADAM }
-,	{"loadc",  &Parser::assembleSIG, Inst::S_LOADC }
-,	{"loadcv", &Parser::assembleSIG, Inst::S_LOADCV }
-,	{"lswitch",&Parser::assembleSIG, Inst::S_LTHRSW }
-,	{"lthrsw", &Parser::assembleSIG, Inst::S_LTHRSW }
-,	{"max",    &Parser::assembleADD, Inst::A_MAX }
-,	{"min",    &Parser::assembleADD, Inst::A_MIN }
-,	{"mnop",   &Parser::assembleMUL, Inst::M_NOP|0x100 }
-,	{"mov",    &Parser::assembleMOV, -1 }
-,	{"mul24",  &Parser::assembleMUL, Inst::M_MUL24 }
-,	{"mv8adds",&Parser::assembleMUL, Inst::M_V8ADDS|0x100 }
-,	{"mv8subs",&Parser::assembleMUL, Inst::M_V8SUBS|0x100 }
-,	{"nop",    &Parser::assembleADD, Inst::A_NOP } // alternative M_NOP
-,	{"not",    &Parser::assembleADD, Inst::A_NOT }
-,	{"or",     &Parser::assembleADD, Inst::A_OR }
-,	{"read",   &Parser::assembleREAD }
-,	{"ror",    &Parser::assembleADD, Inst::A_ROR }
-,	{"sacq",   &Parser::assembleSEMA,1 }
-,	{"sbdone", &Parser::assembleSIG, Inst::S_SBDONE }
-,	{"sbwait", &Parser::assembleSIG, Inst::S_SBWAIT }
-//,	{"sema",   &Parser::assembleSEMA, -1 } // other syntax
-,	{"shl",    &Parser::assembleADD, Inst::A_SHL }
-,	{"shr",    &Parser::assembleADD, Inst::A_SHR }
-,	{"srel",   &Parser::assembleSEMA,0 }
-,	{"sub",    &Parser::assembleADD, Inst::A_SUB }
-,	{"tend",   &Parser::assembleSIG, Inst::S_THREND }
-,	{"thrend", &Parser::assembleSIG, Inst::S_THREND }
-,	{"thrsw",  &Parser::assembleSIG, Inst::S_THRSW }
-,	{"tswitch",&Parser::assembleSIG, Inst::S_THRSW }
-,	{"unlscb", &Parser::assembleSIG, Inst::S_SBDONE }
-,	{"v8adds", &Parser::assembleMUL, Inst::M_V8ADDS } // alternative A_V8ADDS
-,	{"v8max",  &Parser::assembleMUL, Inst::M_V8MAX }
-,	{"v8min",  &Parser::assembleMUL, Inst::M_V8MIN }
-,	{"v8muld", &Parser::assembleMUL, Inst::M_V8MULD }
-,	{"v8subs", &Parser::assembleMUL, Inst::M_V8SUBS } // alternative A_V8SUBS
-,	{"waitscb",&Parser::assembleSIG, Inst::S_SBWAIT }
-,	{"xor",    &Parser::assembleADD, Inst::A_XOR }
+{	{ "add",    &Parser::assembleADD, ::Inst::A_ADD }
+,	{ "and",    &Parser::assembleADD, ::Inst::A_AND }
+,	{ "anop",   &Parser::assembleADD, ::Inst::A_NOP|0x80 }
+,	{ "asr",    &Parser::assembleADD, ::Inst::A_ASR }
+,	{ "av8adds",&Parser::assembleADD, ::Inst::A_V8ADDS|0x80 }
+,	{ "av8subs",&Parser::assembleADD, ::Inst::A_V8SUBS|0x80 }
+,	{ "bpkt",   &Parser::assembleSIG, ::Inst::S_BREAK }
+,	{ "bra",    &Parser::assembleBRANCH, false }
+,	{ "break",  &Parser::assembleSIG, ::Inst::S_BREAK }
+,	{ "brr",    &Parser::assembleBRANCH, true }
+,	{ "clz",    &Parser::assembleADD, ::Inst::A_CLZ }
+,	{ "fadd",   &Parser::assembleADD, ::Inst::A_FADD }
+,	{ "fmax",   &Parser::assembleADD, ::Inst::A_FMAX }
+,	{ "fmaxabs",&Parser::assembleADD, ::Inst::A_FMAXABS }
+,	{ "fmin",   &Parser::assembleADD, ::Inst::A_FMIN }
+,	{ "fminabs",&Parser::assembleADD, ::Inst::A_FMINABS }
+,	{ "fmul",   &Parser::assembleMUL, ::Inst::M_FMUL }
+,	{ "fsub",   &Parser::assembleADD, ::Inst::A_FSUB }
+,	{ "ftoi",   &Parser::assembleADD, ::Inst::A_FTOI }
+,	{ "itof",   &Parser::assembleADD, ::Inst::A_ITOF }
+,	{ "ldaltlb",&Parser::assembleSIG, ::Inst::S_LOADAM }
+,	{ "ldcend", &Parser::assembleSIG, ::Inst::S_LDCEND }
+,	{ "ldcoend",&Parser::assembleSIG, ::Inst::S_LDCEND }
+,	{ "ldcotlb",&Parser::assembleSIG, ::Inst::S_LOADC }
+,	{ "ldcvtlb",&Parser::assembleSIG, ::Inst::S_LOADCV }
+,	{ "ldi",    &Parser::assembleMOV, ::Inst::L_LDI }
+,	{ "ldipes", &Parser::assembleMOV, ::Inst::L_PES }
+,	{ "ldipeu", &Parser::assembleMOV, ::Inst::L_PEU }
+,	{ "ldtmu0", &Parser::assembleSIG, ::Inst::S_LDTMU0 }
+,	{ "ldtmu1", &Parser::assembleSIG, ::Inst::S_LDTMU1 }
+,	{ "loadam", &Parser::assembleSIG, ::Inst::S_LOADAM }
+,	{ "loadc",  &Parser::assembleSIG, ::Inst::S_LOADC }
+,	{ "loadcv", &Parser::assembleSIG, ::Inst::S_LOADCV }
+,	{ "lswitch",&Parser::assembleSIG, ::Inst::S_LTHRSW }
+,	{ "lthrsw", &Parser::assembleSIG, ::Inst::S_LTHRSW }
+,	{ "max",    &Parser::assembleADD, ::Inst::A_MAX }
+,	{ "min",    &Parser::assembleADD, ::Inst::A_MIN }
+,	{ "mnop",   &Parser::assembleMUL, ::Inst::M_NOP|0x80 }
+,	{ "mov",    &Parser::assembleMOV, -1 }
+,	{ "mul24",  &Parser::assembleMUL, ::Inst::M_MUL24 }
+,	{ "mv8adds",&Parser::assembleMUL, ::Inst::M_V8ADDS|0x80 }
+,	{ "mv8subs",&Parser::assembleMUL, ::Inst::M_V8SUBS|0x80 }
+,	{ "nop",    &Parser::assembleADD, ::Inst::A_NOP } // alternative M_NOP
+,	{ "not",    &Parser::assembleADD, ::Inst::A_NOT }
+,	{ "or",     &Parser::assembleADD, ::Inst::A_OR }
+,	{ "read",   &Parser::assembleREAD }
+,	{ "ror",    &Parser::assembleADD, ::Inst::A_ROR }
+,	{ "sacq",   &Parser::assembleMOV, ::Inst::L_SEMA|0x80 }
+,	{ "sbdone", &Parser::assembleSIG, ::Inst::S_SBDONE }
+,	{ "sbwait", &Parser::assembleSIG, ::Inst::S_SBWAIT }
+,	{ "shl",    &Parser::assembleADD, ::Inst::A_SHL }
+,	{ "shr",    &Parser::assembleADD, ::Inst::A_SHR }
+,	{ "srel",   &Parser::assembleMOV, ::Inst::L_SEMA }
+,	{ "sub",    &Parser::assembleADD, ::Inst::A_SUB }
+,	{ "tend",   &Parser::assembleSIG, ::Inst::S_THREND }
+,	{ "thrend", &Parser::assembleSIG, ::Inst::S_THREND }
+,	{ "thrsw",  &Parser::assembleSIG, ::Inst::S_THRSW }
+,	{ "tswitch",&Parser::assembleSIG, ::Inst::S_THRSW }
+,	{ "unlscb", &Parser::assembleSIG, ::Inst::S_SBDONE }
+,	{ "v8adds", &Parser::assembleMUL, ::Inst::M_V8ADDS } // alternative A_V8ADDS
+,	{ "v8max",  &Parser::assembleMUL, ::Inst::M_V8MAX }
+,	{ "v8min",  &Parser::assembleMUL, ::Inst::M_V8MIN }
+,	{ "v8muld", &Parser::assembleMUL, ::Inst::M_V8MULD }
+,	{ "v8subs", &Parser::assembleMUL, ::Inst::M_V8SUBS } // alternative A_V8SUBS
+,	{ "waitscb",&Parser::assembleSIG, ::Inst::S_SBWAIT }
+,	{ "xor",    &Parser::assembleADD, ::Inst::A_XOR }
 };
 
 const Parser::opExtEntry Parser::extMap[] =
-{	{ "16a",            &Parser::addPack,   Inst::P_16a,    E_DST }
-,	{ "16a",            &Parser::addUnpack, Inst::U_16a,    E_SRC }
-,	{ "16aclamp",       &Parser::addPack,   Inst::P_16aS,   E_DST }
-,	{ "16as",           &Parser::addPack,   Inst::P_16aS,   E_DST }
-,	{ "16b",            &Parser::addPack,   Inst::P_16b,    E_DST }
-,	{ "16b",            &Parser::addUnpack, Inst::U_16b,    E_SRC }
-,	{ "16bclamp",       &Parser::addPack,   Inst::P_16bS,   E_DST }
-,	{ "16bs",           &Parser::addPack,   Inst::P_16bS,   E_DST }
-,	{ "32",             &Parser::addPack,   Inst::P_32,     E_DST } // NOP
-,	{ "32",             &Parser::addUnpack, Inst::U_32,     E_SRC } // NOP
-,	{ "32clamp",        &Parser::addPack,   Inst::P_32S,    E_DST }
-,	{ "32s",            &Parser::addPack,   Inst::P_32S,    E_DST }
-,	{ "8888",           &Parser::addPack,   Inst::P_8abcd,  E_DST }
-,	{ "8888s",          &Parser::addPack,   Inst::P_8abcdS, E_DST }
-,	{ "8a",             &Parser::addPack,   Inst::P_8a,     E_DST }
-,	{ "8a",             &Parser::addUnpack, Inst::U_8a,     E_SRC }
-,	{ "8abcd",          &Parser::addPack,   Inst::P_8abcd,  E_DST }
-,	{ "8abcds",         &Parser::addPack,   Inst::P_8abcdS, E_DST }
-,	{ "8aclamp",        &Parser::addPack,   Inst::P_8aS,    E_DST }
-,	{ "8as",            &Parser::addPack,   Inst::P_8aS,    E_DST }
-,	{ "8b",             &Parser::addPack,   Inst::P_8b,     E_DST }
-,	{ "8b",             &Parser::addUnpack, Inst::U_8b,     E_SRC }
-,	{ "8bclamp",        &Parser::addPack,   Inst::P_8bS,    E_DST }
-,	{ "8bs",            &Parser::addPack,   Inst::P_8bS,    E_DST }
-,	{ "8c",             &Parser::addPack,   Inst::P_8c,     E_DST }
-,	{ "8c",             &Parser::addUnpack, Inst::U_8c,     E_SRC }
-,	{ "8cclamp",        &Parser::addPack,   Inst::P_8cS,    E_DST }
-,	{ "8cs",            &Parser::addPack,   Inst::P_8cS,    E_DST }
-,	{ "8d",             &Parser::addPack,   Inst::P_8d,     E_DST }
-,	{ "8d",             &Parser::addUnpack, Inst::U_8d,     E_SRC }
-,	{ "8dclamp",        &Parser::addPack,   Inst::P_8dS,    E_DST }
-,	{ "8ddupe",         &Parser::addPack,   Inst::P_8abcd,  E_DST }
-,	{ "8ddupe",         &Parser::addUnpack, Inst::U_8dr,    E_SRC }
-,	{ "8ddupeclamp",    &Parser::addPack,   Inst::P_8abcdS, E_DST }
-,	{ "8dr",            &Parser::addUnpack, Inst::U_8dr,    E_SRC }
-,	{ "8ds",            &Parser::addPack,   Inst::P_8dS,    E_DST }
-,	{ "allc",           &Parser::addCond,   Inst::B_ALLCS,  E_OP }
-,	{ "allcc",          &Parser::addCond,   Inst::B_ALLCC,  E_OP }
-,	{ "allcs",          &Parser::addCond,   Inst::B_ALLCS,  E_OP }
-,	{ "alln",           &Parser::addCond,   Inst::B_ALLNS,  E_OP }
-,	{ "allnc",          &Parser::addCond,   Inst::B_ALLCC,  E_OP }
-,	{ "allnn",          &Parser::addCond,   Inst::B_ALLNN,  E_OP }
-,	{ "allnz",          &Parser::addCond,   Inst::B_ALLZC,  E_OP }
-,	{ "allz",           &Parser::addCond,   Inst::B_ALLZS,  E_OP }
-,	{ "anyc",           &Parser::addCond,   Inst::B_ANYCS,  E_OP }
-,	{ "anycc",          &Parser::addCond,   Inst::B_ANYCC,  E_OP }
-,	{ "anycs",          &Parser::addCond,   Inst::B_ANYCS,  E_OP }
-,	{ "anyn",           &Parser::addCond,   Inst::B_ANYNS,  E_OP }
-,	{ "anync",          &Parser::addCond,   Inst::B_ANYCC,  E_OP }
-,	{ "anynn",          &Parser::addCond,   Inst::B_ANYNC,  E_OP }
-,	{ "anynz",          &Parser::addCond,   Inst::B_ANYZC,  E_OP }
-,	{ "anyz",           &Parser::addCond,   Inst::B_ANYZS,  E_OP }
-,	{ "c",              &Parser::addIf,     Inst::C_CS,     E_DST }
-,	{ "cc",             &Parser::addIf,     Inst::C_CC,     E_DST }
-,	{ "cs",             &Parser::addIf,     Inst::C_CS,     E_DST }
-,	{ "ifc",            &Parser::addIf,     Inst::C_CS,     E_DSTOP }
-,	{ "ifcc",           &Parser::addIf,     Inst::C_CC,     E_DSTOP }
-,	{ "ifcs",           &Parser::addIf,     Inst::C_CS,     E_DSTOP }
-,	{ "ifn",            &Parser::addIf,     Inst::C_NS,     E_DSTOP }
-,	{ "ifnc",           &Parser::addIf,     Inst::C_NC,     E_DSTOP }
-,	{ "ifnn",           &Parser::addIf,     Inst::C_NC,     E_DSTOP }
-,	{ "ifns",           &Parser::addIf,     Inst::C_NS,     E_DSTOP }
-,	{ "ifnz",           &Parser::addIf,     Inst::C_ZC,     E_DSTOP }
-,	{ "ifz",            &Parser::addIf,     Inst::C_ZS,     E_DSTOP }
-,	{ "ifzc",           &Parser::addIf,     Inst::C_ZC,     E_DSTOP }
-,	{ "ifzs",           &Parser::addIf,     Inst::C_ZS,     E_DSTOP }
-,	{ "n",              &Parser::addIf,     Inst::C_NS,     E_DST }
-,	{ "nc",             &Parser::addIf,     Inst::C_NC,     E_DST }
-,	{ "never",          &Parser::addIf,     Inst::C_NEVER,  E_DSTOP }
-,	{ "nn",             &Parser::addIf,     Inst::C_NC,     E_DST }
-,	{ "ns",             &Parser::addIf,     Inst::C_NS,     E_DST }
-,	{ "nz",             &Parser::addIf,     Inst::C_ZC,     E_DST }
-,	{ "pack16a",        &Parser::addPack,   Inst::P_16a,    E_DSTOP }
-,	{ "pack16aclamp",   &Parser::addPack,   Inst::P_16aS,   E_DSTOP }
-,	{ "pack16as",       &Parser::addPack,   Inst::P_16aS,   E_DSTOP }
-,	{ "pack16b",        &Parser::addPack,   Inst::P_16b,    E_DSTOP }
-,	{ "pack16bclamp",   &Parser::addPack,   Inst::P_16bS,   E_DSTOP }
-,	{ "pack16bs",       &Parser::addPack,   Inst::P_16bS,   E_DSTOP }
-,	{ "pack32",         &Parser::addPack,   Inst::P_32,     E_DSTOP } // NOP
-,	{ "pack32clamp",    &Parser::addPack,   Inst::P_32S,    E_DSTOP }
-,	{ "pack32s",        &Parser::addPack,   Inst::P_32S,    E_DSTOP }
-,	{ "pack8888",       &Parser::addPack,   Inst::P_8abcd,  E_DSTOP }
-,	{ "pack8888s",      &Parser::addPack,   Inst::P_8abcdS, E_DSTOP }
-,	{ "pack8a",         &Parser::addPack,   Inst::P_8a,     E_DSTOP }
-,	{ "pack8abcd",      &Parser::addPack,   Inst::P_8abcd,  E_DSTOP }
-,	{ "pack8abcds",     &Parser::addPack,   Inst::P_8abcdS, E_DSTOP }
-,	{ "pack8aclamp",    &Parser::addPack,   Inst::P_8aS,    E_DSTOP }
-,	{ "pack8as",        &Parser::addPack,   Inst::P_8aS,    E_DSTOP }
-,	{ "pack8b",         &Parser::addPack,   Inst::P_8b,     E_DSTOP }
-,	{ "pack8bclamp",    &Parser::addPack,   Inst::P_8bS,    E_DSTOP }
-,	{ "pack8bs",        &Parser::addPack,   Inst::P_8bS,    E_DSTOP }
-,	{ "pack8c",         &Parser::addPack,   Inst::P_8c,     E_DSTOP }
-,	{ "pack8cclamp",    &Parser::addPack,   Inst::P_8cS,    E_DSTOP }
-,	{ "pack8cs",        &Parser::addPack,   Inst::P_8cS,    E_DSTOP }
-,	{ "pack8d",         &Parser::addPack,   Inst::P_8d,     E_DSTOP }
-,	{ "pack8dclamp",    &Parser::addPack,   Inst::P_8dS,    E_DSTOP }
-,	{ "pack8ddupe",     &Parser::addPack,   Inst::P_8abcd,  E_DSTOP }
-,	{ "pack8ddupeclamp",&Parser::addPack,   Inst::P_8abcdS, E_DSTOP }
-,	{ "pack8ds",        &Parser::addPack,   Inst::P_8dS,    E_DSTOP }
-,	{ "rot",            &Parser::addRot,    0,              E_DSTOP }
-,	{ "setf",           &Parser::addSetF,   0,              E_DSTOP }
-,	{ "sf",             &Parser::addSetF,   0,              E_DSTOP }
-,	{ "unpack16a",      &Parser::addUnpack, Inst::U_16a,    E_SRCOP }
-,	{ "unpack16b",      &Parser::addUnpack, Inst::U_16b,    E_SRCOP }
-,	{ "unpack32",       &Parser::addUnpack, Inst::U_32,     E_SRCOP } // NOP
-,	{ "unpack8a",       &Parser::addUnpack, Inst::U_8a,     E_SRCOP }
-,	{ "unpack8b",       &Parser::addUnpack, Inst::U_8b,     E_SRCOP }
-,	{ "unpack8c",       &Parser::addUnpack, Inst::U_8c,     E_SRCOP }
-,	{ "unpack8d",       &Parser::addUnpack, Inst::U_8d,     E_SRCOP }
-,	{ "unpack8ddupe",   &Parser::addUnpack, Inst::U_8dr,    E_SRCOP }
-,	{ "unpack8dr",      &Parser::addUnpack, Inst::U_8dr,    E_SRCOP }
-,	{ "z",              &Parser::addIf,     Inst::C_ZS,     E_DST }
-,	{ "zc",             &Parser::addIf,     Inst::C_ZC,     E_DST }
-,	{ "zs",             &Parser::addIf,     Inst::C_ZS,     E_DST }
+{	{ "16a",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_16a   }
+,	{ "16aclamp",       IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16aSI |rPUp::PACK }
+,	{ "16af",           IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_16aF  }
+,	{ "16ai",           IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_16aI  }
+,	{ "16as",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16aSI |rPUp::PACK }
+,	{ "16b",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_16b   }
+,	{ "16bclamp",       IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16bSI |rPUp::PACK }
+,	{ "16bf",           IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_16bF  }
+,	{ "16bi",           IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_16bI  }
+,	{ "16bs",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16bSI |rPUp::PACK }
+,	{ "32",             IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_32    } // NOP
+,	{ "32clamp",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_32SI  |rPUp::PACK }
+,	{ "32s",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_32SI  |rPUp::PACK }
+,	{ "8888",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcd |rPUp::PACK }
+,	{ "8888s",          IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdS|rPUp::PACK }
+,	{ "8a",             IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8a    }
+,	{ "8abcd",          IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcd |rPUp::PACK }
+,	{ "8abcds",         IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdS|rPUp::PACK }
+,	{ "8aclamp",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8aS   |rPUp::PACK }
+,	{ "8af",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8aF   }
+,	{ "8ai",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8aI   }
+,	{ "8as",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8aS   |rPUp::PACK }
+,	{ "8b",             IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8b    }
+,	{ "8bclamp",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8bS   |rPUp::PACK }
+,	{ "8bf",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8bF   }
+,	{ "8bi",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8bI   }
+,	{ "8bs",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8bS   |rPUp::PACK }
+,	{ "8c",             IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8c    }
+,	{ "8cclamp",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8cS   |rPUp::PACK }
+,	{ "8cf",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8cF   }
+,	{ "8ci",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8cI   }
+,	{ "8cs",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8cS   |rPUp::PACK }
+,	{ "8d",             IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8d    }
+,	{ "8dclamp",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8dS   |rPUp::PACK }
+,	{ "8ddupe",         IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8abcd }
+,	{ "8ddupeclamp",    IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdS|rPUp::PACK }
+,	{ "8df",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8dF   }
+,	{ "8di",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8dI   }
+,	{ "8dr",            IC_XP|IC_SRC,        &Parser::addPUp,  ::Inst::U_8dr   |rPUp::UNPACK }
+,	{ "8ds",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8dS   |rPUp::PACK }
+,	{ "allc",           IC_OP,               &Parser::addCond, ::Inst::B_ALLCS }
+,	{ "allcc",          IC_OP,               &Parser::addCond, ::Inst::B_ALLCC }
+,	{ "allcs",          IC_OP,               &Parser::addCond, ::Inst::B_ALLCS }
+,	{ "alln",           IC_OP,               &Parser::addCond, ::Inst::B_ALLNS }
+,	{ "allnc",          IC_OP,               &Parser::addCond, ::Inst::B_ALLCC }
+,	{ "allnn",          IC_OP,               &Parser::addCond, ::Inst::B_ALLNN }
+,	{ "allnz",          IC_OP,               &Parser::addCond, ::Inst::B_ALLZC }
+,	{ "allz",           IC_OP,               &Parser::addCond, ::Inst::B_ALLZS }
+,	{ "anyc",           IC_OP,               &Parser::addCond, ::Inst::B_ANYCS }
+,	{ "anycc",          IC_OP,               &Parser::addCond, ::Inst::B_ANYCC }
+,	{ "anycs",          IC_OP,               &Parser::addCond, ::Inst::B_ANYCS }
+,	{ "anyn",           IC_OP,               &Parser::addCond, ::Inst::B_ANYNS }
+,	{ "anync",          IC_OP,               &Parser::addCond, ::Inst::B_ANYCC }
+,	{ "anynn",          IC_OP,               &Parser::addCond, ::Inst::B_ANYNC }
+,	{ "anynz",          IC_OP,               &Parser::addCond, ::Inst::B_ANYZC }
+,	{ "anyz",           IC_OP,               &Parser::addCond, ::Inst::B_ANYZS }
+,	{ "c",              IC_DST,              &Parser::addIf,   ::Inst::C_CS }
+,	{ "cc",             IC_DST,              &Parser::addIf,   ::Inst::C_CC }
+,	{ "cs",             IC_DST,              &Parser::addIf,   ::Inst::C_CS }
+,	{ "ifc",            IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_CS }
+,	{ "ifcc",           IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_CC }
+,	{ "ifcs",           IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_CS }
+,	{ "ifn",            IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_NS }
+,	{ "ifnc",           IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_NC }
+,	{ "ifnn",           IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_NC }
+,	{ "ifns",           IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_NS }
+,	{ "ifnz",           IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_ZC }
+,	{ "ifz",            IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_ZS }
+,	{ "ifzc",           IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_ZC }
+,	{ "ifzs",           IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_ZS }
+,	{ "n",              IC_DST,              &Parser::addIf,   ::Inst::C_NS }
+,	{ "nc",             IC_DST,              &Parser::addIf,   ::Inst::C_NC }
+,	{ "never",          IC_OP|IC_DST,        &Parser::addIf,   ::Inst::C_NEVER }
+,	{ "nn",             IC_DST,              &Parser::addIf,   ::Inst::C_NC }
+,	{ "ns",             IC_DST,              &Parser::addIf,   ::Inst::C_NS }
+,	{ "nz",             IC_DST,              &Parser::addIf,   ::Inst::C_ZC }
+,	{ "pack16a",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16a   |rPUp::PACK }
+,	{ "pack16aclamp",   IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16aSI |rPUp::PACK }
+,	{ "pack16af",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16aF  |rPUp::PACK }
+,	{ "pack16ai",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16aI  |rPUp::PACK }
+,	{ "pack16as",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16aSI |rPUp::PACK }
+,	{ "pack16b",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16b   |rPUp::PACK }
+,	{ "pack16bclamp",   IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16bSI |rPUp::PACK }
+,	{ "pack16bf",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16bF  |rPUp::PACK }
+,	{ "pack16bi",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16bI  |rPUp::PACK }
+,	{ "pack16bs",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16bSI |rPUp::PACK }
+,	{ "pack32",         IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_32    |rPUp::PACK } // NOP
+,	{ "pack32clamp",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_32S   |rPUp::PACK }
+,	{ "pack32s",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_32S   |rPUp::PACK }
+,	{ "pack8888",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcd |rPUp::PACK }
+,	{ "pack8888s",      IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcdS|rPUp::PACK }
+,	{ "pack8a",         IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8a    |rPUp::PACK }
+,	{ "pack8abcd",      IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcd |rPUp::PACK }
+,	{ "pack8abcds",     IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcdS|rPUp::PACK }
+,	{ "pack8aclamp",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8aS   |rPUp::PACK }
+,	{ "pack8af",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8aF   |rPUp::PACK }
+,	{ "pack8ai",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8aI   |rPUp::PACK }
+,	{ "pack8as",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8aS   |rPUp::PACK }
+,	{ "pack8b",         IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8b    |rPUp::PACK }
+,	{ "pack8bclamp",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8bS   |rPUp::PACK }
+,	{ "pack8bf",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8bF   |rPUp::PACK }
+,	{ "pack8bi",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8bI   |rPUp::PACK }
+,	{ "pack8bs",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8bS   |rPUp::PACK }
+,	{ "pack8c",         IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8c    |rPUp::PACK }
+,	{ "pack8cclamp",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8cS   |rPUp::PACK }
+,	{ "pack8cf",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8cF   |rPUp::PACK }
+,	{ "pack8ci",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8cI   |rPUp::PACK }
+,	{ "pack8cs",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8cS   |rPUp::PACK }
+,	{ "pack8d",         IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8d    |rPUp::PACK }
+,	{ "pack8dclamp",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8dS   |rPUp::PACK }
+,	{ "pack8ddupe",     IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcd |rPUp::PACK }
+,	{ "pack8ddupeclamp",IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcdS|rPUp::PACK }
+,	{ "pack8df",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8dF   |rPUp::PACK }
+,	{ "pack8di",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8dI   |rPUp::PACK }
+,	{ "pack8ds",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8dS   |rPUp::PACK }
+,	{ "rot",            IC_OP|IC_DST,        &Parser::addRot,  0 }
+,	{ "setf",           IC_OP|IC_DST,        &Parser::addSetF, 0 }
+,	{ "sf",             IC_OP|IC_DST,        &Parser::addSetF, 0 }
+,	{ "unpack16a",      IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_16a   |rPUp::UNPACK }
+,	{ "unpack16af",     IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_16aF  |rPUp::UNPACK }
+,	{ "unpack16ai",     IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_16aI  |rPUp::UNPACK }
+,	{ "unpack16b",      IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_16b   |rPUp::UNPACK }
+,	{ "unpack16bf",     IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_16bF  |rPUp::UNPACK }
+,	{ "unpack16bi",     IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_16bI  |rPUp::UNPACK }
+,	{ "unpack32",       IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_32    |rPUp::UNPACK } // NOP
+,	{ "unpack8a",       IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8a    |rPUp::UNPACK }
+,	{ "unpack8af",      IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8aF   |rPUp::UNPACK }
+,	{ "unpack8ai",      IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8aI   |rPUp::UNPACK }
+,	{ "unpack8b",       IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8b    |rPUp::UNPACK }
+,	{ "unpack8bf",      IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8bF   |rPUp::UNPACK }
+,	{ "unpack8bi",      IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8bI   |rPUp::UNPACK }
+,	{ "unpack8c",       IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8c    |rPUp::UNPACK }
+,	{ "unpack8cf",      IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8cF   |rPUp::UNPACK }
+,	{ "unpack8ci",      IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8cI   |rPUp::UNPACK }
+,	{ "unpack8d",       IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8d    |rPUp::UNPACK }
+,	{ "unpack8ddupe",   IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8dr   |rPUp::UNPACK }
+,	{ "unpack8df",      IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8dF   |rPUp::UNPACK }
+,	{ "unpack8di",      IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8dI   |rPUp::UNPACK }
+,	{ "unpack8dr",      IC_XP|IC_OP|IC_SRC,  &Parser::addPUp,  ::Inst::U_8dr   |rPUp::UNPACK }
+,	{ "z",              IC_DST,              &Parser::addIf,   ::Inst::C_ZS }
+,	{ "zc",             IC_DST,              &Parser::addIf,   ::Inst::C_ZC }
+,	{ "zs",             IC_DST,              &Parser::addIf,   ::Inst::C_ZS }
 };
 
 const Parser::opEntry<8> Parser::directiveMap[] =

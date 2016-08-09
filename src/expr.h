@@ -8,7 +8,10 @@
 #ifndef EXPR_H_
 #define EXPR_H_
 
+#include "Inst.h"
+#include "utils.h"
 #include <string>
+#include <cstdint>
 #include <limits>
 #include <type_traits>
 
@@ -17,7 +20,7 @@ using namespace std;
 static_assert(numeric_limits<float>::is_iec559 && numeric_limits<float>::digits == 24, "error cannot cross compile on platform that does not support 32 bit IEEE 754 float.");
 
 /// Kind of register, bit vector
-enum regType : uint8_t
+enum regType : unsigned char
 {	R_NONE =  0 ///< invalid value
 ,	R_A    =  1 ///< register file A
 ,	R_B    =  2 ///< register file B
@@ -38,11 +41,33 @@ enum regType : uint8_t
 ,	R_SREL = 32 ///< semaphore release
 ,	R_SEMA = 48 ///< any semaphore type
 };
+/// Pack or unpack mode
+/// The binary zero value is neutral, i.e. no pack or unpack.
+struct rPUp
+{	/// Pack/unpack mode flags
+	enum pum : uint8_t
+	{	NONE   = 0x00 ///< Indeterminate. The expression could be applied as pack or unpack mode as well as integer or float values.
+	,	UNPACK = 0x40 ///< The expression is explicitly an unpack request.
+	,	PACK   = 0x80 ///< The expression is explicitly a pack request.
+	};
+	uint8_t     Mode; ///< lower 6 bits: pack or unpack mode, upper two bits: flags, see \see pum.
+	void        reset()             { Mode = 0; }
+	operator    bool_only()   const { return (bool_only)!!Mode; }
+	/// True if the current value is explicitly a pack mode.
+	pum         requestType() const { return (pum)(Mode & 0xc0); }
+	/// Return current value as pack mode.
+	/// @pre !(requestType() & UNPACK)
+	Inst::pack  asPack()      const { return (Inst::pack)(Mode & 0x3f); }
+	/// Return current value as unpack mode.
+	/// @pre !(requestType() & PACK)
+	Inst::unpack asUnPack()   const { return (Inst::unpack)(Mode & 0x37); }
+};
 /// Structure for register type expressions
 struct reg_t
 {	uint8_t     Num;   ///< register number
 	regType     Type;  ///< register type
 	int8_t      Rotate;///< QPU element rotation [0..15], 16: >> r5, -16: << r5
+	rPUp        Pack;  ///< Pack/unpack request, see Inst::P_*, bit 6:
 };
 /// Type of the expression value
 enum valueType : char
@@ -62,7 +87,7 @@ extern const char* type2string(valueType type);
 /// - an integer constant,
 /// - a floating point constant,
 /// - a set of 2 bit integer constants for each QPU,
-/// - a register reference or
+/// - a register reference with optional rotation and pack/unpack or
 /// - a label reference.
 struct exprValue
 {	union
@@ -72,7 +97,7 @@ struct exprValue
 	};
 	valueType   Type;     /// Current type of the expression value.
 	/// Construct invalid expression value.
-	exprValue()           : Type(V_NONE)  { iValue = 0; }
+	exprValue()           : Type(V_NONE)  {}
 	/// Construct constant expression with explicit type.
 	/// @param i 32 bit value
 	/// @param type One of V_INT, V_LDPE*, V_REG or V_LABEL.
@@ -85,7 +110,7 @@ struct exprValue
 	/// Construct register reference.
 	exprValue(reg_t r)    : Type(V_REG)   { rValue = r; }
 	/// Write the expression in human readable and turn around safe format.
-	string      toString() const;
+	string     toString() const;
 	/// Check for equality
 	friend bool operator==(const exprValue& l, const exprValue& r);
 	/// Check for inequality

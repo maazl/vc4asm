@@ -1,0 +1,264 @@
+/*
+ * Assemble.h
+ *
+ *  Created on: 19.06.2016
+ *      Author: mueller
+ */
+
+#ifndef ASSEMBLEINST_H_
+#define ASSEMBLEINST_H_
+
+#include "utils.h"
+#include "Message.h"
+#include "expr.h"
+#include "Inst.h"
+
+
+/// Core class that does the assembly process.
+class AssembleInst : private Inst
+{public: // types...
+	/// Context of a current expression during parse, bit vector.
+	enum instContext : unsigned char
+	{	IC_NONE     = 0x00   ///< No special context. No extensions allowed.
+	,	IC_OP       = 0x01   ///< Op-code context, i.e. currently at the instruction itself.
+	,	IC_SRCA     = 0x02   ///< Currently at the first source argument of an ADD ALU OP code.
+	,	IC_SRCB     = 0x04   ///< Currently at the second source argument of an ADD ALU OP code.
+	,	IC_SRC      = 0x06   ///< Bit test: currently at any source argument of an OP code; assignment: currently at both source arguments of an ADD ALU OP code.
+	,	IC_DST      = 0x08   ///< Bit test: currently at the destination argument to an OP code; assignment: currently at the destination argument to an ADD ALU OP code.
+	,	IC_ADD      = 0x10   ///< Bit test: currently at a ADD ALU instruction.
+	,	IC_MUL      = 0x20   ///< Bit test: currently at a MUL ALU instruction.
+	,	IC_BOTH     = 0x30   ///< Context of both ALUs, i.e branch or mov instruction with two targets.
+	,	IC_XP       = 0x80   ///< Expression context, without IC_SRC or IC_DST it is indeterminate whether it becomes a source or a destination argument or whatever.
+	};
+	CLASSFLAGSENUM(instContext, unsigned char);
+
+	/// Instruction optimization flags, bit vector
+	enum instFlags : unsigned char
+	{	IF_NONE          = 0    ///< no flags, none of the conditions below is met
+	,	IF_HAVE_NOP      = 1    ///< at least one NOP in the current instruction so far
+	,	IF_CMB_ALLOWED   = 2    ///< Instruction of the following line could be merged
+	,	IF_BRANCH_TARGET = 4    ///< This instruction is a branch target and should not be merged
+	,	IF_DATA          = 8    ///< Result of .data directive, do not optimize
+	,	IF_NORSWAP       = 16   ///< Do not swap regfile A and regfile B peripheral register
+	,	IF_NOASWAP       = 32   ///< Do not swap ADD and MUL ALU
+	};
+	CLASSFLAGSENUM(instFlags, unsigned char);
+
+ private:
+	/// Reference to a ADD \e or MUL ALU operator.
+	class opAddMul
+	{	const int8_t   Op;      ///< ADD or MUL ALU opcode, bit 7 set: MUL ALU
+	 public:
+		/// Create from ADD ALU OP code.
+		constexpr      opAddMul(opadd op) : Op(op) {}
+		/// Create from MUL ALU OP code.
+		constexpr      opAddMul(opmul op) : Op(op|0x80) {}
+		/// true if the class instance represents a MUL ALU opcode
+		/// false if it is an ADD ALU OP code.
+		bool           isMul() const { return Op < 0; }
+		/// Convert to Inst::opadd.
+		/// @pre isMul() == false
+		/// @return ADD ALU OP code.
+		opadd          asAdd() const { return (opadd)Op; }
+		/// Convert to Inst::opmul.
+		/// @pre isMul() == true
+		/// @return MUL ALU OP code.
+		opmul          asMul() const { return (opmul)(Op & 0x7); }
+	};
+	/// Entry of the immediate value lookup table, POD, compatible with binary_search().
+	static const struct smiEntry
+	{	uint32_t       Value;   ///< Desired immediate value (result)
+		uint8_t        SImmd;   ///< Small immediate required to achieve this result.
+		opAddMul       OpCode;  ///< ALU opcode to achieve this result.
+		pack           Pack;    ///< Pack mode to achieve the desired result.
+	}	               smiMap[];///< Immediate value lookup table used for <tt>mov rx, immd</tt>.
+
+ public:
+	/// Current expression context.
+	instContext      InstCtx;
+	instFlags        Flags;
+
+ private: // items valid per opcode...
+	/// Pack mode used by the current instruction in this contexts.
+	instContext      UsePack;
+	/// Unpack mode used by the current instruction in this contexts.
+	instContext      UseUnpack;
+	/// Vector rotation used by the current instruction in this contexts.
+	instContext      UseRot;
+
+ public:
+	AssembleInst() {}
+	~AssembleInst() {}
+
+	void             reset() { Inst::reset(); UseUnpack = UsePack = IC_NONE; }
+
+	/// Apply \c .if opcode extension
+	/// @param cond Requested condition code.
+	/// @exception Message Failed, error message.
+	void             applyIf(conda cond);
+	/// Apply \c .setf opcode extension
+	/// @exception Message Failed, error message.
+	void             applySetF();
+	/// Apply \c branch condition code
+	/// @param cond Condition code.
+	/// @exception Message Failed, error message.
+	void             applyCond(condb cond);
+	/// Apply vector rotation to the current instruction context.
+	/// @param count Desired rotation: 0 = none, 1 = one element right ... 15 = one element left, -16 = rotate by r5
+	void             applyRot(int count);
+	/// Apply pack or unpack to the current instruction context.
+	/// @param mode Pack or unpack mode to apply.
+	/// @exception Message Failed, error message.
+	void             applyPackUnpack(rPUp mode);
+
+	/// Handle nop instruction, ADD or MUL ALU.
+	void             applyNOP();
+	/// @brief Add ADD ALU op code to instruction word.
+	/// @details Some instructions are available by both ALUs. applyADD tries to call applyMUL
+	/// if such an instruction is encountered and the ADD ALU is already busy.
+	/// @param op Operator for ADD ALU.
+	/// @return Number of source arguments of the instruction, i.e. 0 for nop, 1 for unary op-codes and 2 for binary op-codes.
+	/// @exception std::string Failed, error message.
+	int              applyADD(opadd op);
+	/// @brief Add MUL ALU op code to instruction word.
+	/// @details Some instructions are available by both ALUs. applyMUL tries to call applyADD
+	/// if such an instruction is encountered and the MUL ALU is already busy.
+	/// @param op Operator for MUL ALU.
+	/// @return Number of source arguments of the instruction, i.e. 0 for nop and 2 for binary op-codes.
+	/// @exception std::string Failed, error message.
+	int              applyMUL(opmul op);
+	/// @brief Apply register as ALU target.
+	/// @param reg Register to write to.
+	/// @pre The target ALU is taken from InstCtx. The ALU selected by InstCtx must be available.
+	/// @exception Message Failed, error message.
+	void             applyTarget(reg_t reg);
+	/// @brief Apply value as ALU source.
+	/// @param val value.
+	/// @pre Sig < S_LDI, the source multiplexer is taken from InstCtx.
+	/// @exception Message Failed, error message.
+	void             applyALUSource(exprValue val);
+	/// @brief Prepare for mov or ldi instruction.
+	/// @details Sets up instruction context and checks for ALU availability.
+	/// @param target2 Flag whether the mov instruction wants to write both ALU targets.
+	/// @exception std::string Failed, error message.
+	void             prepareMOV(bool target2);
+	/// @brief Handle Source of ALU move instruction.
+	/// @param src Source expression
+	/// @return true: everything OK, \a src accepted. false: This source requires LDI oder semaphore instruction. See applyLDIsrc.
+	/// @exception std::string Failed, error message.
+	bool             applyMOVsrc(exprValue src);
+	/// @brief Handle source of LDI instruction, including semaphore.
+	/// @param src Source expression. Mut be a constant or a semaphore register.
+	/// @param mode desired load mode. L_NONE in doubt.
+	/// The mode is taken automatically in case of a register or per element source expression.
+	/// Bit 7 is the acquire flag in case of L_SEMA.
+	/// @exception std::string Failed, error message.
+	void             applyLDIsrc(exprValue src, ldmode mode);
+
+	void             prepareREAD();
+
+	void             applyREADsrc(exprValue src);
+
+	void             prepareBRANCH(bool relative);
+	/// Handle source argument of branch instruction.
+	/// @param val contains the source value to apply.
+	/// @return Branch instruction is likely to be a branch with link,
+	/// i.e. the instruction after the branch point (PC+3) is likely to be a branch target.
+	/// @exception Message Failed, error message.
+	bool             applyBranchSource(exprValue val, unsigned pc);
+
+	void             applySignal(sig signal);
+
+	/// Check whether the current instruction has concurrent access to TMU resources.
+	bool             isTMUconflict() const;
+
+	/// Some optimizations to save ALU power
+	void             optimize();
+
+	using            Inst::encode;
+	using            Inst::decode;
+
+ private:
+	/// Enrich the formatted message and throws the result as std::string.
+	/// @param fmt printf like format string.
+	virtual void     Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR = 0;
+	/// Enrich the formatted message and write the result to stderr.
+	/// @param level Severity level.
+	/// @param fmt printf like format string.
+	virtual void     Msg(severity level, const char* fmt, ...) PRINTFATTR(3) = 0;
+
+	/// @brief Find the first potential match for an ALU instruction that can assign an immediate value using small immediates.
+	/// @details The function does not only seek for an exactly match small immediate value but also for small immediate values
+	/// that	can be transformed to the wanted value by applying an ADD or MUL ALU instruction to it.
+	/// The ALU instruction always takes the small immediate value for all of its arguments.
+	/// @param i Requested immediate value.
+	/// @return First potential match in the small immediate table.
+	/// The table may have further potential matches in consecutive entries. So you need to seek
+	/// until the Value property of the smiEntry changes. It is guaranteed that this happens before the end of the list.
+	/// If no match is found the returned entry is still valid but it's Value property does not match.
+	/// @remarks This function can significantly increase code density,
+	/// because <tt>mov xx, immediate</tt> instructions often can be packed with other instruction this way.
+	static const smiEntry* getSmallImmediateALU(uint32_t i);
+	/// Return a reference to the input multiplexer of the current instruction that matches the current context.
+	/// @pre InstCtx should contain one of IC_SRCAB and one of IC_BOTH.
+	mux&             currentMux()
+	{ switch (InstCtx & (IC_MUL|IC_SRCB))
+		{case IC_NONE:
+			return MuxAA;
+		 case IC_SRCB:
+			return MuxAB;
+		 case IC_MUL:
+			return MuxMA;
+		 default:
+			return MuxMB;
+	}	};
+	/// Assign the input multiplexer of the current instruction that matches the current context.
+	/// @param val Multiplexer value
+	/// @pre InstCtx should contain at least one of IC_SRCAB and one of IC_BOTH.
+	void             setMux(mux val);
+	/// @brief Get input mux for the current register expression register read access.
+	/// @details Besides choosing the right multiplexer value this function also patches the register number
+	/// into the current instruction and ensures that the value does not conflict with a previous usage of the same register file.
+	/// While doing this job the function takes care of choosing regfile A or B respectively if the IO register
+	/// is available in both register files. In doubt regfile A is preferred to keep the regfile B field free
+	/// for small immediate values.
+	/// @param reg Source register
+	/// @return Matching multiplexer value.
+	/// @exception std::string Error, i.e. no valid register or the current instruction cannot read this register because of conflicts
+	/// with other parts of the same instruction word.
+	Inst::mux        muxReg(reg_t reg);
+	/// Set small immediate value. Fail if impossible.
+	/// @param si desired value.
+	/// @exception std::string Failed because of conflicts with other components of the current instruction word.
+	void             doSMI(uint8_t si);
+	/// Checks whether the given input mux may be the source of an unpack instruction, i.e. r4 or regfile A.
+	/// @param input mux to check. If the mux points to regfile A The read address is also check not to address an IO register.
+	/// @return PM flag for the instruction, i.e. 1 for r4 and 0 for regfile A or -1 if not possible.
+	int              isUnpackable(mux mux) const { if (mux == X_R4) return true; if (mux == X_RA && RAddrA < 32) return false; return -1; }
+
+	/// Setup Parser for opcode arguments, handle instruction extensions.
+	void             doInitOP() { UseRot = IC_NONE; UseUnpack &= ~IC_BOTH; UsePack &= ~IC_BOTH; }
+	/// Try to get immediate value at mov by a small immediate value and an available ALU.
+	/// @param value requested immediate value.
+	/// @return true: succeeded.
+	/// @exception Message Failed, error message.
+	bool             trySmallImmd(uint32_t value);
+
+	/// Try to swap read access to register file A and B
+	/// if the already existing read access is invariant of this change.
+	/// See also isRRegAB.
+	/// @return true: swap succeeded, false: instruction unchanged
+	bool             tryRABSwap();
+	/// Try to swap ADD and MUL ALU of current instruction if allowed by InstCtx, adjust InstCtx.
+	/// @pre Instruct.Sig < Inst::S_BRANCH
+	/// @return true: swap succeeded, false: instruction unchanged
+	/// @post InstCtx & IC_MUL is inverted on success.
+	bool             tryALUSwap();
+
+	/// Check unpack operation of the current instruction for inconsistencies and interaction with the other ALU.
+	/// @param mux current ALU mux, fast path to currentMux()
+	/// @pre Instruct contains ALU instruction. UseUnpack is evaluated to control the checks done.
+	void             checkUnpack(mux mux);
+};
+
+#endif // PARSER_H_

@@ -8,7 +8,7 @@
 #ifndef VALIDATOR_H_
 #define VALIDATOR_H_
 
-#include "Inst.h"
+#include "expr.h"
 #include "utils.h"
 #include <vector>
 #include <memory>

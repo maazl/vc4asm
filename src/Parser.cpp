@@ -12,6 +12,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cinttypes>
+#include <cassert>
+#include <cfloat>
 #include <algorithm>
 #include <cctype>
 #include <sys/stat.h>
@@ -90,9 +92,27 @@ static const char msgpfx[][10]
 ,	"Info: "
 };
 
-void Parser::Msg(severity level, const char* fmt, ...)
-{	if (!Pass2 || Verbose < level)
+void Parser::CaughtMsg(const char* msg)
+{	Success = false;
+	if (OperationMode == IRGNOREERRORS && !Pass2)
 		return;
+	fputs(msgpfx[ERROR], stderr);
+	fputs(msg, stderr);
+	fputc('\n', stderr);
+}
+
+void Parser::Msg(severity level, const char* fmt, ...)
+{	if (Verbose < level)
+		return;
+	switch (OperationMode)
+	{case NORMAL:
+		if (level == ERROR)
+			break;
+	 case IRGNOREERRORS:
+		if (!Pass2)
+			return;
+	 default:;
+	}
 	Success &= level > ERROR;
 	va_list va;
 	va_start(va, fmt);
@@ -114,14 +134,18 @@ void Parser::StoreInstruction(uint64_t inst)
 	LineNumbers.emplace_back();
 	uint64_t* ptr = &Instructions[PC+Back];
 	uint64_t* ip  = ptr - Back;
+	instFlags* fp = &InstFlags[PC+Back];
 	location* lp  = &LineNumbers[PC+Back];
 	while (ptr != ip)
 	{	*ptr = ptr[-1];
+		*fp  = fp[-1];
 		*lp  = lp[-1];
 		--ptr;
+		--fp;
 		--lp;
 	}
 	*ptr = inst;
+	*fp = Flags;
 	*lp  = *Context.back();
 }
 
@@ -138,7 +162,7 @@ Parser::token_t Parser::NextToken()
 	 case '\t':
 	 case '\r':
 	 case '\n':
-		At += strspn(At, " \t\r\n");
+		ToNextChar();
 		goto restart;
 	 case '>':
 	 case '<':
@@ -236,28 +260,30 @@ Parser::label& Parser::labelRef(string name, bool forward)
 	return Labels[l.first->second];
 }
 
-exprValue Parser::parseElemInt()
+void Parser::parseElemInt()
 {	uint32_t value = 0;
 	int pos = 0;
 	signed char sign = 0;
+	auto savectx = InstCtx;
+	InstCtx = IC_NONE;
 
 	while (true)
-	{	auto val = ParseExpression();
-		if (val.Type != V_INT)
+	{	ParseExpression();
+		if (ExprValue.Type != V_INT)
 			Fail("Only integers are allowed between [...].");
-		if (val.iValue < -2 || val.iValue > 3)
+		if (ExprValue.iValue < -2 || ExprValue.iValue > 3)
 			Fail("Load per QPU element can only deal with integer constants in the range of [-2..3].");
-		if (val.iValue < 0)
+		if (ExprValue.iValue < 0)
 		{	if (sign > 0)
 				Fail("All integers in load per QPU element must be either in the range [-2..1] or in the range [0..3].");
 			sign = -1;
-			val.iValue &= 3;
-		} else if (val.iValue > 1)
+			ExprValue.iValue &= 3;
+		} else if (ExprValue.iValue > 1)
 		{	if (sign < 0)
 				Fail("All integers in load per QPU element must be either in the range [-2..1] or in the range [0..3].");
 			sign = 1;
 		}
-		value |= (val.iValue * 0x8001 & 0x10001) << pos;
+		value |= (ExprValue.iValue * 0x8001 & 0x10001) << pos;
 
 		switch (NextToken())
 		{case END:
@@ -274,23 +300,76 @@ exprValue Parser::parseElemInt()
 		}
 		break;
 	}
+	InstCtx = savectx;
 	// Make LDIPEx
-	return exprValue(value, (valueType)(sign + V_LDPE));
+	ExprValue = exprValue(value, (valueType)(sign + V_LDPE));
 }
 
-exprValue Parser::ParseExpression()
+void Parser::parseRegister()
+{	auto savectx = InstCtx;
+	InstCtx = IC_NONE;
+	reg_t reg;
+	ParseExpression();
+	if (ExprValue.Type != V_INT)
+		Fail("Expecting integer constant, found %s.", type2string(ExprValue.Type));
+	reg.Num = (uint8_t)ExprValue.iValue;
+	if (NextToken() != COMMA)
+		Fail("Expected ',', found '%s'.", Token.c_str());
+	ParseExpression();
+	if (ExprValue.Type != V_INT)
+		Fail("Expecting integer constant, found %s.", type2string(ExprValue.Type));
+	reg.Type = (regType)ExprValue.iValue;
+	switch (NextToken())
+	{default:
+		Fail("Expected ',' or ']', found '%s'.", Token.c_str());
+	 case COMMA:
+		ParseExpression();
+		if (ExprValue.Type != V_INT)
+			Fail("Expecting integer constant, found %s.", type2string(ExprValue.Type));
+		reg.Rotate = (uint8_t)ExprValue.iValue;
+		switch (NextToken())
+		{default:
+			Fail("Expected ',' or ']', found '%s'.", Token.c_str());
+		 case COMMA:
+			ParseExpression();
+			if (ExprValue.Type != V_INT)
+				Fail("Expecting integer constant, found %s.", type2string(ExprValue.Type));
+			reg.Pack.Mode = (int8_t)ExprValue.iValue;
+			if (NextToken() != SQBRC2)
+				Fail("Expected ']', found '%s'.", Token.c_str());
+			break;
+		 case SQBRC2:
+			reg.Pack.Mode = 0;
+		}
+		if (NextToken() != SQBRC2)
+			Fail("Expected ']', found '%s'.", Token.c_str());
+		break;
+	 case SQBRC2:
+		reg.Rotate = 0;
+		reg.Pack.Mode = 0;
+	}
+	ExprValue = reg;
+	InstCtx = savectx;
+}
+
+void Parser::ParseExpression()
 {
 	Eval eval;
-	exprValue value;
 	try
 	{next:
 		switch (NextToken())
-		{case WORD:
+		{default:
+		 discard:
+			At -= Token.size();
+			ExprValue = eval.Evaluate();
+			return;
+
+		 case WORD:
 			{	// Expand constants
 				for (auto i = Context.end(); i != Context.begin(); )
 				{	auto c = (*--i)->Consts.find(Token);
 					if (c != (*i)->Consts.end())
-					{	value = c->second.Value;
+					{	ExprValue = c->second.Value;
 						goto have_value;
 					}
 				}
@@ -299,21 +378,21 @@ exprValue Parser::ParseExpression()
 				auto fp = Functions.find(Token);
 				if (fp != Functions.end())
 				{	// Hit!
-					value = doFUNC(fp);
+					doFUNC(fp);
 					break;
 				}
 			}
 			{	// try functional macro
 				auto mp = MacroFuncs.find(Token);
 				if (mp != MacroFuncs.end())
-				{	value = doFUNCMACRO(mp);
+				{	doFUNCMACRO(mp);
 					break;
 				}
 			}
 			{	// try register
 				auto rp = binary_search(regMap, Token.c_str());
 				if (rp)
-				{	value = rp->Value;
+				{	ExprValue = rp->Value;
 					break;
 				}
 			}
@@ -340,43 +419,18 @@ exprValue Parser::ParseExpression()
 					Fail("Expected Label after ':'.");
 
 				 case BRACE1: // Internal label constant
-					value = ParseExpression();
-					if (value.Type != V_INT)
-						Fail("Expecting integer constant, found %s.", type2string(value.Type));
+					if ( NextToken() != NUM
+						|| parseInt(Token.c_str(), ExprValue.iValue) != Token.length() )
+						Fail("Expecting integer constant, found %s.", Token.c_str());
 					if (NextToken() != BRACE2)
 						Fail("Expected ')', found '%s'.", Token.c_str());
-					value.Type = V_LABEL;
+					ExprValue.Type = V_LABEL;
 					goto have_value;
 
 				 case SQBRC1: // Internal register constant
-					{	reg_t reg;
-						value = ParseExpression();
-						if (value.Type != V_INT)
-							Fail("Expecting integer constant, found %s.", type2string(value.Type));
-						reg.Num = (uint8_t)value.iValue;
-						if (NextToken() != COMMA)
-							Fail("Expected ',', found '%s'.", Token.c_str());
-						value = ParseExpression();
-						if (value.Type != V_INT)
-							Fail("Expecting integer constant, found %s.", type2string(value.Type));
-						reg.Type = (regType)value.iValue;
-						switch (NextToken())
-						{default:
-							Fail("Expected ',' or ']', found '%s'.", Token.c_str());
-						 case COMMA:
-							value = ParseExpression();
-							if (value.Type != V_INT)
-								Fail("Expecting integer constant, found %s.", type2string(value.Type));
-							reg.Rotate = (uint8_t)value.iValue;
-							if (NextToken() != SQBRC2)
-								Fail("Expected ']', found '%s'.", Token.c_str());
-							break;
-						 case SQBRC2:
-							reg.Rotate = 0;
-						}
-						value = reg;
-						goto have_value;
-					}
+					parseRegister();
+					goto have_value;
+
 				 case NUM:
 					// NextToken accepts some letters in numeric constants
 					if (Token.back() == 'f') // forward reference
@@ -385,14 +439,9 @@ exprValue Parser::ParseExpression()
 					}
 				 case WORD:;
 				}
-				value = exprValue(labelRef(Token, forward).Value, V_LABEL);
-				break;
+				ExprValue = exprValue(labelRef(Token, forward).Value, V_LABEL);
 			}
-
-		 default:
-		 discard:
-			At -= Token.size();
-			return eval.Evaluate();
+			break;
 
 		 case OP:
 		 case BRACE1:
@@ -405,7 +454,7 @@ exprValue Parser::ParseExpression()
 				goto next;
 			}
 		 case SQBRC1: // per QPU element constant
-			value = parseElemInt();
+			parseElemInt();
 			break;
 
 		 case NUM:
@@ -414,270 +463,108 @@ exprValue Parser::ParseExpression()
 			{	// integer
 				//size_t len;  sscanf of gcc4.8.2/Linux x32 can't read "0x80000000".
 				//if (sscanf(Token.c_str(), "%i%n", &stack.front().iValue, &len) != 1 || len != Token.size())
-				if (parseInt(Token.c_str(), value.iValue) != Token.size())
+				if (parseInt(Token.c_str(), ExprValue.iValue) != Token.size())
 					Fail("%s is no integral number.", Token.c_str());
-				value.Type = V_INT;
+				ExprValue.Type = V_INT;
 			} else
 			{	// float number
 				size_t len;
-				if (sscanf(Token.c_str(), "%lf%zn", &value.fValue, &len) != 1 || len != Token.size())
+				if (sscanf(Token.c_str(), "%lf%zn", &ExprValue.fValue, &len) != 1 || len != Token.size())
 					Fail("%s is no real number.", Token.c_str());
-				value.Type = V_FLOAT;
+				ExprValue.Type = V_FLOAT;
 			}
 			break;
 		}
 	 have_value:
-		eval.PushValue(value);
+		ToNextChar();
+		if (*At == '.')
+			doInstrExt();
+
+		eval.PushValue(ExprValue);
 		goto next;
-	} catch (const Eval::Fail& msg) // Messages from Eval are not yet enriched.
+	} catch (const Message& msg) // Messages from Eval are not yet enriched.
 	{	throw enrichMsg(msg);
 	}
 }
 
-Inst::mux Parser::muxReg(reg_t reg)
-{	if (reg.Type & R_SEMA)
-		Fail("Cannot use semaphore source in ALU or read instruction.");
-	if (!(reg.Type & R_READ))
-	{	// direct read access for r0..r5.
-		if ((reg.Num ^ 32U) <= 5U)
-			return (Inst::mux)(reg.Num ^ 32);
-		Fail("The register is not readable.");
-	}
-	// try RA
-	if (reg.Type & R_A)
-	{	if ( Instruct.RAddrA == reg.Num
-			|| ( Instruct.MuxAA != Inst::X_RA && Instruct.MuxAB != Inst::X_RA
-				&& Instruct.MuxMA != Inst::X_RA && Instruct.MuxMB != Inst::X_RA ))
-		{RA:
-			if (!(reg.Type & R_B))
-				Flags() |= IF_NORSWAP;
-			Instruct.RAddrA = reg.Num;
-			return Inst::X_RA;
-		}
-	}
-	// try RB
-	if (reg.Type & R_B)
-	{	if (Instruct.Sig >= Inst::S_SMI)
-			Fail("Access to register file B conflicts with small immediate value.");
-		if ( Instruct.RAddrB == reg.Num
-			|| ( Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB
-				&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB ))
-		{RB:
-			if (!(reg.Type & R_A))
-				Flags() |= IF_NORSWAP;
-			Instruct.RAddrB = reg.Num;
-			return Inst::X_RB;
-		}
-	}
-	// try to swap RA and RB of existing instruction
-	switch (reg.Type & R_AB)
-	{case R_A:
-		if (( Instruct.RAddrB == reg.Num
-				|| ( Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB
-					&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB ))
-			&& !(Flags() & IF_NORSWAP) && Instruct.tryRABSwap() )
-			goto RA;
-		break;
-	 case R_B:
-		if (( Instruct.RAddrA == reg.Num
-				|| ( Instruct.MuxAA != Inst::X_RA && Instruct.MuxAB != Inst::X_RA
-					&& Instruct.MuxMA != Inst::X_RA && Instruct.MuxMB != Inst::X_RA ))
-			&& !(Flags() & IF_NORSWAP) && Instruct.tryRABSwap() )
-			goto RB;
-	}
-	Fail("Read access to register conflicts with another access to the same register file.");
-}
-
-const Parser::smiEntry* Parser::getSmallImmediateALU(uint32_t i)
-{	size_t l = 0;
-	size_t r = sizeof smiMap / sizeof *smiMap - 1;
-	while (l < r)
-	{	size_t m = (l+r) >> 1;
-		if (i <= smiMap[m].Value)
-			r = m;
-		else
-			l = m + 1;
-	}
-	return smiMap + r;
-}
-
-void Parser::doSMI(uint8_t si)
-{	switch (Instruct.Sig)
-	{default:
-		Fail("Small immediate value or vector rotation cannot be used together with signals.");
-	 case Inst::S_SMI:
-		if (Instruct.SImmd == si)
-			return; // value hit
-		if ((si & 16) && ((Instruct.SImmd ^ si) & 31) == 0)
-		{	// Vector rotation codes return the same value than [16..31]
-			// => only ensure the rotation bit
-			Instruct.SImmd |= si;
-			return;
-		}
-		Fail("Only one distinct small immediate value supported per instruction. Requested value: %u, current Value: %u.", si, Instruct.SImmd);
-	 case Inst::S_NONE:
-		if (Instruct.RAddrB != Inst::R_NOP)
-			Fail("Small immediate cannot be used together with register file B read access.");
-	}
-	Instruct.Sig   = Inst::S_SMI;
-	Instruct.SImmd = si;
-}
-
-bool Parser::trySwap()
-{	if ((Flags() & IF_NOASWAP) || !Instruct.tryALUSwap())
-		return false;
-	InstCtx ^= IC_ADD|IC_MUL;
-	return true;
-}
-
-void Parser::applyRot(int count)
+int Parser::ArgumentCount(const char* rem, int max)
 {
-	if (count)
-	{	if (UseRot & (XR_OP | toExtReq(InstCtx)))
-			Fail("Only one vector rotation per ALU instruction, please.");
-
-		if ((InstCtx & IC_BOTH) != IC_MUL && !trySwap())
-			Fail("Vector rotation is only available to the MUL ALU.");
-		if (count == 16)
-			Fail("Cannot rotate ALU target right by r5.");
-
-		Flags() |= IF_NOASWAP;
-		auto mux = InstCtx & IC_B ? Instruct.MuxMB : Instruct.MuxMA;
-		if (mux == Inst::X_R5)
-			Msg(WARNING, "r5 does not support vector rotations.");
-
-		count = 48 + (count & 0xf);
-		auto isaccu = Inst::isAccu(mux);
-		if (!isaccu && count > 48+3 && count < 64-3)
-			Msg(WARNING, "%s does not support full MUL ALU vector rotation.", Inst::toString(mux));
-
-		if (Instruct.Sig == Inst::S_SMI)
-		{	int mask = !isaccu
-				|| ( (InstCtx & IC_B) && !Inst::isAccu(Instruct.MuxMA)
-					&& Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB
-					&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB )
-				? 0x13 : 0x1f;
-			if ((Instruct.SImmd ^ count) & mask)
-				Fail( Instruct.SImmd < 48
-					? "Vector rotation is in conflict with small immediate value."
-					: "Cannot use different vector rotations within one instruction." );
-
-			if (!isaccu)
-				count = Instruct.SImmd | 0x20;
-			else
-				Instruct.SImmd = count;
+	for (int count = 1; true; ++rem)
+	{	rem += strcspn(rem, ",;()[]#");
+		switch (*rem)
+		{	int brclevel;
+		 default:
+			return count;
+		 case '(':
+			brclevel = 1;
+			do
+			{	rem += strcspn(++rem, "()");
+				if (!*rem)
+					return count;
+				brclevel += *rem == '(' ? 1 : -1;
+			} while (brclevel);
+			break;
+		 case '[':
+			brclevel = 1;
+			do
+			{	rem += strcspn(++rem, "[]");
+				if (!*rem)
+					return count;
+				brclevel += *rem == '[' ? 1 : -1;
+			} while (brclevel);
+			break;
+		 case ',':
+			if (++count >= max)
+				return count;
+			break;
 		}
-
-		if ( (InstCtx & IC_B)
-			&& (Instruct.Sig != Inst::S_SMI || Instruct.SImmd < 48)
-			&& (Inst::isAccu(Instruct.MuxMA) || (count & 0x3) || !count) )
-			Msg(WARNING, "The Vector rotation of the second MUL ALU source argument silently applies also to the first source.");
-
-		UseRot |= toExtReq(InstCtx);
-
-		doSMI(count);
-	} else if ( (InstCtx & IC_B) && (UseRot & XR_SRCA)
-			&& (Inst::isAccu(Instruct.MuxMB) || (Instruct.SImmd & 0x3) || Instruct.SImmd == 48) )
-		Msg(WARNING, "The vector rotation of the first MUL ALU source argument silently applies also to the second argument.");
+	}
 }
 
 void Parser::addIf(int cond)
-{
-	if (Instruct.Sig == Inst::S_BRANCH)
-		Fail("Cannot apply conditional store (.ifxx) to branch instruction.");
-	auto& target = InstCtx & IC_MUL ? Instruct.CondM : Instruct.CondA;
-	if (target != Inst::C_AL)
-		Fail("Store condition (.if) already specified.");
-	target = (Inst::conda)cond;
+{	applyIf((::Inst::conda)cond);
 }
 
-void Parser::addUnpack(int mode)
-{
-	if (Instruct.Sig >= Inst::S_LDI)
-		Fail("Cannot apply .unpack to branch and load immediate instructions.");
-	if (UseUnpack & (XR_OP | toExtReq(InstCtx)))
-		Fail("Only one .unpack per ALU instruction, please.");
-	if (Instruct.Unpack != mode)
-	{	if (Instruct.Unpack != Inst::U_32)
-			Fail("Cannot use different unpack modes within one instruction.");
-		Instruct.Unpack = (Inst::unpack)mode;
-		UseUnpack |= XR_NEW; // Signal
-	}
-	UseUnpack |= toExtReq(InstCtx);
-	// The check of unpack mode against used source register
-	// and the pack mode is done in doALUExpr.
-}
-
-void Parser::addPack(int mode)
-{
-	if (Instruct.Sig == Inst::S_BRANCH)
-		Fail("Cannot apply .pack to branch instruction.");
-	if (Instruct.Pack != Inst::P_32)
-		Fail("Only one .pack per instruction, please.");
-	// Use intermediate pack mode matching the ALU
-	bool pm = !!(InstCtx & IC_MUL);
-	if (InstCtx & IC_DST)
-	{	if (!pm)
-		{	// At target register of ADD ALU = Target must be regfile A
-			if (Instruct.WS || Instruct.WAddrA >= 32)
-				Fail("Target of ADD ALU must be of regfile A to use pack.");
-		} else
-		{	// At target register of MUL ALU
-			// Prefer regfile A pack even for MUL ALU
-			if (Instruct.WS && Instruct.WAddrM < 32 && !Instruct.PM)
-				pm = false;
-			// Check for pack mode supported by MUL ALU
-			else if (mode < Inst::P_8abcdS)
-				Fail("MUL ALU only supports saturated pack modes with 8 bit.");
-			else
-				// Use intermediate pack mode matching the ALU
-				mode &= 7;
-		}
-	}
-	if (Instruct.Unpack && Instruct.PM != pm)
-		Fail("Type of pack conflicts with type of unpack in PM flag.");
-	// Commit
-	Instruct.PM = pm;
-	Instruct.Pack = (Inst::pack)mode;
+void Parser::addPUp(int mode)
+{	rPUp pup; pup.Mode = mode;
+	// Operator context => apply immediately
+	if (InstCtx & IC_OP)
+		return applyPackUnpack(pup);
+	// else apply to expression
+	if (ExprValue.Type != V_REG)
+		Fail("Pack/unpack options are only available for registers.");
+	if (ExprValue.rValue.Pack)
+		Fail("Already applied pack/unpack to the current expression.");
+	ExprValue.rValue.Pack = pup;
 }
 
 void Parser::addSetF(int)
-{
-	if ( Instruct.Sig < Inst::S_LDI && (InstCtx & IC_MUL)
-		&& (Instruct.WAddrA != Inst::R_NOP || Instruct.OpA != Inst::A_NOP)
-		&& !trySwap() )
-		Fail("Cannot apply .setf because the flags of the ADD ALU will be used.");
-	if (Instruct.SF)
-		Fail("Don't use .setf twice.");
-	Instruct.SF = true;
-	Flags() |= IF_NOASWAP;
+{	applySetF();
 }
 
 void Parser::addCond(int cond)
-{
-	if (Instruct.Sig != Inst::S_BRANCH)
-		Fail("Branch condition codes can only be applied to branch instructions.");
-	if (Instruct.CondBr != Inst::B_AL)
-		Fail("Only one branch condition per instruction, please.");
-	Instruct.CondBr = (Inst::condb)cond;
+{	applyCond((::Inst::condb)cond);
 }
 
 void Parser::addRot(int)
 {
-	auto count = ParseExpression();
+	auto savectx = InstCtx;
+	InstCtx = IC_NONE;
+	ParseExpression();
+	InstCtx = savectx;
 	if (NextToken() != COMMA)
 		Fail("Expected ',' after rotation count.");
 
 	int si;
-	switch (count.Type)
+	switch (ExprValue.Type)
 	{case V_REG:
 		si = 0;
-		if ((count.rValue.Type & R_READ) && count.rValue.Num == 37) // r5
+		if ((ExprValue.rValue.Type & R_READ) && ExprValue.rValue.Num == 37 && !ExprValue.rValue.Rotate && !ExprValue.rValue.Pack) // r5
 			break;
 	 default:
 		Fail("QPU rotation needs an integer argument or r5 for the rotation count.");
 	 case V_INT:
-		si = (int)count.iValue & 0xf;
+		si = (int)ExprValue.iValue & 0xf;
 		if (si == 0)
 			return; // Rotation is a multiple of 16 => nothing to do
 	}
@@ -697,642 +584,220 @@ void Parser::doInstrExt()
 		const opExtEntry* ep = binary_search(extMap, Token.c_str());
 		if (!ep)
 			Fail("Unknown instruction extension '%s'.", Token.c_str());
-		/* make problems with mov
-		if ((ctx & IC_MUL) ? Instruct.OpM == Inst::M_NOP : Instruct.OpA == Inst::A_NOP)
-			Fail("Instruction extensions cannot be applied to nop instruction.");*/
-		opExtFlags filter = InstCtx & IC_SRC ? E_SRC : InstCtx & IC_DST ? E_DST : E_OP;
-		while ((ep->Flags & filter) == 0)
-			if (strcmp(Token.c_str(), (++ep)->Name) != 0)
-				Fail("Invalid instruction extension '%s' within this context.", Token.c_str());
+		if ((ep->Where & InstCtx) == 0)
+			Fail("Invalid instruction extension '%s' within this context (%x).", Token.c_str(), InstCtx);
 		(this->*(ep->Func))(ep->Arg);
 	}
 	At -= Token.size();
 }
 
-void Parser::check4Unpack(Inst::mux mux)
-{
-	// check 4 unpack
-	if (UseUnpack & (XR_OP | toExtReq(InstCtx)))
-	{	// Current source argument should be unpacked.
-		bool pm = Instruct.PM;
-		if (mux == Inst::X_R4)
-			pm = true;
-		else if (mux == Inst::X_RA && Instruct.RAddrA < 32)
-			pm = false;
-		else if (!(UseUnpack & XR_OP))
-			Fail("Cannot unpack this source argument.");
-		else if ((InstCtx & IC_SRCB)
-			&& !(((InstCtx & IC_MUL) || !Instruct.isUnary())
-				&& isUnpackable(InstCtx & IC_MUL ? Instruct.MuxMA : Instruct.MuxAA) >= 0 )) // Operands must contain either r4 xor regfile A
-			Fail("The unpack option works for none of the source operands of the current opcode.");
-		if ((UseUnpack & XR_NEW) && ( (InstCtx & IC_MUL)
-				? isUnpackable(Instruct.MuxAB) == pm || (!Instruct.isUnary() && isUnpackable(Instruct.MuxAA) == pm)
-				: isUnpackable(Instruct.MuxMB) == pm || isUnpackable(Instruct.MuxMA) == pm ))
-			Fail("Using unpack changes the semantic of the other ALU.");
-		if (pm != Instruct.PM)
-		{	if (Instruct.Pack)
-				// TODO: in a few constellations the pack mode of regfile A and the MUL ALU are interchangeable.
-				Fail("Requested unpack mode conflicts with pack mode of the current instruction.");
-			if ((InstCtx & IC_B) && (UseUnpack & XR_SRCA))
-				Fail("Conflicting unpack modes of first and second source operand.");
-			// Check for unpack sensitivity of second ALU instruction.
-			if ( (InstCtx & IC_MUL)
-				? isUnpackable(Instruct.MuxAB) >= 0 || (!Instruct.isUnary() && isUnpackable(Instruct.MuxAA) >= 0)
-				: isUnpackable(Instruct.MuxMB) >= 0 || isUnpackable(Instruct.MuxMA) >= 0 )
-				Fail("The unpack modes of ADD ALU and MUL ALU are different.");
-			Instruct.PM = pm;
-		}
-	} else if ( Instruct.Unpack != Inst::U_32 // Current source should not be unpacked
-		&& (Instruct.PM ? mux == Inst::X_R4 : mux == Inst::X_RA && Instruct.RAddrA < 32) )
-		Fail("The unpack option silently applies to %s source argument.", InstCtx & IC_B ? "2nd" : "1st");
-}
-
-void Parser::doALUTarget(exprValue param)
-{	InstCtx |= IC_DST;
-	if (param.Type != V_REG)
-		Fail("The target argument to a ALU or branch instruction must be a register or '-', found %s.", param.toString().c_str());
-	if (!(param.rValue.Type & R_WRITE))
+void Parser::doALUTarget()
+{	InstCtx = (InstCtx & ~IC_OP) | IC_DST;
+	ParseExpression();
+	if (ExprValue.Type != V_REG)
+		Fail("The target argument to a ALU or branch instruction must be a register or '-', found %s.", ExprValue.toString().c_str());
+	if (!(ExprValue.rValue.Type & R_WRITE))
 		Fail("The register is not writable.");
-	bool mul = (InstCtx & IC_MUL) != 0;
-	if ((param.rValue.Type & R_AB) != R_AB)
-	{	bool wsfreeze = !Inst::isWRegAB(mul ? Instruct.WAddrA : Instruct.WAddrM); // Can't swap the other target register.
-		if ((param.rValue.Type & R_A) && (!wsfreeze || Instruct.WS == mul))
-			Instruct.WS = mul;
-		else if ((param.rValue.Type & R_B) && (!wsfreeze || Instruct.WS != mul))
-			Instruct.WS = !mul;
-		else
-			Fail("ADD ALU and MUL ALU cannot write to the same register file.");
-	}
-	// Check pack mode from /this/ opcode if any
-	if ( Instruct.Sig != Inst::S_BRANCH && Instruct.Pack != Inst::P_32
-		&& Instruct.PM == mul && !(!mul && Instruct.WS) ) // Pack matches my ALU and not RA pack of MUL ALU.
-	{	if (!(InstCtx & IC_MUL))
-		{	if (!Instruct.WS && Instruct.WAddrA < 32)
-				goto packOK;
-			Fail("ADD ALU can only pack with regfile A target.");
-		}
-		// MUL ALU => prefer Regfile A pack
-		if ( Instruct.WS && Instruct.WAddrA < 32 // Regfile A write and
-			&& !Instruct.Unpack )                  // pack mode not frozen.
-		{	Instruct.PM = false;
-			goto packOK;
-		}
-		if (Instruct.Pack < Inst::P_8abcdS)
-			Fail("MUL ALU only supports saturated pack modes with 8 bit.");
-		// MUL ALU encodes saturated pack modes like unsaturated
-		Instruct.Pack = (Inst::pack)(Instruct.Pack & 7);
-	}
- packOK:
-	(mul ? Instruct.WAddrM : Instruct.WAddrA) = param.rValue.Num;
-	// vector rotation
-	applyRot(param.rValue.Rotate);
 
-	doInstrExt();
+	applyTarget(ExprValue.rValue);
 }
 
 void Parser::doALUExpr()
-{	InstCtx = (InstCtx & ~IC_DST) | IC_SRC;
-	// destination multiplexer
-	Inst::mux& ret = [this]() -> Inst::mux&
-	{	switch (InstCtx & (IC_MUL|IC_B))
-		{case IC_NONE:
-			return Instruct.MuxAA;
-		 case IC_B:
-			return Instruct.MuxAB;
-		 case IC_MUL:
-			return Instruct.MuxMA;
-		 default:
-			return Instruct.MuxMB;
-		}
-	}();
-
-	if (NextToken() != COMMA)
+{	if (NextToken() != COMMA)
 		Fail("Expected ',' before next argument to ALU instruction, found '%s'.", Token.c_str());
-	exprValue param = ParseExpression();
-	switch (param.Type)
-	{default:
-		Fail("The second argument of a binary ALU instruction must be a register or a small immediate value.");
-	 case V_REG:
-		{	ret = muxReg(param.rValue);
-			applyRot(-param.rValue.Rotate);
-			break;
-		}
-	 case V_FLOAT:
-	 case V_INT:
-		{	qpuValue value; value = param;
-			// some special hacks for ADD ALU
-			if (InstCtx == (IC_SRCB|IC_ADD))
-			{	switch (Instruct.OpA)
-				{case Inst::A_ADD: // swap ADD and SUB in case of constant 16 or negative SMI match
-				 case Inst::A_SUB:
-					if ( value.iValue == 16
-						|| (Instruct.Sig == Inst::S_SMI && Instruct.SMIValue().iValue == -value.iValue) )
-					{	(uint8_t&)Instruct.OpA ^= Inst::A_ADD ^ Inst::A_SUB; // swap add <-> sub
-						value.iValue = -value.iValue;
-					}
-					break;
-				 case Inst::A_ASR: // shift instructions ignore all bits except for the last 5
-				 case Inst::A_SHL:
-				 case Inst::A_SHR:
-				 case Inst::A_ROR:
-					value.iValue = (value.iValue << 27) >> 27; // sign extend
-				 default:;
-				}
-			}
-			uint8_t si = Inst::AsSMIValue(value);
-			if (si == 0xff)
-				Fail("Value 0x%x does not fit into the small immediate field.", value.uValue);
-			doSMI(si);
-			ret = Inst::X_RB;
-			break;
-		}
-	}
+	ParseExpression();
 
-	doInstrExt();
-
-	check4Unpack(ret);
-}
-
-void Parser::doBRASource(exprValue param)
-{
-	switch (param.Type)
-	{default:
-		Fail("Data type is not allowed as branch target.");
-	 case V_LABEL:
-		if (Instruct.Rel)
-			param.iValue -= (PC + 4) * sizeof(uint64_t);
-		else
-			Msg(WARNING, "Using value of label as target of a absolute branch instruction creates non-relocatable code.");
-		param.Type = V_INT;
-	 case V_INT:
-		if (Instruct.Immd.uValue)
-			Fail("Cannot specify two immediate values as branch target.");
-		if (!param.iValue)
-			return;
-		Instruct.Immd = param;
-		break;
-	 case V_REG:
-		if (param.rValue.Num == Inst::R_NOP && !param.rValue.Rotate && (param.rValue.Type & R_AB))
-			return;
-		if (!(param.rValue.Type & R_A) || param.rValue.Num >= 32)
-			Fail("Branch target must be from register file A and no hardware register.");
-		if (param.rValue.Rotate)
-			Fail("Cannot use vector rotation with branch instruction.");
-		if (Instruct.Reg)
-			Fail("Cannot specify two registers as branch target.");
-		if ((param.rValue.Num & 1) != Instruct.SF)
-		{	if (Instruct.SF)
-				Fail("Branch instruction with .setf cannot use even register numbers.");
-			else
-				Msg(WARNING, "Using an odd register number as branch target implies .setf. Use explicit .setf to avoid this warning.");
-		}
-		Instruct.Reg = true;
-		Instruct.RAddrA = param.rValue.Num;
-		break;
-	}
-}
-
-bool Parser::trySmallImmd(uint32_t value)
-{	const smiEntry* si;
-	if (!value)
-	{	// mov ... ,0 does not require small immediate value
-		si = smiMap + !!(InstCtx & IC_MUL);
-		goto mov0;
-	}
-	switch (Instruct.Sig)
-	{default:
-		Fail ("Immediate values cannot be used together with signals.");
-	 case Inst::S_NONE:
-		if (Instruct.RAddrB != Inst::R_NOP)
-			Fail ("Immediate value collides with read from register file B.");
-	 case Inst::S_SMI:;
-	}
-	for (si = getSmallImmediateALU(value); si->Value == value; ++si)
-	{	// conflicting signal or small immediate value
-		if (Instruct.Sig != Inst::S_NONE && !(Instruct.Sig == Inst::S_SMI && Instruct.SImmd == si->SImmd))
-			continue;
-		// Check pack mode
-		if (!!si->Pack)
-		{	// conflicting pack mode?
-			if (Instruct.Pack != Inst::P_32 && !(Instruct.Pack == si->Pack.pack() && Instruct.PM == si->Pack.mode()))
-				continue;
-			// Regfile A target
-			if (!si->Pack.mode())
-			{	// .setf may return unexpected results in pack mode in sign bit. TODO: accept all cases where this does not happen.
-				if (Instruct.SF)
-					continue;
-				// Not regfile A target?
-				if (InstCtx & IC_MUL)
-				{	if (!Instruct.WS || Instruct.WAddrM >= 32)
-						continue;
-				} else
-				{	if (Instruct.WS || Instruct.WAddrA >= 32)
-						continue;
-				}
-			}
-		}
-		// other ALU needed?
-		if ((!si->OpCode.isMul() ^ !(InstCtx & IC_MUL)) && !trySwap())
-			continue;
-
-		// Match!
-		Instruct.Sig   = Inst::S_SMI;
-		Instruct.SImmd = si->SImmd;
-		if (!!si->Pack)
-		{	Instruct.Pack = si->Pack.pack();
-			Instruct.PM   = si->Pack.mode();
-		}
-	 mov0:
-		if (si->OpCode.isMul())
-		{	Instruct.MuxMA = Instruct.MuxMB = Inst::X_RB;
-			Instruct.OpM   = si->OpCode.asMul();
-		} else
-		{	Instruct.MuxAA = Instruct.MuxAB = Inst::X_RB;
-			Instruct.OpA   = si->OpCode.asAdd();
-		}
-
-		doInstrExt();
-		check4Unpack(Inst::X_RB);
-		return true;
-	}
-	// nope, can't help
-	return false;
+	applyALUSource(ExprValue);
 }
 
 void Parser::doNOP()
-{	Flags() |= IF_HAVE_NOP;
+{	Flags |= IF_HAVE_NOP;
 
-	if (strchr(";#", PeekNextChar()))
+	ToNextChar();
+	if (strchr(";#", *At))
 		return;
 
-	doALUTarget(ParseExpression());
+	InstCtx = IC_DST|IC_MUL;
+	doALUTarget();
 
-	if (!strchr(";#", PeekNextChar()))
+	ToNextChar();
+	if (!strchr(";#", *At))
 		Fail("Expected end of instruction.");
 }
 
 void Parser::assembleADD(int add_op)
-{	InstCtx = IC_ADD;
-
-	if (Instruct.Sig >= Inst::S_LDI)
-		Fail("Cannot use ADD ALU in load immediate or branch instruction.");
-	if (Instruct.isADD())
-	{	switch (add_op)
-		{default:
-			if (Instruct.OpM == Inst::M_NOP && Instruct.tryALUSwap())
-				goto cont;
-			Fail("The ADD ALU has already been used in this instruction.");
-		 case Inst::A_NOP:
-			add_op = Inst::M_NOP; break;
-		 case Inst::A_V8ADDS:
-			add_op = Inst::M_V8ADDS; break;
-		 case Inst::A_V8SUBS:
-			add_op = Inst::M_V8SUBS; break;
-		}
-		// retry with MUL ALU
-		return assembleMUL(add_op | 0x100); // The added number is discarded at the cast but avoids recursive retry.
-	}
- cont:
-	Instruct.OpA = (Inst::opadd)add_op;
-	if (add_op & ~0xff)
-		Flags() |= IF_NOASWAP;
-	UseRot = UseUnpack = 0;
-
+{
+	int args = applyADD((::Inst::opadd)add_op);
+	if (args == 0)
+		return doNOP();
+	ExprValue.Type = V_NONE;
 	doInstrExt();
 
-	if (Instruct.OpA == Inst::A_NOP)
-		return doNOP();
+	doALUTarget();
 
-	doALUTarget(ParseExpression());
-
+	InstCtx ^= args == 1 ? IC_DST|IC_SRC : IC_DST|IC_SRCA;
 	doALUExpr();
-	InstCtx |= IC_B;
-	if (Instruct.isUnary())
-		Instruct.MuxAB = Instruct.MuxAA;
-	else
+	if (args == 2)
+	{	InstCtx ^= IC_SRC;
 		doALUExpr();
+	}
 }
 
 void Parser::assembleMUL(int mul_op)
-{	InstCtx = IC_MUL;
-
-	if (Instruct.Sig >= Inst::S_LDI)
-		Fail("Cannot use MUL ALU in load immediate or branch instruction.");
-	if (Instruct.isMUL())
-	{	switch (mul_op)
-		{default:
-			if (Instruct.OpA == Inst::A_NOP && Instruct.tryALUSwap())
-				goto cont;
-			Fail("The MUL ALU has already been used by the current instruction.");
-		 case Inst::M_NOP:
-			mul_op = Inst::A_NOP; break;
-		 case Inst::M_V8ADDS:
-			mul_op = Inst::A_V8ADDS; break;
-		 case Inst::M_V8SUBS:
-			mul_op = Inst::A_V8SUBS; break;
-		}
-		// retry with MUL ALU
-		return assembleADD(mul_op | 0x100); // The added numbed is discarded at the cast but avoids recursive retry.
-	}
- cont:
-	Instruct.OpM = (Inst::opmul)mul_op;
-	if (mul_op & ~0xff)
-		Flags() |= IF_NOASWAP;
-	UseRot = UseUnpack = 0;
-
+{
+	if (applyMUL((::Inst::opmul)mul_op) == 0)
+		return doNOP();
+	ExprValue.Type = V_NONE;
 	doInstrExt();
 
-	if (Instruct.OpM == Inst::M_NOP)
-		return doNOP();
+	doALUTarget();
 
-	doALUTarget(ParseExpression());
-
+	InstCtx ^= IC_DST|IC_SRCA;
 	doALUExpr();
-	InstCtx |= IC_B;
+	InstCtx ^= IC_SRC;
 	doALUExpr();
 }
 
 void Parser::assembleMOV(int mode)
 {
-	if (Instruct.Sig == Inst::S_BRANCH)
-		Fail("Cannot use MOV together with branch instruction.");
-	bool isLDI = Instruct.Sig == Inst::S_LDI;
-	InstCtx = (Flags() & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP)
-		? IC_MUL : IC_ADD;
-	if ((InstCtx & IC_MUL) && (Instruct.WAddrM != Inst::R_NOP || (!isLDI && Instruct.OpM != Inst::M_NOP)))
-		Fail("Both ALUs are already used by the current instruction.");
-	UseRot = UseUnpack = 0;
-
+	bool target2 = ArgumentCount(At, 3) == 3;
+	prepareMOV(target2);
+	ExprValue.Type = V_NONE;
 	doInstrExt();
 
-	doALUTarget(ParseExpression());
+	doALUTarget();
 
 	if (NextToken() != COMMA)
-		Fail("Expected source or second target after first argument to mov/ldi instruction, found %s.", Token.c_str());
+		Fail("Expected comma after first argument to mov, ldi or semaphore instruction, found '%s'.", Token.c_str());
 
-	exprValue param = ParseExpression();
-	switch (NextToken())
-	{default:
-		Fail("Expected source or end of instruction after second argument to mov/ldi instruction, found %s.", Token.c_str());
-
-	 case DOT:   // extension
-		if (!HaveMoreOperands(At--))
-			break;
-	 case COMMA: // second target
-		if ( InstCtx & IC_MUL
-			? ((Flags() & IF_HAVE_NOP) || Instruct.WAddrA != Inst::R_NOP || (!isLDI && Instruct.OpA != Inst::A_NOP))
-			: (Instruct.WAddrM != Inst::R_NOP || (!isLDI && Instruct.OpM != Inst::M_NOP)) )
-			Fail("ALU instruction with two targets can only be used if both ALUs are available.");
-
-		Flags() |= IF_NOASWAP;
+	if (target2)
+	{	// second target
 		InstCtx ^= IC_ADD|IC_MUL; // switch ALU
-		doALUTarget(param);
+		doALUTarget();
 		// From here we are double ALU
 		InstCtx |= IC_ADD|IC_MUL; // now we are at both ALUs
-		param = ParseExpression();
-		break;
-	 case SEMI:  // no second target
-		--At;
-	 case END:;
+
+		if (NextToken() != COMMA)
+			Fail("Expected comma and source argument, found '%s'.", Token.c_str());
 	}
 
 	InstCtx ^= IC_DST|IC_SRC; // Swap to source context
-	qpuValue value;
-	Inst::mux mux;
-	switch (param.Type)
-	{default:
-		Fail("The last parameter of a MOV instruction must be a register or a immediate value. Found %s", type2string(param.Type));
+	ParseExpression();
+	ToNextChar();
+	if (!strchr(";#", *At))
+		Fail("Expected end of instruction.");
 
-	 case V_REG:
-		if (param.rValue.Type & R_SEMA)
-		{	// semaphore access by LDI like instruction
-			mode = Inst::L_SEMA;
-			value.uValue = param.rValue.Num | (param.rValue.Type & R_SACQ);
-			goto ldi;
-		}
-		if (isLDI)
-			Fail("mov instruction with register source cannot be combined with load immediate.");
-
-		mux = muxReg(param.rValue);
-		if (InstCtx & IC_MUL)
-		{	Instruct.MuxMA = Instruct.MuxMB = mux;
-			Instruct.OpM = Inst::M_V8MIN;
-		} else
-		{	Instruct.MuxAA = Instruct.MuxAB = mux;
-			Instruct.OpA = Inst::A_OR;
-		}
-		applyRot(-param.rValue.Rotate);
-
-		doInstrExt();
-		check4Unpack(mux);
-		return;
-
-	 case V_LDPES:
-		if (mode != Inst::L_LDI && mode != Inst::L_PES)
-			Fail("Load immediate mode conflicts with per QPU element constant.");
-		mode = Inst::L_PES;
-		goto ldpe_cont;
-	 case V_LDPEU:
-		if (mode != Inst::L_LDI && mode != Inst::L_PEU)
-			Fail("Load immediate mode conflicts with per QPU element constant.");
-		mode = Inst::L_PEU;
-		goto ldpe_cont;
-	 case V_LDPE:
-		if (mode >= Inst::L_SEMA)
-			Fail("Load immediate mode conflicts with per QPU element constant.");
-		if (mode < Inst::L_PES)
-			mode = Inst::L_PES;
-	 ldpe_cont:
-		value = param;
-		goto ldi;
-
-	 case V_INT:
-	 case V_FLOAT:
-		value = param;
-		// try small immediate first
-		if ( !isLDI && mode < 0 && (InstCtx & IC_BOTH) != IC_BOTH
-			&& trySmallImmd(value.uValue))
+	// Try ALU expression first
+	if (mode < 0)
+	{	if (applyMOVsrc(ExprValue))
 			return;
-		// LDI
-		if (mode < 0)
-			mode = Inst::L_LDI;
-	 ldi:
-		switch (Instruct.Sig)
-		{default:
-			Fail("Load immediate cannot be used with signals.");
-		 case Inst::S_SMI:
-			Fail("This pair of immediate values cannot be handled in one instruction word.");
-		 case Inst::S_LDI:
-			if (Instruct.Immd.uValue != value.uValue || Instruct.LdMode != mode)
-				Fail("Tried to load two different immediate values in one instruction. (0x%x vs. 0x%x)", Instruct.Immd.uValue, value.uValue);
-			break;
-		 case Inst::S_NONE:
-			if (Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP)
-				Fail("Cannot combine load immediate with value %s with ALU instructions.", param.toString().c_str());
-		}
-		// LDI or semaphore
-		Instruct.Sig = Inst::S_LDI;
-		Instruct.LdMode = (Inst::ldmode)mode;
-		Instruct.Immd = value;
-
-		doInstrExt();
+		mode = ::Inst::L_LDI;
 	}
+	// Try LDI
+	applyLDIsrc(ExprValue, (::Inst::ldmode)mode);
 }
 
-void Parser::assembleREAD(int)
-{	InstCtx = IC_SRC;
-
-	if (Instruct.Sig == Inst::S_LDI || Instruct.Sig == Inst::S_BRANCH)
-		Fail("read cannot be combined with load immediate, semaphore or branch instruction.");
-
-	switch (PeekNextChar())
-	{case DOT:
-		Fail("read does not support instruction extensions.");
-	 case END:
-	 case COMMENT:
-	 case COMMA:
-	 case SEMI:
-		Fail("Expected source register or small immediate value after read.");
-	}
-
-	exprValue param = ParseExpression();
-	switch (param.Type)
-	{default:
-		Fail("read instruction requires register file or small immediate source, found '%s'.", param.toString().c_str());
-	 case V_REG:
-		if (param.rValue.Rotate)
-			Fail("Vector rotations cannot be used at read.");
-		if (muxReg(param.rValue) < Inst::X_RA)
-			Fail("Accumulators cannot be used at read.");
-		break;
-	 case V_INT:
-	 case V_FLOAT:
-		qpuValue value; value = param;
-		uint8_t si = Inst::AsSMIValue(value);
-		if (si == 0xff)
-			Fail("Value 0x%" PRIx32 " does not fit into the small immediate field.", value.uValue);
-		doSMI(si);
-	}
-}
-
-void Parser::assembleBRANCH(int relative)
-{	InstCtx = IC_ADD;
-
-	if ( Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP || Instruct.Sig != Inst::S_NONE
-		|| Instruct.RAddrA != Inst::R_NOP || Instruct.RAddrB != Inst::R_NOP )
-		Fail("A branch instruction must be the only one in a line.");
-
-	Instruct.Sig = Inst::S_BRANCH;
-	Instruct.CondBr = Inst::B_AL;
-	Instruct.Rel = !!relative;
-	Instruct.RAddrA = 0;
-	Instruct.Reg = false;
-	Instruct.Immd.uValue = 0;
-
-	doInstrExt();
-
-	doALUTarget(ParseExpression());
-
-	if (NextToken() != COMMA)
-		Fail("Expected ', <branch target>' after first argument to branch instruction, found %s.", Token.c_str());
-	auto param2 = ParseExpression();
-	switch (NextToken())
-	{default:
-		Fail("Expected ',' or end of line, found '%s'.", Token.c_str());
-
-	 case END:
-		doBRASource(param2);
-		break;
-
-	 case COMMA:
-		auto param3 = ParseExpression();
-		switch (NextToken())
-		{default:
-			Fail("Expected ',' or end of line, found '%s'.", Token.c_str());
-		 case END: // we have 3 arguments => #2 and #3 are branch target
-			doBRASource(param2);
-			InstCtx |= IC_B;
-			doBRASource(param3);
-			break;
-		 case COMMA: // we have 4 arguments, so #2 is a target and #3 the first source
-			InstCtx = IC_MUL;
-			doALUTarget(param2);
-			doBRASource(param3);
-			InstCtx |= IC_B;
-			doBRASource(ParseExpression());
-			if (NextToken() != END)
-				Fail("Expected end of line after branch instruction.");
-		}
-	}
-
-	if (Instruct.Immd.uValue & 3)
-		Msg(WARNING, "A branch target without 32 bit alignment probably does not hit the nail on the head.");
-
-	// add branch target flag for the branch point unless the target is 0
-	if (Instruct.Reg || Instruct.Immd.uValue != 0)
-	{	size_t pos = PC + 4;
-		FlagsSize(pos + 1);
-		InstFlags[pos] |= IF_BRANCH_TARGET;
-	}
-}
-
-void Parser::assembleSEMA(int type)
-{	InstCtx = IC_ADD;
+/*void Parser::assembleSEMA(int type)
+{	InstCtx = IC_ADD|IC_OP;
 
 	bool combine;
-	switch (Instruct.Sig)
-	{case Inst::S_LDI:
+ 	switch (Sig)
+	{case S_LDI:
 		combine = true;
-		if (Instruct.LdMode == Inst::L_LDI)
+		if (LdMode == L_LDI)
 			break;
 	 default:
 	 fail:
 		Fail("Semaphore Instructions normally cannot be combined with any other instruction.");
-	 case Inst::S_NONE:
-		if ( Instruct.OpA != Inst::A_NOP || Instruct.OpM != Inst::M_NOP
-			|| Instruct.RAddrA != Inst::R_NOP || Instruct.RAddrB != Inst::R_NOP )
+	 case S_NONE:
+		if ( OpA != A_NOP || OpM != M_NOP
+			|| RAddrA != R_NOP || RAddrB != R_NOP )
 			goto fail;
 		combine = false;
-		Instruct.Sig = Inst::S_LDI;
+		Sig = S_LDI;
 	}
-	Instruct.LdMode = Inst::L_SEMA;
+	LdMode = L_SEMA;
+
+	doInitOP();
 
 	doInstrExt();
 
-	doALUTarget(ParseExpression());
+	doALUTarget();
 	if (NextToken() != COMMA)
 		Fail("Expected ', <number>' after first argument to semaphore instruction, found %s.", Token.c_str());
 
-	auto param = ParseExpression();
-	if (param.Type != V_INT || ((uint64_t)param.iValue & ~(type << 4)) >= 16)
+	InstCtx = IC_ADD|IC_DST;
+	ParseExpression();
+	if (ExprValue.Type != V_INT || ((uint64_t)ExprValue.iValue & ~(type << 4)) >= 16)
 		Fail("Semaphore instructions require a single integer argument less than 16 with the semaphore number.");
-	uint32_t value = param.iValue | (type << 4);
+	uint32_t value = ExprValue.iValue | (type << 4);
 
-	if (combine && (Instruct.Immd.uValue & 0x1f) != (value & 0x1f))
+	if (combine && (Immd.uValue & 0x1f) != (value & 0x1f))
 		Fail("Combining a semaphore instruction with load immediate requires the low order 5 bits to match the semaphore number and the direction bit.");
 	else
-		Instruct.Immd.uValue = value;
+		Immd.uValue = value;
+}*/
+
+void Parser::assembleREAD(int)
+{
+	prepareREAD();
+	ExprValue.Type = V_NONE;
+	doInstrExt();
+
+	ParseExpression();
+
+	applyREADsrc(ExprValue);
+}
+
+void Parser::assembleBRANCH(int relative)
+{
+	prepareBRANCH(!!relative);
+	ExprValue.Type = V_NONE;
+	doInstrExt();
+
+	doALUTarget();
+	if (NextToken() != COMMA)
+		Fail("Expected ', <branch target>' after first argument to branch instruction, found %s.", Token.c_str());
+
+	switch (ArgumentCount(At, 3))
+	{default: // 2nd target
+		InstCtx = IC_MUL|IC_DST;
+		doALUTarget();
+		if (NextToken() != COMMA)
+			Fail("Expected ', <branch target>', found %s.", Token.c_str());
+		InstCtx = IC_BOTH|IC_DST;
+	 case 2:
+		InstCtx ^= IC_DST|IC_SRCA;
+		ParseExpression();
+		applyBranchSource(ExprValue, PC);
+		if (NextToken() != COMMA)
+			Fail("Expected ', <branch target>', found %s.", Token.c_str());
+		InstCtx ^= IC_SRC;
+		break;
+	 case 1:
+		InstCtx = IC_ADD|IC_SRCA;
+	}
+
+	ParseExpression();
+	if (applyBranchSource(ExprValue, PC))
+	{	// add branch target flag for the branch point
+		size_t pos = PC + 4;
+		FlagsSize(pos + 1);
+		InstFlags[pos] |= IF_BRANCH_TARGET;
+	}
+	if (NextToken() != END)
+		Fail("Expected end of line after branch instruction.");
 }
 
 void Parser::assembleSIG(int bits)
 {
-	switch (Instruct.Sig)
-	{default:
-		Fail("You must not use more than one signaling flag per line.");
-	 case Inst::S_BRANCH:
-	 case Inst::S_LDI:
-	 case Inst::S_SMI:
-		Fail("Signaling bits cannot be combined with branch instruction or immediate values.");
-	 case Inst::S_NONE:
-		Instruct.Sig = (Inst::sig)bits;
-	}
+	applySignal((::Inst::sig)bits);
 }
 
 void Parser::ParseInstruction()
 {
-	auto& flags = Flags();
 	while (true)
-	{	flags &= ~IF_CMB_ALLOWED;
+	{	Flags &= ~IF_CMB_ALLOWED;
 		const opEntry<8>* op = binary_search(opcodeMap, Token.c_str());
 		if (!op)
 			Fail("Invalid opcode or unknown macro: %s", Token.c_str());
@@ -1347,7 +812,7 @@ void Parser::ParseInstruction()
 		 case END:
 			return;
 		 case SEMI:
-			flags |= IF_CMB_ALLOWED;
+			Flags |= IF_CMB_ALLOWED;
 			switch (NextToken())
 			{default:
 				Fail("Expected additional instruction or end of line after ';'. Found '%s'.", Token.c_str());
@@ -1384,12 +849,9 @@ void Parser::defineLabel()
 			goto new_label;
 		}
 	}
-	if (!Pass2)
-	{	if (BitOffset & 7)
-			Fail("Cannot set a label at a bit boundary. At least byte alignment is required.");
-		lp->Value = PC * sizeof(uint64_t) + (BitOffset >> 3);
-	}// else if (lp->Name != Token || lp->Value != PC * sizeof(uint64_t))
-	//	Fail("Inconsistent label definition during pass 2.");
+	if (BitOffset & 7)
+		Fail("Cannot set a label at a bit boundary. At least byte alignment is required.");
+	lp->Value = PC * sizeof(uint64_t) + (BitOffset >> 3);
 	lp->Definition = *Context.back();
 
 	if (Preprocessed)
@@ -1409,7 +871,7 @@ void Parser::parseLabel()
 			defineLabel();
 		 case END:;
 		}
-	Flags() |= IF_BRANCH_TARGET;
+	Flags |= IF_BRANCH_TARGET;
 }
 
 void Parser::parseGLOBAL(int)
@@ -1417,20 +879,20 @@ void Parser::parseGLOBAL(int)
 	if (NextToken() != WORD)
 		Fail("Expected global symbol name after .global. Found '%s'.", Token.c_str());
 	string name = Token;
-	exprValue value;
+	//exprValue value;
 	switch (NextToken())
 	{default:
 		Fail("Expected ',' or end of line after symbol name.");
 	 case COMMA: // name, value
-		value = ParseExpression();
+		ParseExpression();
 		if (NextToken() != END)
 			Fail("Expected end of line.");
-		switch (value.Type)
+		switch (ExprValue.Type)
 		{default:
-			Fail("The value of a global symbol definition must be either a label or an integer constant. Found %s.", type2string(value.Type));
+			Fail("The value of a global symbol definition must be either a label or an integer constant. Found %s.", type2string(ExprValue.Type));
 		 case V_INT:
-			if (value.iValue < -0x80000000LL || value.iValue > 0xffffffffLL)
-				Fail("Cannot export 64 bit constant 0x%" PRIx64 "as symbol.", value.iValue);
+			if (ExprValue.iValue < -0x80000000LL || ExprValue.iValue > 0xffffffffLL)
+				Fail("Cannot export 64 bit constant 0x%" PRIx64 "as symbol.", ExprValue.iValue);
 		 case V_LABEL:;
 		}
 		break;
@@ -1441,12 +903,12 @@ void Parser::parseGLOBAL(int)
 		if (NextToken() != END)
 			Fail("Expected end of line.");
 	 case END: // only label name
-		value = exprValue(labelRef(name).Value, V_LABEL);
+		ExprValue = exprValue(labelRef(name).Value, V_LABEL);
 	}
-	auto p = GlobalsByName.emplace(name, value);
+	auto p = GlobalsByName.emplace(name, ExprValue);
 	if (!p.second && Pass2)
 	{	// Doubly defined
-		if (p.first->second == value)
+		if (p.first->second == ExprValue)
 			Msg(INFO, "Label '%s' has already been marked as global.", name.c_str());
 		else
 			Msg(ERROR, "Another label or value has already been assigned to the global symbol '%s'.", name.c_str());
@@ -1456,44 +918,40 @@ void Parser::parseGLOBAL(int)
 void Parser::parseDATA(int bits)
 {	if (doPreprocessor())
 		return;
+
 	int alignment = 0;
  next:
-	exprValue value = ParseExpression();
-	if (value.Type != V_INT && value.Type != V_FLOAT)
-		Fail("Immediate data instructions require integer or floating point constants. Found %s.", type2string(value.Type));
+	ParseExpression();
+	if (ExprValue.Type != V_INT && ExprValue.Type != V_FLOAT)
+		Fail("Immediate data instructions require integer or floating point constants. Found %s.", type2string(ExprValue.Type));
+	if (bits < 0 && ExprValue.Type == V_INT)
+		ExprValue.fValue = ExprValue.iValue;
 	switch (bits)
-	{case -64: // double
-		if (value.Type == V_INT)
-			value.fValue = value.iValue;
-		goto flt;
-	 case -32: // float
-		{	union
-			{	uint32_t uVal;
-				float    fVal;
-			} cvt;
-			cvt.fVal = value.Type == V_INT ? value.iValue : value.fValue;
-			value.iValue = cvt.uVal;
+	{case -32: // float
+		if (fabs(ExprValue.fValue) > FLT_MAX && !std::isinf(ExprValue.fValue))
+			Msg(WARNING, "The value %g is outside the domain of single precision floating point.", ExprValue.fValue);
+		{	float f = (float)ExprValue.fValue;
+			ExprValue.iValue = *(uint32_t*)&f;
 		}
+	 case -64: // double
 	 flt:
 		bits = -bits;
 		break;
 	 case -16: // half precision float
-		try
-		{	value.iValue = Eval::toFloat16(value);
-			goto flt;
-		} catch (const Eval::Fail& msg) // Messages from Eval are not yet enriched.
-		{	throw enrichMsg(msg);
-		}
+		if (fabs(ExprValue.fValue) > 65504. && !std::isinf(ExprValue.fValue))
+			Msg(WARNING, "The value %g is outside the domain of half precision floating point.", ExprValue.fValue);
+		ExprValue.iValue = ::Inst::toFloat16(ExprValue.fValue);
+		goto flt;
 	 case 1: // bit
-		if (value.iValue & ~1)
-			Msg(WARNING, "Bit value out of range: 0x%" PRIx64, value.iValue);
+		if (ExprValue.iValue & ~1)
+			Msg(WARNING, "Bit value out of range: 0x%" PRIx64, ExprValue.iValue);
 		break;
 	 default: // 2 to 32 bit integer
 		{	int32_t lower = -1 << (bits - 1);
 			int64_t upper = (1ULL << bits) -1;
-			if (value.iValue > upper || value.iValue < lower)
-				Msg(WARNING, "%u bits integer value out of range [%" PRIi32 ", %" PRIi64 "]: 0x%" PRIx64, bits, lower, upper, value.iValue);
-			value.iValue &= upper;
+			if (ExprValue.iValue > upper || ExprValue.iValue < lower)
+				Msg(WARNING, "%u bits integer value out of range [%" PRIi32 ", %" PRIi64 "]: 0x%" PRIx64, bits, lower, upper, ExprValue.iValue);
+			ExprValue.iValue &= upper;
 			break;
 		}
 	 case 64:;
@@ -1505,17 +963,18 @@ void Parser::parseDATA(int bits)
 	else if (!alignment && (alignment = BitOffset & (bits-1)) != 0)
 		Msg(WARNING, "Unaligned immediate data directive. %i bits missing for correct alignment.", bits - alignment);
 	// Prevent optimizer across .data segment
-	Flags() |= IF_BRANCH_TARGET|IF_DATA;
+	Flags |= IF_BRANCH_TARGET|IF_DATA;
 	// store value
 	uint64_t& target = Instructions[PC];
-	target |= value.iValue << BitOffset;
+	target |= ExprValue.iValue << BitOffset;
 	if ((BitOffset += bits) >= 64)
 	{	++PC;
+		Flags = IF_NONE;
 		// If value crosses instruction boundary => store remaining part
 		if ((BitOffset -= 64) != 0)
-		{	StoreInstruction((uint64_t)value.iValue >> (bits - BitOffset));
+		{	StoreInstruction((uint64_t)ExprValue.iValue >> (bits - BitOffset));
 			// Prevent optimizer across .data segment
-			Flags() |= IF_BRANCH_TARGET|IF_DATA;
+			Flags |= IF_BRANCH_TARGET|IF_DATA;
 	}	}
 	switch (NextToken())
 	{default:
@@ -1524,7 +983,7 @@ void Parser::parseDATA(int bits)
 		goto next;
 	 case END:;
 	}
-	Instruct.reset();
+	reset();
 }
 
 void Parser::parseALIGN(int bytes)
@@ -1532,12 +991,12 @@ void Parser::parseALIGN(int bytes)
 		return;
 
 	if (bytes < 0)
-	{	auto val = ParseExpression();
-		if (val.Type != V_INT)
+	{	ParseExpression();
+		if (ExprValue.Type != V_INT)
 			Fail("Expected integer constant after .align.");
-		if (val.iValue > 64 || val.iValue < 0)
+		if (ExprValue.iValue > 64 || ExprValue.iValue < 0)
 			Fail("Alignment value must be in the range [0, 64].");
-		bytes = (int)val.iValue;
+		bytes = (int)ExprValue.iValue;
 		if (bytes & (bytes-1))
 			Fail("Alignment value must be a power of 2.");
 	}
@@ -1546,13 +1005,13 @@ void Parser::parseALIGN(int bytes)
 	{default:
 		Fail("Expected end of line or ,<offset>.");
 	 case COMMA:
-		{	auto val = ParseExpression();
-			switch (val.Type)
+		{	ParseExpression();
+			switch (ExprValue.Type)
 			{default:
 				Fail("Expected integer constant or label after .align.");
 			 case V_LABEL:
 			 case V_INT:
-				offset = -val.iValue & 63;
+				offset = -ExprValue.iValue & 63;
 			}
 			if (NextToken() != END)
 				Fail("Expected end of line after alignment directive.");
@@ -1573,6 +1032,7 @@ bool Parser::doALIGN(int bytes, int offset)
 	{	BitOffset += 8*bytes - align;
 		if (BitOffset >= 64) // cannot overflow
 		{	++PC;
+			Flags = IF_NONE;
 			BitOffset = 0;
 		}
 	}
@@ -1584,9 +1044,10 @@ bool Parser::doALIGN(int bytes, int offset)
 		return align != 0;
 	// BitOffset is necessarily zero at this point.
 	do
-	{	StoreInstruction(0);
+	{	StoreInstruction(0x100009e7009e7000ULL); // nop
 		++PC;
 	} while ((PC+offset) & bytes);
+	Flags = IF_NONE;
 	return true;
 }
 
@@ -1615,8 +1076,7 @@ void Parser::endLOCAL(int)
 }
 
 void Parser::beginREP(int mode)
-{
-	if (doPreprocessor())
+{	if (doPreprocessor())
 		return;
 
 	auto name = mode ? ".foreach" : ".rep";
@@ -1631,10 +1091,10 @@ void Parser::beginREP(int mode)
 		Fail(mode ? "Expected ', <parameters>' at .foreach." : "Expected ', <count>' at .rep.");
 
 	{nextpar:
-		const auto& expr = ParseExpression();
-		if (!mode && (expr.Type != V_INT || (uint64_t)expr.iValue > 0x1000000))
-			Fail("Second argument to .rep must be a non-negative integral number. Found %s", expr.toString().c_str());
-		AtMacro->Args.push_back(expr.toString());
+		ParseExpression();
+		if (!mode && (ExprValue.Type != V_INT || (uint64_t)ExprValue.iValue > 0x1000000))
+			Fail("Second argument to .rep must be a non-negative integral number. Found %s", ExprValue.toString().c_str());
+		AtMacro->Args.push_back(ExprValue.toString());
 
 		switch (NextToken())
 		{default:
@@ -1683,7 +1143,8 @@ void Parser::endREP(int mode)
 		if (mode)
 		{	strncpy(Line, m.Args[i+1].c_str(), sizeof(Line));
 			At = Line;
-			value = ParseExpression();
+			ParseExpression();
+			value = ExprValue;
 		} else
 			value.iValue = i;
 		// Invoke body
@@ -1702,23 +1163,24 @@ void Parser::beginBACK(int)
 
 	if (Back)
 		Fail("Cannot nest .back directives.");
-	exprValue param = ParseExpression();
-	if (param.Type != V_INT)
+	ParseExpression();
+	if (ExprValue.Type != V_INT)
 		Fail("Expected integer constant after .back.");
-	if (param.iValue < 0)
+	if (ExprValue.iValue < 0)
 		Fail(".back expects positive integer argument.");
-	if (param.iValue > 10)
+	if (ExprValue.iValue > 10)
 		Fail("Cannot move instructions more than 10 slots back.");
-	if ((unsigned)param.iValue > PC)
+	if ((unsigned)ExprValue.iValue > PC)
 		Fail("Cannot move instructions back before the start of the code.");
 	if (NextToken() != END)
 		Fail("Expected end of line, found '%s'.", Token.c_str());
-	Back = (unsigned)param.iValue;
+	Back = (unsigned)ExprValue.iValue;
 	size_t pos = PC -= Back;
 	// Load last instruction before .back to provide combine support
 	if (pos)
-		Instruct.decode(Instructions[pos-1]);
-
+	{	decode(Instructions[pos-1]);
+		Flags = InstFlags[pos-1];
+	}
 	if (Pass2)
 		while (++pos < PC + Back)
 			if (InstFlags[pos] & IF_BRANCH_TARGET)
@@ -1738,7 +1200,9 @@ void Parser::endBACK(int)
 	Back = 0;
 	// Restore last instruction to provide combine support
 	if (PC)
-		Instruct.decode(Instructions[PC-1]);
+	{	decode(Instructions[PC-1]);
+		Flags = InstFlags[PC-1];
+	}
 }
 
 void Parser::parseCLONE(int)
@@ -1746,38 +1210,40 @@ void Parser::parseCLONE(int)
 	if (doPreprocessor())
 		return;
 
-	exprValue param1 = ParseExpression();
-	if (param1.Type != V_LABEL)
-		Fail("The first argument to .clone must by a label. Found %s.", type2string(param1.Type));
-	param1.iValue >>= 3; // offset in instructions rather than bytes
+	ParseExpression();
+	if (ExprValue.Type != V_LABEL)
+		Fail("The first argument to .clone must by a label. Found %s.", type2string(ExprValue.Type));
+	unsigned param1 = (unsigned)ExprValue.iValue >> 3; // offset in instructions rather than bytes
 	if (NextToken() != COMMA)
 		Fail("Expected ', <count>' at .clone.");
-	exprValue param2 = ParseExpression();
-	if (param2.Type != V_INT || (uint64_t)param2.iValue > 3)
+	ParseExpression();
+	if (ExprValue.Type != V_INT || (uint64_t)ExprValue.iValue > 3)
 		Fail("Expected integer constant in the range [0,3].");
 	// Fast exit without any further checks.
-	if (param2.iValue == 0)
+	if (ExprValue.iValue == 0)
 		return;
 
-	FlagsSize(PC + (unsigned)param2.iValue);
-	param2.iValue += param1.iValue; // end offset rather than count
-	if (Pass2 && (unsigned)param2.iValue >= Instructions.size())
+	unsigned param2 = (unsigned)ExprValue.iValue;
+	FlagsSize(PC + param2);
+	param2 += param1; // end offset rather than count
+	if (Pass2 && param2 >= Instructions.size())
 		Fail("Cannot clone behind the end of the code.");
 
 	if (doALIGN(8, 0))
 		Msg(WARNING, "Used padding to enforce 64 bit alignment of GPU instruction.");
 
-	auto src = (unsigned)param1.iValue;
+	auto src = param1;
 	do
 	{	InstFlags[PC] |= InstFlags[src] & ~IF_BRANCH_TARGET;
 		if ((Instructions[src] & 0xF000000000000000ULL) == 0xF000000000000000ULL)
-			Msg(WARNING, "You should not clone branch instructions. (#%u)", src - (unsigned)param1.iValue);
+			Msg(WARNING, "You should not clone branch instructions. (#%u)", src - param1);
 		StoreInstruction(Instructions[src]);
 		++PC;
 		++src;
-	} while (src < (unsigned)param2.iValue);
+	} while (src < param2);
 	// Restore last instruction to provide combine support
-	Instruct.decode(Instructions[PC-1]);
+	decode(Instructions[PC-1]);
+	Flags = InstFlags[PC-1];
 }
 
 void Parser::parseSET(int flags)
@@ -1825,18 +1291,19 @@ void Parser::parseSET(int flags)
 			break;
 		}
 	 case COMMA:
-		{	exprValue expr = ParseExpression();
+		{	InstCtx = IC_XP;
+			ParseExpression();
 			if (NextToken() != END)
 				Fail("Syntax error: unexpected %s.", Token.c_str());
 
 			auto& consts = (flags & C_LOCAL ? Context.back() : Context.front())->Consts;
-			auto r = consts.emplace(name, constDef(expr, *Context.back()));
+			auto r = consts.emplace(name, constDef(ExprValue, *Context.back()));
 			if (!r.second)
 			{	if (flags & C_CONST)
 					// redefinition not allowed
 					Fail("Identifier %s has already been defined at %s (%u).",
 						name.c_str(), fName(r.first->second.Definition.File), r.first->second.Definition.Line);
-				r.first->second.Value = expr;
+				r.first->second.Value = ExprValue;
 			}
 		}
 	}
@@ -1862,12 +1329,12 @@ void Parser::parseUNSET(int flags)
 
 bool Parser::doCondition()
 {
-	const exprValue& param = ParseExpression();
-	if (param.Type != V_INT)
-		Fail("Conditional expression must be a integer constant, found '%s'.", param.toString().c_str());
+	ParseExpression();
+	if (ExprValue.Type != V_INT)
+		Fail("Conditional expression must be a integer constant, found '%s'.", ExprValue.toString().c_str());
 	if (NextToken() != END)
 		Fail("Expected end of line, found '%s'.", Token.c_str());
-	return param.iValue != 0;
+	return ExprValue.iValue != 0;
 }
 
 void Parser::parseIF(int)
@@ -2029,13 +1496,15 @@ void Parser::endMACRO(int flags)
 
 void Parser::doMACRO(macros_t::const_iterator m)
 {
+	InstCtx = IC_XP;
 	// Fetch macro arguments
 	const auto& argnames = m->second.Args;
 	vector<exprValue> args;
 	if (argnames.size())
 	{	args.reserve(argnames.size());
 		while (true)
-		{	args.emplace_back(ParseExpression());
+		{	ParseExpression();
+			args.emplace_back(ExprValue);
 			switch (NextToken())
 			{default:
 				Fail("internal error");
@@ -2070,11 +1539,12 @@ void Parser::doMACRO(macros_t::const_iterator m)
 	}
 }
 
-exprValue Parser::doFUNCMACRO(macros_t::const_iterator m)
+void Parser::doFUNCMACRO(macros_t::const_iterator m)
 {
 	if (NextToken() != BRACE1)
 		Fail("Expected '(' after function name.");
 
+	InstCtx = IC_XP;
 	// Fetch macro arguments
 	const auto& argnames = m->second.Args;
 	vector<exprValue> args;
@@ -2085,7 +1555,8 @@ exprValue Parser::doFUNCMACRO(macros_t::const_iterator m)
 			Fail("Expected ')' because function %s has no arguments.", m->first.c_str());
 	} else
 	{next:
-		args.push_back(ParseExpression());
+		ParseExpression();
+		args.push_back(ExprValue);
 		switch (NextToken())
 		{case BRACE2:
 			// End of argument list. Are we complete?
@@ -2142,19 +1613,21 @@ exprValue Parser::doFUNCMACRO(macros_t::const_iterator m)
 				break;
 			}
 			At -= Token.size();
-			ret = ParseExpression();
+			ParseExpression();
+			ret = ExprValue;
 		}
 	}
 	if (ret.Type == V_NONE)
 		Fail("Failed to return a value in functional macro %s.", m->first.c_str());
-	return ret;
+	ExprValue = ret;
 }
 
-exprValue Parser::doFUNC(funcs_t::const_iterator f)
+void Parser::doFUNC(funcs_t::const_iterator f)
 {
 	if (NextToken() != BRACE1)
 		Fail("Expected '(' after function name.");
 
+	InstCtx = IC_XP;
 	// Fetch macro arguments
 	const auto& argnames = f->second.Args;
 	vector<exprValue> args;
@@ -2165,7 +1638,8 @@ exprValue Parser::doFUNC(funcs_t::const_iterator f)
 			Fail("Expected ')' because function %s has no arguments.", f->first.c_str());
 	} else
 	{next:
-		args.push_back(ParseExpression());
+		ParseExpression();
+		args.push_back(ExprValue);
 		switch (NextToken())
 		{case BRACE2:
 			// End of argument list. Are we complete?
@@ -2193,10 +1667,9 @@ exprValue Parser::doFUNC(funcs_t::const_iterator f)
 	for (auto arg : argnames)
 		current.Consts.emplace(arg, constDef(args[n++], current));
 
-	const exprValue&& val = ParseExpression();
+	ParseExpression();
 	if (NextToken() != END)
 		Fail("Function %s evaluated to an incomplete expression.", f->first.c_str());
-	return val;
 }
 
 void Parser::doSEGMENT(int flags)
@@ -2302,6 +1775,7 @@ void Parser::ParseLine()
 		if (isinst)
 			goto def;
 		// directives
+		InstCtx = IC_NONE;
 		ParseDirective();
 		return;
 
@@ -2362,18 +1836,11 @@ void Parser::ParseLine()
 			{	// Try to parse into existing instruction.
 				ParseInstruction();
 				// Do not combine TMU instructions
-				if ( Instruct.Sig < Inst::S_LDI
-					&& ( ((0xfff09e0000000000ULL & (1ULL << Instruct.WAddrA)) != 0)
-					+ ((0xfff09e0000000000ULL & (1ULL << Instruct.WAddrM)) != 0)
-					+ ((0x0008060000000000ULL & (1ULL << Instruct.RAddrA)) != 0)
-					+ (Instruct.Sig != Inst::S_SMI && (0x0008060000000000ULL & (1ULL << Instruct.RAddrB)) != 0)
-					+ ( Instruct.Sig == Inst::S_LDTMU0 || Instruct.Sig == Inst::S_LDTMU1
-						|| Instruct.Sig == Inst::S_LOADCV || Instruct.Sig == Inst::S_LOADAM
-						|| (Instruct.Sig == Inst::S_LDI && (Instruct.LdMode & Inst::L_SEMA)) )
-					+ (Instruct.WAddrA == 45 || Instruct.WAddrA == 46 || Instruct.WAddrM == 45 || Instruct.WAddrM == 46 || Instruct.Sig == Inst::S_LOADC || Instruct.Sig == Inst::S_LDCEND) ) > 1 )
+				if (isTMUconflict())
 					throw string();
 				// Combine succeeded
-				Instructions[pos-1] = Instruct.encode();
+				Instructions[pos-1] = encode();
+				InstFlags[pos-1] = Flags;
 				return;
 			} catch (const string& msg)
 			{	// Combine failed => try new instruction.
@@ -2383,11 +1850,12 @@ void Parser::ParseLine()
 			}
 		}
 		// new instruction
-		Instruct.reset();
+		reset();
 
 		ParseInstruction();
-		StoreInstruction(Instruct.encode());
+		StoreInstruction(encode());
 		++PC;
+		Flags = IF_NONE;
 		return;
 	}
 }
@@ -2405,10 +1873,7 @@ void Parser::ParseFile()
 			{	ParseLine();
 			} catch (const string& msg)
 			{	// recover from errors
-				Success = false;
-				fputs(msgpfx[ERROR], stderr);
-				fputs(msg.c_str(), stderr);
-				fputc('\n', stderr);
+				CaughtMsg(msg.c_str());
 			}
 
 			if (AtMacro && AtMacro->Definition.Line == 0)
@@ -2433,9 +1898,7 @@ void Parser::ParseFile(const string& file)
 	} catch (const string& msg)
 	{	// recover from errors
 		Success = false;
-		fputs(msgpfx[ERROR], stderr);
-		fputs(msg.c_str(), stderr);
-		fputc('\n', stderr);
+		CaughtMsg(msg.c_str());
 	}
 }
 
@@ -2452,7 +1915,7 @@ void Parser::ResetPass()
 	LabelCount = 0;
 	InstFlags.clear();
 	PC = 0;
-	Instruct.reset();
+	reset();
 	BitOffset = 0;
 	Segments.resize(1);
 	Segments[0].Start = 0;
@@ -2461,7 +1924,7 @@ void Parser::ResetPass()
 
 void Parser::EnsurePass2()
 {
-	if (Pass2 || !Success)
+	if (Pass2 || (!Success && OperationMode != IRGNOREERRORS))
 		return;
 
 	// enter pass 2
@@ -2492,7 +1955,6 @@ void Parser::EnsurePass2()
 
 	// Optimize instructions identify code segments automatically
 	unsigned pc = 0;
-	Inst optimized;
 	auto sp = Segments.begin();
 	auto np = sp + 1;
 	bool autocode = false;
@@ -2504,9 +1966,9 @@ void Parser::EnsurePass2()
 		}
 		if ((InstFlags[pc++] & IF_DATA) == 0)
 		{	// instruction
-			optimized.decode(inst);
-			optimized.optimize();
-			inst = optimized.encode();
+			decode(inst);
+			optimize();
+			inst = encode();
 			// auto code?
 			if (sp->Flags == SF_None)
 			{	if (sp->Start != pc)

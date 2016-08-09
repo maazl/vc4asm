@@ -191,7 +191,7 @@ bool Inst::evalPack(qpuValue& r, qpuValue v, bool mul)
 {	int32_t mask = -1;
 	if (PM)
 	{	if (mul) // MUL ALU pack mode?
-			switch (Pack)
+			switch (Pack & 0x7)
 			{default:
 				return false;
 
@@ -201,12 +201,12 @@ bool Inst::evalPack(qpuValue& r, qpuValue v, bool mul)
 			 case P_8d:
 				mask = 0xff << ((Pack & 3) * 8);
 			 case P_8abcd:
-				if (v.fValue <= 0.F)
-					v.iValue = 0;
-				else if (v.fValue >= 1.0F)
+				if (v.fValue >= 1.0F)
 					v.iValue = 255;
-				else
+				else if (v.fValue > 0.F)
 					v.iValue = (int)(v.fValue * 255); // TODO: is the rounding correct?
+				else
+					v.iValue = 0;
 				v.iValue *= 0x1010101; // replicate bytes
 				r.iValue &= ~mask;
 				r.iValue |= v.iValue;
@@ -216,7 +216,7 @@ bool Inst::evalPack(qpuValue& r, qpuValue v, bool mul)
 			}
 	} else
 	{	if (mul == WS) // regfile A pack mode?
-			switch (Pack)
+			switch (Pack & 0xf)
 			{case P_16a:
 				mask = 0xffff;
 				goto pack16_cont;
@@ -234,8 +234,8 @@ bool Inst::evalPack(qpuValue& r, qpuValue v, bool mul)
 				else if (v.iValue > 0x7fff)
 					v.iValue = 0x7fff;
 			 pack16_cont:
-				if (mul ? OpM == M_MUL24 : 0x17e & (1<<OpA))
-					v.uValue = Eval::toFloat16(v.fValue);
+				if (isFloatResult(mul))
+					v.uValue = toFloat16(v.fValue);
 				else
 					v.iValue &= 0xffff;
 				v.iValue *= 0x10001; // replicate words
@@ -298,166 +298,14 @@ void Inst::reset()
 	SF = false;
 }
 
-bool Inst::tryRABSwap()
-{	if ( Sig >= S_LDI      // can't swap ldi and branch
-		|| (Unpack && !PM)   // can't swap with regfile A unpack
-		|| !isRRegAB(RAddrA) // regfile A read not invariant
-		|| !isRRegAB(RAddrB) // regfile B read not invariant
-		|| ( Sig == S_LDI    // can't swap small immediate, but vector rotation is OK
-			&& (MuxAA == X_RB || MuxAB == X_RB || MuxMA == X_RB || MuxMB == X_RB) ))
-		return false;
-	// execute swap
-	swap(RAddrA, RAddrB);
-	if (MuxAA >= X_RA) (uint8_t&)MuxAA ^= X_RA^X_RB;
-	if (MuxAB >= X_RA) (uint8_t&)MuxAB ^= X_RA^X_RB;
-	if (MuxMA >= X_RA) (uint8_t&)MuxMA ^= X_RA^X_RB;
-	if (MuxMB >= X_RA) (uint8_t&)MuxMB ^= X_RA^X_RB;
-	return true;
-}
-
-bool Inst::tryALUSwap()
-{	if ( Sig >= S_LDI   // can't swap ldi and branch
-		|| SF             // can't swap with set flags
-		|| (Pack && PM)   // can't swap with MUL ALU pack
-		|| (Sig == S_SMI && SImmd >= 48) ) // can't swap with vector rotation
-		return false;
-	opadd opa;
-	switch (OpM)
-	{default:
-		return false;
-	 case M_V8ADDS:
-		opa = A_V8ADDS;
-		break;
-	 case M_V8SUBS:
-		opa = A_V8SUBS;
-		break;
-	 case M_V8MIN:
-	 case M_V8MAX:
-		if (MuxMA != MuxMB)
-			return false;
-		opa = A_OR;
-		break;
-	 case M_NOP:
-		opa = A_NOP;
-		break;
-	}
-	opmul opm;
-	switch (OpA)
-	{default:
-		return false;
-	 case A_V8ADDS:
-		opm = M_V8ADDS;
-		break;
-	 case A_XOR:
-	 case A_SUB:
-		if (MuxAA != MuxAB)
-			return false;
-	 case A_V8SUBS:
-		opm = M_V8SUBS;
-		break;
-	 case A_OR:
-	 case A_AND:
-	 case A_MIN:
-	 case A_MAX:
-		if (MuxAA != MuxAB)
-			return false;
-		opm = M_V8MIN;
-		break;
-	 case A_NOP:
-		opm = M_NOP;
-		break;
-	}
-	// execute swap
-	OpA = opa;
-	OpM = opm;
-	swap(MuxAA, MuxMA);
-	swap(MuxAB, MuxMB);
-	swap(CondA, CondM);
-	swap(WAddrA, WAddrM);
-	WS = !WS;
-	return true;
-}
-
-void Inst::optimize()
-{	qpuValue val;
-	switch (Sig)
-	{case S_SMI:
-		if ((1 << Pack) & 0x0909) // only pack modes that write the entire word
-		{	if (WAddrM == R_NOP && OpM == M_NOP && MuxAA == X_RB && MuxAB == X_RB && !SF)
-			{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
-				val = SMIValue();
-				if (evalADD(val, val) && evalPack(val, val, false))
-					goto mkLDI;
-			}
-			if (OpA == A_NOP && MuxMA == X_RB && MuxMB == X_RB && !SF)
-			{	// convert MUL ALU small immediate loads to LDI if ADD ALU is unused.
-				val = SMIValue();
-				if (evalMUL(val, val) && evalPack(val, val, true))
-					goto mkLDI;
-			}
-		}
-	 default:
-		switch (OpA)
-		{default:
-			if (WAddrA != R_NOP || SF)
-				break;
-		 case A_NOP:
-			CondA = C_NEVER;
-			//MuxAA = X_R0;
-			//MuxAB = X_R0;
-			break;
-		 case A_XOR:
-		 case A_SUB:
-			if (WAddrM == R_NOP && MuxAA == MuxAB)
-				goto mkLDI0; // convert to LDI ..., 0
-			break;
-		}
-		switch (OpM)
-		{default:
-			if (WAddrM != R_NOP || (SF && (OpA == A_NOP || CondA == C_NEVER)))
-				break;
-		 case M_NOP:
-			if (WAddrM == R_NOP)
-				CondM = C_NEVER;
-			//MuxMA = X_R0;
-			//MuxMB = X_R0;
-			break;
-		 case M_V8SUBS:
-			if (!SF && WAddrA == R_NOP && MuxMA == MuxMB)
-				goto mkLDI0; // convert to LDI ..., 0
-			break;
-		}
-		break;
-	 mkLDI0:
-		if (Sig != S_NONE || RAddrB != R_NOP)
-			break;
-		val.uValue = 0;
-	 mkLDI:
-		if (RAddrA != R_NOP)
-			break;
-		Sig = S_LDI;
-		LdMode = L_LDI;
-		Immd = val;
-		PM = false;
-		Pack = P_32;
-	 case S_LDI: // ldi, sema
-		if (WAddrA == R_NOP && !SF)
-			CondA = C_NEVER;
-		if (WAddrM == R_NOP)
-			CondM = C_NEVER;
-	 case S_BRANCH:
-		break;
-	}
-}
-
 uint64_t Inst::encode() const
 {	switch (Sig)
 	{default:
 		return (uint64_t)
 				(	Sig    << 28
-				| Unpack << 25
+				| (Unpack & 7) << 25
 				| PM     << 24
-				| Pack   << 20
+				| (Pack & (15 >> PM)) << 20
 				| CondA  << 17
 				| CondM  << 14
 				| SF     << 13
@@ -478,7 +326,7 @@ uint64_t Inst::encode() const
 				( S_LDI  << 28
 				| LdMode << 25
 				| PM     << 24
-				| Pack   << 20
+				| (Pack & 15) << 20
 				| CondA  << 17
 				| CondM  << 14
 				| SF     << 13
@@ -501,38 +349,46 @@ uint64_t Inst::encode() const
 }
 
 void Inst::decode(uint64_t code)
-{	uint32_t h = (uint32_t)(code >> 32);
-	Sig    = (sig)(h >> 28);
-	Unpack = (unpack)(h >> 25 & 0x7);
-	PM     = !!(h & 1U<<24);
+{	uint32_t i = (uint32_t)(code >> 32);
+	Sig    = (sig)(i >> 28);
+	Unpack = (unpack)(i >> 25 & 0x7);
+	PM     = !!(i & 1U<<24);
+	SF     = !!(i & 1U<<13);
+	WS     = !!(i & 1U<<12);
+	WAddrA = (uint8_t)(i >> 6 & 0x3f);
+	WAddrM = (uint8_t)(i >> 0 & 0x3f);
 	if (Sig == S_BRANCH)
-	{	CondBr = (condb)(h >> 20 & 0xf);
-		Rel    = !!(h & 1U<<19);
-		Reg    = !!(h & 1U<<18);
-		RAddrA = (uint8_t)(h >> 13 & 0x1f);
+	{	CondBr = (condb)(i >> 20 & 0xf);
+		Rel    = !!(i & 1U<<19);
+		Reg    = !!(i & 1U<<18);
+		RAddrA = (uint8_t)(i >> 13 & 0x1f);
 		Immd.uValue = (uint32_t)(code);
 	} else
-	{	Pack   = (pack)(h >> 20 & 0xf);
-		CondA  = (conda)(h >> 17 & 0x7);
-		CondM  = (conda)(h >> 14 & 0x7);
+	{	Pack   = (pack)(i >> 20 & 0xf);
+		CondA  = (conda)(i >> 17 & 0x7);
+		CondM  = (conda)(i >> 14 & 0x7);
 		if (Sig == S_LDI)
 		{	Immd.uValue = (uint32_t)(code);
+			if (Pack && !PM)
+				(uint8_t&)Pack |= P_INT;
 		} else
-		{	uint32_t l = (uint32_t)code;
-			OpM    = (opmul)(l >> 29 & 0x7);
-			OpA    = (opadd)(l >> 24 & 0x1f);
-			RAddrA = (uint8_t)(l >> 18 & 0x3f);
-			RAddrB = (uint8_t)(l >> 12 & 0x3f);
-			MuxAA  = (mux)(l >>  9 & 0x7);
-			MuxAB  = (mux)(l >>  6 & 0x7);
-			MuxMA  = (mux)(l >>  3 & 0x7);
-			MuxMB  = (mux)(l >>  0 & 0x7);
+		{	i = (uint32_t)code;
+			OpM    = (opmul)(i >> 29 & 0x7);
+			OpA    = (opadd)(i >> 24 & 0x1f);
+			RAddrA = (uint8_t)(i >> 18 & 0x3f);
+			RAddrB = (uint8_t)(i >> 12 & 0x3f);
+			MuxAA  = (mux)(i >> 9 & 0x7);
+			MuxAB  = (mux)(i >> 6 & 0x7);
+			MuxMA  = (mux)(i >> 3 & 0x7);
+			MuxMB  = (mux)(i >> 0 & 0x7);
+			if (Pack && !PM)
+				(uint8_t&)Pack |= isFloatResult(WS) ? P_FLT : P_INT;
 		}
+		if (PM && (Pack ^ 8) >= 0xb)
+			(uint8_t&)Pack |= P_32S|P_FLT;
 	}
-	SF     = !!(h & 1U<<13);
-	WS     = !!(h & 1U<<12);
-	WAddrA = (uint8_t)(h >> 6 & 0x3f);
-	WAddrM = (uint8_t)(h >> 0 & 0x3f);
+	if (Unpack && Unpack != U_8dr)
+		(uint8_t&)Unpack |= PM || isFloatRA() ? U_FLT : U_INT;
 }
 
 qpuValue Inst::SMIValue() const
@@ -561,4 +417,54 @@ static const char cRF[2][10] =
 };
 const char* Inst::toString(mux m)
 {	return m >= X_RA ? cRF[m-X_RA] : cAcc[m];
+}
+
+unsigned Inst::toFloat16(float value)
+{	// vc4asm supports only IEEE 754 floats, so we can just use bit arithmetics.
+	int32_t iValue = *(int32_t*)&value;
+	unsigned ret = (iValue >> 16) & 0x8000; // copy sign
+	value = fabs(value); // clear sign
+	if (value < 1./16384) // subnormal values and 0.
+		return ret; // QPU cannot deal with subnormals  | (int)(value * 16777216.);
+	if (value > 65504. && !std::isinf(value))
+		return ret | 0x7c00;
+	// Move exponent as well as mantissa into target including INF and NAN.
+	return ret | ((iValue >> 13) & 0x7fff);
+}
+
+float Inst::fromFloat16(unsigned value)
+{	// vc4asm supports only IEEE 754 floats, so we can just use bit arithmetics.
+	int32_t ret = ((value & 0x8000) << 16) // copy sign
+		| (((int)value << 17 >> 4) & 0x7fffffff); // expand sign of exponent
+	return *(float*)&ret;
+}
+
+int Inst::calcPM(pack mode)
+{	// valid modes: I = int source, F = float source, A = regfile A pack, M = MUL ALU pack
+	// 32 bit : IA, IM, FA, FM
+	// 16 bit : IA,     FA
+	// 8 bit  : IA,         FM
+	// 8 bitR : IA,         FM  (replicate bytes)
+	uint8_t raw = mode & 15;
+	if (raw == 0)
+		return -1;
+	if ((mode & P_INT) || raw == 8 || (raw & 7) < 3)
+		return 0; // regfile A pack only
+	if (mode & P_FLT)
+		return 1; // MUL ALU pack only
+	return -1;
+}
+
+int Inst::calcPM(unpack mode)
+{	// valid modes: I = int result, F = float result, A = regfile A unpack, 4 = r4 unpack
+	// 32 bit : IA, I4, FA, F4
+	// 16 bit : IA,     FA, F4
+	// 8 bit  : IA,     FA, F4
+	// 8 bitR : IA, I4         (replicate alpha byte)
+	int raw = mode & 7;
+	if (raw == 0 || raw == 3)
+		return -1;
+	if (mode & U_INT)
+		return 0;
+	return -1;
 }

@@ -70,15 +70,15 @@
 .set isLdPE(x)      x >= [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2] && x < :[0,0,0]
 .set isLdPES(x)     x >= [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2] && x < [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2]
 .set isLdPEU(x)     x >= [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] && x < :[0,0,0]
-.set isRegister(x)  x >= :[0,0,0] && x < :[0,16,0]
-.set isRegfileA(x)  isRegister(x) && (x & :[0,1,0]) == :[0,1,0]
-.set isRegfileB(x)  isRegister(x) && (x & :[0,2,0]) == :[0,2,0]
-.set isAccu(x)      isRegister(x) && (x & :[-8,0x34,0]) == :[32,0,0] && (x & :[-2,0,0]) != :[38,0,0] 
-.set isReadable(x)  isRegister(x) && (x & :[0,4,0]) == :[0,4,0] || x == r5
-.set isWritable(x)  isRegister(x) && (x & :[0,8,0]) == :[0,8,0]
-.set isRotate(x)    isRegister(x) && (x & :[0,0,-1]) != :[0,0,0]
-.set isSemaphore(x) x >= :[0,16,0] && x <= :[-1,-1,-1]
-.set isLabel(x)     x > :[-1,-1,-1]
+.set isRegister(x)  x >= :[0,0] && x < :[0,16]
+.set isRegfileA(x)  isRegister(x) && (x & :[0,1]) == :[0,1]
+.set isRegfileB(x)  isRegister(x) && (x & :[0,2]) == :[0,2]
+.set isAccu(x)      isRegister(x) && (x & :[-8,0x34]) == :[32,0] && (x & :[-2,0]) != :[38,0]
+.set isReadable(x)  isRegister(x) && (x & :[0,4]) == :[0,4] || x == r5
+.set isWritable(x)  isRegister(x) && (x & :[0,8]) == :[0,8]
+.set isRotate(x)    isRegister(x) && (x & :[0,0,-1]) != :[0,0]
+.set isSemaphore(x) x >= :[0,16,0] && x <= :[-1,-1]
+.set isLabel(x)     x > :[-1,-1,-1,255]
 .set isSmallImmd(x) isConstant(x) && (!(x+16 & ~0x1f) || !(x-0x3b800000 & 0xf87fffff))
 
 # mathematics

@@ -57,7 +57,9 @@ void Disassembler::appendPE(bool sign)
 
 void Disassembler::appendPack(bool mul)
 {	if (Instruct.PM ? mul : Instruct.WS == mul)
-		append(cPack[Instruct.PM][Instruct.Pack]);
+	{	append(cPack[Instruct.PM][Instruct.Pack & 15]);
+		append(cPUPX[Instruct.Pack / Inst::P_INT]);
+	}
 }
 
 void Disassembler::appendSource(Inst::mux mux)
@@ -77,7 +79,9 @@ void Disassembler::appendSource(Inst::mux mux)
 	}
 	if ( (Instruct.PM && mux == Inst::X_R4) // r4 unpack
 		|| (!Instruct.PM && mux == Inst::X_RA) ) // RA unpack
-		append(cUnpack[Instruct.Unpack]);
+	{	append(cUnpack[Instruct.Unpack & 7]);
+		append(cPUPX[Instruct.Unpack / Inst::U_INT]);
+	}
 }
 
 void Disassembler::appendMULSource(Inst::mux mux)

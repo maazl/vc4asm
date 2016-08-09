@@ -15,15 +15,6 @@
 #include <climits>
 
 
-Eval::Fail::Fail(const char* format, ...)
-{	va_list va;
-	va_start(va, format);
-	const auto&& msg = vstringf(format, va);
-	va_end(va);
-	static_cast<string&>(*this) = msg;
-}
-
-
 Eval::operate::operate(vector<exprEntry>& stack)
 :	rhs(stack.back())
 ,	lhs(stack[stack.size()-2])
@@ -32,9 +23,9 @@ Eval::operate::operate(vector<exprEntry>& stack)
 
 void Eval::operate::TypesFail()
 {	if (isUnary(lhs.Op))
-		throw Fail("Cannot apply unary operator %s to operand of type %s.", op2string(lhs.Op), type2string(rhs.Type));
+		throw Message("Cannot apply unary operator %s to operand of type %s.", op2string(lhs.Op), type2string(rhs.Type));
 	else
-		throw Fail("Cannot apply operator %s to operands of type %s and %s.", op2string(lhs.Op), type2string(lhs.Type), type2string(rhs.Type));
+		throw Message("Cannot apply operator %s to operands of type %s and %s.", op2string(lhs.Op), type2string(lhs.Type), type2string(rhs.Type));
 }
 
 void Eval::operate::CheckInt()
@@ -109,6 +100,10 @@ int Eval::operate::Compare()
 			goto less;
 		if (lhs.rValue.Num > rhs.rValue.Num)
 			goto greater;
+		if (lhs.rValue.Pack.Mode < rhs.rValue.Pack.Mode)
+			goto less;
+		if (lhs.rValue.Pack.Mode > rhs.rValue.Pack.Mode)
+			goto less;
 		goto equal;
 	 default:
 		if (lhs.Type > rhs.Type)
@@ -142,11 +137,11 @@ bool Eval::operate::Apply(bool unary)
 
 	switch (lhs.Op)
 	{default:
-		throw Fail("internal parser error");
+		throw Message("internal parser error");
 	 case BRO:
 		switch (rhs.Op)
 		{case EVAL:
-			throw Fail("Incomplete expression: missing ')'.");
+			throw Message("Incomplete expression: missing ')'.");
 		 case BRC:
 			lhs.Op = NOP; // closing brace cancels opening brace
 			lhs.iValue = rhs.iValue;
@@ -172,7 +167,7 @@ bool Eval::operate::Apply(bool unary)
 		 case V_LDPE:
 			sh = (rhs.iValue & 0x55555555U) << 1;
 			if (rhs.iValue & sh)
-				throw Fail("Cannot negate per element value set containing a value of 3.");
+				throw Message("Cannot negate per element value set containing a value of 3.");
 			lhs.iValue = rhs.iValue | sh;
 			lhs.Type = V_LDPES;
 			break;
@@ -180,7 +175,7 @@ bool Eval::operate::Apply(bool unary)
 			sh = (rhs.iValue & 0x55555555U) << 1;
 			lhs.iValue = rhs.iValue | sh;
 			if (lhs.iValue & sh)
-				throw Fail("Cannot negate per element value set containing a value of -2.");
+				throw Message("Cannot negate per element value set containing a value of -2.");
 			break;
 		}
 		break;
@@ -192,7 +187,7 @@ bool Eval::operate::Apply(bool unary)
 		 case V_LDPES:
 		 case V_LDPE:
 		 case V_LDPEU:
-			lhs.iValue = ~rhs.iValue; break;
+			lhs.iValue = ~rhs.iValue;
 		}
 		lhs.Type = rhs.Type;
 		break;
@@ -302,12 +297,13 @@ bool Eval::operate::Apply(bool unary)
 		 case 1<<V_INT:
 			lhs.iValue += rhs.iValue; break;
 		 case 1<<V_REG | 1<<V_INT:
-			{	unsigned r = lhs.Type == V_REG ? lhs.rValue.Num + rhs.iValue : rhs.rValue.Num + lhs.iValue;
-				if (r > 63 || ((lhs.rValue.Type & R_SEMA) && r > 15))
-					throw Fail("Register number out of range.");
-				lhs.rValue.Num = r;
-				lhs.Type = V_REG;
-			} break;
+			if (rhs.Type == V_REG)
+				swap((exprValue&)lhs, (exprValue&)rhs);
+			if ( rhs.iValue < -64 || rhs.iValue > 64
+				|| (lhs.rValue.Num += (uint8_t)rhs.iValue) > 63
+				|| ((lhs.rValue.Type & R_SEMA) && lhs.rValue.Num > 15) )
+				throw Message("Register number out of range.");
+			break;
 		} break;
 	 case SUB:
 		switch (types)
@@ -329,11 +325,11 @@ bool Eval::operate::Apply(bool unary)
 		 case 1<<V_REG | 1<<V_INT:
 			if (rhs.Type == V_REG)
 				TypesFail();
-			{	unsigned r = lhs.rValue.Num - rhs.iValue;
-				if (r > 63 || ((lhs.rValue.Type & R_SEMA) && r > 15))
-					throw Fail("Register number out of range.");
-				lhs.rValue.Num = r;
-			} break;
+			if ( rhs.iValue < -64 || rhs.iValue > 64
+				|| (lhs.rValue.Num -= (uint8_t)rhs.iValue) > 63
+				|| ((lhs.rValue.Type & R_SEMA) && lhs.rValue.Num > 15) )
+				throw Message("Register number out of range.");
+			break;
 		} break;
 	 case ASL:
 	 case ROL32:
@@ -352,15 +348,15 @@ bool Eval::operate::Apply(bool unary)
 				TypesFail();
 			lhs.fValue = ldexp(lhs.fValue, rhs.iValue > 5000 ? 5000 : rhs.iValue < -5000 ? -5000 : (int)rhs.iValue);
 			break;
-		 case 1 << V_REG:
-			if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate)
-				Fail("Vector rotation are only allowed by constant or by r5");
+		 case 1<<V_REG:
+			if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate || rhs.rValue.Pack)
+				throw Message("Vector rotation are only allowed by constant or by r5");
 			lhs.rValue.Rotate = 16;
 			break;
 		 case 1<<V_REG | 1<<V_INT:
 			if (lhs.Type == V_REG)
 			{	if (lhs.rValue.Rotate & ~0xf)
-					Fail("Cannot apply additional offset to r5 vector rotation");
+					throw Message("Cannot apply additional offset to r5 vector rotation");
 				lhs.rValue.Rotate = (lhs.rValue.Rotate + rhs.iValue) & 0xf;
 				break;
 			}
@@ -386,13 +382,13 @@ bool Eval::operate::Apply(bool unary)
 			break;
 		 case 1<<V_REG:
 			if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate)
-				Fail("Vector rotation are only allowed by constant or by r5");
+				throw Message("Vector rotation are only allowed by constant or by r5");
 			lhs.rValue.Rotate = -16;
 			break;
 		 case 1<<V_REG | 1<<V_INT:
 			if (lhs.Type == V_REG)
 			{	if (lhs.rValue.Rotate & ~0xf)
-					Fail("Cannot apply additional offset to r5 vector rotation");
+					throw Message("Cannot apply additional offset to r5 vector rotation");
 				lhs.rValue.Rotate = (lhs.rValue.Rotate - rhs.iValue) & 0xf;
 				break;
 			}
@@ -445,6 +441,7 @@ bool Eval::operate::Apply(bool unary)
 			lhs.rValue.Num &= rhs.rValue.Num;
 			(uint8_t&)lhs.rValue.Type &= rhs.rValue.Type;
 			lhs.rValue.Rotate &= rhs.rValue.Rotate;
+			lhs.rValue.Pack.Mode &= rhs.rValue.Pack.Mode;
 			break;
 		}
 		CheckInt();
@@ -489,7 +486,7 @@ bool Eval::partialEvaluate(bool unary)
 	{	if (Stack.size() <= 1)
 		{	if (Stack.back().Op == BRC) // closing brace w/o opening brace, might not belong to our expression
 			{	if (Stack.back().Type == V_NONE)
-					throw Fail("Incomplete expression: expected value.");
+					throw Message("Incomplete expression: expected value.");
 				return false;
 			}
 			return true;
@@ -506,7 +503,7 @@ bool Eval::PushOperator(mathOp op)
 	current.Op = op;
 	if (isUnary(op))
 	{	if (current.Type != V_NONE)
-			throw Fail("Unexpected unary operator %s after numeric expression.", op2string(op));
+			throw Message("Unexpected unary operator %s after numeric expression.", op2string(op));
 	 unary:
 		Stack.emplace_back();
 		return true;
@@ -514,7 +511,7 @@ bool Eval::PushOperator(mathOp op)
 	{	if (current.Type == V_NONE)
 			switch (op)
 			{default:
-				throw Fail("Binary operator %s needs left hand side expression.", op2string(op));
+				throw Message("Binary operator %s needs left hand side expression.", op2string(op));
 			 case ADD:
 				current.Op = NOP;
 				goto unary;
@@ -534,7 +531,7 @@ bool Eval::PushOperator(mathOp op)
 void Eval::PushValue(const exprValue& value)
 {	exprEntry& current = Stack.back();
 	if (current.Type != V_NONE)
-		throw Fail("Missing operator before value '%s'.", value.toString().c_str());
+		throw Message("Missing operator before value '%s'.", value.toString().c_str());
 	(exprValue&)current = value; // assign slice
 	partialEvaluate(true);
 }
@@ -548,32 +545,14 @@ exprValue Eval::Evaluate()
 			current.rValue.Num = Inst::R_NOP;
 			current.rValue.Rotate = 0;
 			current.rValue.Type = R_RWAB;
+			current.rValue.Pack.reset();
 			return current;
 		}
-		throw Fail("Incomplete expression: expected value.");
+		throw Message("Incomplete expression: expected value.");
 	}
 	current.Op = EVAL;
 	partialEvaluate(false);
 	return Stack.front();
-}
-
-unsigned Eval::toFloat16(exprValue value)
-{	switch (value.Type)
-	{default:
-		throw Fail("Cannot convert value of type %s to half precision float.", type2string(value.Type));
-	 case V_INT:
-		value.fValue = value.iValue;
-	 case V_FLOAT:;
-	}
-	// vc4asm supports only IEEE 754 floats, so we can just use bit arithmetics.
-	unsigned ret = (value.iValue >> 0) << 15; // copy sign
-	value.fValue = fabs(value.fValue); // clear sign
-	if (value.fValue < 1./16384) // subnormal values and 0.
-		return ret | (int)(value.fValue * 16777216.);
-	if (value.fValue > 65504. && !std::isinf(value.fValue))
-		throw Fail("The value %g is outside the domain of half precision floating point.", value.fValue);
-	// Move exponent as well as mantissa into target including INF and NAN.
-	return ret | ((unsigned)(value.iValue >> 42) & 0x7fff);
 }
 
 const char* Eval::op2string(mathOp op)

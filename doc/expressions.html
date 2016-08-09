@@ -24,7 +24,7 @@
       <tbody>
         <tr>
           <td>decimal</td>
-          <td><tt>-42 </tt></td>
+          <td><tt>-42</tt></td>
           <td>int<br>
           </td>
           <td>Integer constant, 32 bit signed or unsigned<br>
@@ -61,6 +61,12 @@
             Note that this <i>must</i> include a decimal dot.</td>
         </tr>
         <tr>
+          <td>per element constant</td>
+          <td><tt>[0,2,3...]</tt></td>
+          <td>int2[16]</td>
+          <td>2 bit integer per QPU element.</td>
+        </tr>
+        <tr>
           <td>accumulator<br>
           </td>
           <td><tt>r1</tt></td>
@@ -74,8 +80,11 @@
           <td>memory register</td>
           <td><tt> ra25</tt></td>
           <td>register</td>
-          <td><tt>ra0</tt> ... <tt>ra31</tt>, <tt>rb0</tt> ... <tt>rb31</tt>
-          </td>
+          <td><tt>ra0</tt> ... <tt>ra31</tt>, <tt>rb0</tt> ... <tt>rb31</tt>.
+            The numbers <tt>r<var>x</var>32</tt> ... <tt>r<var>x</var>63</tt>
+            also work, but this is normally not recommended because it prevents
+            vc4asm from choosing from any the register file automatically for
+            peripheral registers where this does not matter. </td>
         </tr>
         <tr>
           <td>I/O register</td>
@@ -97,10 +106,19 @@
         </tr>
         <tr>
           <td>label</td>
-          <td><tt>:loop </tt></td>
+          <td><tt>:loop</tt></td>
           <td>label</td>
           <td>label receiving the absolute number of bytes from the start of the
             assembly.</td>
+        </tr>
+        <tr>
+          <td>internal raw register</td>
+          <td><tt>:[0,1,0,3]</tt></td>
+          <td>register</td>
+          <td>Internal register constant. It consists of the fields register <i>number,
+              register type, vector rotation</i> and <i>pack/unpack mode</i>.
+            The latter two are optional and by default zero. <i>This syntax is
+              for internal use only and subject to change.</i></td>
         </tr>
       </tbody>
     </table>

@@ -5,14 +5,13 @@
  *      Author: mueller
  */
 
-#ifndef INSTRUCTION_H_
-#define INSTRUCTION_H_
-
-#include "expr.h"
+#ifndef INST_H_
+#define INST_H_
 
 #include <cstdint>
 using namespace std;
 
+struct exprValue;
 
 struct qpuValue
 {	union
@@ -116,14 +115,14 @@ struct Inst
 	/// Pack mode
 	enum pack : uint8_t
 	{	P_32      ///< write 32 bit = no pack
-	,	P_16a     ///< write lower 16 bits only
-	,	P_16b     ///< write lower 16 bits to the upper 16 bits
+	,	P_16a     ///< write lower 16 bits or pack to half precision float
+	,	P_16b     ///< write lower 16 bits to the upper 16 bits or pack to half precision float
 	,	P_8abcd   ///< replicate low byte over all 4 bytes
 	,	P_8a      ///< write low byte only
 	,	P_8b      ///< write low byte to bits 8 to 15
 	,	P_8c      ///< write low byte to bits 16 to 23
 	,	P_8d      ///< write low byte to bits 24 to 31
-	,	P_32S     ///< write 32 bit with saturation
+	,	P_32S     ///< write 32 bit with saturation, also saturation flag
 	,	P_16aS    ///< write lower 16 bits only with saturation
 	,	P_16bS    ///< write lower 16 bits to the upper 16 bits with saturation
 	,	P_8abcdS  ///< replicate low byte over all 4 bytes with saturation
@@ -131,17 +130,63 @@ struct Inst
 	,	P_8bS     ///< write low byte to bits 8 to 15 with saturation
 	,	P_8cS     ///< write low byte to bits 16 to 23 with saturation
 	,	P_8dS     ///< write low byte to bits 24 to 31 with saturation
+	// further bits are only for informational purposes
+	,	P_INT     ///< Flag to indicate that the pack operation should be made in integer mode, ignored by encode().
+	,	P_16aI    ///< write lower 16 bits only
+	,	P_16bI    ///< write lower 16 bits to the upper 16 bits
+	,	P_8abcdI  ///< replicate low byte over all 4 bytes
+	,	P_8aI     ///< write low byte only
+	,	P_8bI     ///< write low byte to bits 8 to 15
+	,	P_8cI     ///< write low byte to bits 16 to 23
+	,	P_8dI     ///< write low byte to bits 24 to 31
+	,	P_32SI    ///< write 32 bit with saturation, also saturation flag
+	,	P_16aSI   ///< write lower 16 bits only with saturation
+	,	P_16bSI   ///< write lower 16 bits to the upper 16 bits with saturation
+	,	P_8abcdSI ///< replicate low byte over all 4 bytes with saturation
+	,	P_8aSI    ///< write low byte only with saturation
+	,	P_8bSI    ///< write low byte to bits 8 to 15 with saturation
+	,	P_8cSI    ///< write low byte to bits 16 to 23 with saturation
+	,	P_8dSI    ///< write low byte to bits 24 to 31 with saturation
+	,	P_FLT     ///< Flag to indicate that the pack operation should be made in
+	,	P_16aF    ///< write half precision float to the lower 16 bits
+	,	P_16bF    ///< write half precision float to the upper 16 bits
+	,	P_8aF=0x24///< meta entry for Float pack or unpack in parser
+	,	P_8bF     ///< meta entry for Float pack or unpack in parser
+	,	P_8cF     ///< meta entry for Float pack or unpack in parser
+	,	P_8dF     ///< meta entry for Float pack or unpack in parser
+	,	P_8abcdSF=0x2b///< convert float in range [0..1] to [0..256] with saturation (MUL ALU pack) and replicate low byte over all 4 bytes (MUL ALU pack)
+	,	P_8aSF    ///< convert float in range [0..1] to [0..256] with saturation (MUL ALU pack) and write low byte only
+	,	P_8bSF    ///< convert float in range [0..1] to [0..256] with saturation (MUL ALU pack) and write low byte to bits 8 to 15
+	,	P_8cSF    ///< convert float in range [0..1] to [0..256] with saturation (MUL ALU pack) and write low byte to bits 16 to 23
+	,	P_8dSF    ///< convert float in range [0..1] to [0..256] with saturation (MUL ALU pack) and write low byte to bits 24 to 31
 	};
 	/// Unpack mode
 	enum unpack : uint8_t
 	{	U_32      ///< read 32 bit = no unpack
-	,	U_16a     ///< read lower 16 bit
-	,	U_16b     ///< read higher 16 bit
+	,	U_16a     ///< read lower 16 bit and optionally convert from half precision float
+	,	U_16b     ///< read higher 16 bit and optionally convert from half precision float
 	,	U_8dr     ///< replicate bits 24 to 31 over all 4 bytes
-	,	U_8a      ///< read low byte
-	,	U_8b      ///< read bits 8 to 15
-	,	U_8c      ///< read bits 16 to 23
-	,	U_8d      ///< read bits 24 to 31
+	,	U_8a      ///< read low byte and optionally convert from [0..255] to [0..1.]
+	,	U_8b      ///< read bits 8 to 15 and optionally convert from [0..255] to [0..1.]
+	,	U_8c      ///< read bits 16 to 23 and optionally convert from [0..255] to [0..1.]
+	,	U_8d      ///< read bits 24 to 31 and optionally convert from [0..255] to [0..1.]
+	// further bits are only for informational purposes
+	,	U_INT=0x10///< Flag to indicate that the unpack operation uses integers.
+	,	U_16aI    ///< read lower 16 bit
+	,	U_16bI    ///< read higher 16 bit
+	,	U_8drI    ///< replicate bits 24 to 31 over all 4 bytes
+	,	U_8aI     ///< read low byte
+	,	U_8bI     ///< read bits 8 to 15
+	,	U_8cI     ///< read bits 16 to 23
+	,	U_8dI     ///< read bits 24 to 31
+	,	U_FLT=0x20///< Flag to indicate that the unpack operation has a floating point destination.
+	,	U_16aF    ///< read lower 16 bit and convert from half precision float
+	,	U_16bF    ///< read higher 16 bit and convert from half precision float
+	,	U_8drF    ///< ???
+	,	U_8aF     ///< read low byte and convert from [0..255] to [0..1.]
+	,	U_8bF     ///< read bits 8 to 15 and convert from [0..255] to [0..1.]
+	,	U_8cF     ///< read bits 16 to 23 and convert from [0..255] to [0..1.]
+	,	U_8dF     ///< read bits 24 to 31 and convert from [0..255] to [0..1.]
 	};
 	/// ALU input multiplexer values
 	enum mux : uint8_t
@@ -270,18 +315,14 @@ struct Inst
 	/// Check whether an ADD operator is an unary operator.
 	/// @pre Sig < S_LDI
 	bool       isUnary() const { return (0x01800180 & (1<<OpA)) != 0; }
+	/// Check whether an OP code returns a floating point value.
+	/// @param mul Check for MUL ALU result instead of ADD ALU result.
+	/// @pre Sig < S_LDI
+	bool       isFloatResult(bool mul) const { return mul ? OpM == M_FMUL : ((OpA - 1U) ^ 1U) <= 6U; }
+	/// Check whether register file A is consumed by any floating point OP code.
+	/// @pre Sig < S_LDI
+	bool       isFloatRA() const { return ((MuxAA == X_RA || MuxAB == X_RA) && ((OpA - 1U) ^ 1U) <= 6U) || ((MuxMA == X_RA || MuxMB == X_RA) && OpM == M_FMUL); }
 
-	/// Try to swap read access to register file A and B
-	/// if the already existing read access is invariant of this change.
-	/// See also isRRegAB.
-	/// @return true: swap succeeded, false: instruction unchanged
-	bool       tryRABSwap();
-	/// Try to swap ADD and MUL ALU of the current instruction
-	/// @return true: swap succeeded, false: instruction unchanged
-	bool       tryALUSwap();
-
-	/// Some optimizations to save ALU power
-	void       optimize();
 	/// Encode instruction to QPU binary format
 	uint64_t   encode() const;
 	/// Decode instruction from QPU binary format into this instance.
@@ -289,6 +330,24 @@ struct Inst
 
 	/// Convert input mux to human readable format, e.g. for error messages.
 	static const char* toString(mux m);
+
+	/// Convert value to half precision floating point value.
+	/// @return 16 bit floating point value. 0x7c00 or 0xfc00 if the value does not fit into a half precision float.
+	static unsigned toFloat16(float value);
+	/// Convert value from half precision floating point value to single precision.
+	/// @return Floating point value matching the half precision float value in the low order 16 bit of \a value.
+	static float fromFloat16(unsigned value);
+
+	/// Calculate PM bit from pack mode.
+	/// @param mode Requested pack mode.
+	/// @return PM bit or -1 in case of undetermined.
+	/// @remarks Due to the capabilities of the QPUs all pack modes are deterministic if P_INT or P_FLT is set.
+	static int calcPM(pack mode);
+	/// Calculate PM bit from unpack mode.
+	/// @param mode Requested unpack mode.
+	/// @return PM bit or -1 in case of undetermined.
+	/// @remarks In fact the function will never return 1 because all r4 unpack modes are available by regfile A as well.
+	static int calcPM(unpack mode);
 };
 
-#endif // INSTRUCTION_H_
+#endif // INST_H_
