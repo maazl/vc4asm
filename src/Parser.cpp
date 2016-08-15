@@ -1149,6 +1149,11 @@ void Parser::assembleMOV(int mode)
 		value = param;
 		goto ldi;
 
+	 case V_LABEL:
+		/* Convert type to V_INT to use V_LABEL target as int. */
+		param.Type = V_INT;
+		//no break
+
 	 case V_INT:
 	 case V_FLOAT:
 		value = param;
