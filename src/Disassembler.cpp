@@ -311,8 +311,15 @@ void Disassembler::DoBranch()
 			target += Addr + 4*sizeof(uint64_t);
 		auto l = Labels.find(target);
 		if (l != Labels.end())
+		{ int label_num;
+			return appendf(Instruct.Rel ? "r:%s%s" : ":%s%s",
+					l->second.c_str(),
+					// Add 'f' if branch jumps forward to local label.
+					(sscanf(l->second.c_str(), "%i", &label_num)
+					 && target > Addr+4*sizeof(uint64_t))?"f":"");
 			return appendf(Instruct.Rel ? "r:%s" : ":%s", l->second.c_str());
-		return appendf(Instruct.Rel ? "%+d # %04x" : "%d # %04x", Instruct.Immd.iValue, target);
+		}
+		return appendf(Instruct.Rel ? "%+d # 0x%04x" : "%d # 0x%04x", Instruct.Immd.iValue, target);
 	}
 	if (Instruct.Immd.iValue || !Instruct.Reg)
 		appendf(Instruct.Rel ? "%+d" : "0x%x", Instruct.Immd.iValue);
@@ -354,6 +361,12 @@ void Disassembler::ScanLabels()
 	}
 }
 
+void Disassembler::ProvideLabels(map<size_t,string> new_labels)
+{
+	Labels.clear();
+	Labels.insert(new_labels.begin(), new_labels.end());
+}
+
 void Disassembler::Disassemble()
 {
 	Addr = BaseAddr;
@@ -370,6 +383,35 @@ void Disassembler::Disassemble()
 			fprintf(Out, "\t%-55s # %04x: %016" PRIx64 " %s\n", Code, Addr, i, Comment);
 		else
 			fprintf(Out, "\t%s\n", Code);
+		Addr += sizeof(uint64_t);
+	}
+}
+
+void Disassembler::Disassemble(stringstream &s, bool one_line)
+{
+	char Line[400];
+
+	Addr = BaseAddr;
+	for (uint64_t i : Instructions)
+	{	Instruct.decode(i);
+		if (!one_line)
+		{ // Label?
+			auto l = Labels.find(Addr);
+			if (l != Labels.end())
+			{ snprintf(Line, sizeof(Line), ":%s\n", l->second.c_str());
+				s << Line;
+			}
+		}
+
+		DoInstruction();
+		*CodeAt = 0;
+		if (PrintComment)
+		{	snprintf(Line, sizeof(Line), "%-55s # %04x: %016" PRIx64 " %s\n", Code, Addr, i, Comment);
+			s << Line;
+		}else
+		{	snprintf(Line, sizeof(Line), "%s\n", Code);
+			s << Line;
+		}
 		Addr += sizeof(uint64_t);
 	}
 }

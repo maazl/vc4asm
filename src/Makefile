@@ -14,7 +14,7 @@ O   = .o
 	$(CC) $(FLAGS) $(CPPFLAGS) -S -o $@ $<
 
 BASEOBJECTS = ../obj/utils$(O) ../obj/expr$(O) ../obj/Inst$(O) ../obj/Eval$(O) ../obj/Validator$(O)
-ASMOBJECTS  = $(BASEOBJECTS) ../obj/Parser$(O) ../obj/vc4asm$(O) ../obj/WriteELF$(O)
+ASMOBJECTS  = $(BASEOBJECTS) ../obj/Parser$(O) ../obj/vc4asm$(O) ../obj/WriteELF$(O) ../obj/Disassembler$(O)
 DISOBJECTS  = $(BASEOBJECTS) ../obj/Disassembler$(O) ../obj/vc4dis$(O)
 
 all: ../bin/vc4asm$(EXE) ../bin/vc4dis$(EXE)

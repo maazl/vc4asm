@@ -15,6 +15,7 @@
 #include <map>
 #include <cstdio>
 #include <cinttypes>
+#include <sstream>
 
 using namespace std;
 
@@ -129,8 +130,12 @@ class Disassembler
 	/// @brief Scan the binary code for branch targets.
 	/// @details This populates the labels array and should be done before the call to Disassemble.
 	void ScanLabels();
+	/// @brief Provide predefined list of label names as base.
+	void ProvideLabels(map<size_t,string> new_labels);
 	/// Disassemble the instruction words in \ref Instructions.
 	void Disassemble();
+	// Variant to push into stream instead of FILE* Out.
+	void Disassemble(stringstream &s, bool one_line = false);
 };
 
 #endif // DISASSEMBLER_H_
