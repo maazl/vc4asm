@@ -459,19 +459,19 @@ void Parser::ParseExpression()
 
 		 case NUM:
 			// parse number
-			if (Token.find('.') == string::npos)
+			if (Token.find('.') != string::npos || (Token.find_first_of("eE") != string::npos && (Token[1] & 0xdf) != 'x'))
+			{	// float number
+				size_t len;
+				if (sscanf(Token.c_str(), "%lf%zn", &ExprValue.fValue, &len) != 1 || len != Token.size())
+					Fail("%s is no real number.", Token.c_str());
+				ExprValue.Type = V_FLOAT;
+			} else
 			{	// integer
 				//size_t len;  sscanf of gcc4.8.2/Linux x32 can't read "0x80000000".
 				//if (sscanf(Token.c_str(), "%i%n", &stack.front().iValue, &len) != 1 || len != Token.size())
 				if (parseInt(Token.c_str(), ExprValue.iValue) != Token.size())
 					Fail("%s is no integral number.", Token.c_str());
 				ExprValue.Type = V_INT;
-			} else
-			{	// float number
-				size_t len;
-				if (sscanf(Token.c_str(), "%lf%zn", &ExprValue.fValue, &len) != 1 || len != Token.size())
-					Fail("%s is no real number.", Token.c_str());
-				ExprValue.Type = V_FLOAT;
 			}
 			break;
 		}
@@ -526,7 +526,7 @@ void Parser::addIf(int cond)
 }
 
 void Parser::addPUp(int mode)
-{	rPUp pup; pup.Mode = mode;
+{	rPUp pup { (uint8_t)mode };
 	// Operator context => apply immediately
 	if (InstCtx & IC_OP)
 		return applyPackUnpack(pup);
