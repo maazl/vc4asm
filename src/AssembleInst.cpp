@@ -26,6 +26,31 @@
 #endif
 
 
+qpuValue AssembleInst::QPUValue(const exprValue& value)
+{	qpuValue ret;
+	switch (value.Type)
+	{default:
+		throw stringf("Value of type %s cannot be used for QPU evaluation. Only constants are allowed.", type2string(value.Type));
+
+	 case V_LDPES:
+	 case V_LDPE:
+	 case V_LDPEU:
+	 case V_INT:
+		if (value.iValue < -0x80000000LL || value.iValue > 0xffffffffU)
+			Fail("Integer constant 0x%" PRIx64 " out of range for use as QPU constant.", value.iValue);
+		ret.iValue = (int32_t)value.iValue;
+		break;
+
+	 case V_FLOAT:
+		if (fabs(value.fValue) > FLT_MAX && !::isinf(value.fValue))
+		{	Msg(WARNING, "Floating point constant %f does not fit into 32 bit float.", value.fValue);
+			ret.fValue = value.fValue > 0 ? INFINITY : -INFINITY;
+		} else
+			ret.fValue = (float)value.fValue;
+	}
+	return ret;
+}
+
 void AssembleInst::setMux(mux val)
 {
 	switch (+InstCtx & (IC_MUL|IC_SRC))
@@ -590,7 +615,7 @@ bool AssembleInst::applyMOVsrc(exprValue src)
 
 	 case V_INT:
 	 case V_FLOAT:
-		value = src;
+		value = QPUValue(src);
 		// try small immediate first
 		if ( Sig != S_LDI && (InstCtx & IC_BOTH) != IC_BOTH
 			&& trySmallImmd(value.uValue))
@@ -637,14 +662,14 @@ void AssembleInst::applyLDIsrc(exprValue src, ldmode mode)
 		if (mode != L_PEU)
 			mode = L_PES;
 	 ldpe_cont:
-		value = src;
+		value = QPUValue(src);
 		break;
 
 	 case V_FLOAT:
 		if (mode & L_PEU)
 			Fail("Cannot load float value per element.");
 	 case V_INT:
-		value = src;
+		value = QPUValue(src);
 		if (mode & 0x80) // Acquire flag
 			value.uValue |= 0x10;
 		else if ((mode & L_SEMA) && (value.uValue & 0x10))
@@ -692,7 +717,7 @@ void AssembleInst::applyREADsrc(exprValue src)
 		break;
 	 case V_INT:
 	 case V_FLOAT:
-		qpuValue value; value = src;
+		qpuValue value = QPUValue(src);
 		uint8_t si = AsSMIValue(value);
 		if (si == 0xff)
 			Fail("Value 0x%" PRIx32 " does not fit into the small immediate field.", value.uValue);
@@ -733,7 +758,7 @@ bool AssembleInst::applyBranchSource(exprValue val, unsigned pc)
 			Fail("Cannot specify two immediate values as branch target.");
 		if (!val.iValue)
 			break;
-		Immd = val;
+		Immd = QPUValue(val);
 		if (Immd.uValue & 3)
 			Msg(WARNING, "A branch target without 32 bit alignment probably does not hit the nail on the head.");
 		break;

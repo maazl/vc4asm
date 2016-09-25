@@ -16,30 +16,6 @@
 #include <cinttypes>
 
 
-qpuValue& qpuValue::operator=(const exprValue& value)
-{
-	switch (value.Type)
-	{default:
-		throw stringf("Value of type %s cannot be used for QPU evaluation. Only constants are allowed.", type2string(value.Type));
-
-	 case V_LDPES:
-	 case V_LDPE:
-	 case V_LDPEU:
-	 case V_INT:
-		if (value.iValue < -0x80000000LL || value.iValue > 0xffffffffU)
-			throw stringf("Integer constant 0x%" PRIx64 " out of range for use as QPU constant.", value.iValue);
-		iValue = (int32_t)value.iValue;
-		break;
-
-	 case V_FLOAT:
-		if (fabs(value.fValue) > FLT_MAX && !::isinf(value.fValue))
-			throw stringf("Floating point constant %f does not fit into 32 bit float.", value.fValue);
-		fValue = (float)value.fValue;
-	}
-	return *this;
-}
-
-
 static inline void adds(uint8_t& l, uint8_t r)
 {	l = (uint8_t)min(255, (l+r));
 }

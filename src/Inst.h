@@ -11,8 +11,6 @@
 #include <cstdint>
 using namespace std;
 
-struct exprValue;
-
 struct qpuValue
 {	union
 	{	uint32_t  uValue;   ///< Value as unsigned integer
@@ -20,9 +18,6 @@ struct qpuValue
 		float     fValue;   ///< Value as 32 bit float
 		uint8_t   cValue[4];///< Value as 4 separate bytes @remarks The endianess does not count here.
 	};
-	/// Assign from expression value if possible.
-	/// @exception std::string Error during conversion.
-	qpuValue& operator=(const exprValue& value);
 };
 
 /// Worker class to assemble or disassemble QPU instruction words.

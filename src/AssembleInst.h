@@ -187,6 +187,9 @@ class AssembleInst : private Inst
 	/// @param fmt printf like format string.
 	virtual void     Msg(severity level, const char* fmt, ...) PRINTFATTR(3) = 0;
 
+	/// Fetch QPU value from vc4asm expression.
+	/// @exception Message Failed, error message.
+	qpuValue         QPUValue(const exprValue& value);
 	/// @brief Find the first potential match for an ALU instruction that can assign an immediate value using small immediates.
 	/// @details The function does not only seek for an exactly match small immediate value but also for small immediate values
 	/// that	can be transformed to the wanted value by applying an ADD or MUL ALU instruction to it.
