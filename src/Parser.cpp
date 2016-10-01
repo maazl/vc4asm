@@ -958,23 +958,23 @@ void Parser::parseDATA(int bits)
 	}
 	// Ensure slot
 	if (!BitOffset)
+	{	Flags |= IF_BRANCH_TARGET|IF_DATA;
 		StoreInstruction(0);
+		Flags = IF_NONE;
+	}
 	// Check alignment
 	else if (!alignment && (alignment = BitOffset & (bits-1)) != 0)
 		Msg(WARNING, "Unaligned immediate data directive. %i bits missing for correct alignment.", bits - alignment);
-	// Prevent optimizer across .data segment
-	Flags |= IF_BRANCH_TARGET|IF_DATA;
 	// store value
 	uint64_t& target = Instructions[PC];
 	target |= ExprValue.iValue << BitOffset;
 	if ((BitOffset += bits) >= 64)
 	{	++PC;
-		Flags = IF_NONE;
 		// If value crosses instruction boundary => store remaining part
 		if ((BitOffset -= 64) != 0)
-		{	StoreInstruction((uint64_t)ExprValue.iValue >> (bits - BitOffset));
-			// Prevent optimizer across .data segment
-			Flags |= IF_BRANCH_TARGET|IF_DATA;
+		{	Flags |= IF_BRANCH_TARGET|IF_DATA;
+			StoreInstruction((uint64_t)ExprValue.iValue >> (bits - BitOffset));
+			Flags = IF_NONE;
 	}	}
 	switch (NextToken())
 	{default:
