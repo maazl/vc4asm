@@ -459,7 +459,7 @@ void Parser::ParseExpression()
 
 		 case NUM:
 			// parse number
-			if (Token.find('.') != string::npos || (Token.find_first_of("eE") != string::npos && (Token[1] & 0xdf) != 'x'))
+			if (Token.find('.') != string::npos || (Token.find_first_of("eE") != string::npos && (Token[1] & 0xdf) != 'X'))
 			{	// float number
 				size_t len;
 				if (sscanf(Token.c_str(), "%lf%zn", &ExprValue.fValue, &len) != 1 || len != Token.size())
