@@ -75,7 +75,7 @@ const char Disassembler::cPack[2][16][8] = {
 	".32s", ".16as", ".16bs", ".8abcds", ".8as", ".8bs", ".8cs", ".8ds"
 },
 {	"", ".pm01?", ".pm02?", ".8abcds", ".8as", ".8bs", ".8cs", ".8ds",
-	".pm08?", ".pm09?", ".pm10?", ".pm11?", ".pm12?", ".pm13?", ".pm14?", ".pm15?"
+	".pm08?", ".pm09?", ".pm10?", ".8abcds", ".8as", ".8bs", ".8cs", ".8ds"
 } };
 
 const char Disassembler::cUnpack[8][5] =

@@ -302,7 +302,7 @@ uint64_t Inst::encode() const
 				( S_LDI  << 28
 				| LdMode << 25
 				| PM     << 24
-				| (Pack & 15) << 20
+				| (Pack & (15 >> PM)) << 20
 				| CondA  << 17
 				| CondM  << 14
 				| SF     << 13
