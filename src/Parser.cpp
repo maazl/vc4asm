@@ -635,7 +635,7 @@ void Parser::assembleADD(int add_op)
 
 	doALUTarget();
 
-	InstCtx ^= args == 1 ? IC_DST|IC_SRC : IC_DST|IC_SRCA;
+	InstCtx = args == 1 ? IC_ADD|IC_SRC : IC_ADD|IC_SRCA;
 	doALUExpr();
 	if (args == 2)
 	{	InstCtx ^= IC_SRC;
@@ -1544,6 +1544,7 @@ void Parser::doFUNCMACRO(macros_t::const_iterator m)
 	if (NextToken() != BRACE1)
 		Fail("Expected '(' after function name.");
 
+	auto oldctx = InstCtx;
 	InstCtx = IC_XP;
 	// Fetch macro arguments
 	const auto& argnames = m->second.Args;
@@ -1572,6 +1573,7 @@ void Parser::doFUNCMACRO(macros_t::const_iterator m)
 			goto next;
 		}
 	}
+	InstCtx = oldctx; // restore context
 
 	// Setup invocation context
 	saveLineContext ctx(*this, new fileContext(CTX_MACRO, m->second.Definition.File, m->second.Definition.Line));
@@ -1627,6 +1629,7 @@ void Parser::doFUNC(funcs_t::const_iterator f)
 	if (NextToken() != BRACE1)
 		Fail("Expected '(' after function name.");
 
+	auto oldctx = InstCtx;
 	InstCtx = IC_XP;
 	// Fetch macro arguments
 	const auto& argnames = f->second.Args;
@@ -1655,6 +1658,7 @@ void Parser::doFUNC(funcs_t::const_iterator f)
 			goto next;
 		}
 	}
+	InstCtx = oldctx;
 
 	// Setup invocation context
 	saveLineContext ctx(*this, new fileContext(CTX_FUNCTION, f->second.Definition.File, f->second.Definition.Line));
