@@ -213,6 +213,9 @@ class Eval
 	/// But the function is smart enough to convert the binary operators ADD/SUB to NOP/NEG
 	/// if no value is on the stack. So the parser need not to distinguish between unary and binary +/-.
 	/// You can just pass the code for the binary operators only. (But not the other way around.)
+	/// @return - true: evaluation done
+	/// - false: Operator was a closing brace but it does not belong to the current expression because of no matching opening brace.
+	/// This happens when parsing the last argument to a function.
 	/// @exception Fail Something went wrong, error message.
 	/// It is up to the parser to enrich this message with the source code location.
 	/// @details The function implicitly evaluates all operators with lower or same precedence
@@ -239,6 +242,10 @@ class Eval
 	/// @exception Fail Something went wrong, error message.
 	/// It is up to the parser to enrich this message with the source code location.
 	exprValue   Evaluate();
+	/// Access the current expression value.
+	/// @pre no pending operator should be on the stack.
+	/// @return Current expression value. May be modified.
+	exprValue&  PeekExpression() { return Stack.back(); }
  public:
 	/// Human readable string for an operator.
 	static const char* op2string(mathOp op);

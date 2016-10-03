@@ -451,6 +451,12 @@ void Parser::ParseExpression()
 					Fail("Invalid operator: %s", Token.c_str());
 				if (!eval.PushOperator(op->Op))
 					goto discard;
+				ToNextChar();
+				if (*At == '.')
+				{	ExprValue = eval.PeekExpression();
+					doInstrExt();
+					eval.PeekExpression() = ExprValue;
+				}
 				goto next;
 			}
 		 case SQBRC1: // per QPU element constant
