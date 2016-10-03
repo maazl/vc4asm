@@ -536,7 +536,7 @@ void AssembleInst::applyALUSource(exprValue val)
 		break;
 	 case V_FLOAT:
 	 case V_INT:
-		qpuValue value; value = val;
+		qpuValue value = QPUValue(val);
 		// some special hacks for ADD ALU
 		if (InstCtx == (IC_SRCB|IC_ADD))
 		{	switch (OpA)
