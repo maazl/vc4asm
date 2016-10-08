@@ -327,14 +327,14 @@ uint64_t Inst::encode() const
 void Inst::decode(uint64_t code)
 {	uint32_t i = (uint32_t)(code >> 32);
 	Sig    = (sig)(i >> 28);
-	Unpack = (unpack)(i >> 25 & 0x7);
 	PM     = !!(i & 1U<<24);
 	SF     = !!(i & 1U<<13);
 	WS     = !!(i & 1U<<12);
 	WAddrA = (uint8_t)(i >> 6 & 0x3f);
 	WAddrM = (uint8_t)(i >> 0 & 0x3f);
 	if (Sig == S_BRANCH)
-	{	CondBr = (condb)(i >> 20 & 0xf);
+	{	Unpack = (unpack)(i >> 25 & 0x7);
+		CondBr = (condb)(i >> 20 & 0xf);
 		Rel    = !!(i & 1U<<19);
 		Reg    = !!(i & 1U<<18);
 		RAddrA = (uint8_t)(i >> 13 & 0x1f);
@@ -345,10 +345,12 @@ void Inst::decode(uint64_t code)
 		CondM  = (conda)(i >> 14 & 0x7);
 		if (Sig == S_LDI)
 		{	Immd.uValue = (uint32_t)(code);
+			LdMode = (ldmode)(i >> 25 & 7);
 			if (Pack && !PM)
 				(uint8_t&)Pack |= P_INT;
 		} else
-		{	i = (uint32_t)code;
+		{	Unpack = (unpack)(i >> 25 & 0x7);
+			i = (uint32_t)code;
 			OpM    = (opmul)(i >> 29 & 0x7);
 			OpA    = (opadd)(i >> 24 & 0x1f);
 			RAddrA = (uint8_t)(i >> 18 & 0x3f);
@@ -363,7 +365,7 @@ void Inst::decode(uint64_t code)
 		if (PM && (Pack ^ 8) >= 0xb)
 			(uint8_t&)Pack |= P_32S|P_FLT;
 	}
-	if (Unpack && Unpack != U_8dr)
+	if (Sig != S_LDI && Unpack && Unpack != U_8dr)
 		(uint8_t&)Unpack |= PM || isFloatRA() ? U_FLT : U_INT;
 }
 
