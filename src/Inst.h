@@ -294,6 +294,9 @@ struct Inst
 	/// @return true for r0 to r3.
 	static bool isAccu(mux m) { return m <= X_R3; }
 
+	/// Check if current instruction is an ALU instruction, i.e. neither ldi nor branch.
+	/// @return Sig < S_LDI
+	bool       isALU() const { return Sig < S_LDI; }
 	/// Check whether ADD ALU is in use
 	/// @pre Sig < S_LDI
 	bool       isADD() const { return WAddrA != R_NOP || OpA != Inst::A_NOP; }

@@ -641,7 +641,7 @@ void Parser::assembleADD(int add_op)
 
 	doALUTarget();
 
-	InstCtx = args == 1 ? IC_ADD|IC_SRC : IC_ADD|IC_SRCA;
+	InstCtx ^= IC_DST|IC_SRCA;
 	doALUExpr();
 	if (args == 2)
 	{	InstCtx ^= IC_SRC;

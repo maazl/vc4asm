@@ -430,9 +430,7 @@ void AssembleInst::applyCond(condb cond)
 }
 
 int AssembleInst::applyADD(opadd add_op)
-{	InstCtx = IC_OP|IC_ADD;
-
-	if (Sig >= S_LDI)
+{	if (!isALU())
 		Fail("Cannot use ADD ALU in load immediate or branch instruction.");
 	if (isADD())
 	{	if (isMUL())
@@ -453,15 +451,14 @@ int AssembleInst::applyADD(opadd add_op)
 	}
 	(uint8_t&)add_op &= 0x1f;
 	OpA = add_op;
+	InstCtx = IC_OP|IC_ADD;
 	doInitOP();
 
 	return add_op == A_NOP ? 0 : 1 + !isUnary();
 }
 
 int AssembleInst::applyMUL(opmul mul_op)
-{	InstCtx = IC_OP|IC_MUL;
-
-	if (Sig >= S_LDI)
+{	if (!isALU())
 		Fail("Cannot use MUL ALU in load immediate or branch instruction.");
 	if (isMUL())
 	{	if (isADD())
@@ -482,6 +479,7 @@ int AssembleInst::applyMUL(opmul mul_op)
 	}
 	(uint8_t&)mul_op &= 7;
 	OpM = mul_op;
+	InstCtx = IC_OP|IC_MUL;
 	doInitOP();
 
 	return 2 * (mul_op != M_NOP);
