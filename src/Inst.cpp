@@ -416,33 +416,3 @@ float Inst::fromFloat16(unsigned value)
 		| (((int)value << 17 >> 4) & 0x7fffffff); // expand sign of exponent
 	return *(float*)&ret;
 }
-
-int Inst::calcPM(pack mode)
-{	// valid modes: I = int source, F = float source, A = regfile A pack, M = MUL ALU pack
-	// 32 bit : IA, IM, FA, FM
-	// 16 bit : IA,     FA
-	// 8 bit  : IA,         FM
-	// 8 bitR : IA,         FM  (replicate bytes)
-	uint8_t raw = mode & 15;
-	if (raw == 0)
-		return -1;
-	if ((mode & P_INT) || raw == 8 || (raw & 7) < 3)
-		return 0; // regfile A pack only
-	if (mode & P_FLT)
-		return 1; // MUL ALU pack only
-	return -1;
-}
-
-int Inst::calcPM(unpack mode)
-{	// valid modes: I = int result, F = float result, A = regfile A unpack, 4 = r4 unpack
-	// 32 bit : IA, I4, FA, F4
-	// 16 bit : IA,     FA, F4
-	// 8 bit  : IA,     FA, F4
-	// 8 bitR : IA, I4         (replicate alpha byte)
-	int raw = mode & 7;
-	if (raw == 0 || raw == 3)
-		return -1;
-	if (mode & U_INT)
-		return 0;
-	return -1;
-}

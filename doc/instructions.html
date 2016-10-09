@@ -2,17 +2,18 @@
 <html lang="en">
   <head>
     <meta content="text/html; charset=iso-8859-15" http-equiv="content-type">
-    <title>VC4ASM Instructions</title>
+    <title>VC4ASM Assembler instructions</title>
     <meta content="Marcel M&uuml;ller" name="author">
-    <meta content="Raspberry Pi BCM2835 QPU macro assembler" name="keywords">
+    <meta content="Raspberry Pi BCM2835 BCM2836 QPU macro assembler" name="keywords">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
   </head>
   <body>
     <h1>VC4ASM - Assembler instructions</h1>
-    <p><a href="index.html">&uarr; Top</a>, <a href="#ALU">ALU</a>,&nbsp;<tt><a
-          href="#mov">mov</a></tt>, <tt><a href="#ldi">ldi</a></tt>, <tt><a href="#read">read</a></tt>,
-      <a href="#ifcc">Conditional assign</a>, <a href="#sema">Semaphore</a>, <a
-        href="#bra">Branch</a>, <a href="#sig">Signal</a></p>
+    <p><a href="index.html">&uarr; Top</a>, <a href="#ALU">ALU</a>, <tt><a href="#mov">mov</a></tt>,
+      <tt><a href="#ldi">ldi</a></tt>, <tt><a href="#nop">nop</a></tt>, <tt><a
+          href="#read">read</a></tt>, <a href="#sema">Semaphore</a>, <a href="#bra">Branch</a>,
+      <a href="#sig">Signal</a>, <a href="extensions.html#ifcc">Conditional
+        assignment</a>, <a href="extensions.html#pack">Pack/unpack</a></p>
     <h2>General rules</h2>
     <ul>
       <li>Each line of code with QPU assembler instructions generates exactly
@@ -28,8 +29,10 @@
         the ADD ALU as used and place the second ALU instruction to the MUL ALU.</li>
       <li>Operands are delimited by <tt>,</tt> (comma), destination operands
         first.</li>
+      <li><a href="extensions.html">Instruction extensions</a> can be applied to
+        the opcode delimited by a <tt>.</tt> (dot). Some of the extensions can
+        also be applied to the source or destination operands.</li>
     </ul>
-    <h2>Optimizations</h2>
     <h3>Instruction joining</h3>
     <p>A trailing <tt>;</tt> indicates that the assembler my try to merge the
       current instruction with the next one if next instruction is preceded with
@@ -45,8 +48,9 @@
       instruction joining over this point. Ordinary labels will do the same.</p>
     <ul>
     </ul>
-    <h2><a id="ALU" name="ADD"></a>ADD ALU instruction</h2>
-    <pre><var>binaryopcode destination, source1, source2</var><br><var>unaryopcode destination, source1<br>opcode</var>.setf ...</pre>
+    <h2><a id="ALU" name="ADD"></a>ALU instruction</h2>
+    <pre><var>binaryopcode destination, source1, source2</var><br><var>unaryopcode destination, source1<br>opcode</var>.<a
+href="extensions.html#setf">setf</a> ...<br><var>opcode</var>.<a href="extensions.html#ifcc">if<var>cc</var></a> ...</pre>
     <dl>
       <dt><var><tt>binaryopcode, unaryopcode</tt></var></dt>
       <dd>ALU opcode, see below.</dd>
@@ -56,7 +60,7 @@
       <dd>Source <a href="expressions.html#register">register</a> or <a href="expressions.html#SMI">small
           immediate value</a>.</dd>
     </dl>
-    <h3>Opcodes</h3>
+    <h3><a id="opcodes" name="opcodes"></a>Opcodes</h3>
     <dl>
     </dl>
     <dl>
@@ -65,100 +69,80 @@
           <tr>
             <th rowspan="2">op<wbr>code</th>
             <th>source1</th>
-            <th>source2<br>
-            </th>
-            <th colspan="2" rowspan="1">destination<br>
-            </th>
-            <th colspan="3" rowspan="1">flags<br>
-            </th>
+            <th>source2</th>
+            <th colspan="2">destination</th>
+            <th colspan="3">flags (if <tt>.setf</tt> is used)</th>
           </tr>
           <tr>
-            <th>type<br>
-            </th>
-            <th>type<br>
-            </th>
-            <th>type<br>
-            </th>
-            <th>value<br>
-            </th>
-            <th>Z<br>
-            </th>
+            <th>type</th>
+            <th>type</th>
+            <th>type</th>
+            <th>value</th>
+            <th>Z</th>
             <th>N</th>
             <th>C</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td class="th"><tt>add</tt> </td>
+            <td class="th"><tt>add</tt></td>
             <td><tt>uint32</tt></td>
             <td><tt>uint32</tt></td>
             <td><tt>uint32</tt></td>
-            <td><tt>source1 + source2</tt> </td>
-            <td><tt>destination == 0</tt> </td>
-            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
-            <td><tt>source1 + source2 &gt; 0xffffffff</tt> </td>
-          </tr>
-          <tr>
-            <td class="th"><tt>sub</tt> </td>
-            <td><tt>uint32</tt></td>
-            <td><tt>uint32</tt></td>
-            <td><tt>uint32</tt></td>
-            <td><tt>source1 - source2</tt> </td>
-            <td><tt>destination == 0</tt> </td>
+            <td><tt>source1 + source2</tt></td>
+            <td><tt>destination == 0</tt></td>
             <td><tt>destination &gt;&gt;&gt; 31</tt></td>
-            <td><tt>source1 &lt; source2</tt> </td>
+            <td><tt>source1 + source2 &gt; 0xffffffff</tt></td>
           </tr>
           <tr>
-            <td class="th"><tt>min</tt> </td>
-            <td><tt>int32
-              </tt> </td>
-            <td><tt>int32
-              </tt> </td>
-            <td><tt>int32
-              </tt> </td>
-            <td><tt>source1 &gt; source2 ? source2 : source1</tt> </td>
-            <td><tt>destination == 0</tt> </td>
-            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
-            <td><tt>source1 &gt; source2</tt> </td>
+            <td class="th"><tt>sub</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>source1 - source2</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>source1 &lt; source2</tt></td>
           </tr>
           <tr>
-            <td class="th"><tt>max</tt> </td>
-            <td><tt>int32
-              </tt> </td>
-            <td><tt>int32
-              </tt> </td>
-            <td><tt>int32
-              </tt> </td>
-            <td><tt>source1 &gt; source2 ? source1 : source2</tt> </td>
-            <td><tt>destination == 0</tt> </td>
-            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
-            <td><tt>source1 &gt; source2</tt> </td>
+            <td class="th"><tt>min</tt></td>
+            <td><tt>int32</tt></td>
+            <td><tt>int32</tt></td>
+            <td><tt>int32</tt></td>
+            <td><tt>source1 &gt; source2 ? source2 : source1</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>source1 &gt; source2</tt></td>
           </tr>
           <tr>
-            <td class="th"><tt>and</tt> </td>
-            <td><tt>uint32
-              </tt> </td>
-            <td><tt>uint32
-              </tt> </td>
-            <td><tt>uint32
-              </tt> </td>
-            <td><tt>source1 &amp; source2</tt> </td>
-            <td><tt>destination == 0</tt> </td>
-            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
-            <td><tt>0</tt> </td>
+            <td class="th"><tt>max</tt></td>
+            <td><tt>int32</tt></td>
+            <td><tt>int32</tt></td>
+            <td><tt>int32</tt></td>
+            <td><tt>source1 &gt; source2 ? source1 : source2</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>source1 &gt; source2</tt></td>
           </tr>
           <tr>
-            <td class="th"><tt>or</tt> </td>
-            <td><tt>uint32
-              </tt> </td>
-            <td><tt>uint32
-              </tt> </td>
-            <td><tt>uint32
-              </tt> </td>
-            <td><tt>source1 | source2</tt> </td>
-            <td><tt>destination == 0</tt> </td>
-            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
-            <td><tt>0</tt> </td>
+            <td class="th"><tt>and</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>source1 &amp; source2</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
+          </tr>
+          <tr>
+            <td class="th"><tt>or</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>uint32</tt></td>
+            <td><tt>source1 | source2</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
           </tr>
           <tr>
             <td class="th"><tt>xor</tt></td>
@@ -212,26 +196,26 @@
           </tr>
           <tr>
             <td class="th"><tt>not </tt></td>
-            <td><tt>uint32 </tt></td>
-            <td><tt>uint32 </tt></td>
-            <td><tt> </tt><br>
+            <td><tt>uint32</tt></td>
+            <td><br>
             </td>
-            <td><tt>~source1</tt> </td>
-            <td><tt>destination == 0</tt> </td>
-            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
-            <td><tt>0</tt> </td>
+            <td><tt>uint32</tt> </td>
+            <td><tt>~source1</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
           </tr>
           <tr>
             <td class="th"><tt>clz </tt></td>
-            <td><tt>uint32 </tt></td>
-            <td><tt>uint32 </tt></td>
-            <td><tt> </tt><br>
+            <td><tt>uint32</tt></td>
+            <td><br>
             </td>
-            <td><tt>32 - floor(log&#8322;(source1))</tt> </td>
-            <td><tt>destination == 0</tt> </td>
+            <td><tt>uint32</tt> </td>
+            <td><tt>32 - floor(log&#8322;(source1))</tt></td>
+            <td><tt>destination == 0</tt></td>
             <td><tt>0</tt><br>
             </td>
-            <td><tt>0</tt> </td>
+            <td><tt>0</tt></td>
           </tr>
           <tr>
             <td class="th"><tt>mul24</tt></td>
@@ -239,7 +223,7 @@
             <td><tt>uint24</tt></td>
             <td><tt>uint32</tt></td>
             <td><tt>source1 * source2</tt></td>
-            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination == 0</tt></td>
             <td><tt>destination &gt;&gt;&gt; 31</tt></td>
             <td><tt>source1 * source2 &gt; 0xffffff</tt></td>
           </tr>
@@ -251,7 +235,7 @@
             <td><tt>source1 + source2</tt></td>
             <td><tt>destination == 0</tt></td>
             <td><tt>destination &gt;&gt;&gt; 31</tt></td>
-            <td><tt>destination &gt; 0</tt> (incl. <tt>+NaN</tt>)<tt> </tt></td>
+            <td><tt>destination &gt; 0</tt> (incl. <tt>+NaN</tt>)</td>
           </tr>
           <tr>
             <td class="th"><tt>fsub</tt></td>
@@ -261,7 +245,7 @@
             <td><tt>source1 - source2</tt></td>
             <td><tt>destination == 0</tt></td>
             <td><tt>destination &gt;&gt;&gt; 31</tt></td>
-            <td><tt>destination &gt; 0</tt> (incl. <tt>+NaN</tt>)<tt> </tt></td>
+            <td><tt>destination &gt; 0</tt> (incl. <tt>+NaN</tt>)</td>
           </tr>
           <tr>
             <td class="th"><tt>fmin</tt></td>
@@ -284,10 +268,10 @@
             <td><tt>source1 &gt; source2</tt></td>
           </tr>
           <tr>
-            <td class="th"><tt>fminabs </tt></td>
+            <td class="th"><tt>fminabs</tt></td>
+            <td><tt>float32</tt></td>
             <td><tt>float32 </tt></td>
-            <td><tt>float32 </tt></td>
-            <td><tt>float32 </tt></td>
+            <td><tt>float32</tt></td>
             <td><tt>abs(source1) &gt; abs(source2) ? abs(source2) : abs(source1)</tt></td>
             <td><tt>destination == 0</tt></td>
             <td><tt>destination &gt;&gt;&gt; 31</tt></td>
@@ -295,9 +279,9 @@
           </tr>
           <tr>
             <td class="th"><tt>fmaxabs </tt></td>
-            <td><tt>float32 </tt></td>
-            <td><tt>float32 </tt></td>
-            <td><tt>float32 </tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
+            <td><tt>float32</tt></td>
             <td><tt>abs(source1) &gt; abs(source2) ? abs(source1) : abs(source2)</tt></td>
             <td><tt>destination == 0</tt></td>
             <td><tt>destination &gt;&gt;&gt; 31</tt></td>
@@ -314,47 +298,46 @@
             <td><tt>0</tt></td>
           </tr>
           <tr>
-            <td class="th"><tt>itof</tt> </td>
+            <td class="th"><tt>itof</tt></td>
             <td><tt>int32 </tt></td>
-            <td><tt>float32 </tt></td>
-            <td><tt> </tt><br>
+            <td><br>
             </td>
-            <td><tt>source1</tt> </td>
-            <td><tt>destination == 0</tt> </td>
-            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
-            <td><tt>0</tt> </td>
+            <td><tt><tt>float32</tt></tt></td>
+            <td><tt>source1</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
           </tr>
           <tr>
-            <td class="th"><tt>ftoi</tt> </td>
-            <td><tt>float32 </tt></td>
-            <td><tt>int32 </tt></td>
-            <td><tt> </tt><br>
+            <td class="th"><tt>ftoi</tt></td>
+            <td><tt>float32</tt></td>
+            <td><br>
             </td>
-            <td><tt>source1</tt> </td>
-            <td><tt>destination == 0</tt> </td>
-            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
-            <td><tt>0</tt> </td>
+            <td><tt><tt>int32</tt></tt></td>
+            <td><tt>source1</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
           </tr>
           <tr>
-            <td class="th"><tt>v8adds</tt> </td>
-            <td><tt>uint8[4] </tt></td>
+            <td class="th"><tt>v8adds</tt></td>
             <td><tt>uint8[4]</tt></td>
             <td><tt>uint8[4]</tt></td>
-            <td><tt>min(source1[] + source2[], 255)</tt><br>
-            </td>
-            <td><tt>destination == 0</tt> </td>
-            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
-            <td><tt>0</tt> </td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>min(source1[] + source2[], 255)</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
           </tr>
           <tr>
-            <td class="th"><tt>v8subs</tt> </td>
-            <td><tt>uint8[4] </tt></td>
-            <td><tt><tt>uint8[4]</tt> </tt></td>
+            <td class="th"><tt>v8subs</tt></td>
             <td><tt>uint8[4]</tt></td>
-            <td><tt>max(min(source1[] - source2[], 255), 0)</tt> </td>
-            <td><tt>destination == 0</tt> </td>
-            <td><tt>destination &gt;&gt;&gt; 31</tt> </td>
-            <td><tt>0</tt> </td>
+            <td><tt><tt>uint8[4]</tt></tt></td>
+            <td><tt>uint8[4]</tt></td>
+            <td><tt>max(min(source1[] - source2[], 255), 0)</tt></td>
+            <td><tt>destination == 0</tt></td>
+            <td><tt>destination &gt;&gt;&gt; 31</tt></td>
+            <td><tt>0</tt></td>
           </tr>
           <tr>
             <td class="th"><tt>v8min</tt></td>
@@ -362,7 +345,7 @@
             <td><tt>uint8[4]</tt></td>
             <td><tt>uint8[4]</tt></td>
             <td><tt>min(source1[], source2[])</tt></td>
-            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination == 0</tt></td>
             <td><tt>destination &gt;&gt;&gt; 31</tt></td>
             <td><tt>0</tt></td>
           </tr>
@@ -372,7 +355,7 @@
             <td><tt>uint8[4]</tt></td>
             <td><tt>uint8[4]</tt></td>
             <td><tt>max(source1[], source2[])</tt></td>
-            <td><tt>destination == 0</tt> </td>
+            <td><tt>destination == 0</tt></td>
             <td><tt>destination &gt;&gt;&gt; 31</tt></td>
             <td><tt>0</tt></td>
           </tr>
@@ -394,7 +377,8 @@
     <dl>
     </dl>
     <h2><a id="mov" name="mov"></a>Move instruction</h2>
-    <pre>mov <var>destination, source</var><var></var><br>mov <var><var>destination,</var> register</var> &lt;&lt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; r5<br>mov <var>destination1, destination2, source</var><var></var><br>mov.setf ...</pre>
+    <pre>mov <var>destination, source</var><br>mov <var>destination, register</var> &lt;&lt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; r5<br>mov <var>destination1, destination2, source</var><br>mov.<a
+href="extensions.html#setf">setf</a> ...<br>mov.<a href="extensions.html#ifcc">if<var>cc</var></a> ...</pre>
     <dl>
       <dt><var><tt>destination</tt></var></dt>
       <dd>Target <a href="expressions.html#register">register(s)</a>.</dd>
@@ -407,15 +391,17 @@
       <dt><tt><var>rotate</var></tt></dt>
       <dd>Optional rotation of the value.</dd>
     </dl>
-    <p>Strictly speaking <tt>mov</tt> is no QPU instruction at all. It is
-      simply a convenient way to create a identity ALU instruction like <tt>or</tt>
-      with two identical source arguments or a <a href="#ldi">load immediate
+    <p>Strictly speaking <tt>mov</tt> is no QPU instruction. It is simply a
+      convenient way to create a identity ALU instruction like <tt>or</tt> with
+      two identical source arguments or an <a href="#ldi"><tt>ldi</tt>
         instruction</a>, whatever fits best.</p>
     <p>If <b><var><tt>source</tt></var> is a register</b>, the assembler
       preferably uses the ADD ALU to realize the movement. If either the ADD ALU
       is already used by the current instruction or a rotate operation is
-      requested it uses the MUL ALU. The op-code is <tt>or</tt> in case of the
-      ADD ALU and <tt>v8min</tt> for the MUL ALU.</p>
+      requested it uses the MUL ALU. The op-code <tt>or</tt> is used in case of
+      the ADD ALU and <tt>v8min</tt> for the MUL ALU. Except when 16 bit
+      floating point unpack is requested, in this case the instruction <tt>fmin</tt>
+      is used.</p>
     <p>If <b><var><tt>source</tt></var> fits into a small immediate value</b>
       then the assembler prefers this over load immediate. The assembler is
       quite smart when using small immediate. E.g. the immediate value 64 which
@@ -423,22 +409,28 @@
       the MUL ALU with instruction <tt>mul24</tt>. Again the ADD ALU is
       preferred when available. But some hacks like the example before require
       the MUL ALU, but the same value could be constructed by the ADD ALU from
-      the value 4 with the <tt>shl</tt> instruction. See the <a href="smallimmediate.html">small
-        immediate table</a> for a list of supported values. The value 0 can be
-      assigned without the use of a small immediate value by any ALU using <tt>xor</tt>
-      or <tt>v8subs</tt> with any identical source.<br>
-      If neither the second ALU nor signalling flags are used then the
-      instruction is converted back to <tt>ldi</tt> to save ALU power.</p>
+      the value 4 with the <tt>shl</tt> instruction. Even some pack modes are
+      considered to achieve the desired constant. See the <a href="smallimmediate.html">small
+        immediate table</a> for a list of supported values. The value <tt>0</tt>
+      can be assigned without the use of a small immediate value by any ALU
+      using <tt>xor</tt> or <tt>v8subs</tt> with an identical source.<br>
+      Be aware that the carry flag is not well defined in case <tt>.setf</tt>
+      is used because of the free choice of the opcode.</p>
+    <p>If neither the second ALU nor signalling flags are used at the end then
+      the instruction is converted back to <tt>ldi</tt> to save ALU power.</p>
     <p>If <b><var><tt>source</tt></var> does not fit into a small immediate</b>
       than a <a href="#ldi"><tt>ldi</tt></a> instruction is generated.</p>
     <p>With some restrictions you can handle <b>two move instructions in a
         single cycle</b>. E.g. if both sources are registers or if one source is
       from register file A and the other source fits into a small immediate
-      value of if both sources can be created from the same immediate value.</p>
+      value of if both sources can be created from the same small immediate
+      value.</p>
     <h3>Examples</h3>
     <pre>mov ra29, 16<br>mov r3, rb4 &lt;&lt; 2;  mov r2, ra11 # Uses the MUL ALU for the first move (because of the vector rotation) and the ADD ALU for the second one.<br>mov r0, 0x8000000; mov tmurs, 1 # Uses small immediate value 1 with ror r0, 1, 1 to create the 0x80000000.</pre>
     <h2><a id="ldi" name="ldi"></a>Load immediate</h2>
-    <pre>ldi <var>destination, constant</var><br>ldi <var>destination1, destination2, constant</var></pre>
+    <pre>ldi <var>destination, constant</var><br>ldi <var>destination1, destination2, constant</var><br>ldi.<a
+href="extensions.html#setf">setf</a> ...<br>ldi.<a href="extensions.html#ifcc">if<var>cc</var></a> ...
+<var></var></pre>
     <dl>
       <dt><var><tt>destination</tt></var></dt>
       <dd>Target <a href="expressions.html#register">register</a>.</dd>
@@ -451,6 +443,22 @@
     ALU output.<br>
     <h3>Example</h3>
     <pre>ldi ra7, 0xffff0000</pre>
+    <h2><a id="nop" name="nop"></a>No operation</h2>
+    <pre>nop<br>anop<br>mnop<br>mnop <var>destination</var><var></var></pre>
+    <dl>
+      <dt><var><tt>destination</tt></var></dt>
+      <dd>Target <a href="expressions.html#register">register</a>.</dd>
+    </dl>
+    <p>
+      <tt>nop</tt> does nothing, well not really. At least it reserves an
+      instruction word that causes a delay. This could be required to meet some
+      instruction constraints.<br>
+      The variants <tt>anop</tt> and <tt>mnop</tt> explicitly schedule to the
+      ADD ALU or MUL ALU respectively. Otherwise vc4asm would take whatever ALU
+      is available.</p>
+    <p>vc4asm allows the <tt>nop</tt> instructions to have a target. This can
+      be used to access <a href="VideoCoreIV-addendum.html#mnop">previous ALU
+        results again</a>.</p>
     <h2><a id="read" name="read"></a>Read pseudo instruction</h2>
     <pre><tt>read <var>source</var></tt></pre>
     <dl>
@@ -458,7 +466,7 @@
       <dd>Source register. This must be from register file A or B including
         peripherals or a small immediate value. </dd>
     </dl>
-    <p><tt>read</tt> is no real instruction of the GPU. It is just an extension
+    <p><tt>read</tt> is also no instruction of the QPU. It is just an extension
       of vc4asm to create a register file A or B access without allocation of an
       ALU instruction. Semantically it is identical to <tt>mov -, <var>source</var></tt>,
       but it will <i>not</i> crate any opcode to one of the ALUs. Instead only
@@ -495,241 +503,6 @@
           accumulator or even one of the ALUs of the previous instruction.</p>
       </dd>
     </dl>
-    <h2><a id="ifcc" name="ifcc"></a>Conditional assignment</h2>
-    <p>All ALU instructions and load immediate can use conditional assignment
-      for the destination operand. The condition code can be applied to the
-      opcode as well as to the destination operand.</p>
-    <pre><var>opcode</var>.if<var>cc destination, ...
-</var><var><var>opcode</var><var> destination.cc, ...</var></var><var><var></var></var></pre>
-    <dl>
-      <dt><var><tt>cc</tt></var></dt>
-      <dd>Condition code.
-        <table border="1" cellpadding="2" cellspacing="0">
-          <thead>
-            <tr>
-              <th><var><tt>cc</tt></var></th>
-              <th style="text-align: center;">Flag</th>
-              <th style="text-align: center;">Value</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><tt>nz, zc</tt> </td>
-              <td style="text-align: center;">Z</td>
-              <td style="text-align: center;">0</td>
-              <td>non zero</td>
-            </tr>
-            <tr>
-              <td><tt>z, zs</tt> </td>
-              <td style="text-align: center;">Z</td>
-              <td style="text-align: center;">1</td>
-              <td>zero</td>
-            </tr>
-            <tr>
-              <td><tt>nn, nc</tt> </td>
-              <td style="text-align: center;">N</td>
-              <td style="text-align: center;">0</td>
-              <td>non negative</td>
-            </tr>
-            <tr>
-              <td><tt>n, ns</tt> </td>
-              <td style="text-align: center;">N</td>
-              <td style="text-align: center;">1</td>
-              <td>negative</td>
-            </tr>
-            <tr>
-              <td><tt>cc</tt> </td>
-              <td style="text-align: center;">C</td>
-              <td style="text-align: center;">0</td>
-              <td>carry clear</td>
-            </tr>
-            <tr>
-              <td><tt>c, cs</tt> </td>
-              <td style="text-align: center;">C</td>
-              <td style="text-align: center;">1</td>
-              <td>carry set</td>
-            </tr>
-          </tbody>
-        </table>
-      </dd>
-    </dl>
-    <h3>Example</h3>
-    <pre>mov.ifnz r0, ra7<br>mov r0.z, rb7</pre>
-    <h2><a id="pack" name="pack"></a>Pack/unpack</h2>
-    <p>All ALU instructions including <tt>mov</tt> and <tt>ldi</tt> can be
-      extended by pack/unpack operations. Be aware of the restriction that apply
-      especially to the MUL ALU.</p>
-    <pre>opcode.pack<var>xx</var> <var>destination</var>, ...<br>opcode<var></var> <var>destination</var>.<var><var>xx</var></var>, ...
-opcode.unpack<var>yy</var> <var>destination</var>, ...<br>opcode<var></var> <var>destination, source.xx</var>, ...<br>opcode<var></var> <var>destination</var>, ..., <var>source.xx</var><var></var></pre>
-    <dl>
-      <dt><var><tt>xx</tt></var></dt>
-      <dd>Destination pack mode.
-        <table border="1" cellpadding="2" cellspacing="0">
-          <tbody>
-            <tr>
-              <th colspan="1" rowspan="1"><var><tt>xx</tt></var></th>
-              <th colspan="1" rowspan="1">Source pattern</th>
-              <th colspan="1" rowspan="1">Target pattern</th>
-              <th>Comment</th>
-            </tr>
-            <tr>
-              <td><tt>32 </tt></td>
-              <td><tt>BA DC FE HG</tt></td>
-              <td><tt><tt>BA DC FE HG</tt> </tt></td>
-              <td>no pack<tt> </tt></td>
-            </tr>
-            <tr>
-              <td><tt>16a </tt></td>
-              <td><tt>BA DC __ __ </tt></td>
-              <td><tt><tt>BA DC __ __</tt> </tt></td>
-              <td>ADD ALU only</td>
-            </tr>
-            <tr>
-              <td><tt>16b </tt></td>
-              <td><tt>BA DC __ __</tt></td>
-              <td><tt>__ __ BA DC</tt></td>
-              <td>ADD ALU only</td>
-            </tr>
-            <tr>
-              <td><tt>8abcd </tt></td>
-              <td><tt>BA __ __ __ </tt></td>
-              <td><tt>BA BA BA BA </tt></td>
-              <td>replicate to all bytes</td>
-            </tr>
-            <tr>
-              <td><tt>8a </tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td>low byte<br>
-              </td>
-            </tr>
-            <tr>
-              <td><tt>8b </tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td><tt>__ BA __ __</tt></td>
-              <td><br>
-              </td>
-            </tr>
-            <tr>
-              <td><tt>8c </tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td><tt>__ __ BA __</tt></td>
-              <td><br>
-              </td>
-            </tr>
-            <tr>
-              <td><tt>8d </tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td><tt>__ __ __ BA</tt></td>
-              <td>high byte<br>
-              </td>
-            </tr>
-            <tr>
-              <td><tt>32s </tt></td>
-              <td><tt>BA DC FE HG</tt></td>
-              <td><tt>BA DC FE HG</tt></td>
-              <td>saturate, ADD ALU only </td>
-            </tr>
-            <tr>
-              <td><tt>16as </tt></td>
-              <td><tt><tt>BA DC __ __</tt></tt></td>
-              <td><tt><tt>BA DC __ __</tt></tt></td>
-              <td>saturate, ADD ALU only</td>
-            </tr>
-            <tr>
-              <td><tt>16bs </tt></td>
-              <td><tt><tt>BA DC __ __</tt></tt></td>
-              <td><tt>__ __ BA DC</tt></td>
-              <td>saturate, ADD ALU only</td>
-            </tr>
-            <tr>
-              <td><tt>8abcds </tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td><tt>BA BA BA BA</tt></td>
-              <td>replicate to all bytes, saturate, ADD ALU only</td>
-            </tr>
-            <tr>
-              <td><tt>8as </tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td>saturate, ADD ALU only </td>
-            </tr>
-            <tr>
-              <td><tt>8bs </tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td><tt>__ BA __ __ </tt></td>
-              <td>saturate, ADD ALU only </td>
-            </tr>
-            <tr>
-              <td><tt>8cs </tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td><tt>__ __ BA __ </tt></td>
-              <td>saturate, ADD ALU only </td>
-            </tr>
-            <tr>
-              <td><tt>8ds </tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td><tt>__ __ __ AB </tt></td>
-              <td>saturate, ADD ALU only </td>
-            </tr>
-          </tbody>
-        </table>
-      </dd>
-      <dt><var><tt>yy</tt></var></dt>
-      <dd>Source unpack mode, register file A or <tt>r4</tt>.<br>
-        <table border="1" cellpadding="2" cellspacing="0">
-          <tbody>
-            <tr>
-              <th colspan="1" rowspan="1"><var><tt>yy</tt></var></th>
-              <th colspan="1" rowspan="1">Source pattern</th>
-              <th colspan="1" rowspan="1">Target pattern</th>
-            </tr>
-            <tr>
-              <td><tt>32 </tt></td>
-              <td><tt>BA DC FE HG</tt></td>
-              <td><tt>BA DC FE HG</tt></td>
-            </tr>
-            <tr>
-              <td><tt>16a </tt></td>
-              <td><tt>BA DC __ __</tt></td>
-              <td><tt>BA DC __ __</tt></td>
-            </tr>
-            <tr>
-              <td><tt>16b </tt></td>
-              <td><tt><tt>__ __ BA DC</tt></tt></td>
-              <td><tt>BA DC __ __</tt></td>
-            </tr>
-            <tr>
-              <td><tt>8ddup </tt></td>
-              <td><tt>__ __ __ BA</tt></td>
-              <td><tt>BA BA BA BA</tt></td>
-            </tr>
-            <tr>
-              <td><tt>8a </tt></td>
-              <td><tt>BA __ __ __</tt></td>
-              <td><tt>BA __ __ __</tt></td>
-            </tr>
-            <tr>
-              <td><tt>8b </tt></td>
-              <td><tt><tt>__ BA __ __</tt></tt></td>
-              <td><tt>BA __ __ __</tt></td>
-            </tr>
-            <tr>
-              <td><tt>8c </tt></td>
-              <td><tt><tt>__ __ BA __</tt></tt></td>
-              <td><tt>BA __ __ __</tt></td>
-            </tr>
-            <tr>
-              <td><tt>8d </tt></td>
-              <td><tt>__ __ __ BA</tt></td>
-              <td><tt>BA __ __ __</tt></td>
-            </tr>
-          </tbody>
-        </table>
-      </dd>
-    </dl>
-    <p>All patterns are nibbles in little endian memory order.</p>
     <h2><a id="sema" name="sema"></a>Semaphore instruction</h2>
     <pre>sacq <var>destination, number</var><br>srel <var>destination, number</var><br>mov <var>destination</var>, sacq<var>number</var><br>mov <var>destination</var>, srel<var>number</var></pre>
     <dl>
@@ -756,13 +529,15 @@ opcode.unpack<var>yy</var> <var>destination</var>, ...<br>opcode<var></var> <var
       <dt><var><tt>.cond</tt></var></dt>
       <dd>Branch condition, optional. One of:<br>
         <table border="1" cellpadding="2" cellspacing="0">
-          <tbody>
+          <thead>
             <tr>
               <th>condition</th>
               <th>zero flag</th>
               <th>negative flag</th>
               <th>carry flag</th>
             </tr>
+          </thead>
+          <tbody>
             <tr>
               <td>set on all SIMD elements</td>
               <td><tt>.allz</tt></td>
@@ -805,10 +580,13 @@ opcode.unpack<var>yy</var> <var>destination</var>, ...<br>opcode<var></var> <var
         Note that the use of odd register numbers implies <tt>.setf</tt> which
         is generally not intended.</dd>
     </dl>
-    <p><tt>bra</tt> creates an absolute branch, i.e. target must be a physical
-      memory address. <tt>brr</tt> creates a relative branch.</p>
+    <p><b><tt>bra</tt></b> creates an <b>absolute</b> branch, i.e. target must
+      be a physical memory address.<br>
+      <b><tt>brr</tt></b> creates a <b>relative</b> branch, i.e. it adds PC + 4
+      to the target.</p>
     <p>Remember that branch instructions are executed 3 instructions delayed,
-      i.e. three further instructions are always executed.</p>
+      i.e. three further instructions are always executed before any branch is
+      taken.</p>
     <h2><a id="sig" name="sig"></a>Signaling instruction</h2>
     <pre>bkpt<br>thrsw<br>thrend<br>sbwait<br>sbdone<br>lthrsw<br>loadcv<br>loadc<br>ldcend<br>ldtmu0<br>ldtmu1<br>loadam</pre>
     The above signals can be combined with any normal ALU instructions in one

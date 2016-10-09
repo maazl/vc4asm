@@ -11,6 +11,8 @@
     <p><a href="index.html">&uarr; Top</a></p>
     <h2>V 0.2.2</h2>
     <ul>
+      <li>Complete redesign of pack/unpack handling. Support packed register
+        expressions, including in macros.</li>
       <li>Fixed instruction swap of <tt>sub</tt> &amp; <tt>xor</tt> resulting
         in bad code.</li>
       <li>Support for instructions that are tied to an ALU, e.g. <tt>mv8adds</tt>.</li>
@@ -19,7 +21,10 @@
       <li>Validator: warn about concurrent VPM access.</li>
       <li>Reworked <tt>Inf</tt>/<tt>NaN</tt> handling; fixes <tt>mov ...,
           0x7f800000</tt></li>
-      <li>Added rotate operators to expression syntax.</li>
+      <li>Added binary rotate operators to expression syntax.</li>
+      <li>Fixed parsing of floating point constants without a decimal dot, e.g.
+        <tt>1E6</tt>.</li>
+      <li>Disabled ELF support on OS X.</li>
     </ul>
     <h2>V 0.2.1</h2>
     <ul>

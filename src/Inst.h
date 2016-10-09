@@ -317,9 +317,13 @@ struct Inst
 	/// @param mul Check for MUL ALU result instead of ADD ALU result.
 	/// @pre Sig < S_LDI
 	bool       isFloatResult(bool mul) const { return mul ? OpM == M_FMUL : ((OpA - 1U) ^ 1U) <= 6U; }
+	/// Check whether floating point OP code.
+	/// @param mul Check for MUL ALU result instead of ADD ALU result.
+	/// @pre Sig < S_LDI
+	bool       isFloatInput(bool mul) const { return mul ? OpM == M_FMUL : OpA - 1U <= 6U; }
 	/// Check whether register file A is consumed by any floating point OP code.
 	/// @pre Sig < S_LDI
-	bool       isFloatRA() const { return ((MuxAA == X_RA || MuxAB == X_RA) && ((OpA - 1U) ^ 1U) <= 6U) || ((MuxMA == X_RA || MuxMB == X_RA) && OpM == M_FMUL); }
+	bool       isFloatRA() const { return ((MuxAA == X_RA || MuxAB == X_RA) && OpA - 1U <= 6U) || ((MuxMA == X_RA || MuxMB == X_RA) && OpM == M_FMUL); }
 
 	/// Encode instruction to QPU binary format
 	uint64_t   encode() const;
@@ -335,17 +339,6 @@ struct Inst
 	/// Convert value from half precision floating point value to single precision.
 	/// @return Floating point value matching the half precision float value in the low order 16 bit of \a value.
 	static float fromFloat16(unsigned value);
-
-	/// Calculate PM bit from pack mode.
-	/// @param mode Requested pack mode.
-	/// @return PM bit or -1 in case of undetermined.
-	/// @remarks Due to the capabilities of the QPUs all pack modes are deterministic if P_INT or P_FLT is set.
-	static int calcPM(pack mode);
-	/// Calculate PM bit from unpack mode.
-	/// @param mode Requested unpack mode.
-	/// @return PM bit or -1 in case of undetermined.
-	/// @remarks In fact the function will never return 1 because all r4 unpack modes are available by regfile A as well.
-	static int calcPM(unpack mode);
 };
 
 #endif // INST_H_

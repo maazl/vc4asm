@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta content="text/html; charset=iso-8859-15" http-equiv="content-type">
+    <title>VC4ASM Instruction extensions</title>
+    <meta content="Marcel M&uuml;ller" name="author">
+    <meta content="Raspberry Pi BCM2835 BCM2836 QPU macro assembler" name="keywords">
+    <link rel="stylesheet" href="infstyle.css" type="text/css">
+  </head>
+  <body>
+    <h1>VC4ASM - Instruction extensions</h1>
+    <p><a href="index.html">&uarr; Top</a>, <a href="instructions.html#ALU">ALU</a>,
+      <tt><a href="instructions.html#mov">mov</a></tt>, <tt><a href="instructions.html#ldi">ldi</a></tt>,
+      <tt><a href="instructions.html#nop">nop</a></tt>, <tt><a href="instructions.html#read">read</a></tt>,
+      <a href="instructions.html#sema">Semaphore</a>, <a href="instructions.html#bra">Branch</a>,
+      <a href="instructions.html#sig">Signal</a>, <a href="#ifcc">Conditional
+        assignment</a>, <a href="#pack">Pack/unpack</a></p>
+    <h2><a id="setf" name="setf"></a>Set flags</h2>
+    <pre><var>opcode</var>.setf<var></var> ...<var></var><br><var>opcode</var>.sf ...<br><var>opcode destination</var>.setf, ...<br><var>opcode destination</var>.sf, ...</pre>
+    <p>This flag causes an instruction to set the flags according to the
+      destination value. See <a href="instructions.html#opcodes">opcode table</a>.</p>
+    <h2><a id="ifcc" name="ifcc"></a>Conditional assignment</h2>
+    <p>All ALU instructions and load immediate can use conditional assignment
+      for the destination operand. The condition code can be applied to the
+      opcode as well as to the destination operand.</p>
+    <pre><var>opcode</var>.if<var>cc destination</var>, ...
+<var>opcode destination.cc</var>, ...</pre>
+    <dl>
+      <dt><var><tt>cc</tt></var></dt>
+      <dd>Condition code.
+        <table border="1" cellpadding="2" cellspacing="0">
+          <thead>
+            <tr>
+              <th><var><tt>cc</tt></var></th>
+              <th style="text-align: center;">Flag</th>
+              <th style="text-align: center;">Value</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><tt>nz, zc</tt> </td>
+              <td style="text-align: center;">Z</td>
+              <td style="text-align: center;">0</td>
+              <td>non zero</td>
+            </tr>
+            <tr>
+              <td><tt>z, zs</tt> </td>
+              <td style="text-align: center;">Z</td>
+              <td style="text-align: center;">1</td>
+              <td>zero</td>
+            </tr>
+            <tr>
+              <td><tt>nn, nc</tt> </td>
+              <td style="text-align: center;">N</td>
+              <td style="text-align: center;">0</td>
+              <td>non negative</td>
+            </tr>
+            <tr>
+              <td><tt>n, ns</tt> </td>
+              <td style="text-align: center;">N</td>
+              <td style="text-align: center;">1</td>
+              <td>negative</td>
+            </tr>
+            <tr>
+              <td><tt>cc</tt> </td>
+              <td style="text-align: center;">C</td>
+              <td style="text-align: center;">0</td>
+              <td>carry clear</td>
+            </tr>
+            <tr>
+              <td><tt>c, cs</tt> </td>
+              <td style="text-align: center;">C</td>
+              <td style="text-align: center;">1</td>
+              <td>carry set</td>
+            </tr>
+          </tbody>
+        </table>
+      </dd>
+    </dl>
+    <h3>Example</h3>
+    <pre>mov.ifnz r0, ra7<br>mov r0.z, rb7</pre>
+    <h2><a id="pack" name="pack"></a><a id="unpack" name="unpack"></a>Pack and
+      unpack</h2>
+    <p>All <a href="instructions.html#ALU">ALU instructions</a> including <a href="instructions.html#mov"><tt>mov</tt></a>
+      and <a href="instructions.html#ldi"><tt>ldi</tt></a> can be extended by
+      pack operations.</p>
+    <pre><var>opcode</var>.pack<var>xx</var> <var>destination</var>, ...<br><var>opcode destination</var>.<var>xx</var>, ...<br><var>opcode</var>.unpack<var>xx</var> ...<br><var>opcode</var> ... <var>source</var>.<var>xx</var></pre>
+    <dl>
+      <dt><var><tt>xx</tt></var></dt>
+      <dd>Pack or unpack mode.</dd>
+    </dl>
+    <h3>Pack/unpack modes</h3>
+    <p>Format: <tt>B</tt>[<tt>O</tt>][<tt>s</tt>][<tt>i</tt>|<tt>f</tt>]<br>
+      <tt>B</tt>: number of bits in the packed format<br>
+      <tt>O</tt>: offset in the packed data (<tt>a</tt> = least significant
+      packed word ...)<br>
+      <tt>s</tt>: use saturation. This is ignored on unpack modes when assigned
+      to a symbol.<br>
+      <tt>i</tt>: use integer pack mode<br>
+      <tt>f</tt>: use floating point pack mode, i.e. unpack type is float.</p>
+    <table border="1" cellpadding="2" cellspacing="0">
+      <thead>
+        <tr>
+          <th colspan="1" rowspan="2"><var><tt>xx</tt></var></th>
+          <th colspan="1" rowspan="2">unpacked<br>
+            type</th>
+          <th colspan="1" rowspan="2">packed<br>
+            type</th>
+          <th colspan="1" rowspan="2">byte<br>
+            mask</th>
+          <th style="text-align: center;" colspan="2" rowspan="1">pack</th>
+          <th style="text-align: center;" colspan="2" rowspan="1">unpack</th>
+        </tr>
+        <tr>
+          <th>conversion</th>
+          <th>restrict destination</th>
+          <th>conversion</th>
+          <th>restrict source</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><tt>32</tt></td>
+          <td>any</td>
+          <td>any</td>
+          <td><nobr><tt>3 2 1 0</tt></nobr></td>
+          <td><tt>x</tt></td>
+          <td><br>
+          </td>
+          <td><tt>x</tt></td>
+          <td><br>
+          </td>
+        </tr>
+        <tr>
+          <td><tt>32s</tt></td>
+          <td><tt>int32</tt></td>
+          <td><tt>int32</tt></td>
+          <td><nobr><tt>3 2 1 0</tt></nobr></td>
+          <td><i>unknown</i></td>
+          <td><var></var>reg A</td>
+          <td class="inactive" style="text-align: center;" colspan="2" rowspan="1">n/a<br>
+          </td>
+        </tr>
+        <tr>
+          <td><tt>16a</tt></td>
+          <td style="text-align: center;" colspan="7" rowspan="1"> <tt>16ai</tt>
+            or <tt>16af</tt> depending on the context <a href="#noteP1"><sup>(1)</sup></a></td>
+        </tr>
+        <tr>
+          <td><tt>16ai</tt></td>
+          <td><tt>int16</tt></td>
+          <td><tt>int16</tt></td>
+          <td><nobr><tt>_ _ 1 0</tt></nobr></td>
+          <td><tt>x &amp; 0xffff</tt></td>
+          <td><var></var>reg A &amp; no float</td>
+          <td><tt>x</tt></td>
+          <td style="text-align: left;">reg A &amp; no float</td>
+        </tr>
+        <tr>
+          <td><tt>16af</tt></td>
+          <td><tt>float32</tt></td>
+          <td><tt>float16</tt></td>
+          <td><nobr><tt>_ _ 1 0</tt></nobr></td>
+          <td><tt>x </tt> </td>
+          <td><var></var>reg A &amp; float only</td>
+          <td><tt>x</tt></td>
+          <td style="text-align: left;">reg A &amp; float | r4</td>
+        </tr>
+        <tr>
+          <td><tt>16as<br>
+              16asi</tt></td>
+          <td><tt>int32</tt></td>
+          <td><tt>int16</tt></td>
+          <td><nobr><tt>_ _ 1 0</tt></nobr></td>
+          <td><tt>min(0x7fff, max(-0x8000, x))</tt></td>
+          <td><var></var>reg A &amp; no float</td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>16a</tt>(<tt>i</tt>)</td>
+        </tr>
+        <tr>
+          <td><tt>16b</tt></td>
+          <td style="text-align: center;" colspan="7" rowspan="1"> <tt>16ai</tt>
+            or <tt>16af</tt> depending on the context <a href="#noteP1"><sup>(1)</sup></a></td>
+        </tr>
+        <tr>
+          <td><tt>16bi </tt></td>
+          <td><tt>int16</tt></td>
+          <td><tt>int16 </tt></td>
+          <td><nobr><tt>1 0 _ _</tt></nobr></td>
+          <td><tt>x &amp; 0xffff </tt></td>
+          <td><var></var>reg A &amp; no float</td>
+          <td><tt>x </tt></td>
+          <td style="text-align: left;">reg A &amp; no float</td>
+        </tr>
+        <tr>
+          <td><tt>16bf </tt></td>
+          <td><tt>float32</tt></td>
+          <td><tt>float16 </tt></td>
+          <td><nobr><tt>1 0 _ _</tt></nobr></td>
+          <td><tt>x </tt></td>
+          <td><var></var>reg A &amp; float only</td>
+          <td><tt>x </tt></td>
+          <td style="text-align: left;">reg A &amp; float | r4</td>
+        </tr>
+        <tr>
+          <td><tt>16bs<br>
+              16bsi</tt></td>
+          <td><tt>int32</tt></td>
+          <td><tt>int16</tt></td>
+          <td><nobr><tt>1 0 _ _</tt></nobr></td>
+          <td><tt>min(0x7fff, max(-0x8000, x)) </tt></td>
+          <td><var></var>reg A &amp; no float</td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>16b</tt>(<tt>i</tt>)</td>
+        </tr>
+        <tr>
+          <td><tt>8888<br>
+              8abcd<br>
+              8888i<br>
+              8abcdi </tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>uint32</tt></td>
+          <td><tt>0 0 0 0</tt></td>
+          <td><tt>(x &amp; 0xff) * 0x01010101</tt></td>
+          <td><var></var>reg A</td>
+          <td class="inactive" style="text-align: center;" colspan="2" rowspan="1">n/a</td>
+        </tr>
+        <tr>
+          <td><tt>8888s<br>
+              8abcds</tt></td>
+          <td style="text-align: center;" colspan="5" rowspan="1"><tt>8888si</tt>
+            or <tt>8888sf</tt> depending on the context <a href="#noteP1"><sup>(1)</sup></a>
+          </td>
+          <td class="inactive" style="text-align: center;" colspan="2" rowspan="1">n/a</td>
+        </tr>
+        <tr>
+          <td><tt>8888si<br>
+              8abcdsi </tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>uint32</tt></td>
+          <td><nobr><tt>0 0 0 0</tt></nobr></td>
+          <td><tt>min(255, max(0, x))</tt><tt> * 0x01010101</tt></td>
+          <td><var></var>reg A</td>
+          <td class="inactive" style="text-align: center;" colspan="2" rowspan="1">n/a</td>
+        </tr>
+        <tr>
+          <td><tt>8888sf<br>
+              8abcdsf </tt></td>
+          <td><tt>float32</tt></td>
+          <td><tt>uint32</tt></td>
+          <td><nobr><tt>0 0 0 0</tt></nobr></td>
+          <td><tt>min(255, max(0, x*255))</tt><tt> * 0x01010101</tt></td>
+          <td>MUL ALU</td>
+          <td class="inactive" style="text-align: center;" colspan="2" rowspan="1">n/a</td>
+        </tr>
+        <tr>
+          <td><tt>8a</tt></td>
+          <td><br>
+          </td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ _ _ 0</tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8ai</tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>8ai</tt>
+            or <tt>8af</tt> depending on the context <a href="#noteP1"><sup>(1)</sup></a></td>
+        </tr>
+        <tr>
+          <td><tt>8ai</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><nobr><tt>_ _ _ 0</tt></nobr></td>
+          <td><tt>x &amp; 0xff</tt></td>
+          <td>reg A</td>
+          <td><tt>x</tt></td>
+          <td style="text-align: left;">reg A &amp; no float</td>
+        </tr>
+        <tr>
+          <td><tt>8af</tt></td>
+          <td><tt>float32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><nobr><tt>_ _ _ 0</tt></nobr></td>
+          <td class="inactive" style="text-align: center;" colspan="2" rowspan="1">n/a</td>
+          <td><tt>x / 255</tt></td>
+          <td>reg A &amp; float | r4</td>
+        </tr>
+        <tr>
+          <td><tt>8as</tt></td>
+          <td><br>
+          </td>
+          <td><tt>uint8</tt></td>
+          <td><nobr><tt>_ _ _ 0</tt></nobr></td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>8asi</tt>
+            or <tt>8asf</tt> depending on the context <a href="#noteP1"><sup>(1)</sup></a></td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8a</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8asi</tt></td>
+          <td><tt>int32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><nobr><tt>_ _ _ 0</tt></nobr></td>
+          <td><tt>min(255, max(0, x))</tt></td>
+          <td>reg A</td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8ai</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8asf</tt></td>
+          <td><tt>float32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><nobr><tt>_ _ _ 0</tt></nobr></td>
+          <td><tt>min(255, max(0, x*255))</tt></td>
+          <td>MUL ALU</td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8af</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8b</tt></td>
+          <td><br>
+          </td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ _ 0 _ </tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8ai</tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>8ai</tt>
+            or <tt>8af</tt> depending on the context <a href="#noteP1"><sup>(1)</sup></a></td>
+        </tr>
+        <tr>
+          <td><tt>8bi</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ _ 0 _</tt></td>
+          <td><tt>x &amp; 0xff</tt></td>
+          <td>reg A</td>
+          <td><tt>x</tt></td>
+          <td style="text-align: left;">reg A &amp; no float</td>
+        </tr>
+        <tr>
+          <td><tt>8bf</tt></td>
+          <td><tt>float32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ _ 0 _</tt></td>
+          <td class="inactive" style="text-align: center;" colspan="2" rowspan="1">n/a</td>
+          <td><tt>x / 255</tt></td>
+          <td>reg A &amp; float | r4</td>
+        </tr>
+        <tr>
+          <td><tt>8bs</tt></td>
+          <td><br>
+          </td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ _ 0 _</tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>8asi</tt>
+            or <tt>8asf</tt> depending on the context <a href="#noteP1"><sup>(1)</sup></a></td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8a</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8bsi</tt></td>
+          <td><tt>int32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ _ 0 _</tt></td>
+          <td><tt>min(255, max(0, x))</tt></td>
+          <td>reg A</td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8ai</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8bsf</tt></td>
+          <td><tt>float32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ _ 0 _</tt></td>
+          <td><tt>min(255, max(0, x*255))</tt></td>
+          <td>MUL ALU</td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8af</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8c</tt></td>
+          <td><br>
+          </td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ 0 _ _ </tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8ai</tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>8ai</tt>
+            or <tt>8af</tt> depending on the context <a href="#noteP1"><sup>(1)</sup></a></td>
+        </tr>
+        <tr>
+          <td><tt>8ci</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ 0 _ _</tt></td>
+          <td><tt>x &amp; 0xff</tt></td>
+          <td>reg A</td>
+          <td><tt>x</tt></td>
+          <td style="text-align: left;">reg A &amp; no float</td>
+        </tr>
+        <tr>
+          <td><tt>8cf</tt></td>
+          <td><tt>float32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ 0 _ _</tt></td>
+          <td class="inactive" style="text-align: center;" colspan="2" rowspan="1">n/a</td>
+          <td><tt>x / 255</tt></td>
+          <td>reg A &amp; float | r4</td>
+        </tr>
+        <tr>
+          <td><tt>8cs</tt></td>
+          <td><br>
+          </td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ 0 _ _</tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>8asi</tt>
+            or <tt>8asf</tt> depending on the context <a href="#noteP1"><sup>(1)</sup></a></td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8a</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8csi</tt></td>
+          <td><tt>int32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ 0 _ _</tt></td>
+          <td><tt>min(255, max(0, x))</tt></td>
+          <td>reg A</td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8ai</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8csf</tt></td>
+          <td><tt>float32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>_ 0 _ _</tt></td>
+          <td><tt>min(255, max(0, x*255))</tt></td>
+          <td>MUL ALU</td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8af</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8d</tt></td>
+          <td><br>
+          </td>
+          <td><tt>uint8</tt></td>
+          <td><tt>0 _ _ _ </tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8ai</tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>8ai</tt>
+            or <tt>8af</tt> depending on the context <a href="#noteP1"><sup>(1)</sup></a></td>
+        </tr>
+        <tr>
+          <td><tt>8di</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>0 _ _ _</tt></td>
+          <td><tt>x &amp; 0xff</tt></td>
+          <td>reg A</td>
+          <td><tt>x</tt></td>
+          <td style="text-align: left;">reg A &amp; no float</td>
+        </tr>
+        <tr>
+          <td><tt>8df</tt></td>
+          <td><tt>float32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>0 _ _ _</tt></td>
+          <td class="inactive" style="text-align: center;" colspan="2" rowspan="1">n/a</td>
+          <td><tt>x / 255</tt></td>
+          <td>reg A &amp; float | r4</td>
+        </tr>
+        <tr>
+          <td><tt>8ds</tt></td>
+          <td><br>
+          </td>
+          <td><tt>uint8</tt></td>
+          <td><tt>0 _ _ _</tt></td>
+          <td style="text-align: center;" colspan="2" rowspan="1"><tt>8asi</tt>
+            or <tt>8asf</tt> depending on the context <a href="#noteP1"><sup>(1)</sup></a></td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8a</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8dsi</tt></td>
+          <td><tt>int32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>0 _ _ _</tt></td>
+          <td><tt>min(255, max(0, x))</tt></td>
+          <td>reg A</td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8ai</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8dsf</tt></td>
+          <td><tt>float32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>0 _ _ _</tt></td>
+          <td><tt>min(255, max(0, x*255))</tt></td>
+          <td>MUL ALU</td>
+          <td style="text-align: center;" colspan="2" rowspan="1">same as <tt>8af</tt></td>
+        </tr>
+        <tr>
+          <td><tt>8dr</tt></td>
+          <td><tt>uint32</tt></td>
+          <td><tt>uint8</tt></td>
+          <td><tt>0 _ _ _</tt></td>
+          <td class="inactive" style="text-align: center;" colspan="2">n/a</td>
+          <td><tt>x * 0x01010101</tt></td>
+          <td>reg A | r4</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><a id="#noteP1">Note (1)</a> It is strongly recommended to use the
+      pack/unpack modes that specify whether an integer or floating point
+      operation should be used. vc4asm tries to guess this otherwise but you
+      should avoid surprises.</p>
+  </body>
+</html>

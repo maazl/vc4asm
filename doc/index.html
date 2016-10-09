@@ -4,7 +4,7 @@
     <meta content="text/html; charset=windows-1252" http-equiv="content-type">
     <title>Macro Assembler for Broadcom VideoCore IV</title>
     <meta content="Marcel M&uuml;ller" name="author">
-    <meta content="Raspberry Pi BCM2835 QPU macro assembler" name="keywords">
+    <meta content="Raspberry Pi BCM2835 BCM2836 QPU macro assembler" name="keywords">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
   </head>
   <body>
@@ -142,11 +142,11 @@
     <h2><a id="build" name="build"></a>Build instructions</h2>
     <p>The source code has hopefully no major platform dependencies, i.e. you
       don't need to build it on the Raspberry. But it requires a <a href="https://en.wikipedia.org/wiki/C++11">C++11</a>
-      compliant compiler to build. Current Raspiban ships with gcc 4.9 which
-      works. Raspbian Wheezy seems not to be sufficient. While I succeeded with
-      gcc 4.7.3 on another platform, gcc 4.7.2 of Wheezy fails to compile the
-      disassembler. But you can install gcc 4.8 in Raspbian Wheezy. This will
-      work.</p>
+      compliant compiler to build. Current Raspbian ships with gcc 4.9 which
+      works fine. Raspbian Wheezy seems not to be sufficient. While I succeeded
+      with gcc 4.7.3 on another platform, gcc 4.7.2 of Wheezy fails to compile
+      the disassembler. But you can install gcc 4.8 in Raspbian Wheezy. This
+      will work.</p>
     <ul>
       <li>Download and extract the source.</li>
       <li>Go to folder <tt>src</tt>.</li>
@@ -161,16 +161,18 @@
     <p>Furthermore you need a recent Raspbian kernel (use <tt>rpi-update</tt>)
       or create a local character device named <tt>/dev/vcio</tt> to access the
       vcio driver of the Raspi kernel: <tt>sudo mknod /dev/vcio c 100 0</tt></p>
-    <p>All these restrictions apply to the original <tt>hello_fft</tt> as well.</p>
+    <p>All these restrictions apply to <tt>hello_fft</tt> from the Raspberry Pi
+      Foundation as well.</p>
     <h3><tt>simple</tt></h3>
     <p>This is a very simple program that demonstrates the use of all available
       operators with small immediate values. It is not optimized in any way.</p>
     <h3><tt>hello_fft</tt></h3>
     <p>This is the well known hello_fft sample available. The main difference is
       that it is faster compared to GPU_FFT 3.0 because the shader code has been
-      optimized. The gain is about 40% of code size and roughly 9% of the run
-      time. The code will no longer build with another assembler since it uses
-      some special features for instruction packing and scheduling.</p>
+      significantly optimized. The gain is about 40% of code size and roughly 9%
+      of the run time. The code will no longer build with another assembler
+      since it uses several special features for instruction packing and
+      scheduling.</p>
     <table border="1" cellpadding="2" cellspacing="0">
       <thead>
         <tr>

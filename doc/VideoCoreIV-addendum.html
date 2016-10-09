@@ -4,7 +4,7 @@
     <meta content="text/html; charset=iso-8859-15" http-equiv="content-type">
     <title>Addendum to in the Broadcom VideoCore IV documentation</title>
     <meta content="Marcel M&uuml;ller" name="author">
-    <meta content="vc4asm instruction set" name="keywords">
+    <meta content="Raspberry Pi BCM2835 BCM2836 QPU" name="keywords">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
   </head>
   <body>
@@ -42,15 +42,15 @@
     <p>The <em>branch target</em> is taken from <em>SIMD element <b>15</b></em>
       if <tt>reg</tt> is set (rather than element 0). This is wrong at several
       places in the documentation.<br>
-      However, this can particularly useful to use an A register as branch
-      target and for VPM/VCD setup and concurrently since the latter will only
-      use SIMD element 0.</p>
+      However, this can particularly useful to use a regfile A register as
+      branch target and for VPM/VCD setup and concurrently since the latter will
+      only use SIMD element 0.</p>
     <h3>Section 3: Branch Instruction - target assignment</h3>
     <p>The assignment of the target register(s) of a branch instruction depends
       on the flags. The target register is only assigned if the branch is
       actually taken. The same applies to the flags if <tt>sf</tt> is true. So
       you may not abuse <tt>brr.never</tt> to load the relocated values of
-      labels into a register. What a pity!</p>
+      labels into a register - what a pity!</p>
     <h3>Section 3: QPU Instruction Set - no inf, nan, denormal support</h3>
     <p>The handling of <tt>Inf</tt> and <tt>NaN</tt> seems to be broken or
       just <em>not implemented</em> in Videocore IV. I.e. <tt>0.0 + NaN = +Inf</tt>.
@@ -119,7 +119,8 @@
       slices of a word.</p>
     <h3>Concurrent access to VPM registers</h3>
     <p>While VPM read and VPM write can coexist <em>no</em> other <em>concurrent
-        VPM access in one instruction</em> is reliable.</p>
+        VPM access in one instruction</em> is reliable, especially including the
+      <tt>ldtmu</tt> signals.</p>
     <h2>Undocumented features</h2>
     <h3>Section 3: Horizontal vector rotation</h3>
     <p>Both source operands must be from accumulator <tt>r0</tt>..<tt>r3</tt>
@@ -216,8 +217,7 @@
       </tbody>
     </table>
     <pre>shl.setf -, elem_num, 30;  mov r0, r0&lt;&lt;2  # Set C flag to bit 2 of elem_num, set N flag to bit 1</pre>
-    <h3>Secret access to previous input values with vector rotation through the
-      NOP register</h3>
+    <h3>Secret access to previous input values through the NOP register</h3>
     <p><em>Reading</em> one of the <em>NOP registers always returns the last
         value</em> read from the particular register file by the <em>SIMD
         elements 12 to 15</em>. So reading <tt>ra39</tt> returns the last 4
@@ -245,18 +245,20 @@
       repeatable read from a peripheral register like <tt>unif</tt>. But keep
       in mind that in the latter case it makes an important difference whether
       regfile A or regfile B was used to read the uniform value. So do not use
-      the pseudo register <tt>unif</tt> in this case, since vc4asm will chose
+      the pseudo register <tt>unif</tt> in this case since vc4asm will chose
       freely which register file to use. Example:</p>
     <pre>add ra0, ra32, 8  # read uniform<br>sub rb0, ra39, 8  # read the same uniform again</pre>
     <p>Combine immediate value with signal:</p>
     <pre>add ra0, ra0, 8<br>add ra1, ra1, rb39;  ldtmu0  # adds immediate value 8 to ra1 too</pre>
-    <h3>Secret access to previous MUL ALU result with vector rotation</h3>
+    <h3><a id="mnop" name="mnop"></a>Secret access to previous MUL ALU result</h3>
     <p>Using the <em>MUL ALU opcode 0 in conjunction with <tt>waddr_mul</tt></em>
       let you access the last result of the MUL ALU again. Because of the
       virtual parallelism of the quads only the results from the last quads,
       i.e. <em>only SIMD element 12..15</em> are available. But be careful, if
       the value has not been assigned because of an <tt>.if</tt> condition the
-      result is unreliable. Example:</p>
+      result is unreliable.</p>
+    <p>vc4asm supports the special instruction <tt>mnop</tt> to explicitly use
+      the <tt>nop</tt> instruction of the MUL ALU. Example:</p>
     <pre>ldi.setf r0, [0,1,2,3, 1,2,3,0, 2,3,0,1, 3,0,1,2]<br>nop;  v8adds vpm, elem_num, r0  # results in [ 0, 2, 4, 6,  5, 7, 9, 7, 10,12,10,12, 15,13,15,17]<br>nop;  mnop r2                   # results in [15,13,15,17, 15,13,15,17, 15,13,15,17, 15,13,15,17]</pre>
     <h2><a id="cache" name="cache"></a>Cache details</h2>
     <table border="1" cellspacing="0">

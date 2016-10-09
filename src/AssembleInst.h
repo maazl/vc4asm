@@ -13,6 +13,8 @@
 #include "expr.h"
 #include "Inst.h"
 
+#include <assert.h>
+
 
 /// Core class that does the assembly process.
 class AssembleInst : private Inst
@@ -82,6 +84,7 @@ class AssembleInst : private Inst
 	/// Pack mode used by the current instruction in this contexts.
 	instContext      UsePack;
 	/// Unpack mode used by the current instruction in this contexts.
+	/// @details The Flags IC_SRCA and IC_SRCB will also be set in opcode
 	instContext      UseUnpack;
 	/// Vector rotation used by the current instruction in this contexts.
 	instContext      UseRot;
@@ -202,10 +205,12 @@ class AssembleInst : private Inst
 	/// @remarks This function can significantly increase code density,
 	/// because <tt>mov xx, immediate</tt> instructions often can be packed with other instruction this way.
 	static const smiEntry* getSmallImmediateALU(uint32_t i);
-	/// Return a reference to the input multiplexer of the current instruction that matches the current context.
-	/// @pre InstCtx should contain one of IC_SRCAB and one of IC_BOTH.
-	mux&             currentMux()
-	{ switch (InstCtx & (IC_MUL|IC_SRCB))
+	/// Return the input multiplexer of the current instruction that matches the given context.
+	/// @param ctx ctx should contain one of IC_SRCAB and one of IC_BOTH.
+	/// @return input multiplexer value
+	mux              getMux(instContext ctx)
+	{	assert(ctx & IC_SRC);
+		switch (ctx & (IC_MUL|IC_SRCB))
 		{case IC_NONE:
 			return MuxAA;
 		 case IC_SRCB:
@@ -215,6 +220,10 @@ class AssembleInst : private Inst
 		 default:
 			return MuxMB;
 	}	};
+	/// Return the input multiplexer of the current instruction that matches the current context.
+	/// @pre InstCtx should contain one of IC_SRCAB and one of IC_BOTH.
+	/// @return input multiplexer value
+	mux              currentMux() { return getMux(InstCtx); }
 	/// Assign the input multiplexer of the current instruction that matches the current context.
 	/// @param val Multiplexer value
 	/// @pre InstCtx should contain at least one of IC_SRCAB and one of IC_BOTH.
@@ -234,13 +243,39 @@ class AssembleInst : private Inst
 	/// @param si desired value.
 	/// @exception std::string Failed because of conflicts with other components of the current instruction word.
 	void             doSMI(uint8_t si);
+	/// Calculate PM bit from pack mode.
+	/// @param mode Requested pack mode.
+	/// @return PM bit or -1 in case of undetermined.
+	/// @remarks Due to the capabilities of the QPUs all pack modes are deterministic if P_INT or P_FLT is set.
+	static int       calcPM(pack mode);
+	/// Calculate PM bit from unpack mode within the current context.
+	/// @param mode Requested unpack mode.
+	/// @return PM bit or -1 in case of undetermined.
+	/// @remarks In fact the function will never return 1 because all r4 unpack modes are available by regfile A as well.
+	int              calcPM(unpack mode);
 	/// Checks whether the given input mux may be the source of an unpack instruction, i.e. r4 or regfile A.
 	/// @param input mux to check. If the mux points to regfile A The read address is also check not to address an IO register.
 	/// @return PM flag for the instruction, i.e. 1 for r4 and 0 for regfile A or -1 if not possible.
 	int              isUnpackable(mux mux) const { if (mux == X_R4) return true; if (mux == X_RA && RAddrA < 32) return false; return -1; }
+	/// Checks the unpack mode against the current instruction.
+	/// Checks for conflicting int/float mode and may adjust opcode in case of mov instruction.
+	/// @exception Message Failed, error message.
+	void             checkUnpack();
+	/// Adjust current pack mode and check for conflicts.
+	/// @param @pm desired pack mode (PM)
+	/// @exception Message Failed, error message.
+	void             applyPM(bool pm);
+	/// Handle unpack request at current context.
+	/// @param mode Unpack mode to apply, might be none.
+	/// @exception Message Failed, error message.
+	void             doUnpack(unpack mode);
+	/// Handle pack request at current context.
+	/// @param mode Pack mode to apply, might be none.
+	/// @exception Message Failed, error message.
+	void             doPack(pack mode);
 
 	/// Setup Parser for opcode arguments, handle instruction extensions.
-	void             doInitOP() { UseRot = IC_NONE; UseUnpack &= ~IC_BOTH; UsePack &= ~IC_BOTH; }
+	void             doInitOP() { UseRot = IC_NONE; UseUnpack &= IC_BOTH; UsePack &= IC_BOTH; }
 	/// Try to get immediate value at mov by a small immediate value and an available ALU.
 	/// @param value requested immediate value.
 	/// @return true: succeeded.
@@ -257,11 +292,6 @@ class AssembleInst : private Inst
 	/// @return true: swap succeeded, false: instruction unchanged
 	/// @post InstCtx & IC_MUL is inverted on success.
 	bool             tryALUSwap();
-
-	/// Check unpack operation of the current instruction for inconsistencies and interaction with the other ALU.
-	/// @param mux current ALU mux, fast path to currentMux()
-	/// @pre Instruct contains ALU instruction. UseUnpack is evaluated to control the checks done.
-	void             checkUnpack(mux mux);
 };
 
-#endif // PARSER_H_
+#endif // ASSEMBLEINST_H_

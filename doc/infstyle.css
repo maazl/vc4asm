@@ -3,6 +3,11 @@
   text-align: center;
 }
 
+.inactive
+{
+  color: #888;
+}
+
 .nobr {
   white-space: nowrap;
 }

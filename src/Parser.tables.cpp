@@ -402,42 +402,58 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "16aclamp",       IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16aSI |rPUp::PACK }
 ,	{ "16af",           IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_16aF  }
 ,	{ "16ai",           IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_16aI  }
-,	{ "16as",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16aSI |rPUp::PACK }
+,	{ "16as",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16aS  |rPUp::PACK }
+,	{ "16asi",          IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16aSI }
 ,	{ "16b",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_16b   }
 ,	{ "16bclamp",       IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16bSI |rPUp::PACK }
 ,	{ "16bf",           IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_16bF  }
 ,	{ "16bi",           IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_16bI  }
-,	{ "16bs",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16bSI |rPUp::PACK }
+,	{ "16bs",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16bS  |rPUp::PACK }
+,	{ "16bsi",          IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16bSI }
 ,	{ "32",             IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_32    } // NOP
 ,	{ "32clamp",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_32SI  |rPUp::PACK }
 ,	{ "32s",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_32SI  |rPUp::PACK }
 ,	{ "8888",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcd |rPUp::PACK }
+,	{ "8888i",          IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdI|rPUp::PACK }
 ,	{ "8888s",          IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdS|rPUp::PACK }
+,	{ "8888sf",         IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdSF|rPUp::PACK }
+,	{ "8888si",         IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdSI|rPUp::PACK }
 ,	{ "8a",             IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8a    }
 ,	{ "8abcd",          IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcd |rPUp::PACK }
+,	{ "8abcdi",         IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdI|rPUp::PACK }
 ,	{ "8abcds",         IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdS|rPUp::PACK }
+,	{ "8abcdsf",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdSF|rPUp::PACK }
+,	{ "8abcdsi",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdSI|rPUp::PACK }
 ,	{ "8aclamp",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8aS   |rPUp::PACK }
-,	{ "8af",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8aF   }
+,	{ "8af",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8aF   |rPUp::UNPACK}
 ,	{ "8ai",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8aI   }
 ,	{ "8as",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8aS   |rPUp::PACK }
+,	{ "8asf",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8aSF  }
+,	{ "8asi",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8aSI  }
 ,	{ "8b",             IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8b    }
 ,	{ "8bclamp",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8bS   |rPUp::PACK }
-,	{ "8bf",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8bF   }
+,	{ "8bf",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8bF   |rPUp::UNPACK}
 ,	{ "8bi",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8bI   }
 ,	{ "8bs",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8bS   |rPUp::PACK }
+,	{ "8bsf",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8bSF  }
+,	{ "8bsi",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8bSI  }
 ,	{ "8c",             IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8c    }
 ,	{ "8cclamp",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8cS   |rPUp::PACK }
-,	{ "8cf",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8cF   }
+,	{ "8cf",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8cF   |rPUp::UNPACK}
 ,	{ "8ci",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8cI   }
 ,	{ "8cs",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8cS   |rPUp::PACK }
+,	{ "8csf",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8cSF  }
+,	{ "8csi",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8cSI  }
 ,	{ "8d",             IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8d    }
 ,	{ "8dclamp",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8dS   |rPUp::PACK }
 ,	{ "8ddupe",         IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8abcd }
 ,	{ "8ddupeclamp",    IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcdS|rPUp::PACK }
-,	{ "8df",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8dF   }
+,	{ "8df",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8dF   |rPUp::UNPACK}
 ,	{ "8di",            IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_8dI   }
 ,	{ "8dr",            IC_XP|IC_SRC,        &Parser::addPUp,  ::Inst::U_8dr   |rPUp::UNPACK }
 ,	{ "8ds",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8dS   |rPUp::PACK }
+,	{ "8dsf",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8dSF  }
+,	{ "8dsi",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8dSI  }
 ,	{ "allc",           IC_OP,               &Parser::addCond, ::Inst::B_ALLCS }
 ,	{ "allcc",          IC_OP,               &Parser::addCond, ::Inst::B_ALLCC }
 ,	{ "allcs",          IC_OP,               &Parser::addCond, ::Inst::B_ALLCS }
@@ -478,34 +494,48 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "pack16aclamp",   IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16aSI |rPUp::PACK }
 ,	{ "pack16af",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16aF  |rPUp::PACK }
 ,	{ "pack16ai",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16aI  |rPUp::PACK }
-,	{ "pack16as",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16aSI |rPUp::PACK }
+,	{ "pack16as",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16aS  |rPUp::PACK }
+,	{ "pack16asi",      IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16aSI |rPUp::PACK }
 ,	{ "pack16b",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16b   |rPUp::PACK }
 ,	{ "pack16bclamp",   IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16bSI |rPUp::PACK }
 ,	{ "pack16bf",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16bF  |rPUp::PACK }
 ,	{ "pack16bi",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16bI  |rPUp::PACK }
-,	{ "pack16bs",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16bSI |rPUp::PACK }
+,	{ "pack16bs",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16bI  |rPUp::PACK }
+,	{ "pack16bsi",      IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_16bSI |rPUp::PACK }
 ,	{ "pack32",         IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_32    |rPUp::PACK } // NOP
 ,	{ "pack32clamp",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_32S   |rPUp::PACK }
 ,	{ "pack32s",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_32S   |rPUp::PACK }
 ,	{ "pack8888",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcd |rPUp::PACK }
+,	{ "pack8888i",      IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcdI|rPUp::PACK }
 ,	{ "pack8888s",      IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcdS|rPUp::PACK }
+,	{ "pack8888sf",     IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcdSF|rPUp::PACK }
+,	{ "pack8888si",     IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcdSI|rPUp::PACK }
 ,	{ "pack8a",         IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8a    |rPUp::PACK }
 ,	{ "pack8abcd",      IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcd |rPUp::PACK }
+,	{ "pack8abcdi",     IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcdI|rPUp::PACK }
 ,	{ "pack8abcds",     IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcdS|rPUp::PACK }
+,	{ "pack8abcdsf",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcdSF|rPUp::PACK }
+,	{ "pack8abcdsi",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcdSI|rPUp::PACK }
 ,	{ "pack8aclamp",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8aS   |rPUp::PACK }
 ,	{ "pack8af",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8aF   |rPUp::PACK }
 ,	{ "pack8ai",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8aI   |rPUp::PACK }
 ,	{ "pack8as",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8aS   |rPUp::PACK }
+,	{ "pack8asf",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8aSF  |rPUp::PACK }
+,	{ "pack8asi",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8aSI  |rPUp::PACK }
 ,	{ "pack8b",         IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8b    |rPUp::PACK }
 ,	{ "pack8bclamp",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8bS   |rPUp::PACK }
 ,	{ "pack8bf",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8bF   |rPUp::PACK }
 ,	{ "pack8bi",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8bI   |rPUp::PACK }
 ,	{ "pack8bs",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8bS   |rPUp::PACK }
+,	{ "pack8bsf",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8bSF  |rPUp::PACK }
+,	{ "pack8bsi",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8bSI  |rPUp::PACK }
 ,	{ "pack8c",         IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8c    |rPUp::PACK }
 ,	{ "pack8cclamp",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8cS   |rPUp::PACK }
 ,	{ "pack8cf",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8cF   |rPUp::PACK }
 ,	{ "pack8ci",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8cI   |rPUp::PACK }
 ,	{ "pack8cs",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8cS   |rPUp::PACK }
+,	{ "pack8csf",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8cSF  |rPUp::PACK }
+,	{ "pack8csi",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8cSI  |rPUp::PACK }
 ,	{ "pack8d",         IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8d    |rPUp::PACK }
 ,	{ "pack8dclamp",    IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8dS   |rPUp::PACK }
 ,	{ "pack8ddupe",     IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8abcd |rPUp::PACK }
@@ -513,6 +543,8 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "pack8df",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8dF   |rPUp::PACK }
 ,	{ "pack8di",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8dI   |rPUp::PACK }
 ,	{ "pack8ds",        IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8dS   |rPUp::PACK }
+,	{ "pack8dsf",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8dSF  |rPUp::PACK }
+,	{ "pack8dsi",       IC_XP|IC_OP|IC_DST,  &Parser::addPUp,  ::Inst::P_8dSI  |rPUp::PACK }
 ,	{ "rot",            IC_OP|IC_DST,        &Parser::addRot,  0 }
 ,	{ "setf",           IC_OP|IC_DST,        &Parser::addSetF, 0 }
 ,	{ "sf",             IC_OP|IC_DST,        &Parser::addSetF, 0 }

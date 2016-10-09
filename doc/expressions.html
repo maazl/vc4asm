@@ -4,7 +4,7 @@
     <meta content="text/html; charset=iso-8859-15" http-equiv="content-type">
     <title>VC4ASM Expression syntax</title>
     <meta content="Marcel M&uuml;ller" name="author">
-    <meta content="Raspberry Pi BCM2835 QPU macro assembler" name="keywords">
+    <meta content="Raspberry Pi BCM2835 BCM2836 QPU macro assembler" name="keywords">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
   </head>
   <body>
@@ -91,7 +91,16 @@
           <td><tt>vary<br>
               irq</tt></td>
           <td>register</td>
-          <td>Access to peripheral hardware, see table below.</td>
+          <td>Access to peripheral hardware, see <a href="#register">table
+              below</a>.</td>
+        </tr>
+        <tr>
+          <td>packed register experssion</td>
+          <td><tt>ra0.8csf</tt></td>
+          <td>register</td>
+          <td>Register that should be packed and/or unpacked. This can be
+            assigned to a symbol to define aliases for register slices, e.g.<br>
+            <tt>.set back_color, ra0.8ai</tt></td>
         </tr>
         <tr>
           <td>semaphore</td>
@@ -117,8 +126,8 @@
           <td>register</td>
           <td>Internal register constant. It consists of the fields register <i>number,
               register type, vector rotation</i> and <i>pack/unpack mode</i>.
-            The latter two are optional and by default zero. <i>This syntax is
-              for internal use only and subject to change.</i></td>
+            The latter two are optional and by default zero. <em>This syntax is
+              for internal use only and subject to change.</em></td>
         </tr>
       </tbody>
     </table>
@@ -835,13 +844,11 @@
         lower element number.</dd>
     </dl>
     <h4>Alphanumeric operators</h4>
-    <dl>
-      <dt>Note that <tt>vc4asm</tt> treats mathematical functions like <tt>log</tt>
-        as unary operators rather than functions. I.e. the basic syntax is <tt>log
-          7</tt> rather than <tt>log(7)</tt>. However, since braces are always
-        allowed around expression the latter will work as well although the
-        braces are no function call operator.</dt>
-    </dl>
+    <p>Note that <tt>vc4asm</tt> treats mathematical functions like <tt>log</tt>
+      as unary operators rather than functions. I.e. the basic syntax is <tt>log
+        7</tt> rather than <tt>log(7)</tt>. However, since braces are always
+      allowed around expression the latter will work as well although the braces
+      are no function call operator.</p>
     <dl>
     </dl>
   </body>

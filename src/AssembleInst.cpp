@@ -222,114 +222,267 @@ void AssembleInst::applyRot(int count)
 
 void AssembleInst::applyPackUnpack(rPUp mode)
 {
-	if (!mode)
-	{	// no pack/unpack => Ensure that no pack/unpack silently applies.
-		if (InstCtx & IC_DST)
-		{
-
-		} else if (InstCtx & IC_SRC)
-		{	// Source context
-			if ((UseUnpack & ~InstCtx & IC_SRC) && PM == isUnpackable(currentMux()))
-				Msg(WARNING, "The unpack option silently applies to 2nd source argument.");
-		}
-		return;
-	}
-
 	switch (mode.requestType())
-	{default: // NONE
-		if (InstCtx & IC_DST)
-			goto pack;
-		assert(InstCtx & IC_SRC);
-		goto unpack;
-
-	 case rPUp::UNPACK:
+	{case rPUp::UNPACK:
 		if (InstCtx & IC_DST)
 			Fail("Unpack cannot be used in target context.");
 	 unpack:
-		if (Sig >= S_LDI)
-			Fail("Cannot apply .unpack to branch and load immediate instructions.");
-		if (UseUnpack & (IC_OP | (InstCtx&IC_SRC)))
-			Fail("Only one .unpack per ALU instruction, please.");
-		if ((InstCtx & IC_SRC) && isUnpackable(currentMux()) < 0)
-			Fail("Cannot unpack this source argument.");
-		if (Unpack != mode.asUnPack())
-		{	if (Unpack != U_32)
-				Fail("Cannot use different unpack modes within one instruction.");
-			Unpack = mode.asUnPack();
-		}
-		UseUnpack |= InstCtx;
-		// The check of unpack mode against used source register
-		// and the pack mode is done in doALUExpr.
+		doUnpack(mode.asUnPack());
 		break;
 
 	 case rPUp::PACK:
 		if (InstCtx & IC_SRC)
 			Fail("Register pack cannot be used in source context.");
 	 pack:
-		if (Sig == S_BRANCH)
-			Fail("Cannot apply .pack to branch instruction.");
-		if (Pack != P_32)
-			Fail("Only one .pack per instruction, please.");
-		// Use intermediate pack mode matching the ALU
-		bool pm = !!(InstCtx & IC_MUL);
-		auto pack = mode.asPack();
-		if (InstCtx & IC_DST)
-		{	if (!pm)
-			{	// At target register of ADD ALU = Target must be regfile A
-				if (WS/* || WAddrA >= 32*/)
-					Fail("Target of ADD ALU must be of regfile A to use pack.");
-			} else
-			{	// At target register of MUL ALU
-				// Prefer regfile A pack even for MUL ALU
-				if (WS && WAddrM < 32 && !PM)
-					pm = false;
-				// Check for pack mode supported by MUL ALU
-				else if (pack < P_8abcdS)
-					Fail("MUL ALU only supports saturated pack modes with 8 bit.");
-				else
-					(uint8_t&)pack &= 7;
-			}
+		doPack(mode.asPack());
+		break;
+
+	 default: // NONE
+		// auto detect pack vs. unpack
+		if (InstCtx & IC_SRC)
+		{	if (isALU())
+				goto unpack;
+		} else if (InstCtx & IC_DST)
+		{	if (Sig != S_BRANCH)
+				goto pack;
 		}
-		if (Unpack && PM != pm)
-			Fail("Type of pack conflicts with type of unpack in PM flag.");
-		// Commit
-		PM = pm;
-		Pack = pack;
 	}
 }
 
-void AssembleInst::checkUnpack(mux mux)
-{
-	if (UseUnpack & (IC_OP | (InstCtx&IC_SRC)))
-	{	// Current source argument should be unpacked.
-		int pm = isUnpackable(mux);
-		if (pm < 0)
-		{	pm = PM;
-			if (!(UseUnpack & IC_OP))
-				Fail("Cannot unpack this source argument.");
-			else if ( (InstCtx & IC_SRCB)
-				&& !(((InstCtx & IC_MUL) || !isUnary())
-					&& isUnpackable(InstCtx & IC_MUL ? MuxMA : MuxAA) >= 0 )) // Operands must contain either r4 xor regfile A
-				Fail("The unpack option works for none of the source operands of the current opcode.");
-		}
-		if ( (UseUnpack & ~InstCtx & IC_BOTH) && ( (InstCtx & IC_MUL)
-				? isUnpackable(MuxAB) == pm || (!isUnary() && isUnpackable(MuxAA) == pm)
-				: isUnpackable(MuxMB) == pm || isUnpackable(MuxMA) == pm ))
-			Fail("Using unpack changes the semantic of the other ALU.");
-		if (pm != PM)
-		{	if (Pack)
-				// TODO: in a few constellations the pack mode of regfile A and the MUL ALU are interchangeable.
-				Fail("Requested unpack mode conflicts with pack mode of the current instruction.");
-			if ((InstCtx & IC_SRCB) && (UseUnpack & IC_SRCA))
-				Fail("Conflicting unpack modes of first and second source operand.");
-			// Check for unpack sensitivity of second ALU instruction.
-			if ( (InstCtx & IC_MUL)
-				? isUnpackable(MuxAB) >= 0 || (!isUnary() && isUnpackable(MuxAA) >= 0)
-				: isUnpackable(MuxMB) >= 0 || isUnpackable(MuxMA) >= 0 )
-				Fail("The unpack modes of ADD ALU and MUL ALU are different.");
-			PM = (bool)pm;
+int AssembleInst::calcPM(pack mode)
+{	// valid modes: I = int source, F = float source, A = regfile A pack, M = MUL ALU pack
+	// 32 bit : IA, IM, FA, FM
+	// 16 bit : IA,     FA
+	// 8 bit  : IA,         FM
+	// 8 bitR : IA,         FM  (replicate bytes)
+	uint8_t raw = mode & 15;
+	if (raw == 0)
+		return -1;
+	if ((mode & P_INT) || raw == 8 || (raw & 7) < 3)
+		return 0; // regfile A pack only
+	if (mode & P_FLT)
+		return 1; // MUL ALU pack only
+	return -1;
+}
+
+int AssembleInst::calcPM(unpack mode)
+{	// valid modes: I = int result, F = float result, A = regfile A unpack, 4 = r4 unpack
+	// 32 bit : IA, I4, FA, F4
+	// 16 bit : IA,     FA, F4
+	// 8 bit  : IA,     FA, F4
+	// 8 bitR : IA, I4         (replicate alpha byte)
+	int raw = mode & 7;
+	if (raw == 0 || raw == 3)
+		return -1;
+	if (mode & U_INT)
+		return false;
+	// Additionally check whether current ALU supports float modes.
+	if ((mode & U_FLT) && !isFloatInput(InstCtx & IC_MUL))
+		return false;
+	return -1;
+}
+
+void AssembleInst::checkUnpack()
+{	if ( !(InstCtx & IC_SRC)     // only check in source context
+		|| !Unpack                 // no unpack, no problem
+		|| PM                      // no ambiguities with r4 unpack
+		|| (Unpack & 7) == U_8dr ) // no ambiguities with .8dr
+		return;
+	bool floatin = isFloatInput(InstCtx & IC_MUL);
+	switch (Unpack & (U_INT|U_FLT))
+	{case 0: // no explicit int/float mode, but lets nail the mode to avoid conflicts with the other ALU
+		Unpack = (unpack)(Unpack | (floatin ? U_FLT : U_INT));
+		break;
+	 case U_INT:
+		if (floatin)
+			Fail("The requested unpack mode is only supported by instructions that take integer input.");
+		break;
+	 case U_FLT:
+		if (!floatin)
+		{	// if this is a mov instruction, executed by the ADD ALU then we could fulfill the request by changing the opcode
+			if ( (InstCtx & IC_SRC) == IC_SRC
+				&& ((InstCtx & IC_ADD) || tryALUSwap())
+				&& OpA == A_OR )
+				OpA = A_FMIN;
+			else
+				Fail("The requested unpack mode is only supported by instructions that take floating point input.");
 		}
 	}
+	// Stage 2: check the other ALU
+	bool otherfloatin;
+	if (InstCtx & IC_MUL)
+	{	if (!isADD())
+			return; // ADD ALU unused => no conflict
+		auto mux = currentMux();
+		if (MuxAA != mux && MuxAB != mux)
+			return; // ADD ALU does not access unpack mux => no conflict
+		otherfloatin = isFloatInput(false);
+	} else
+	{	if (!isADD())
+			return; // MUL ADD ALU unused => no conflict
+		auto mux = currentMux();
+		if (MuxMA != mux && MuxMB != mux)
+			return; // MUL ALU does not access unpack mux => no conflict
+		otherfloatin = isFloatInput(true);
+	}
+	if (otherfloatin == !floatin)
+	{	if (floatin)
+			Fail("Using unpack with floating point input changes the behavior of the unpack operation of the other ALU.");
+		else
+			Fail("Unpack of the other ALU with a floating point instruction prevents access to the integer unpack modes.");
+	}
+}
+
+void AssembleInst::applyPM(bool pm)
+{	if (PM == pm)
+		return; // match
+	if (Pack)
+		Fail("Required unpack mode conflicts with pack mode of this instruction.");
+	if (Unpack && (UseUnpack & ~InstCtx & (IC_SRC|IC_BOTH)))
+		Fail("Required unpack mode conflicts previous unpack mode.");
+	PM = pm;
+}
+
+void AssembleInst::doUnpack(unpack mode)
+{	int pm;
+	if (!mode)
+	{	// no unpack request at source context...
+		if (UseUnpack & IC_OP)
+		{	// OP code level unpack at current instruction...
+			pm = isUnpackable(currentMux());
+			// opcode unpack applies? => adjust PM
+			int pm2 = calcPM(Unpack);
+			if (pm >= 0 && pm2 < 0)
+			{	if ((InstCtx & IC_SRC) == IC_SRCB && isUnpackable(InstCtx & IC_MUL ? MuxMA : MuxAA) == !pm)
+					Fail("Ambiguous (un)pack mode. Unpack could apply to both source arguments.");
+				applyPM((bool)pm);
+				checkUnpack();
+				UseUnpack |= InstCtx;
+			}
+			// check 4 unused unpack extensions
+			switch (InstCtx & IC_BOTH)
+			{case IC_ADD:
+				if ( ((InstCtx & IC_SRCB) || isUnary()) // last source arg
+						&& isUnpackable(MuxAA) != PM && isUnpackable(MuxAB) != PM )
+					goto nounpack;
+				break;
+			 case IC_MUL:
+				if ( (InstCtx & IC_SRCB) // last source arg
+					&& isUnpackable(MuxMA) != PM && isUnpackable(MuxMB) != PM )
+				 nounpack:
+					Msg(WARNING, "The unpack option does not apply to any source argument.");
+			 default:;
+			}
+		} else
+		{	// no unpack at current context...
+			// ensure that no unpack silently applies.
+			if ((UseUnpack & (~InstCtx & IC_BOTH)) && PM == isUnpackable(currentMux()))
+				Fail("The unpack option from the other ALU silently applies.");
+			if ((InstCtx & IC_SRCB) && (UseUnpack & IC_SRCA) && PM == isUnpackable(currentMux()))
+				Msg(WARNING, "The unpack option silently applies to 2nd source argument.");
+		}
+		return;
+	}
+
+	if (!isALU())
+		Fail("Cannot apply .unpack to branch and load immediate instructions.");
+	if (UseUnpack & (InstCtx|IC_OP) & (IC_OP|IC_SRC))
+		Fail("Only one .unpack per ALU instruction, please.");
+	// determine PM bit
+	pm = calcPM(mode);
+	if (InstCtx & IC_SRC)
+	{	int pm2 = isUnpackable(currentMux());
+		if (pm2 < 0)
+			Fail("Cannot unpack this source argument.");
+		if (!pm2 == pm)
+			Fail("The requested unpack mode is not supported by this source argument.");
+		pm = pm2;
+	}
+	// apply unpack mode to *this
+	if (pm >= 0)
+		applyPM((bool)pm);
+	else if (!Pack && !Unpack)
+		Msg(INFO, "Indeterminate unpack mode.");
+
+	if (Unpack != U_32 && ((Unpack ^ mode) & 7))
+		Fail("Cannot use different unpack modes within one instruction.");
+	Unpack = mode;
+	checkUnpack();
+	UseUnpack |= InstCtx;
+	// Check whether unpack applies unexpectedly to another argument.
+	if ((InstCtx & IC_SRCB) && !(UseUnpack & (IC_OP|IC_SRCA)) && PM == isUnpackable(getMux(InstCtx ^ IC_SRC)))
+		Msg(WARNING, "The unpack option silently applies to 1st source argument.");
+	if ( (InstCtx | (IC_OP|IC_SRCA)) && ( InstCtx & IC_MUL
+			? !(UseUnpack & IC_ADD) && isADD() && (isUnpackable(MuxAA) == PM || (!isUnary() && isUnpackable(MuxAB) == PM))
+			: !(UseUnpack & IC_MUL) && isMUL() && (isUnpackable(MuxMB) == PM || isUnpackable(MuxMA) == PM) ))
+		Fail("Using unpack changes the semantic of the other ALU.");
+}
+
+void AssembleInst::doPack(pack mode)
+{
+	if (!mode)
+	{	if (!(InstCtx & IC_DST) || !(InstCtx & UsePack & IC_BOTH))
+			return;
+		mode = Pack;
+	} else
+	{	if (Sig == S_BRANCH)
+			Fail("Cannot apply .pack to branch instruction.");
+		if (Pack)
+			Fail("Only one .pack per instruction, please.");
+	}
+	// handle pack mode
+	{	int pm = calcPM(mode);
+		switch (pm)
+		{default:
+			if (!(InstCtx & IC_DST))
+				goto applyPack;
+			// check for target
+			if (InstCtx & IC_MUL)
+			{	if (Unpack)
+					goto applyPack;
+				pm = !WS || WAddrM >= 32;
+			} else
+			{	pm = WS || WAddrA >= 32;
+				if (!pm && Unpack)
+					goto applyPack;
+				if (pm && !tryALUSwap())
+					Fail("Target of ADD ALU must be of regfile A to use pack.");
+			}
+			break; // apply PM
+
+		 case true: // MUL ALU
+			if (!(InstCtx & IC_MUL) && !tryALUSwap())
+				Fail("The requested pack mode is only supported by the MUL ALU.");
+		 case false:; // reg A
+		}
+		// apply PM
+		if (pm != PM)
+		{	if (Unpack)
+				Fail("Required pack mode conflicts with unpack mode of this instruction.");
+			PM = pm;
+		}
+	}
+ applyPack:
+	if ((InstCtx & IC_DST) && !PM)
+	{	if (InstCtx & IC_MUL ? (!WS || WAddrM >= 32) : (WS || WAddrA >= 32))
+			Fail("This pack mode requires regfile A target.");
+		// check for int/float
+		if ( (mode & (P_INT|P_FLT))
+			&& (unsigned)(mode & (P_16a|P_16b|P_8a)) - P_16a <= P_16b - P_16a ) // 16 bit pack mode
+		{	bool isfloat = isFloatResult(InstCtx & IC_MUL);
+			if (!(mode & P_FLT) == isfloat)
+			{	if (isfloat)
+					Fail("This pack mode requires the result of an integer instruction.");
+				/* TODO: in case of mov instruction and ADD ALU change opcode to fmin.
+				else if ( (InstCtx & IC_SRC) == IC_SRC // hack for mov instruction
+					&& ((InstCtx & IC_ADD) || (tryALUSwap() && OpA == A_OR)) )
+					OpA = A_FMIN;*/
+				else
+					Fail("This pack mode requires the result of a floating point instruction.");
+			}
+		}
+	}
+	Pack = mode;
 }
 
 bool AssembleInst::trySmallImmd(uint32_t value)
@@ -390,8 +543,6 @@ bool AssembleInst::trySmallImmd(uint32_t value)
 		{	MuxAA = MuxAB = X_RB;
 			OpA  = si->OpCode.asAdd();
 		}
-
-		checkUnpack (X_RB);
 		return true;
 	}
 	// nope, can't help
@@ -523,12 +674,12 @@ void AssembleInst::applyTarget(reg_t reg)
 }
 
 void AssembleInst::applyALUSource(exprValue val)
-{	mux ret;
+{	mux mux;
 	switch (val.Type)
 	{default:
 		Fail("The second argument of a binary ALU instruction must be a register or a small immediate value.");
 	 case V_REG:
-		ret = muxReg(val.rValue);
+		mux = muxReg(val.rValue);
 		applyPackUnpack(val.rValue.Pack);
 		applyRot(-val.rValue.Rotate);
 		break;
@@ -558,9 +709,8 @@ void AssembleInst::applyALUSource(exprValue val)
 		if (si == 0xff)
 			Fail("Value 0x%x does not fit into the small immediate field.", value.uValue);
 		doSMI(si);
-		setMux(ret = X_RB);
+		setMux(mux = X_RB);
 	}
-	checkUnpack(ret);
 }
 
 void AssembleInst::prepareMOV(bool target2)
@@ -607,8 +757,6 @@ bool AssembleInst::applyMOVsrc(exprValue src)
 		}
 		applyPackUnpack(src.rValue.Pack);
 		applyRot(-src.rValue.Rotate);
-
-		checkUnpack(mux);
 		return true;
 
 	 case V_INT:
@@ -618,7 +766,6 @@ bool AssembleInst::applyMOVsrc(exprValue src)
 		if ( Sig != S_LDI && (InstCtx & IC_BOTH) != IC_BOTH
 			&& trySmallImmd(value.uValue))
 			return true;
-
 	 case V_LDPES:
 	 case V_LDPEU:
 	 case V_LDPE:
@@ -634,8 +781,10 @@ void AssembleInst::applyLDIsrc(exprValue src, ldmode mode)
 		Fail("The last parameter of a ldi or semaphore instruction must be an immediate value. Found %s", type2string(src.Type));
 
 	 case V_REG:
+		if (src.rValue.Pack)
+			Fail("Unpack not allowed for ldi or semaphore instruction.");
 		if (!(src.rValue.Type & R_SEMA))
-			Fail("register source not allowed for ldi or semaphore instruction.");
+			Fail("Register source not allowed for ldi or semaphore instruction.");
 		// semaphore access by LDI like instruction
 		if (!(mode & L_SEMA))
 			(uint8_t&)mode |= L_SEMA;
@@ -800,7 +949,7 @@ void AssembleInst::applySignal(sig signal)
 }
 
 bool AssembleInst::tryRABSwap()
-{	if ( Sig >= S_LDI      // can't swap ldi and branch
+{	if ( !isALU()          // can't swap ldi and branch
 		|| (Unpack && !PM)   // can't swap with regfile A unpack
 		|| !isRRegAB(RAddrA) // regfile A read not invariant
 		|| !isRRegAB(RAddrB) // regfile B read not invariant
@@ -820,7 +969,7 @@ bool AssembleInst::tryALUSwap()
 {	if (Flags & IF_NOASWAP)
 		return false;
 
-	if ( Sig >= S_LDI  // can't swap ldi and branch
+	if ( !isALU()      // can't swap ldi and branch
 		|| SF            // can't swap with set flags
 		|| (Pack && PM)  // can't swap with MUL ALU pack
 		|| (Sig == S_SMI && SImmd >= 48) ) // can't swap with vector rotation
@@ -891,7 +1040,7 @@ bool AssembleInst::tryALUSwap()
 }
 
 bool AssembleInst::isTMUconflict() const
-{	return Sig < S_LDI
+{	return isALU()
 		&& ( ((0xfff09e0000000000ULL & (1ULL << WAddrA)) != 0)
 		+ ((0xfff09e0000000000ULL & (1ULL << WAddrM)) != 0)
 		+ ((0x0008060000000000ULL & (1ULL << RAddrA)) != 0)
