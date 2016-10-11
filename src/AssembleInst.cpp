@@ -759,6 +759,11 @@ bool AssembleInst::applyMOVsrc(exprValue src)
 		applyRot(-src.rValue.Rotate);
 		return true;
 
+	 case V_LABEL:
+		/* Convert type to V_INT to use V_LABEL target as int. */
+		src.Type = V_INT;
+		//no break
+
 	 case V_INT:
 	 case V_FLOAT:
 		value = QPUValue(src);
@@ -811,6 +816,11 @@ void AssembleInst::applyLDIsrc(exprValue src, ldmode mode)
 	 ldpe_cont:
 		value = QPUValue(src);
 		break;
+
+	 case V_LABEL:
+		/* Convert type to V_INT to use V_LABEL target as int. */
+		src.Type = V_INT;
+		//no break
 
 	 case V_FLOAT:
 		if (mode & L_PEU)

@@ -255,6 +255,7 @@ Parser::label& Parser::labelRef(string name, bool forward)
 		else if (Labels.size() <= LabelCount || Labels[LabelCount].Name != Token)
 			Fail("Inconsistent label definition during Pass 2.");
 		Labels[LabelCount].Reference = *Context.back();
+
 		++LabelCount;
 	}
 	return Labels[l.first->second];
@@ -414,9 +415,18 @@ void Parser::ParseExpression()
 		 case COLON: // Label
 			{	// Is forward reference?
 				bool forward = false;
-				switch (NextToken())
+
+				// Search for '::name' labels
+				bool double_colon = false;
+				token_t nt = NextToken();
+				if (nt == COLON)
+				{ nt = NextToken();
+					double_colon = true;
+				}
+
+				switch (nt)
 				{default:
-					Fail("Expected Label after ':'.");
+					Fail("Expected Label after '%s'.", double_colon?"::":":");
 
 				 case BRACE1: // Internal label constant
 					if ( NextToken() != NUM
@@ -830,7 +840,7 @@ void Parser::ParseInstruction()
 	}
 }
 
-void Parser::defineLabel()
+void Parser::defineLabel(bool exportable_label)
 {
 	// Lookup symbol
 	const auto& lname = LabelsByName.emplace(Token, LabelCount);
@@ -860,6 +870,8 @@ void Parser::defineLabel()
 	lp->Value = PC * sizeof(uint64_t) + (BitOffset >> 3);
 	lp->Definition = *Context.back();
 
+	lp->Exported = exportable_label;
+
 	if (Preprocessed)
 	{	fputs(Token.c_str(), Preprocessed);
 		fputs(": ", Preprocessed);
@@ -869,14 +881,24 @@ void Parser::defineLabel()
 void Parser::parseLabel()
 {
 	if (!isspace(*At))
-		switch (NextToken())
-		{default:
-			Fail("Expected label name after ':', found '%s'.", Token.c_str());
-		 case WORD:
-		 case NUM:
-			defineLabel();
-		 case END:;
+	{ token_t nt = NextToken();
+
+		// Search for '::name' labels
+		bool double_colon = false;
+		if (nt == COLON)
+		{ nt = NextToken();
+			double_colon = true;
 		}
+		switch (nt)
+		{default:
+			Fail("Expected label name after '%s', found '%s'.",
+					double_colon?"::":":", Token.c_str());
+			case WORD:
+			case NUM:
+			defineLabel(double_colon);
+			case END:;
+		}
+	}
 	Flags |= IF_BRANCH_TARGET;
 }
 
@@ -903,13 +925,19 @@ void Parser::parseGLOBAL(int)
 		}
 		break;
 	 case COLON:
-		if (NextToken() != WORD)
-			Fail("Label name expected. Found '%s'.", Token.c_str());
-		name = Token;
-		if (NextToken() != END)
-			Fail("Expected end of line.");
+		{ // Search for '::name' labels
+			token_t nt = NextToken();
+			if (nt == COLON)
+				nt = NextToken();
+
+			if (nt != WORD)
+				Fail("Label name expected. Found '%s'.", Token.c_str());
+			name = Token;
+			if (NextToken() != END)
+				Fail("Expected end of line.");
+		}
 	 case END: // only label name
-		ExprValue = exprValue(labelRef(name).Value, V_LABEL);
+		ExprValue = exprValue(labelRef(name, false).Value, V_LABEL);
 	}
 	auto p = GlobalsByName.emplace(name, ExprValue);
 	if (!p.second && Pass2)
@@ -1822,7 +1850,13 @@ void Parser::ParseLine()
 		// read-ahead to see if the next token is a colon in which case
 		// this is a label.
 		if (*At == ':')
-		{	defineLabel();
+		{	// Search for '::name' labels
+			if (*(At+1) == ':')
+			{ ++At;
+				defineLabel(true);
+			}else{
+				defineLabel();
+			}
 			InstFlags[pos] |= IF_BRANCH_TARGET;
 			++At;
 			goto next;
@@ -1864,6 +1898,18 @@ void Parser::ParseLine()
 
 		ParseInstruction();
 		StoreInstruction(encode());
+		if (Pass2)
+		{	LineForInstruction.emplace_back(Line);
+			auto &l = LineForInstruction.back();
+			if (l.back() == '\n')
+				l.pop_back();
+			// Truncate '#'- Comments
+			l.erase(l.begin() + min(l.find("#"), l.size()), l.end());
+			// Trim
+			l.erase(l.begin(), l.begin() + l.find_first_not_of("\t ") );
+			l.erase(l.begin() + l.find_last_not_of("\t ") + 1, l.end());
+		}
+
 		++PC;
 		Flags = IF_NONE;
 		return;
@@ -1872,6 +1918,7 @@ void Parser::ParseLine()
 
 void Parser::ParseFile()
 {
+	LineForInstruction.clear();
 	FILE* f = fopen(fName(Context.back()->File), "r");
 	if (!f)
 		Fail("Failed to open file %s.", fName(Context.back()->File));
@@ -2005,6 +2052,20 @@ void Parser::Reset()
 	Labels.clear();
 	Pass2 = false;
 	SourceFiles.clear();
+}
+
+Parser::lnames_t&  Parser::getLabelsForIntruction(unsigned int PC, bool exported) const
+{
+	lnames_t *ret = new lnames_t();
+	unsigned int i=0;
+	for (auto& label : Labels){
+		if (label.Value - 4*PC < 4 && (!exported || label.Exported))
+		{
+			ret->emplace(label.Name, i);
+		}
+		++i;
+	}
+	return *ret;
 }
 
 Parser::Parser()

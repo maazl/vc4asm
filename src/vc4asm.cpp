@@ -1,9 +1,11 @@
 #include "Parser.h"
 #include "Validator.h"
+#include "Disassembler.h"
 #ifdef __linux__
 #include "WriteELF.h"
 #endif
 #include <cstdio>
+#include <sstream>
 #include <getopt.h>
 
 using namespace std;
@@ -19,6 +21,73 @@ static inline uint64_t swap_uint64(uint64_t x)
 #endif
 
 static const char CPPTemplate[] = ",\n0x%08lx, 0x%08lx";
+static const char CPPTemplate_Detailed[] = ",\n/* [0x%08x] */ 0x%08lx, 0x%08lx%s // %-*s | %s";
+static const char CPPTemplate_Method[] = ",\n// %s%s";
+static const char HTemplate1[] = "#ifndef %1$s_H\n#define %1$s_H\n\nextern unsigned int %1$s[];\n\n";
+static const char HTemplate2[] = "#define %s (%s + %u)\n";
+
+bool print_labels(FILE *of, const char *tpl, Parser &parser, unsigned int pos){
+	auto &label_map = parser.getLabelsForIntruction(pos, false);
+	bool add_newline(false);
+	for( auto &label : label_map){
+		fprintf(of, CPPTemplate_Method
+				+ (tpl-CPPTemplate_Detailed), // offset prevent '\n' in first line
+				parser.getLabels()[label.second].Exported?"::":":",
+				label.first.c_str());
+		add_newline = true;
+	}
+	return add_newline;
+}
+
+void print_hex(FILE *of, Parser &parser){
+	const char* tpl = CPPTemplate_Detailed + 2; // no ,\n in the first line
+
+	/* Optimization and macros, etc made it sometimes complex to track which
+	 * instruction was created by which chunks of text.
+	 * Use disassembly object to generate instruction comment.
+	 */
+	Disassembler dis;
+	stringstream dis_stream;
+	string dis_line;
+
+	// Propagete Labels to dis.
+	map<size_t,string> l;
+	for (auto& label : parser.getLabels())
+	{
+		l.emplace(label.Value, label.Name);
+	}
+	dis.ProvideLabels(l);
+
+	for (auto& code : parser.Instructions)
+	{	// Search labels
+		auto pos = &code - &parser.Instructions[0];
+		bool last = (pos == (int)parser.Instructions.size() - 1);
+		if (print_labels(of, tpl, parser, 2 * pos))
+			tpl = CPPTemplate_Detailed + 1;
+
+		dis.Instructions.clear();
+		dis_line.clear();
+		dis_stream.str(dis_line); // clear stream
+
+		dis.BaseAddr = sizeof(uint64_t)*pos;
+		dis.Instructions.push_back(code);
+		dis.Disassemble(dis_stream, true);
+		getline(dis_stream, dis_line, '\n');
+
+		fprintf(of, tpl, 2*sizeof(unsigned long)*pos,
+				(unsigned long)(code & 0xffffffffULL),
+				(unsigned long)(code >> 32),
+				last?" ":",",
+				26, // min width of following field.
+				dis_line.c_str(),
+				parser.LineForInstruction[pos].c_str());
+
+		tpl = CPPTemplate_Detailed + 1;
+	}
+
+	// Add labels after last instruction, i.e. ':end'.
+	print_labels(of, tpl, parser, 2*parser.Instructions.size());
+}
 
 int main(int argc, char **argv)
 {
@@ -28,12 +97,14 @@ int main(int argc, char **argv)
 	const char* writeELF = NULL;
 	const char* writeELF2 = NULL;
 	const char* writePRE = NULL;
+	const char* writeHEADER = NULL;
 	bool check = false;
+	bool decorated_hex = false;
 
 	Parser parser;
 
 	int c;
-	while ((c = getopt(argc, argv, "o:c:e:C:E:I:Vi")) != -1)
+	while ((c = getopt(argc, argv, "o:c:e:v:C:H:E:I:Vi")) != -1)
 	{	switch (c)
 		{case 'o':
 			writeBIN = optarg; break;
@@ -41,6 +112,8 @@ int main(int argc, char **argv)
 			writeCPP = optarg; break;
 		 case 'C':
 			writeCPP2 = optarg; break;
+		 case 'H':
+			writeHEADER = optarg; break;
 #ifdef __linux__
 		 case 'e':
 			writeELF = optarg; break;
@@ -55,15 +128,19 @@ int main(int argc, char **argv)
 			parser.OperationMode = Parser::IRGNOREERRORS; break;
 		 case 'P':
 			writePRE = optarg; break;
+		 case 'v':
+			decorated_hex = true; break;
 		}
 	}
 
-	if (!writeBIN && !writeCPP && !writeCPP2 && !writePRE && !writeELF && parser.OperationMode != Parser::PASS1ONLY)
+	if (!writeBIN && !writeCPP && !writeCPP2 && !writePRE && !writeELF && !writeHEADER && parser.OperationMode != Parser::PASS1ONLY)
 	{	fputs("vc4asm V0.2.2\n"
-			"Usage: vc4asm [-o <bin-output>] [-{c|C} <c-output>] [-V] <qasm-file(s)>\n"
+			"Usage: vc4asm [-o <bin-output>] [-{c|C} <c-output>] [-{H} <c-header>] [-v] [-V] <qasm-file(s)>\n"
 			" -o<file> Binary output file.\n"
 			" -c<file> C output file with trailing ','.\n"
 			" -C<file> C output file withOUT trailing ','.\n"
+			" -v Add decoration to C output, like labels and instructions.\n"
+			" -H<file> C header with list of all ::name labels.\n"
 #ifdef __linux__
 			" -e<file> Linux ELF output file.\n"
 			" -E<file> Linux ELF output file without predefined symbols.\n"
@@ -109,6 +186,36 @@ int main(int argc, char **argv)
 		if (!parser.Success && parser.OperationMode != Parser::IRGNOREERRORS)
 			throw string("Aborted because of earlier errors.");
 		// Write results
+
+		if (writeHEADER)
+		{	FILE* of = fopen(writeHEADER, "wt");
+			if (of == NULL)
+			{	fprintf(stderr, "Failed to open %s for writing.", writeHEADER);
+				return -1;
+			}
+
+			// Truncate extension, i.e. '.c'. Warn if header without
+			// suffix not match with writeCPP* name.
+			string sc(writeCPP2?writeCPP2:(writeCPP?writeCPP:writeHEADER));
+			string prog = sc.substr(0, sc.find_last_of("."));
+
+			string sh(writeHEADER);
+			if (prog != sh.substr(0, sh.find_last_of(".")))
+			{ fprintf(stderr, "Warning: Header file name not match to c file. Name of binary array " \
+					"derived from %s-argument.\n %s,%s\n", writeCPP2?"-C":"-c", writeCPP2, writeHEADER);
+			};
+
+			fprintf(of, HTemplate1, prog.c_str());
+
+			for (auto& label : parser.getLabels())
+			{	if (label.Exported)
+				{ fprintf(of, HTemplate2, label.Name.c_str(), prog.c_str(), label.Value/4 );
+				}
+			}
+			fputs("\n#endif\n", of);
+			fclose(of);
+		}
+
 		if (writeCPP)
 		{	FILE* of = fopen(writeCPP, "wt");
 			if (of == NULL)
@@ -116,11 +223,18 @@ int main(int argc, char **argv)
 				return -1;
 			}
 
-			const char* tpl = CPPTemplate + 2; // no ,\n in the first line
-			for (auto code : parser.Instructions)
-			{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
-				tpl = CPPTemplate;
+			if (decorated_hex)
+			{
+				print_hex(of, parser);
+			}else
+			{
+				const char* tpl = CPPTemplate + 2; // no ,\n in the first line
+				for (auto code : parser.Instructions)
+				{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
+					tpl = CPPTemplate;
+				}
 			}
+
 			fputs(",\n", of);
 			fclose(of);
 		}
@@ -131,11 +245,17 @@ int main(int argc, char **argv)
 				return -1;
 			}
 
-			const char* tpl = CPPTemplate + 2; // no ,\n in the first line
-			for (auto code : parser.Instructions)
-			{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
-				tpl = CPPTemplate;
+			if (decorated_hex)
+			{
+				print_hex(of, parser);
+			}else
+			{ const char* tpl = CPPTemplate + 2; // no ,\n in the first line
+				for (auto code : parser.Instructions)
+				{ fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
+					tpl = CPPTemplate;
+				}
 			}
+
 			fputc('\n', of);
 			fclose(of);
 		}

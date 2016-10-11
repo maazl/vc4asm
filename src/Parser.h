@@ -51,6 +51,8 @@ class Parser : private AssembleInst, public DebugInfo
 	/// This is only valid after EnsurePass2 has been called.
 	vector<uint64_t> Instructions;
 
+	/// Hold after assembly the source code for each entry of Instructions.
+	vector<string> LineForInstruction;
  private: // types...
 	/// Type of a parser token.
 	enum token_t : char
@@ -127,7 +129,8 @@ class Parser : private AssembleInst, public DebugInfo
 		unsigned       Value;///< Value of the label if already defined.
 		location       Definition;///< Where has the label been defined if already defined.
 		location       Reference; ///< Where has the label been referenced if already referenced. (for messages only, only one reference is kept)
-		label(const string& name) : Name(name), Value(0) {} ///< create new label entry for name
+		bool					 Exported; /// True for ::name labels. Label will exported by -H flag.
+		label(const string& name) : Name(name), Value(0), Exported(false) {} ///< create new label entry for name
 	};
 	/// List of label definitions in order of appearance
 	/// The index in the vector is the unique label ID.
@@ -474,8 +477,10 @@ class Parser : private AssembleInst, public DebugInfo
 	/// @brief Handle label definition.
 	/// @details The function will not forward the parser location.
 	/// The label name is expected to be the last parsed \ref Token value.
+	/// @param exportable_label The label name and its position will exported
+	/// under certain program arguments.
 	/// @exception std::string Failed, error message.
-	void             defineLabel();
+	void             defineLabel(bool exportable_label = false);
 	/// @brief Handle label definition with trailing colon.
 	/// @details The function is intended to be invoked after NextToken returned a colon at the start of a line.
 	/// It parses the label name and leaves the rest of the line untouched for further parsing.
@@ -659,6 +664,17 @@ class Parser : private AssembleInst, public DebugInfo
 	/// This function switches to pass 2 after pass 1, i.e. ParseFile, has completed.
 	/// @post This call ensures the validity of Instructions, GlobalSymbolsByName and DebugInfo.
 	void             EnsurePass2();
+
+	/// Return reference on labels.
+	const labels_t   getLabels() const{
+		return Labels;
+	};
+
+	/// Return unordered map with all labels of an instruction.
+	/// @param PC Program counter in GPU words.
+	/// @param exported restrict output on labels with Exported flag.
+	/// @return Unordered map with all labels of a instruction.
+	lnames_t& getLabelsForIntruction(unsigned int PC, bool exported = false) const;
 };
 
 #endif // PARSER_H_
