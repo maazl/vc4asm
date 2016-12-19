@@ -165,22 +165,31 @@ Parser::token_t Parser::NextToken()
 	 case '\n':
 		ToNextChar();
 		goto restart;
-	 case '>':
-	 case '<':
-	 case '&':
-	 case '^':
-	 case '|':
 	 case '!':
-	 case '=':
+		i = !memchr("^=", 2, At[1]) ? 0 : 1 + (At[2] == At[1]);
+		goto op;
+	 case '%':
 	 case '+':
 	 case '-':
-	 case '*':
 	 case '/':
-	 case '%':
 	 case '~':
-		i = strspn(At+1, "><&^|!=+-*/%~");
+		i = 0;
+	 op:
 		ret = OP;
 		break;
+	 case '&':
+	 case '*':
+	 case '^':
+	 case '|':
+		i = At[1] == *At;
+		goto op;
+	 case '<':
+	 case '>':
+		i = strspn(At+1, "<=>");
+		goto op;
+	 case '=':
+		i = At[1] != '=' ? 0 : 1 + (At[2] == '=');
+		goto op;
 	 case '(':
 	 case ')':
 	 case '[':
