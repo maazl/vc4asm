@@ -732,6 +732,13 @@ const AssembleInst::smiEntry AssembleInst::smiMap[] =
 ,	{ 0x7f800000, 61, A_FSUB }
 ,	{ 0x7f800000, 62, A_FSUB }
 ,	{ 0x7f800000, 63, A_FSUB }
+,	{ 0x7fffffff, 33, A_ADD,   P_32SI }
+,	{ 0x7fffffff, 34, A_ADD,   P_32SI }
+,	{ 0x7fffffff, 35, A_ADD,   P_32SI }
+,	{ 0x7fffffff, 36, A_ADD,   P_32SI }
+,	{ 0x7fffffff, 37, A_ADD,   P_32SI }
+,	{ 0x7fffffff, 38, A_ADD,   P_32SI }
+,	{ 0x7fffffff, 39, A_ADD,   P_32SI }
 ,	{ 0x80000000,  1, A_ROR } // INT_MIN
 ,	{ 0x80000000, 33, M_V8ADDS }
 ,	{ 0x80000000, 33, A_ADD }

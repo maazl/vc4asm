@@ -133,12 +133,12 @@
           </td>
         </tr>
         <tr>
-          <td><tt>32s</tt></td>
+          <td><tt>32s<br>32si</tt></td>
           <td><tt>int32</tt></td>
           <td><tt>int32</tt></td>
           <td><nobr><tt>3 2 1 0</tt></nobr></td>
-          <td><i>unknown</i></td>
-          <td><var></var>reg A</td>
+          <td><tt>min(0x7fffffff, max(-0x80000000, x))</tt> for <tt>add</tt> instruction,<br><tt>min(0x80000000, max(-0x80000001, x))</tt> for <tt>sub</tt> instruction,<br>other instructions seem not to support this pack mode.</td>
+          <td><var></var>reg A &amp; <tt>add</tt>/<tt>sub</tt> only</td>
           <td class="inactive" style="text-align: center;" colspan="2" rowspan="1">n/a<br>
           </td>
         </tr>
