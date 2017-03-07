@@ -1,0 +1,2 @@
+add_subdirectory(hello_fft)
+add_subdirectory(simple)
