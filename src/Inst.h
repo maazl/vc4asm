@@ -142,7 +142,7 @@ struct Inst
 	,	P_8bSI    ///< write low byte to bits 8 to 15 with saturation
 	,	P_8cSI    ///< write low byte to bits 16 to 23 with saturation
 	,	P_8dSI    ///< write low byte to bits 24 to 31 with saturation
-	,	P_FLT     ///< Flag to indicate that the pack operation should be made in
+	,	P_FLT     ///< Flag to indicate that the pack operation should be made in float mode, ignored by encode().
 	,	P_16aF    ///< write half precision float to the lower 16 bits
 	,	P_16bF    ///< write half precision float to the upper 16 bits
 	,	P_8aF=0x24///< meta entry for Float pack or unpack in parser

@@ -14,6 +14,7 @@
 #include <cinttypes>
 #include <cassert>
 #include <cfloat>
+#include <cmath>
 #include <algorithm>
 #include <cctype>
 #include <sys/stat.h>

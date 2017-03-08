@@ -1,7 +1,7 @@
 #
 # ALU operations
 #
-.set RES_COUNT, 44
+.set RES_COUNT, 45
 
 shl r0, elem_num, 3;
 mov ra0, unif # vector count
@@ -65,6 +65,9 @@ v8min vpm.8abcds, r0, r1
 #v8max vpm.8abcds, r0, r1
 v8adds vpm.8abcds, r0, r1
 v8subs vpm.8abcds, r0, r1
+add ra16.32s, r0, r0
+nop
+mov vpm, ra16
 
 # dma write
 mov r2, 16*4; mov r1, ra3
