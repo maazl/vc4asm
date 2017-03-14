@@ -40,17 +40,20 @@ bool print_labels(FILE *of, const char *tpl, Parser &parser, unsigned int pos){
 }
 
 void print_hex(FILE *of, Parser &parser){
-	const char* tpl = CPPTemplate_Detailed + 2; // no ,\n in the first line
+	const char* tpl = CPPTemplate_Detailed + 2; // no ',\n' in the first line
 
-	/* Optimization and macros, etc made it sometimes complex to track which
-	 * instruction was created by which chunks of text.
-	 * Use disassembly object to generate instruction comment.
+	/* Optimizations, macros, register names, etc made it sometimes to complex
+   * to track which instruction finally was created by a line of text...
+	 * Use Disassembler instance to generate second instruction comment.
+   *
+   * Example:      ldi r0, 0x101a00 | mov r0, vpm_setup(1, 1, h32(0, 0))
+   *          (disassembled comment) (line of code)
 	 */
 	Disassembler dis;
 	stringstream dis_stream;
 	string dis_line;
 
-	// Propagete Labels to dis.
+	// Propagate labels to dis
 	map<size_t,string> l;
 	for (auto& label : parser.getLabels())
 	{
@@ -74,9 +77,9 @@ void print_hex(FILE *of, Parser &parser){
 		dis.Disassemble(dis_stream, true);
 		getline(dis_stream, dis_line, '\n');
 
-		fprintf(of, tpl, 2*sizeof(unsigned long)*pos,
-				(unsigned long)(code & 0xffffffffULL),
-				(unsigned long)(code >> 32),
+		fprintf(of, tpl, sizeof(uint64_t)*pos,
+				(uint64_t)(code & 0xffffffffULL),
+				(uint64_t)(code >> 32),
 				last?" ":",",
 				26, // min width of following field.
 				dis_line.c_str(),
@@ -230,7 +233,7 @@ int main(int argc, char **argv)
 			{
 				const char* tpl = CPPTemplate + 2; // no ,\n in the first line
 				for (auto code : parser.Instructions)
-				{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
+				{	fprintf(of, tpl, (uint64_t)(code & 0xffffffffULL), (uint64_t)(code >> 32) );
 					tpl = CPPTemplate;
 				}
 			}
@@ -251,7 +254,7 @@ int main(int argc, char **argv)
 			}else
 			{ const char* tpl = CPPTemplate + 2; // no ,\n in the first line
 				for (auto code : parser.Instructions)
-				{ fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
+				{ fprintf(of, tpl, (uint64_t)(code & 0xffffffffULL), (uint64_t)(code >> 32) );
 					tpl = CPPTemplate;
 				}
 			}
