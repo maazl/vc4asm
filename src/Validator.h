@@ -18,6 +18,63 @@ using namespace std;
 
 struct DebugInfo;
 
+/// Type of the failed validation, for error-hooks
+enum class FailureType
+{
+	/// write to the source of a vector-rotation in the previous instruction
+	VECTOR_ROTATION_WRITE_SOURCE,
+	/// a vector-rotation by r5 immediately follows a write to r5
+	VECTOR_ROTATION_WRITE_R5,
+	/// inputs of MUL ALU can't handle the full vector-rotation specified
+	MEANINGLESS_VECTOR_ROTATION,
+	/// two branch instructions with less than 3 instructions in between
+	BRANCH_DISTANCE,
+	/// a register is read in the instruction directly following a write to that register
+	READ_AFTER_WRITE,
+	/// both ALUs have the same output without inverted conditions (and neither is NOP)
+	ALUS_SAME_OUTPUT,
+	/// the first instructions of a shader access the scoreboard
+	SHADER_START_SCOREBOARD_WAIT,
+	/// a uniform is read less than 2 instructions after the uniform address is set
+	UNIFORM_AFTER_UNIFORM_ADDRESS,
+	/// TMU noswap is changed, after the TMU has been already used
+	TMU_NOSWAP_AFTER_TMU_USE,
+	/// write to TMU in the 3 instructions after write to TMU noswap
+	TMU_AFTER_TMU_NOSWAP,
+	/// a signal is omitted, which causes r4 to be filled, while an SFU-instruction is running
+	SIGNAL_R4_WHILE_SFU,
+	/// a request for the SFU is triggered while it is still processing another request
+	SFU_IN_USE,
+	/// multisample mask is read in the two instructions after a write to TLB Z
+	MS_AFTER_TLB_Z,
+	/// more than 1 access to periphery (SFU, TMU, TLB, mutex, semaphores) in one instruction
+	MULTIPLE_ACCESS_PERIPHERY,
+	/// conditional write to periphery
+	CONDITIONAL_PERIPHERY,
+	//writing into periphery with pack mode
+	PACK_PERIPHERY,
+	/// concurrent write to VPM read and VPM write setup registers
+	CONCURRENT_VPM_SETUP,
+	///concurrent read of VPM with write to VPM write setup
+	CONCURRENT_VPM_READ,
+	/// concurrent writing into VPM with write of VPM read setup
+	CONCURRENT_VPM_WRITE,
+	/// access to periphery (uniform, varyings, VPM) after thread-end
+	THREAD_END_PERIPHERY,
+	/// access to ra14 or rb14 after thread-end
+	THREAD_END_R14,
+	/// write to a register in the thread-end instruction
+	THREAD_END_REGISTER,
+	/// the last instruction writes to TLB Z
+	THREAD_END_TLB_Z
+};
+
+/// @brief Hook to be notified when a validation fails
+/// @param type The type of validation-error
+/// @param pos The position (instruction-index) of the error
+/// @param message The error-message
+typedef void ValidationCallback(const FailureType type, int pos, const std::string& message);
+
 /// Helper class to validate VideoCore IV instruction constraints.
 class Validator
 {public:
@@ -34,6 +91,9 @@ class Validator
 	/// - 1 : relaxed check, warn only combos that are likely to fail.
 	/// - 2 : strict check, warn all cases.
 	int CheckVectorRotationLevel = 1;
+
+	/// An optional callback to be called when validations fail
+	ValidationCallback* callback = nullptr;
  private:
 	/// Maximum number of instructions where constraints apply.
 	/// @remarks This is related to the pipeline length in QPU elements.
@@ -114,7 +174,7 @@ class Validator
 	/// @param fmt Message format string
 	/// @remarks The reference locations before the branch have always instruction numbers less than start
 	/// because the constructor relocated the accordingly. This function does the opposite transform to get meaningful messages.
-	void Message(int refloc, const char* fmt, ...) PRINTFATTR(3);
+	void Message(FailureType type, int refloc, const char* fmt, ...) PRINTFATTR(4);
 	/// @brief Get effective condition of all read access to input mux \a m
 	/// in the current instruction.
 	/// @param inst Instruction to check.
