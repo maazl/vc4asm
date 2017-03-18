@@ -1,9 +1,10 @@
 FLAGS    = -Wall -std=c++11 -g#-O3
-CPPFLAGS = -c
+CPPFLAGS = -c -fPIC
 LDFLAGS  =
 LIBS     = -lm -lstdc++
 CC  = g++
 LD  = gcc
+AR	= ar
 EXE =
 O   = .o
 
@@ -16,22 +17,32 @@ O   = .o
 BASEOBJECTS = ../obj/utils$(O) ../obj/Message$(O) ../obj/expr$(O) ../obj/Inst$(O) ../obj/Eval$(O) ../obj/Validator$(O)
 ASMOBJECTS  = $(BASEOBJECTS) ../obj/AssembleInst$(O) ../obj/Parser$(O) ../obj/vc4asm$(O) ../obj/WriteELF$(O)
 DISOBJECTS  = $(BASEOBJECTS) ../obj/Disassembler$(O) ../obj/vc4dis$(O)
+LIBOBJECTS = $(BASEOBJECTS) ../obj/AssembleInst$(O) ../obj/Parser$(O) ../obj/WriteELF$(O) ../obj/Disassembler$(O)
 
-all: ../bin/vc4asm$(EXE) ../bin/vc4dis$(EXE)
+all: ../bin/vc4asm$(EXE) ../bin/vc4dis$(EXE) ../lib/libvc4asm.a ../lib/libvc4asm.so
 
 clean:
-	-rm ../bin/* ../obj/*
+	-rm ../bin/* ../lib/* ../obj/*
 
 ../bin/vc4asm$(EXE) : $(ASMOBJECTS) | ../bin
 	$(LD) $(FLAGS) $(LDFLAGS) -o $@ $(ASMOBJECTS) $(LIBS)
 
 ../bin/vc4dis$(EXE) : $(DISOBJECTS) | ../bin
 	$(LD) $(FLAGS) $(LDFLAGS) -o $@ $(DISOBJECTS) $(LIBS)
+	
+../lib/libvc4asm.a : $(LIBOBJECTS) | ../lib
+	$(AR) rcs -o $@ $(LIBOBJECTS)
+	
+../lib/libvc4asm.so : $(LIBOBJECTS) | ../lib
+	$(LD) -shared -o $@ $(LIBOBJECTS)
 
 ../obj:
 	mkdir $@
 
 ../bin:
+	mkdir $@
+	
+../lib/:
 	mkdir $@
 
 %.cpp : %.h
