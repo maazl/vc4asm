@@ -42,7 +42,7 @@ clean:
 ../bin:
 	mkdir $@
 	
-../lib/:
+../lib:
 	mkdir $@
 
 %.cpp : %.h
