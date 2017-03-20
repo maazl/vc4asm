@@ -1738,7 +1738,7 @@ void Parser::doINCLUDE(int)
 	{	// check include paths first
 		for (string path : IncludePaths)
 		{	file = path + Token;
-			if (stat(file.c_str(), &buffer) == 0)
+			if (stat(file.c_str(), &buffer) == 0 && S_ISREG(buffer.st_mode))
 				goto got_it;
 		}
 	}
