@@ -43,7 +43,7 @@ qpuValue AssembleInst::QPUValue(const exprValue& value)
 		break;
 
 	 case V_FLOAT:
-		if (fabs(value.fValue) > FLT_MAX && !::isinf(value.fValue))
+		if (fabs(value.fValue) > FLT_MAX && !std::isinf(value.fValue))
 		{	Msg(WARNING, "Floating point constant %f does not fit into 32 bit float.", value.fValue);
 			ret.fValue = value.fValue > 0 ? INFINITY : -INFINITY;
 		} else
@@ -395,7 +395,7 @@ void AssembleInst::doUnpack(unpack mode)
 	{	int pm2 = isUnpackable(currentMux());
 		if (pm2 < 0)
 			Fail("Cannot unpack this source argument.");
-		if (!pm2 == pm)
+		if ((!pm2) == pm)
 			Fail("The requested unpack mode is not supported by this source argument.");
 		pm = pm2;
 	}
