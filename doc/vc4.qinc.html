@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type">
+    <title>VC4ASM vc4.qinc</title>
+    <meta content="Marcel M&uuml;ller" name="author">
+    <link rel="stylesheet" href="infstyle.css" type="text/css">
+  </head>
+  <body>
+    <h1>VC4ASM - <tt>vc4.qinc</tt> include</h1>
+    <p><a href="index.html">&uarr; Top</a>, <a href="#expr_pred">expression
+        predicated</a>, <a href="#VPM">VPM/VDC setup</a>, <a href="#bitops">bit
+        operations</a>, <a href="#numC">numerical constants</a>, <a href="#compatibility">Broadcom
+        compatibility</a></p>
+    <p class="abstract">This file contains several useful macros for VC4
+      programming.<br>
+      Use <tt>.include &lt;vc4.qinc&gt;</tt> in the source or the command line
+      option <tt>-i vc4.qinc</tt> to use this file.</p>
+    <h2><a id="expr_pred" name="expr_pred"></a>Expression predicates</h2>
+    <h3>Constants</h3>
+    <dl>
+      <dt><b><tt>isConstant(<var>x</var>)</tt></b></dt>
+      <dd>Evaluates true if and only if <var><tt>x</tt></var> is a constant
+        expression, i.e. no register, no semaphore and no label.</dd>
+      <dt><b><tt>isLdPE(<var>x</var>)<br>
+            isLdPES(<var>x</var>)<br>
+            isLdPEU(<var>x</var>)</tt></b></dt>
+      <dd>Evaluates true if <var><tt>x</tt></var> is a per QPU element constant
+        expression. <tt>isLdPES</tt> is false when the constant contains
+        negative values, <tt>isLdPEU</tt> is false when the constant contains
+        values greater than 1.</dd>
+      <dt><b><tt>isSmallImmd(<var>x</var>)</tt></b></dt>
+      <dd>Evaluates true if <var><tt>x</tt></var> is a constant expression that
+        fits into a small immediate field.</dd>
+    </dl>
+    <h3>Registers</h3>
+    <dl>
+      <li><b><tt>isRegister(<var>x</var>)</tt></b></li>
+      <dd>Evaluates true if <var><tt>x</tt></var> is a register expression,
+        including semaphore registers.</dd>
+      <dt><b><tt>isRegfileA(<var>x</var>)<br>
+            isRegfileB(<var>x</var>)</tt></b></dt>
+      <dd>Evaluates true if <var><tt>x</tt></var> is a register from register
+        file A/B, including peripheral registers.</dd>
+      <dt><b><tt>isAccu(<var>x</var>)</tt></b></dt>
+      <dd>Evaluates true if <var><tt>x</tt></var> is an accumulator, i.e. <tt>r0</tt>..<tt>r5</tt>.</dd>
+      <dt><b><tt>isReadable(<var>x</var>)</tt><tt><br>
+            isWritable(<var>x</var>)</tt></b></dt>
+      <dd>Evaluates true if <var><tt>x</tt></var> is a readable/writable
+        register.</dd>
+      <dt><b><tt>isRotate(<var>x</var>)</tt></b></dt>
+      <dd>Evaluates true if <var><tt>x</tt></var> is a register with an vector
+        rotation attribute, e.g. <tt>r5&lt;&lt;2</tt>.</dd>
+      <dt><b><tt>isSemaphore(<var>x</var>)</tt></b></dt>
+      <dd>Evaluates true if <var><tt>x</tt></var> is a semaphore register.</dd>
+    </dl>
+    <h2><a id="VPM" name="VPM"></a>VPM/VCD setup helpers</h2>
+    <p>See Broadcom Videocore IV Architecture Reference Guide for further
+      details.</p>
+    <h3>VPM read/write</h3>
+    <dl>
+      <dt><b><tt>vpm_setup(<var>num,stride,dma</var>)</tt></b></dt>
+      <dd>Setup VPM read/write for <var><tt>num</tt></var> items starting at <var><tt>dma</tt></var>
+        and incrementing <var><tt>dma</tt></var> by <var><tt>stride</tt></var>
+        after each item.</dd>
+      <dt><b><tt>h_32(<var>y,x</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
+        Start a horizontal 32 bit transfer at position <var><tt>x,y</tt></var>
+        in VPM, i.e. QPU elements access 16 consecutive horizontal values in the
+        VPM. <var><tt>x</tt></var> must always be 0 in this mode.</dd>
+      <dt><b><tt>v_32(<var>y,x</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
+        Start a vertical 32 bit transfer at position <var><tt>x,y</tt></var> in
+        VPM, i.e. QPU elements access 16 consecutive vertical values in the VPM.
+        <var><tt>y</tt></var> must be a multiple of 16 in this mode.</dd>
+      <dt><i>further modes need to be defined...</i></dt>
+    </dl>
+    <h3>VCD DMA access</h3>
+    <dl>
+      <dt><b><tt>vdw_setup_0(<var>units,depth,dma</var>)</tt></b></dt>
+      <dd>Setup VPM DMA write for <var><tt>units</tt></var> rows of length <var><tt>depth</tt></var>
+        starting at <var><tt>dma</tt></var>.</dd>
+      <dt><b><tt>vdw_setup_1(<var>stride</var>)</tt></b></dt>
+      <dd>Setup VPM DMA write memory stride from the last item of a row to the
+        first item of the next row.</dd>
+      <dt><b><tt>vdr_setup_0(<var>mpitch,rowlen,nrows,dma</var>)</tt></b></dt>
+      <dd>Setup VPM DMA read for <var><tt>nrows</tt></var> rows of length <var><tt>rowlen</tt></var>
+        starting at <var><tt>dma</tt></var>. <tt><var>mpitch</var></tt> is the
+        distance of two rows in memory. It must either be a power of 2 or 0 to
+        indicate that <tt>vdw_setup_1</tt> has to be used.</dd>
+      <dt><b><tt>vdw_setup_1(<var>stride</var>)</tt></b></dt>
+      <dd>Setup VPM DMA read memory stride from the last item of a row to the
+        first item of the next row.</dd>
+      <dt><b><tt>vdr_h32(<var>vpitch,y,x</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdr_setup_0</tt>/<tt>vdw_setup_0</tt>.
+        Start a horizontal 32 bit transfer at position <var><tt>x,y</tt></var>
+        in VPM, i.e. elements in a row are horizontally aligned in VPM. The <var><tt>y</tt></var>
+        component is incremented by<var><tt> vpitch</tt></var> after each row.</dd>
+      <dt><b><tt>vdr_v32(<var>vpitch,y,x</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdr_setup_0</tt>/<tt>vdw_setup_0</tt>.
+        Start a vertical 32 bit transfer at position <var><tt>x,y</tt></var> in
+        VPM, i.e. elements in a row are vertically aligned in VPM. The <var><tt>y</tt></var>
+        component is incremented by<var><tt> vpitch</tt></var> after each row.</dd>
+      <dt><i>further modes need to be defined...</i></dt>
+    </dl>
+    <h2><a id="bitops" name="bitops"></a>Bit operations</h2>
+    <dl>
+      <dt><b><tt>countBits(<var>x</var>)</tt></b></dt>
+      <dd>Number of set bits in <var><tt>x</tt></var>.</dd>
+      <dt><b><tt>reverseBits(<var>x,n</var>)</tt></b></dt>
+      <dd>Rightmost <var><tt>n</tt></var> bits of <var><tt>x</tt></var> in
+        reversed order.</dd>
+      <dt><b><tt>reverseBits4(<var>x</var>)<br>
+            reverseBits8(<var>x</var>)<br>
+            reverseBits16(<var>x</var>)<br>
+            reverseBits32(<var>x</var>)<br>
+            reverseBits64(<var>x</var>)</tt></b></dt>
+      <dd>Shorthand for <tt>reverseBits(<var>x</var>,4</tt>/<tt>8</tt>/<tt>16</tt>/<tt>32</tt>/<tt>64)</tt>,
+        also faster.</dd>
+      <dt><b><tt>ilog2(<var>x</var>)</tt></b></dt>
+      <dd>Index of the highest set bit in <var><tt>x</tt></var>, i.e. 0 &rarr;
+        -1, 1 &rarr; 0, 2 &rarr; 1, 3 &rarr; 1, 4 &rarr; 2 ...</dd>
+    </dl>
+    <h2><a id="numC" name="numC"></a>Numerical constants</h2>
+    <table border="1" cellpadding="2" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Value</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><tt>M_E</tt></td>
+          <td>2.7182818284590452354</td>
+          <td><i>e</i> (Euler number)<br>
+          </td>
+        </tr>
+        <tr>
+          <td><tt>M_LOG2E</tt></td>
+          <td>1.4426950408889634074</td>
+          <td>log<sub>2</sub> <i>e</i></td>
+        </tr>
+        <tr>
+          <td><tt>M_LOG10E</tt></td>
+          <td>0.43429448190325182765</td>
+          <td>log<sub>10</sub> <i>e</i></td>
+        </tr>
+        <tr>
+          <td><tt>M_PI</tt></td>
+          <td>3.14159265358979323846</td>
+          <td>&pi;</td>
+        </tr>
+        <tr>
+          <td><tt>M_2PI</tt></td>
+          <td>6.28318530717958647693</td>
+          <td>2&pi;</td>
+        </tr>
+        <tr>
+          <td><tt>M_PI_2</tt></td>
+          <td>1.57079632679489661923</td>
+          <td><sup>&pi;</sup>/<sub>2</sub> </td>
+        </tr>
+        <tr>
+          <td><tt>M_PI_4</tt></td>
+          <td>0.78539816339744830962</td>
+          <td><sup>&pi;</sup>/<sub>4</sub></td>
+        </tr>
+        <tr>
+          <td><tt>M_1_PI</tt></td>
+          <td>0.31830988618379067154</td>
+          <td><sup>1</sup>/<sub>&pi;</sub></td>
+        </tr>
+        <tr>
+          <td><tt>M_2_PI</tt></td>
+          <td>0.63661977236758134308</td>
+          <td><sup>2</sup>/<sub>&pi;</sub></td>
+        </tr>
+        <tr>
+          <td><tt>M_2_SQRTPI </tt></td>
+          <td>1.12837916709551257390</td>
+          <td><sup>2</sup>/<sub>&radic;&pi;</sub></td>
+        </tr>
+        <tr>
+          <td><tt>M_SQRT2</tt></td>
+          <td>1.41421356237309504880</td>
+          <td>&radic;2</td>
+        </tr>
+        <tr>
+          <td><tt>M_SQRT1_2</tt></td>
+          <td>0.70710678118654752440</td>
+          <td><sup>1</sup>/<sub>&radic;2</sub></td>
+        </tr>
+        <tr>
+          <td><tt>M_NAN</tt></td>
+          <td>NaN</td>
+          <td>not a number</td>
+        </tr>
+        <tr>
+          <td><tt>M_INF</tt></td>
+          <td>Inf</td>
+          <td>infinity</td>
+        </tr>
+      </tbody>
+    </table>
+    <h2><a id="compatibility" name="compatibility"></a>Broadcom compatibility
+      helpers</h2>
+    <h3><tt>sacq(<var>i</var>)<br>
+        srel(<var>i</var>)</tt></h3>
+    <p>Alternative way to declare semaphore register <tt>sacq0</tt>..<tt>15</tt>
+      and <tt>srel0</tt>..<tt>15</tt>.</p>
+  </body>
+</html>
