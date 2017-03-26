@@ -36,7 +36,7 @@
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
     <p>The heart of the software. It assembles QPU code to binary or C
       constants.</p>
-    <pre>vc4asm [-o &lt;bin-output&gt;] [-c &lt;c-output&gt;] [-e &lt;ELF-output&gt;] [-I &lt;include-path&gt; [-I &lt;include-path2&gt; ...]] &lt;qasm-file&gt; [&lt;qasm-file2&gt; ...]</pre>
+    <pre>vc4asm [-o &lt;bin-output&gt;] [-C &lt;C-output&gt;] [-e &lt;ELF-output&gt;] [-I &lt;include-path&gt; [-I &lt;include-path2&gt; ...]] &lt;qasm-file&gt; [&lt;qasm-file2&gt; ...]</pre>
     <h3>Options</h3>
     <dl>
       <dt><tt>-o &lt;bin-output&gt; </tt></dt>
@@ -71,7 +71,13 @@
         to be able to access the code by a linker symbol.</dd>
       <dt><tt>-I &lt;include-path&gt;</tt></dt>
       <dd>Add an include path to the search path list. This paths are used at <a
-          href="directives.html#.include"><tt>.include &lt;...&gt;</tt></a>.</dd>
+          href="directives.html#.include"><tt>.include &lt;...&gt;</tt></a>.
+        Note that this is a <i>prefix</i> rather than a path, i.e. if it is a
+        folder it should contain a <i>trailing slash</i>.</dd>
+      <dt><tt>-i</tt></dt>
+      <dd>Search include path for command line arguments (files) as well.<br>
+        Useful to include <a href="vc4.qinc.html"><tt>vc4.qinc</tt></a> without
+        an absolute path: <tt>-i vc4.qinc</tt></dd>
       <dt><tt>-V</tt></dt>
       <dd>Check for Videocore IV constraints, e.g. reading a register file
         address immediately after writing it.</dd>
@@ -88,6 +94,7 @@
       <li><a href="expressions.html">Expressions and operators</a></li>
       <li><a href="directives.html">Assembler directives</a></li>
       <li><a href="instructions.html">Instructions</a></li>
+      <li><a href="vc4.qinc.html">Standard macros <tt>vc4.qinc</tt></a></li>
     </ol>
     <p>See the <a href="http://www.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf">Broadcom
         VideoCore IV Reference Guide</a> for the semantics of the instructions

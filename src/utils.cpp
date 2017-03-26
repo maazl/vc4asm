@@ -9,6 +9,8 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <climits>
+#include <unistd.h>
 
 
 string vstringf(const char* format, va_list va)
@@ -40,8 +42,35 @@ string stringf(const char* format, ...)
 	return ret;
 }
 
+
 string relpath(const string& context, const string& rel)
 {	if (rel.size() && rel.front() == '/')
 		return rel;
 	return string(context, 0, context.rfind('/')+1) + rel;
+}
+
+string exepath;
+
+void setexepath(const char* argv0)
+{	{	char buf[PATH_MAX];
+		// try /proc/self/exe (Linux)
+		int rc = readlink("/proc/self/exe", buf, sizeof buf);
+		if (rc > 0)
+		{	buf[rc] = 0;
+			argv0 = buf;
+		} else
+		{	// try absolute or relative path.
+			char* path = realpath(argv0, buf);
+			if (path != NULL)
+				argv0 = buf;
+	}	}
+	// find last of [/\:]
+	int p = strlen(argv0);
+	while (p)
+	{	char c = argv0[--p];
+		if (c == '/' || c == '\\' || c == ':')
+		{	++p;
+			break;
+	}	}
+	exepath = string(argv0, p);
 }

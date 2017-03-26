@@ -95,7 +95,7 @@ static const char msgpfx[][10]
 
 void Parser::CaughtMsg(const char* msg)
 {	Success = false;
-	if (OperationMode == IRGNOREERRORS && !Pass2)
+	if (OperationMode == IGNOREERRORS && !Pass2)
 		return;
 	fputs(msgpfx[ERROR], stderr);
 	fputs(msg, stderr);
@@ -109,7 +109,7 @@ void Parser::Msg(severity level, const char* fmt, ...)
 	{case NORMAL:
 		if (level == ERROR)
 			break;
-	 case IRGNOREERRORS:
+	 case IGNOREERRORS:
 		if (!Pass2)
 			return;
 	 default:;
@@ -1732,21 +1732,14 @@ void Parser::doINCLUDE(int)
 	Token.assign(At+1, len-2);
 
 	// find file
-	struct stat buffer;
 	string file;
-	if (*At == '<')
-	{	// check include paths first
-		for (string path : IncludePaths)
-		{	file = path + Token;
-			if (stat(file.c_str(), &buffer) == 0 && S_ISREG(buffer.st_mode))
-				goto got_it;
-		}
+	if (*At != '<' || (file = FindIncludePath(Token)).length() == 0) // check include paths first
+	{	file = relpath(SourceFiles[Context.back()->File].Name, Token);
+		struct stat buffer;
+		if (stat(file.c_str(), &buffer) != 0)
+			Fail("Cannot locate included file '%s'.", Token.c_str());
 	}
-	file = relpath(SourceFiles[Context.back()->File].Name, Token);
-	if (stat(file.c_str(), &buffer) != 0)
-		Fail("Cannot locate included file '%s'.", Token.c_str());
 
- got_it:
 	if (Pass2)
 	{	const auto& p1file = SourceFiles[FilesCount];
 		if (p1file.Name != file)
@@ -1880,6 +1873,16 @@ void Parser::ParseLine()
 	}
 }
 
+string Parser::FindIncludePath(const string& file)
+{	struct stat buffer;
+	for (string path : IncludePaths)
+	{	string test = path + file;
+		if (stat(test.c_str(), &buffer) == 0 && S_ISREG(buffer.st_mode))
+			return test;
+	}
+	return string();
+}
+
 void Parser::ParseFile()
 {
 	FILE* f = fopen(fName(Context.back()->File), "r");
@@ -1910,7 +1913,13 @@ void Parser::ParseFile()
 void Parser::ParseFile(const string& file)
 {	if (Pass2)
 		throw string("Cannot add another file after pass 2 has been entered.");
-	SourceFiles.emplace_back(file);
+	struct stat buffer;
+	string target = file;
+	if ( !(stat(file.c_str(), &buffer) == 0 && S_ISREG(buffer.st_mode))
+		&& !(SearchIncludePaths && (target = FindIncludePath(file)).length() != 0) )
+		throw stringf("\"%s\" not found or no regular file.", file.c_str());
+
+	SourceFiles.emplace_back(target);
 	FilesCount = SourceFiles.size();
 	saveContext ctx(*this, new fileContext(CTX_FILE, FilesCount-1, 0));
 	try
@@ -1944,7 +1953,7 @@ void Parser::ResetPass()
 
 void Parser::EnsurePass2()
 {
-	if (Pass2 || (!Success && OperationMode != IRGNOREERRORS))
+	if (Pass2 || (!Success && OperationMode != IGNOREERRORS))
 		return;
 
 	// enter pass 2

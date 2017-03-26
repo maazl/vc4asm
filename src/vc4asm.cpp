@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 	Parser parser;
 
 	int c;
-	while ((c = getopt(argc, argv, "o:c:e:C:E:I:Vi")) != -1)
+	while ((c = getopt(argc, argv, "o:c:e:C:E:I:iVQP:")) != -1)
 	{	switch (c)
 		{case 'o':
 			writeBIN = optarg; break;
@@ -49,10 +49,12 @@ int main(int argc, char **argv)
 #endif
 		 case 'I':
 			parser.IncludePaths.push_back(optarg); break;
+		 case 'i':
+			parser.SearchIncludePaths = true; break;
 		 case 'V':
 			check = true; break;
-		 case 'i':
-			parser.OperationMode = Parser::IRGNOREERRORS; break;
+		 case 'Q':
+			parser.OperationMode = Parser::IGNOREERRORS; break;
 		 case 'P':
 			writePRE = optarg; break;
 		}
@@ -69,10 +71,16 @@ int main(int argc, char **argv)
 			" -E<file> Linux ELF output file without predefined symbols.\n"
 #endif
 			" -I<path> Add search path for .include <...>\n"
+			" -i       Search include path for command line arguments as well.\n"
 			" -V       Run instruction verifier and print warnings about suspicious code.\n"
 			, stderr);
 		return 1;
 	}
+
+	setexepath(argv[0]);
+
+	// add default include path with low precedence
+	parser.IncludePaths.emplace_back(exepath + "../share/");
 
 	if (writePRE)
 	{	parser.Preprocessed = fopen(writePRE, "wt");
@@ -106,7 +114,7 @@ int main(int argc, char **argv)
 			v.Validate();
 		}
 
-		if (!parser.Success && parser.OperationMode != Parser::IRGNOREERRORS)
+		if (!parser.Success && parser.OperationMode != Parser::IGNOREERRORS)
 			throw string("Aborted because of earlier errors.");
 		// Write results
 		if (writeCPP)

@@ -57,6 +57,12 @@ string stringf(const char* format, ...) PRINTFATTR(1);
 /// @return \c rel if \c rel is an absolute path a concatenation of \c context and \c rel otherwise.
 string relpath(const string& context, const string& rel);
 
+/// Path to current executable, including trailing slash.
+extern string exepath;
+
+/// Examine path of the current executable.
+/// @param argv0 argv[0] from main.
+void setexepath(const char* argv0);
 
 /// Find the first occurrence of key in an ordered, constant array of C strings.
 /// @tparam T Element type, must be convertible to const char*.
