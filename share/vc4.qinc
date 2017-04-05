@@ -2,31 +2,33 @@
 
 # VPM setup helpers
 .func vdr_setup_0(mpitch, rowlen, nrows, dma)
-  .assert !(mpitch & (mpitch-1)) && !(mpitch & ~0x7fff0) 
-  .assert !((rowlen-1) & ~0xf)
-  .assert !((nrows-1) & ~0xf)
+# .assert !(mpitch & (mpitch-1)) && !(mpitch & ~0x7fff0) 
+  .assert !(mpitch & ~0xf) 
+  .assert rowlen >= 0 && rowlen <= 0x10
+  .assert nrows >= 0 && nrows <= 0x10
   .assert !(dma & ~0x7000ffff) && (dma & 0x70000000) != 0x10000000
-  0x80000000 | ilog2(mpitch/8+1) << 24 | (rowlen & 0xf) << 20 | (nrows & 0xf) << 16 | dma
+# 0x80000000 | ilog2(mpitch/8+1) << 24 | (rowlen & 0xf) << 20 | (nrows & 0xf) << 16 | dma
+  0x80000000 | mpitch << 24 | (rowlen & 0xf) << 20 | (nrows & 0xf) << 16 | dma
 .endf
 .func vdr_setup_1(stride)
   .assert !(stride & ~0x1fff)
   0x90000000 | stride
 .endf
 .func vdr_h32(vpitch, y, x)
-  .assert !((vpitch-1) & ~0xf)
+  .assert vpitch >= 0 && vpitch <= 0x10
   .assert !(y & ~0x3f)
   .assert !(x & ~0xf)
   (vpitch & 0xf) << 12 | y << 4 | x
 .endf
 .func vdr_v32(vpitch, y, x)
-  .assert !((vpitch-1) & ~0xf)
+  .assert vpitch >= 0 && vpitch <= 0x10
   .assert !(y & ~0x3f)
   .assert !(x & ~0xf)
   (vpitch & 0xf) << 12 | 0x800 | y << 4 | x
 .endf
 .func vdw_setup_0(units, depth, dma)
-  .assert !((units-1) & ~0x7f)
-  .assert !((depth-1) & ~0x7f)
+  .assert units >= 0 && units <= 0x80
+  .assert depth >= 0 && depth <= 0x80
   .assert !(dma & ~0x7fff)
   0x80000000 | (units & 0x7f) << 23 | (depth & 0x7f) << 16 | (dma & 0xffff)
 .endf
@@ -39,26 +41,93 @@
   .assert !(x & ~0xf)
   0x4000 | y << 7 | x << 3
 .endf
+.func dma_h16p(y, x, h)
+  .assert !(y & ~0x7f)
+  .assert !(x & ~0xf)
+  .assert !(h & ~1)
+  0x4002 | y << 7 | x << 3 | h
+.endf
+.func dma_h8p(y, x, b)
+  .assert !(y & ~0x7f)
+  .assert !(x & ~0xf)
+  .assert !(b & ~3)
+  0x4004 | y << 7 | x << 3 | b
+.endf
 .func dma_v32(y, x)
   .assert !(y & ~0x7f)
   .assert !(x & ~0xf)
   y << 7 | x << 3
 .endf
+.func dma_v16p(y, x, h)
+  .assert !(y & ~0x7f)
+  .assert !(x & ~0xf)
+  .assert !(h & ~1)
+  2 | y << 7 | x << 3 | h
+.endf
+.func dma_v8p(y, x, b)
+  .assert !(y & ~0x7f)
+  .assert !(x & ~0xf)
+  .assert !(b & ~3)
+  4 | y << 7 | x << 3 | b
+.endf
 .func vpm_setup(num, stride, dma)
-  .assert !((num-1) & ~0xf)
-  .assert !((abs(stride)-1) & ~0x3f)
+  .assert num >= 0 && num <= 0x10
+  .assert stride >= -0x40 && stride <= 0x40
   .assert !(dma & ~0xfff)
   (num & 0xf) << 20 | (stride & 0x3f) << 12 | dma
 .endf
-.func h32(y, x)
+.func h32(y)
   .assert !(y & ~0x3f)
-  .assert !x
   0xa00 | y
+.endf
+.func h16p(y, h)
+  .assert !(y & ~0x3f)
+  .assert !(h & ~1)
+  0x900 | y << 1 | h
+.endf
+.func h16l(y, h)
+  .assert !(y & ~0x3f)
+  .assert !(h & ~1)
+  0xd00 | y << 1 | h
+.endf
+.func h8p(y, b)
+  .assert !(y & ~0x3f)
+  .assert !(b & ~3)
+  0x800 | y << 2 | b
+.endf
+.func h8l(y, b)
+  .assert !(y & ~0x3f)
+  .assert !(b & ~3)
+  0xc00 | y << 2 | b
 .endf
 .func v32(y, x)
   .assert !(y & ~0x30)
   .assert !(x & ~0xf)
   0x200 | y | x
+.endf
+.func v16p(y, x, h)
+  .assert !(y & ~0x30)
+  .assert !(x & ~0xf)
+  .assert !(h & ~1)
+  0x100 | (y | x) << 1 | h
+.endf
+.func v16l(y, x, h)
+  .assert !(y & ~0x30)
+  .assert !(x & ~0xf)
+  .assert !(h & ~1)
+  0x500 | (y | x) << 1 | h
+.endf
+.func v8p(y, x, b)
+  .assert !(y & ~0x30)
+  .assert !(x & ~0xf)
+  .assert !(b & ~3)
+  (y | x) << 2 | b
+.endf
+.func v8l(y, x, b)
+  .assert !(y & ~0x30)
+  .assert !(x & ~0xf)
+  .assert !(b & ~3)
+  0x400 | (y | x) << 2 | b
 .endf
 
 # functional semaphore style

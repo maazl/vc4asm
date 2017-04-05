@@ -63,17 +63,48 @@
       <dd>Setup VPM read/write for <var><tt>num</tt></var> items starting at <var><tt>dma</tt></var>
         and incrementing <var><tt>dma</tt></var> by <var><tt>stride</tt></var>
         after each item.</dd>
-      <dt><b><tt>h_32(<var>y,x</var>)</tt></b></dt>
+      <dt><b><tt>h_32(<var>y</var>)</tt></b></dt>
       <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
-        Start a horizontal 32 bit transfer at position <var><tt>x,y</tt></var>
+        Start a horizontal 32 bit transfer at position <tt>0,</tt><var><tt>y</tt></var><tt></tt>
         in VPM, i.e. QPU elements access 16 consecutive horizontal values in the
-        VPM. <var><tt>x</tt></var> must always be 0 in this mode.</dd>
+        VPM.</dd>
+      <dt><b><tt>h16p(<var>y,h</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
+        Start a horizontal 16 bit packed transfer at position <tt>0,</tt><var><tt>y</tt></var><tt></tt>
+        and half word <var><tt>h</tt></var> in VPM.</dd>
+      <dt><b><tt>h16l(<var>y,h</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
+        Start a horizontal 16 bit laned transfer at position <tt>0,</tt><var><tt>y</tt></var>
+        and half word <var><tt>h</tt></var> in VPM.</dd>
+      <dt><b><tt>h16p(<var>y,h</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
+        Start a horizontal 8 bit packed transfer at position <tt>0,</tt><var><tt>y</tt></var>
+        and byte <var><tt>b</tt></var> in VPM.</dd>
+      <dt><b><tt>h16l(<var>y,h</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
+        Start a horizontal 8 bit laned transfer at position <tt>0,</tt><var><tt>y</tt></var>
+        and byte <var><tt>b</tt></var> in VPM.</dd>
       <dt><b><tt>v_32(<var>y,x</var>)</tt></b></dt>
       <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
         Start a vertical 32 bit transfer at position <var><tt>x,y</tt></var> in
         VPM, i.e. QPU elements access 16 consecutive vertical values in the VPM.
         <var><tt>y</tt></var> must be a multiple of 16 in this mode.</dd>
-      <dt><i>further modes need to be defined...</i></dt>
+      <dt><b><tt>h16p(<var>y,h</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
+        Start a vertical 16 bit packed transfer at position <var><tt>x,y</tt></var><var><tt></tt></var>
+        and half word <var><tt>h</tt></var> in VPM.</dd>
+      <dt><b><tt>h16l(<var>y,h</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
+        Start a vertical 16 bit laned transfer at position <var><tt>x,y</tt></var><var></var>
+        and half word <var><tt>h</tt></var> in VPM.</dd>
+      <dt><b><tt>h8p(<var>y,h</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
+        Start a vertical 8 bit packed transfer at position <var><tt>x,y</tt></var><var></var>
+        and byte <var><tt>b</tt></var> in VPM.</dd>
+      <dt><b><tt>h8l(<var>y,h</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vpm_setup</tt>.
+        Start a vertical 8 bit laned transfer at position <var><tt>x,y</tt></var><var></var>
+        and byte <var><tt>b</tt></var> in VPM.</dd>
     </dl>
     <h3>VCD DMA access</h3>
     <dl>
