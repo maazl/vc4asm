@@ -840,7 +840,7 @@ void Parser::ParseInstruction()
 	}
 }
 
-void Parser::defineLabel()
+Parser::label& Parser::defineLabel()
 {
 	// Lookup symbol
 	const auto& lname = LabelsByName.emplace(Token, LabelCount);
@@ -874,19 +874,43 @@ void Parser::defineLabel()
 	{	fputs(Token.c_str(), Preprocessed);
 		fputs(": ", Preprocessed);
 	}
+	return *lp;
+}
+
+void Parser::addGlobal(const string& name, exprValue value)
+{
+	auto p = GlobalsByName.emplace(name, value);
+	if (!p.second && Pass2)
+	{	// Doubly defined
+		if (p.first->second == value)
+			Msg(INFO, "Label '%s' has already been marked as global.", name.c_str());
+		else
+			Msg(ERROR, "Another label or value has already been assigned to the global symbol '%s'.", name.c_str());
+	}
 }
 
 void Parser::parseLabel()
 {
 	if (!isspace(*At))
+	{	bool global = false;
+	 rep:
 		switch (NextToken())
-		{default:
+		{case COLON:
+			if (!global)
+			{	global = true;
+				goto rep;
+			}
+		 default:
 			Fail("Expected label name after ':', found '%s'.", Token.c_str());
 		 case WORD:
 		 case NUM:
-			defineLabel();
+			{	label& l = defineLabel();
+				if (global)
+					addGlobal(l.Name, exprValue(l.Value, V_LABEL));
+			}
 		 case END:;
 		}
+	}
 	Flags |= IF_BRANCH_TARGET;
 }
 
@@ -921,14 +945,7 @@ void Parser::parseGLOBAL(int)
 	 case END: // only label name
 		ExprValue = exprValue(labelRef(name).Value, V_LABEL);
 	}
-	auto p = GlobalsByName.emplace(name, ExprValue);
-	if (!p.second && Pass2)
-	{	// Doubly defined
-		if (p.first->second == ExprValue)
-			Msg(INFO, "Label '%s' has already been marked as global.", name.c_str());
-		else
-			Msg(ERROR, "Another label or value has already been assigned to the global symbol '%s'.", name.c_str());
-	}
+	addGlobal(name, ExprValue);
 }
 
 void Parser::parseDATA(int bits)

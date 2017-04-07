@@ -477,7 +477,12 @@ class Parser : private AssembleInst, public DebugInfo
 	/// @details The function will not forward the parser location.
 	/// The label name is expected to be the last parsed \ref Token value.
 	/// @exception std::string Failed, error message.
-	void             defineLabel();
+	label&           defineLabel();
+	/// Add a symbol to the global symbol table.
+	/// @param name Global symbol name.
+	/// @param value Global symbol value.
+	/// @exception std::string Failed, error message.
+	void             addGlobal(const string& name, exprValue value);
 	/// @brief Handle label definition with trailing colon.
 	/// @details The function is intended to be invoked after NextToken returned a colon at the start of a line.
 	/// It parses the label name and leaves the rest of the line untouched for further parsing.
