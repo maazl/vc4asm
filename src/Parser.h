@@ -158,12 +158,12 @@ class Parser : private AssembleInst, public DebugInfo
 	/// @brief Function definition (.set)
 	/// @details A function is any single line expression that evaluates to an exprValue from a set of exprValue arguments.
 	struct function
-	{	location       Definition;///< Where has this function been defined (for messages only)
-		vector<string> Args;      ///< Identifier names of the function arguments in order of appearance.
+	{	vector<string> Args;      ///< Identifier names of the function arguments in order of appearance.
 		string         DefLine;   ///< Copy of the entire Line where the function has been defined.
-		char*          Start;     ///< Pointer to the location in DefLine where the function body starts.
+		unsigned       Start;     ///< Character in DefLine where the function body starts.
+		location       Definition;///< Where has this function been defined (for messages only)
 		/// Construct an empty function definition. The properties have to be assigned later.
-		function(const location& definition) : Definition(definition), Start(NULL) {}
+		function(const location& definition) : Start(0), Definition(definition) {}
 	};
 	/// @brief Function lookup table.
 	/// @details The key is the function name, the value is the function definition.
@@ -234,7 +234,7 @@ class Parser : private AssembleInst, public DebugInfo
 	/// RAII class to enter a deeper file context while preserving the current position in the current source line.
 	class saveLineContext : public saveContext
 	{	const string   LineBak;
-		char* const    AtBak;
+		unsigned       AtBak;
 	 public:
 		/// Enter a deeper file context and save the current source line and the current parser position within this line.
 		saveLineContext(Parser& parent, fileContext* ctx);
@@ -247,12 +247,11 @@ class Parser : private AssembleInst, public DebugInfo
 	bool             Pass2 = false;
 
 	/// @brief Current source line to be parsed.
-	/// @remarks Well, static size ... todo
-	char             Line[1024];
+	string           Line;
  private: // items valid per parser token...
 	/// @brief Current location within Line
 	/// This Pointer always points to the next character to be parsed in Line.
-	char*            At = NULL;
+	const char*      At = NULL;
 	/// Last token captured by NextToken().
 	string           Token;
  private: // items valid per expression...

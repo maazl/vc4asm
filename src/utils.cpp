@@ -74,3 +74,19 @@ void setexepath(const char* argv0)
 	}	}
 	exepath = string(argv0, p);
 }
+string fgetstring(FILE* fh, size_t maxlen)
+{	char* buf = (char*)alloca(++maxlen);
+	if (!fgets(buf, maxlen, fh))
+	{	if (feof(fh))
+			return string();
+		throw stringf("Failed to read line from file: %s", strerror(errno));
+	}
+	string ret(buf);
+	if (ret.length() && ret[ret.length()-1] != '\n' && !feof(fh))
+	{	// incomplete, long line => skip remaining part
+		fscanf(fh, "%*[^\n]");
+		fgetc(fh); // discard newline as well
+	}
+	return ret;
+}
+

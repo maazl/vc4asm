@@ -10,8 +10,9 @@
 
 #include <string>
 #include <cstdarg>
+#include <cstdio>
 #include <vector>
-#include <string.h>
+#include <cstring>
 
 using namespace std;
 
@@ -63,6 +64,16 @@ extern string exepath;
 /// Examine path of the current executable.
 /// @param argv0 argv[0] from main.
 void setexepath(const char* argv0);
+
+/// Read a line of an input stream into a string.
+/// @param fh Source file handle.
+/// @param maxlen Maximum line length. Any content beyond this limit is discarded.
+/// @return Line from the file including the terminating new line character
+/// if the line length did not exceed \a maxlen.
+/// In case of EOF an empty string is returned.
+/// @exception string Failed to read: error message
+string fgetstring(FILE* fh, size_t maxlen);
+
 
 /// Find the first occurrence of key in an ordered, constant array of C strings.
 /// @tparam T Element type, must be convertible to const char*.

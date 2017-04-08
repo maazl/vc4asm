@@ -42,12 +42,12 @@ Parser::saveContext::~saveContext()
 Parser::saveLineContext::saveLineContext(Parser& parent, fileContext* ctx)
 :	saveContext(parent, ctx)
 , LineBak(parent.Line)
-, AtBak(parent.At)
+, AtBak(parent.At - parent.Line.c_str())
 {}
 
 Parser::saveLineContext::~saveLineContext()
-{	strncpy(Parent.Line, LineBak.c_str(), sizeof(Line));
-	Parent.At = AtBak;
+{	Parent.Line = LineBak;
+	Parent.At = Parent.Line.c_str() + AtBak;
 }
 
 
@@ -60,7 +60,7 @@ string Parser::enrichMsg(string msg)
 		{	auto fname = fName(ctx.File);
 			switch (type)
 			{case CTX_CURRENT:
-				msg = stringf("%s (%u,%zi): ", fname, ctx.Line, At - Line - Token.size() + 1) + msg;
+				msg = stringf("%s (%u,%zi): ", fname, ctx.Line, At - Line.c_str() - Token.size() + 1) + msg;
 				break;
 			 case CTX_INCLUDE:
 				msg += stringf("\n  Included from %s (%u)", fname, ctx.Line);
@@ -1174,8 +1174,8 @@ void Parser::endREP(int mode)
 	for (size_t i = 0; i < count; ++i)
 	{	// set argument
 		if (mode)
-		{	strncpy(Line, m.Args[i+1].c_str(), sizeof(Line));
-			At = Line;
+		{	Line = m.Args[i+1];
+			At = Line.c_str();
 			ParseExpression();
 			value = ExprValue;
 		} else
@@ -1183,7 +1183,7 @@ void Parser::endREP(int mode)
 		// Invoke body
 		for (const string& line : m.Content)
 		{	++Context.back()->Line;
-			strncpy(Line, line.c_str(), sizeof(Line));
+			Line = line;
 			ParseLine();
 		}
 	}
@@ -1312,7 +1312,7 @@ void Parser::parseSET(int flags)
 			// Anything after ')' is function body and evaluated delayed
 			At += strspn(At, " \t\r\n,");
 			func.DefLine = Line;
-			func.Start = At;
+			func.Start = At - Line.c_str();
 
 			const auto& ret = Functions.emplace(name, func);
 			if (!ret.second)
@@ -1567,7 +1567,7 @@ void Parser::doMACRO(macros_t::const_iterator m)
 	// Invoke macro
 	for (const string& line : m->second.Content)
 	{	++Context.back()->Line;
-		strncpy(Line, line.c_str(), sizeof(Line));
+		Line = line;
 		ParseLine();
 	}
 }
@@ -1622,8 +1622,8 @@ void Parser::doFUNCMACRO(macros_t::const_iterator m)
 	exprValue ret;
 	for (const string& line : m->second.Content)
 	{	++Context.back()->Line;
-		strncpy(Line, line.c_str(), sizeof(Line));
-		At = Line;
+		Line = line;
+		At = Line.c_str();
 		switch (NextToken())
 		{case DOT:
 			// directives
@@ -1695,8 +1695,8 @@ void Parser::doFUNC(funcs_t::const_iterator f)
 
 	// Setup invocation context
 	saveLineContext ctx(*this, new fileContext(CTX_FUNCTION, f->second.Definition.File, f->second.Definition.Line));
-	strncpy(Line, f->second.DefLine.c_str(), sizeof Line);
-	At = f->second.Start;
+	Line = f->second.DefLine;
+	At = Line.c_str() + f->second.Start;
 	// setup args inside new context to avoid interaction with argument values that are also functions.
 	auto& current = *Context.back();
 	current.Consts.reserve(current.Consts.size() + argnames.size());
@@ -1737,16 +1737,14 @@ void Parser::doINCLUDE(int)
 	if (doPreprocessor())
 		return;
 
+	// remove trailing blanks
+	auto p = Line.find_last_not_of(" \t\r\n");
+	if (p != string::npos)
+		Line.erase(p + 1);
 	At += strspn(At, " \t\r\n");
-	{	// remove trailing blanks
-		char* cp = At + strlen(At);
-		while (strchr(" \t\r\n", *--cp))
-			*cp = 0;
-	}
-	size_t len = strlen(At);
-	if ((*At != '"' || At[len-1] != '"') && (*At != '<' || At[len-1] != '>'))
+	if ((*At != '"' || Line[Line.length()-1] != '"') && (*At != '<' || Line[Line.length()-1] != '>'))
 		Fail("Syntax error. Expected \"file-name\" or <file-name> after .include, found '%s'.", At);
-	Token.assign(At+1, len-2);
+	Token.assign(At+1, Line.length() - (At - Line.c_str()) - 2);
 
 	// find file
 	string file;
@@ -1793,7 +1791,7 @@ bool Parser::doPreprocessor(preprocType type)
 
 void Parser::ParseLine()
 {
-	At = Line;
+	At = Line.c_str();
 	bool trycombine = false;
 	bool isinst = false;
 	size_t pos = PC;
@@ -1810,7 +1808,8 @@ void Parser::ParseLine()
 		return;
 
 	 case END:
-		*Line = 0;
+		Line.clear();
+		At = Line.c_str();
 		doPreprocessor(PP_MACRO);
 		return;
 
@@ -1859,7 +1858,7 @@ void Parser::ParseLine()
 			Msg(WARNING, "Used padding to enforce 64 bit alignment of GPU instruction.");
 
 		if (trycombine)
-		{	char* atbak = At;
+		{	const char* atbak = At;
 			bool succbak = Success;
 			string tokenbak = Token;
 			try
@@ -1907,7 +1906,7 @@ void Parser::ParseFile()
 		Fail("Failed to open file %s.", fName(Context.back()->File));
 	auto ifs = AtIf.size();
 	try
-	{	while (fgets(Line, sizeof(Line), f))
+	{	while ((Line = fgetstring(f, 1024)).length())
 		{	++Context.back()->Line;
 			try
 			{	ParseLine();
