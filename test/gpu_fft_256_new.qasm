@@ -24,7 +24,7 @@
 :0_src1 .int  16 * q                                          # source address
         .short :sync - :loop + (q<<5)                         # ra_sync
         .short :end - :end_base                               # rb_end
-        .int  vpm_setup(2, -16, h32(24+q, 0))                 # VPM pass 2
+        .int  vpm_setup(2, -16, h32(24+q))                    # VPM pass 2
         .int  vpm_setup(4, 1, v32(16*(q>>2), 4*(q&3)))        # VPM pass 1
 :0_dir  .int  0.                                              # Direction
         .int  vdw_setup_0(16, 2, dma_h32(16*(q>>2), 4*(q&3))) # VDW pass 2
