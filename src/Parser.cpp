@@ -166,7 +166,7 @@ Parser::token_t Parser::NextToken()
 		ToNextChar();
 		goto restart;
 	 case '!':
-		i = !memchr("^=", 2, At[1]) ? 0 : 1 + (At[2] == At[1]);
+		i = !memchr("^=", At[1], 2) ? 0 : 1 + (At[2] == At[1]);
 		goto op;
 	 case '%':
 	 case '+':
