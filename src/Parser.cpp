@@ -676,6 +676,7 @@ void Parser::assembleMUL(int mul_op)
 
 void Parser::assembleMOV(int mode)
 {
+	InstCtx = mode < 0 ? (instContext)~mode : IC_ADD|IC_MUL;
 	bool target2 = ArgumentCount(At, 3) == 3;
 	prepareMOV(target2);
 	ExprValue.Type = V_NONE;

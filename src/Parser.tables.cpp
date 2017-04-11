@@ -330,6 +330,7 @@ const Parser::regEntry Parser::regMap[] =
 /// Map with opcode tokens, must be ordered.
 const Parser::opEntry<8> Parser::opcodeMap[] =
 {	{ "add",    &Parser::assembleADD, ::Inst::A_ADD }
+,	{ "amov",   &Parser::assembleMOV, ~(int)(IC_ADD) }
 ,	{ "and",    &Parser::assembleADD, ::Inst::A_AND }
 ,	{ "anop",   &Parser::assembleADD, ::Inst::A_NOP|0x80 }
 ,	{ "asr",    &Parser::assembleADD, ::Inst::A_ASR }
@@ -366,8 +367,9 @@ const Parser::opEntry<8> Parser::opcodeMap[] =
 ,	{ "lthrsw", &Parser::assembleSIG, ::Inst::S_LTHRSW }
 ,	{ "max",    &Parser::assembleADD, ::Inst::A_MAX }
 ,	{ "min",    &Parser::assembleADD, ::Inst::A_MIN }
+,	{ "mmov",   &Parser::assembleMOV, ~(int)(IC_MUL) }
 ,	{ "mnop",   &Parser::assembleMUL, ::Inst::M_NOP|0x80 }
-,	{ "mov",    &Parser::assembleMOV, -1 }
+,	{ "mov",    &Parser::assembleMOV, ~(int)(IC_ADD|IC_MUL) }
 ,	{ "mul24",  &Parser::assembleMUL, ::Inst::M_MUL24 }
 ,	{ "mv8adds",&Parser::assembleMUL, ::Inst::M_V8ADDS|0x80 }
 ,	{ "mv8subs",&Parser::assembleMUL, ::Inst::M_V8SUBS|0x80 }

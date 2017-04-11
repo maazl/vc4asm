@@ -449,8 +449,9 @@ class Parser : private AssembleInst, public DebugInfo
 	/// if auto mode is allowed, i.e. \a mode < 0, and the source argument is an immediate value
 	/// then it first tries to load the desired value from any small immediate value
 	/// using any ALU operator of any available ALU. If this fails a load immediate instruction is created.
-	/// @param mode Value for Inst::LdMode or < 0 to choose automatically.
-	/// Bit 7 is the acquire flag in case of L_SEMA.
+	/// @param mode One of
+	/// - value for Inst::LdMode to create ldi or semaphore instruction. Bit 7 is the acquire flag in case of L_SEMA.
+	/// - ~(IC_ADD|IC_MUL), ~IC_ADD or ~IC_MUL to choose load mode automatically and optionally restrict to only one of the ALUs.
 	/// @exception std::string Failed, error message.
 	void             assembleMOV(int mode);
 	/// @brief Assemble \c read pseudo instruction.

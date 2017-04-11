@@ -720,16 +720,41 @@ void AssembleInst::prepareMOV(bool target2)
 		Fail("Cannot combine mov, ldi or semaphore instruction with branch.");
 	bool isLDI = Sig == S_LDI;
 	if (target2)
-	{	if ( ((Flags & IF_HAVE_NOP) || WAddrA != R_NOP || (!isLDI && OpA != A_NOP))
+	{	if (InstCtx != (IC_ADD|IC_MUL))
+			Fail("amov/mmov cannot write two target registers.");
+		if ( ((Flags & IF_HAVE_NOP) || WAddrA != R_NOP || (!isLDI && OpA != A_NOP))
 			|| (WAddrM != R_NOP || (!isLDI && OpM != M_NOP)) )
-			Fail("instruction with two targets can only be used if both ALUs are available.");
+			Fail("Instruction with two targets can only be used if both ALUs are available.");
 		Flags |= IF_NOASWAP;
 		InstCtx = IC_OP|IC_ADD;
 	} else
-	{	InstCtx = (Flags & IF_HAVE_NOP) || WAddrA != R_NOP || (!isLDI && OpA != A_NOP)
-		? IC_OP|IC_MUL : IC_OP|IC_ADD;
-		if ((InstCtx & IC_MUL) && (WAddrM != R_NOP || (!isLDI && OpM != M_NOP)))
-			Fail("Both ALUs are already used by the current instruction.");
+	{	if (isLDI && InstCtx != (IC_ADD|IC_MUL))
+			Fail("Cannot combine amov, mmov with ldi or semaphore instruction.");
+		bool addused = (Flags & IF_HAVE_NOP) || WAddrA != R_NOP || (!isLDI && OpA != A_NOP);
+		bool mulused = WAddrM != R_NOP || (!isLDI && OpM != M_NOP);
+		switch (InstCtx)
+		{default:
+			if (!addused)
+				goto add;
+			else if (!mulused)
+				goto mul;
+			else
+				Fail("Both ALUs are already used by the current instruction.");
+		 case IC_ADD:
+			if (addused && (mulused || !tryALUSwap()))
+				Fail("The ADD ALU has already been used in this instruction.");
+			Flags |= IF_NOASWAP;
+		 add:
+			InstCtx = IC_ADD|IC_OP;
+			break;
+		 case IC_MUL:
+			if (mulused && (addused || !tryALUSwap()))
+				Fail("The MUL ALU has already been used in this instruction.");
+			Flags |= IF_NOASWAP;
+		 mul:
+			InstCtx = IC_MUL|IC_OP;
+			break;
+		}
 	}
 	doInitOP();
 }

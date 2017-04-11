@@ -143,6 +143,7 @@ class AssembleInst : private Inst
 	/// @brief Prepare for mov or ldi instruction.
 	/// @details Sets up instruction context and checks for ALU availability.
 	/// @param target2 Flag whether the mov instruction wants to write both ALU targets.
+	/// @pre InstCtx should contain the allowed ALUs, in doubt IC_ADD|IC_MUL.
 	/// @exception std::string Failed, error message.
 	void             prepareMOV(bool target2);
 	/// @brief Handle Source of ALU move instruction.
