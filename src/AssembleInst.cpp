@@ -488,46 +488,58 @@ void AssembleInst::doPack(pack mode)
 
 bool AssembleInst::trySmallImmd(uint32_t value)
 {	const smiEntry* si;
+	const bool wantmul = !!(InstCtx & IC_MUL);
 	if (!value)
 	{	// mov ... ,0 does not require small immediate value
-		si = smiMap + !!(InstCtx & IC_MUL);
-		goto mov0;
-	}
-	switch (Sig)
-	{default:
-		Fail("Immediate values cannot be used together with signals.");
-	 case S_NONE:
-		if (RAddrB != R_NOP)
-			Fail("Immediate value collides with read from register file B.");
-	 case S_SMI:;
-	}
-	for (si = getSmallImmediateALU(value); si->Value == value; ++si)
-	{	// conflicting signal or small immediate value
-		if (Sig != S_NONE && !(Sig == S_SMI && SImmd == si->SImmd))
-			continue;
-		// Check pack mode
-		if (!!si->Pack)
-		{	// conflicting pack mode?
-			if (Pack != P_32 && !(((Pack ^ si->Pack) & 0xf) == 0 && PM == !(si->Pack & P_FLT)))
+		si = smiMap + wantmul;
+	} else
+	{	switch (Sig)
+		{default:
+			Fail("Immediate values cannot be used together with signals.");
+		 case S_NONE:
+			if (RAddrB != R_NOP)
+				Fail("Immediate value collides with read from register file B.");
+		 case S_SMI:;
+		}
+
+		const smiEntry* otherALU = NULL;
+		for (si = getSmallImmediateALU(value); ; ++si)
+		{	if (si->Value != value)
+			{	// option ALU swap?
+				if (!otherALU || !tryALUSwap())
+					return false; // nope, can't help
+				si = otherALU;
+				break; // Match!
+			}
+			// conflicting signal or small immediate value
+			if (Sig != S_NONE && !(Sig == S_SMI && SImmd == si->SImmd))
 				continue;
-			// Regfile A target
-			if (!(si->Pack & P_FLT))
-			{	// .setf may return unexpected results in pack mode in sign bit. TODO: accept all cases where this does not happen.
-				if (SF)
+			// Check pack mode
+			if (!!si->Pack)
+			{	// conflicting pack mode?
+				if (Pack != P_32 && !(((Pack ^ si->Pack) & 0xf) == 0 && PM == !(si->Pack & P_FLT)))
 					continue;
-				// Not regfile A target?
-				if (InstCtx & IC_MUL)
-				{	if (!WS || WAddrM >= 32)
+				// Regfile A target
+				if (!(si->Pack & P_FLT))
+				{	// .setf may return unexpected results in pack mode in sign bit. TODO: accept all cases where this does not happen.
+					if (SF)
 						continue;
-				} else
-				{	if (WS || WAddrA >= 32)
-						continue;
+					// Not regfile A target?
+					if (InstCtx & IC_MUL)
+					{	if (!WS || WAddrM >= 32)
+							continue;
+					} else
+					{	if (WS || WAddrA >= 32)
+							continue;
+					}
 				}
 			}
+			// other ALU needed?
+			if (si->OpCode.isMul() == wantmul)
+				break; // no => Match!
+			if (!otherALU)
+				otherALU = si; // First option with other ALU, try later
 		}
-		// other ALU needed?
-		if ((!si->OpCode.isMul() ^ !(InstCtx & IC_MUL)) && !tryALUSwap())
-			continue;
 
 		// Match!
 		Sig  = S_SMI;
@@ -536,18 +548,16 @@ bool AssembleInst::trySmallImmd(uint32_t value)
 		{	Pack = si->Pack;
 			PM  = (si->Pack & P_FLT) != 0;
 		}
-	 mov0:
-		if (si->OpCode.isMul())
-		{	MuxMA = MuxMB = X_RB;
-			OpM  = si->OpCode.asMul();
-		} else
-		{	MuxAA = MuxAB = X_RB;
-			OpA  = si->OpCode.asAdd();
-		}
-		return true;
 	}
-	// nope, can't help
-	return false;
+	// match or mov ..., 0
+	if (si->OpCode.isMul())
+	{	MuxMA = MuxMB = X_RB;
+		OpM  = si->OpCode.asMul();
+	} else
+	{	MuxAA = MuxAB = X_RB;
+		OpA  = si->OpCode.asAdd();
+	}
+	return true;
 }
 
 void AssembleInst::applyIf(conda cond)
