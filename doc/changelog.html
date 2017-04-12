@@ -17,8 +17,14 @@
         instruction to one of the ALUs (if vc4asm can't guess correctly).</li>
       <li>Make parser smarter with respect to operators that are not separated
         by spaces.</li>
-      <li>Added building as library (shared and static).</li>
+      <li>Added building as library (shared and static). [doe300]</li>
       <li>CLI option to search include path.</li>
+      <li>Added <tt>amov</tt>/<tt>mmov</tt> to explicitly place move
+        instruction to one of the ALUs.</li>
+      <li>Do not unnecessarily swap ALUs when loading <tt>mov</tt> constants
+        with small immediate values.</li>
+      <li>vc4.qinc: compatibility to Broadcom VPM macros.</li>
+      <li>Fixed disassembly of label redefinitions at forward references.</li>
     </ul>
     <h2>V 0.2.2</h2>
     <ul>
