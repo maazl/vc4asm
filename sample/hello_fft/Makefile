@@ -44,7 +44,7 @@ profile: hello_fft.bin
 	./profile.pl
 
 hex:
-	mkdir $@
+	-mkdir $@
 
 hello_fft.bin:	$(O1D)
 	gcc $(CFLAGS) -o hello_fft.bin $(F) $(O1D)

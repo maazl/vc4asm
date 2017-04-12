@@ -37,13 +37,13 @@ clean:
 	$(LD) -shared -o $@ $(LIBOBJECTS)
 
 ../obj:
-	mkdir $@
+	-mkdir $@
 
 ../bin:
-	mkdir $@
+	-mkdir $@
 	
 ../lib:
-	mkdir $@
+	-mkdir $@
 
 %.cpp : %.h
 
