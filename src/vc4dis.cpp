@@ -67,7 +67,7 @@ static void file_load_x32(const char *filename, vector<uint64_t>& memory)
 		return;
 	}
 	uint32_t value1, value2;
-	while ((fscanf(f, "%*[ \t]"), fscanf(f, "//%*[^\n]"), fscanf(f, "%" SCNx32 ",", &value1)) == 1)
+	while (((void)fscanf(f, "%*[ \t]"), fscanf(f, "//%*[^\n]"), fscanf(f, "%" SCNx32 ",", &value1)) == 1)
 	{	if (fscanf(f, "%" SCNx32 ",", &value2) != 1)
 		{	if (feof(f))
 			{	fprintf(stderr, "File %s must contain an even number of 32 bit words.\n", filename);
@@ -80,7 +80,7 @@ static void file_load_x32(const char *filename, vector<uint64_t>& memory)
 	if (!feof(f))
 	{	char buf[10];
 		*buf = 0;
-		fscanf(f, "%9s", buf);
+		(void)fscanf(f, "%9s", buf);
 		buf[9] = 0;
 		fprintf(stderr, "File %s contains not parsable input %s.\n", filename, buf);
 	}
@@ -95,12 +95,12 @@ static void file_load_x64(const char *filename, vector<uint64_t>& memory)
 		return;
 	}
 	uint64_t value;
-	while ((fscanf(f, "%*[ \t]"), fscanf(f, "//%*[^\n]"), fscanf(f, "%" SCNx64 ",", &value)) == 1)
+	while (((void)fscanf(f, "%*[ \t]"), (void)fscanf(f, "//%*[^\n]"), fscanf(f, "%" SCNx64 ",", &value)) == 1)
 		memory.push_back(value);
 	if (!feof(f))
 	{	char buf[10];
 		*buf = 0;
-		fscanf(f, "%9s", buf);
+		(void)fscanf(f, "%9s", buf);
 		buf[9] = 0;
 		fprintf(stderr, "File %s contains not parsable input %s.\n", filename, buf);
 	}

@@ -84,7 +84,7 @@ string fgetstring(FILE* fh, size_t maxlen)
 	string ret(buf);
 	if (ret.length() && ret[ret.length()-1] != '\n' && !feof(fh))
 	{	// incomplete, long line => skip remaining part
-		fscanf(fh, "%*[^\n]");
+		(void)fscanf(fh, "%*[^\n]");
 		fgetc(fh); // discard newline as well
 	}
 	return ret;
