@@ -32,7 +32,7 @@ test.hex : test.qasm ../bin/vc4asm
 	../bin/vc4asm -V -c $@ ../share/vc4.qinc $<
 
 parser.%.hex : parser.%.qasm ../bin/vc4asm
-	-../bin/vc4asm -V -i -c $@ ../share/vc4.qinc $< >parser.out 2>&1
+	-../bin/vc4asm -V -Q -i -c $@ ../share/vc4.qinc $< >parser.out 2>&1
 	./checkOutput.pl $< <parser.out
 
 validator.%.hex : validator.%.qasm ../bin/vc4asm
