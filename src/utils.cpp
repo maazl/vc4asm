@@ -13,6 +13,7 @@
 #include <cstdarg>
 #include <alloca.h>
 #include <unistd.h>
+#include <errno.h>
 
 
 string vstringf(const char* format, va_list va)
