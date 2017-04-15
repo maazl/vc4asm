@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include "Validator.h"
+#include "WriteC.h"
 #ifdef __linux__
 #include "WriteELF.h"
 #endif
@@ -18,80 +19,93 @@ static inline uint64_t swap_uint64(uint64_t x)
 }
 #endif
 
-static const char CPPTemplate[] = ",\n0x%08lx, 0x%08lx";
-
 int main(int argc, char **argv)
 {
 	const char* writeBIN = NULL;
-	const char* writeCPP = NULL;
-	const char* writeCPP2 = NULL;
+	const char* writeC = NULL;
+	const char* writeX = NULL;
+	const char* writeH = NULL;
+	const char* writeH2 = NULL;
 	const char* writeELF = NULL;
-	const char* writeELF2 = NULL;
 	const char* writePRE = NULL;
 	bool check = false;
+	bool comments = false;
+	bool nopredefsym = false;
 
 	Parser parser;
-
-	int c;
-	while ((c = getopt(argc, argv, "o:c:e:C:E:I:iVQP:")) != -1)
-	{	switch (c)
-		{case 'o':
-			writeBIN = optarg; break;
-		 case 'c':
-			writeCPP = optarg; break;
-		 case 'C':
-			writeCPP2 = optarg; break;
-#ifdef __linux__
-		 case 'e':
-			writeELF = optarg; break;
-		 case 'E':
-			writeELF2 = optarg; break;
-#endif
-		 case 'I':
-			parser.IncludePaths.push_back(optarg); break;
-		 case 'i':
-			parser.SearchIncludePaths = true; break;
-		 case 'V':
-			check = true; break;
-		 case 'Q':
-			parser.OperationMode = Parser::IGNOREERRORS; break;
-		 case 'P':
-			writePRE = optarg; break;
-		}
-	}
-
-	if (!writeBIN && !writeCPP && !writeCPP2 && !writePRE && !writeELF && parser.OperationMode != Parser::PASS1ONLY)
-	{	fputs("vc4asm V0.2.3\n"
-			"Usage: vc4asm [-o <bin-output>] [-{c|C} <c-output>] [-V] <qasm-file(s)>\n"
-			" -o<file> Binary output file.\n"
-			" -c<file> C output file with trailing ','.\n"
-			" -C<file> C output file withOUT trailing ','.\n"
-#ifdef __linux__
-			" -e<file> Linux ELF output file.\n"
-			" -E<file> Linux ELF output file without predefined symbols.\n"
-#endif
-			" -I<path> Add search path for .include <...>\n"
-			" -i       Search include path for command line arguments as well.\n"
-			" -V       Run instruction verifier and print warnings about suspicious code.\n"
-			, stderr);
-		return 1;
-	}
 
 	setexepath(argv[0]);
 
 	// add default include path with low precedence
-	parser.IncludePaths.emplace_back(exepath + "../share/");
-
-	if (writePRE)
-	{	parser.Preprocessed = fopen(writePRE, "wt");
-		if (parser.Preprocessed == NULL)
-		{	fprintf(stderr, "Failed to open %s for writing.", writePRE);
-			return -1;
-		}
-	}
+	parser.IncludePaths.emplace_back(exepath + "../share/include/");
 
 	try
-	{	// Pass 1
+	{	int c;
+		while ((c = getopt(argc, argv, "o:c:e:C:h:H:vI:i:VsQP:")) != -1)
+		{	switch (c)
+			{case 'o':
+				writeBIN = optarg; break;
+			 case 'c':
+				writeC = optarg; break;
+			 case 'C':
+				writeX = optarg; break;
+			 case 'h':
+				writeH = optarg; break;
+			 case 'H':
+				writeH2 = optarg; break;
+			#ifdef __linux__
+			 case 'e':
+				writeELF = optarg; break;
+			#endif
+			 case 'v':
+				comments = true; break;
+			 case 'I':
+				parser.IncludePaths.push_back(optarg); break;
+			 case 'V':
+				check = true; break;
+			 case 's':
+				nopredefsym = true; break;
+			 case 'Q':
+				parser.OperationMode = Parser::IGNOREERRORS; break;
+			 case 'P':
+				writePRE = optarg; break;
+			 case 'i':
+				{	string file = parser.FindIncludePath(optarg);
+					if (file.length() == 0)
+						throw stringf("\"%s\" not found in include path.\n", optarg);
+					parser.ParseFile(file);
+					break;
+				}
+			}
+		}
+
+		if (!writeBIN && !writeC && !writeX && !writeH && !writeH2 && !writePRE && !writeELF && parser.OperationMode != Parser::PASS1ONLY)
+		{	fputs("vc4asm V0.3\n"
+				"Usage: vc4asm [options...] <qasm-file(s)>\n"
+				" -o<file> Binary output file.\n"
+				" -C<file> C output with hex data only.\n"
+				" -c<file> C output with matching header, recommends -H.\n"
+				" -h<file> C header output for use with -e or -c.\n"
+				#ifdef __linux__
+				" -H<file> C header output w/o inline symbol values for use with -e only.\n"
+				" -e<file> Linux ELF output file.\n"
+				#endif
+				" -v       Write comments to C output\n"
+				" -s       Do not generate predefined symbols with file name.\n"
+				" -I<path> Add search path for .include <...>\n"
+				" -i<file> Search include path for command line arguments as well.\n"
+				" -V       Run instruction verifier and print warnings about suspicious code.\n"
+				"Examples:\n"
+				" vc4asm -V -C smitest.hex -i vc4.qinc smitest.qasm\n"
+				" vc4asm -v -c rpi_shader.c -H rpi_shader.h -i vc4.qinc rpi_shader.qasm\n"
+				, stderr);
+			return 1;
+		}
+
+		if (writePRE)
+			parser.Preprocessed = checkedopen(writePRE, "wt");
+
+		// Pass 1
 		while (optind < argc)
 		{	parser.ParseFile(argv[optind]);
 			++optind;
@@ -116,79 +130,37 @@ int main(int argc, char **argv)
 
 		if (!parser.Success && parser.OperationMode != Parser::IGNOREERRORS)
 			throw string("Aborted because of earlier errors.");
+
 		// Write results
-		if (writeCPP)
-		{	FILE* of = fopen(writeCPP, "wt");
-			if (of == NULL)
-			{	fprintf(stderr, "Failed to open %s for writing.", writeCPP);
-				return -1;
-			}
-
-			const char* tpl = CPPTemplate + 2; // no ,\n in the first line
-			for (auto code : parser.Instructions)
-			{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
-				tpl = CPPTemplate;
-			}
-			fputs(",\n", of);
-			fclose(of);
-		}
-		if (writeCPP2)
-		{	FILE* of = fopen(writeCPP2, "wt");
-			if (of == NULL)
-			{	fprintf(stderr, "Failed to open %s for writing.", writeCPP2);
-				return -1;
-			}
-
-			const char* tpl = CPPTemplate + 2; // no ,\n in the first line
-			for (auto code : parser.Instructions)
-			{	fprintf(of, tpl, (unsigned long)(code & 0xffffffffULL), (unsigned long)(code >> 32) );
-				tpl = CPPTemplate;
-			}
-			fputc('\n', of);
-			fclose(of);
-		}
-
+		if (writeH)
+			WriteC(FILEguard(checkedopen(writeH, "wt")), "template.h", WriteX::O_NONE, true)
+				.Write(parser.Instructions, parser, writeH);
+		if (writeH2)
+			WriteC(FILEguard(checkedopen(writeH2, "wt")), "template2.h", WriteX::O_NONE, !nopredefsym)
+				.Write(parser.Instructions, parser, writeH2);
+		if (writeC)
+			WriteC(FILEguard(checkedopen(writeC, "wt")), "template.c", comments ? WriteX::O_WriteLabelComment|WriteX::O_WriteLocationComment|WriteX::O_WriteSourceComment : WriteX::O_NONE, true)
+				.Write(parser.Instructions, parser, writeC, writeH ? strippath(writeH) : string());
+		if (writeX)
+			WriteX(FILEguard(checkedopen(writeX, "wt")), comments ? WriteX::O_WriteLabelComment|WriteX::O_WriteLocationComment|WriteX::O_WriteSourceComment : WriteX::O_NONE)
+				.Write(parser.Instructions, parser);
+		#ifdef __linux__
+		if (writeELF)
+			WriteELF(FILEguard(checkedopen(writeELF, "wb")), nopredefsym)
+				.Write(parser.Instructions, parser, writeELF);
+		#endif
 		if (writeBIN)
 		{
-			/*#if (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__) || (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN)
-			for (auto& i : memory)
+			#if (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__) || (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN)
+			for (auto& i : parser.Instructions)
 				i = swap_uint64(i);
-			#endif*/
-			FILE* of = fopen(writeBIN, "wb");
-			if (of == NULL)
-			{	fprintf(stderr, "Failed to open %s for writing.", writeBIN);
-				return -1;
-			}
+			#endif
+			FILEguard of(checkedopen(writeBIN, "wb"));
 			fwrite(&*parser.Instructions.begin(), sizeof(uint64_t), parser.Instructions.size(), of);
-			fclose(of);
 		}
-
-#ifdef __linux__
-		if (writeELF)
-		{	WriteELF we;
-			we.Target = fopen(writeELF, "wb");
-			if (we.Target == NULL)
-			{	fprintf(stderr, "Failed to open %s for writing.", writeELF);
-				return -1;
-			}
-			we.Write(parser.Instructions, parser, writeELF);
-			fclose(we.Target);
-		}
-		if (writeELF2)
-		{	WriteELF we;
-			we.Target = fopen(writeELF2, "wb");
-			if (we.Target == NULL)
-			{	fprintf(stderr, "Failed to open %s for writing.", writeELF2);
-				return -1;
-			}
-			we.NoStandardSymbols = true;
-			we.Write(parser.Instructions, parser, writeELF);
-			fclose(we.Target);
-		}
-#endif
 	} catch (const string& msg)
 	{	fputs(msg.c_str(), stderr);
-	  fputc('\n', stderr);
+		fputc('\n', stderr);
 		return 1;
 	}
 

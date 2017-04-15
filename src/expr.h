@@ -70,7 +70,7 @@ struct reg_t
 	rPUp        Pack;  ///< Pack/unpack request, see Inst::P_*, bit 6:
 };
 /// Type of the expression value
-enum valueType : char
+enum valueType : unsigned char
 {	V_NONE      ///< no value
 ,	V_INT       ///< integer literal or the result of an integer expression
 ,	V_FLOAT     ///< float literal or the result of a float expression

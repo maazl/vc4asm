@@ -7,9 +7,11 @@
 
 #include "utils.h"
 
-#include <cstdio>
 #include <cstdlib>
 #include <climits>
+#include <cctype>
+#include <cstdarg>
+#include <alloca.h>
 #include <unistd.h>
 
 
@@ -49,6 +51,22 @@ string relpath(const string& context, const string& rel)
 	return string(context, 0, context.rfind('/')+1) + rel;
 }
 
+const char* strippath(const char* filepath)
+{	// find last of / \ :
+	size_t len = strlen(filepath);
+	while (len--)
+	{	char c = filepath[len];
+		if (c == '/' || c == '\\' || c == ':')
+			break;
+	}
+	return filepath + len + 1;
+}
+
+string stripextension(const char* filename)
+{	const char* cp = strrchr(filename, '.');
+	return cp ? string(filename, cp) : filename;
+}
+
 string exepath;
 
 void setexepath(const char* argv0)
@@ -74,6 +92,51 @@ void setexepath(const char* argv0)
 	}	}
 	exepath = string(argv0, p);
 }
+
+FILE* checkedopen(const char* file, const char* mode)
+{	FILE* ret = fopen(file, mode);
+	if (ret == NULL)
+		throw stringf("Failed to open \"%s\" for %s: %s", file, strchr(mode, 'w') ? "writing" : "reading", strerror(errno));
+	return ret;
+}
+
+void checkedwrite(FILE* fh, const void* data, size_t size)
+{	switch (fwrite(data, size, 1, fh))
+	{default:
+		throw stringf("Failed to write to file: %s", strerror(errno));
+	 case 0:
+		throw string("Failed to write to file: Disk full");
+	 case 1:;
+	}
+}
+
+void checkedfprintf(FILE* fh, const char* fmt, ...)
+{	va_list va;
+	va_start(va, fmt);
+	int ret = vfprintf(fh, fmt, va);
+	va_end(va);
+	if (ret < 0)
+		throw stringf("Failed to write to file: %s", strerror(errno));
+}
+
+string readcomplete(const char* file)
+{	FILEguard fh(checkedopen(file, "r"));
+	if (fseek(fh, 0, SEEK_END))
+		throw stringf("Failed to seek to end of \"%s\": %s", file, strerror(errno));
+	long size = ftell(fh);
+	if (size == -1)
+		throw stringf("Failed to get size of file \"%s\": %s", file, strerror(errno));
+	if (size > 1<<16)
+		throw stringf("File \"%s\" is no reasonable template.", file);
+	if (fseek(fh, 0, SEEK_SET))
+		throw stringf("Failed to seek to start of \"%s\": %s", file, strerror(errno));
+	string ret;
+	ret.resize(size);
+	if (fread(&ret.front(), size, 1, fh) != 1)
+		throw stringf("Failed to read file content of \"%s\": %s", file, strerror(errno));
+	return ret;
+}
+
 string fgetstring(FILE* fh, size_t maxlen)
 {	char* buf = (char*)alloca(++maxlen);
 	if (!fgets(buf, maxlen, fh))
@@ -90,3 +153,8 @@ string fgetstring(FILE* fh, size_t maxlen)
 	return ret;
 }
 
+void replacenonalphanum(string& value, char repl)
+{	for (auto& c : value)
+		if (!isalnum(c))
+			c = repl;
+}

@@ -1,28 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta content="text/html; charset=iso-8859-15" http-equiv="content-type">
-    <title>VC4ASM Assembler directives</title>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type">
+    <title>VC4ASM Directives</title>
     <meta content="Marcel M&uuml;ller" name="author">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
   </head>
   <body>
     <h1>VC4ASM - Assembler directives</h1>
-    <p><a href="index.html">&uarr; Top</a> <tt><a href="#.align">.align</a> <a
-          href="#.assert">.assert</a> <a href="#.back">.back</a> <a href="#.bit">.bit</a>
-        <a href="#.byte">.byte</a> <a href="#.clone">.clone</a> <a href="#.code">.code</a>
-        <a href="#.const">.const</a> <a href="#.double">.double</a> <a href="#.else">.else</a>
-        <a href="#.elseif">.elseif</a> <a href="#.back">.endb</a> <a href="#.func">.endf</a>
-        <a href="#.foreach">.endfor</a> <a href="#.endif">.endif</a> <a href="#.macro">.endm</a>
-        <a href="#.rep">.endr</a> <a href="#.equ">.equ</a> <a href="#.float">.float</a>
-        <a href="#.foreach">.foreach</a> <a href="#.func">.func</a> <a href="#.global">.global</a>
-        <a href="#.if">.if</a> <a href="#.ifset">.ifset</a> <a href="#.include">.include</a>
-        <a href="#.int">.int</a> <a href="#.const">.lconst</a> <a href="#.long">.long</a>
-        <a href="#.set">.lset</a> <a href="#.unset">.lunset</a> <a href="#.macro">.macro</a>
-        <a href="#.rep">.rep</a> <a href="#.rodata">.rodata</a> <a href="#.set">.set</a>
-        <a href="#.short">.short</a> <a href="#.text">.text</a> <a href="#.unset">.unset</a></tt></p>
+    <p><a href="index.html">&uarr; Top</a> <tt><a href="#.align">.align</a>
+      <a href="#.assert">.assert</a> <a href="#.back">.back</a> <a href="#.bit">.bit</a>
+      <a href="#.byte">.byte</a> <a href="#.clone">.clone</a> <a href="#.code">.code</a>
+      <a href="#.const">.const</a> <a href="#.double">.double</a> <a href="#.else">.else</a>
+      <a href="#.elseif">.elseif</a> <a href="#.back">.endb</a> <a href="#.func">.endf</a>
+      <a href="#.foreach">.endfor</a> <a href="#.endif">.endif</a> <a href="#.macro">.endm</a>
+      <a href="#.rep">.endr</a> <a href="#.equ">.equ</a> <a href="#.float">.float</a>
+      <a href="#.foreach">.foreach</a> <a href="#.func">.func</a> <a href="#.global">.global</a>
+      <a href="#.if">.if</a> <a href="#.ifset">.ifset</a> <a href="#.include">.include</a>
+      <a href="#.int">.int</a> <a href="#.const">.lconst</a> <a href="#.long">.long</a>
+      <a href="#.set">.lset</a> <a href="#.unset">.lunset</a> <a href="#.macro">.macro</a>
+      <a href="#.rep">.rep</a> <a href="#.rodata">.rodata</a> <a href="#.set">.set</a>
+      <a href="#.short">.short</a> <a href="#.text">.text</a> <a href="#.unset">.unset</a></tt></p>
     <h2><a id=".const" name=".const"></a><a id=".set" name=".set"></a><tt>.const
-        .set .lconst .lset</tt> - define a constant or single line function</h2>
+      .set .lconst .lset</tt> - define a constant or single line function</h2>
     <pre>.const <i>identifier</i>, <i>expression</i>
 .set <i>identifier</i>, <i>expression</i>
 .lconst <i>identifier</i>, <i>expression</i>
@@ -239,7 +239,7 @@
     <p>An included file denotes a local context. Definitions that are local like
       <tt>.lset</tt> are only valid within the included file and sub includes.</p>
     <h2><tt><a name=".byte"></a><a name=".short"></a><a name=".int"></a><a name=".long"></a><a
-          name=".float"></a><a name=".bit"></a><a name=".double"></a><a name=".half"></a>.byte
+name=".float"></a><a name=".bit"></a><a name=".double"></a><a name=".half"></a>.byte
         .short .int .long .bit .float .half .double</tt> - emit constants inside
       code blocks</h2>
     <pre>.byte <var>constant, constant</var> ...<br>.short <var><var>constant, constant</var></var> ...<var></var><br>.int <var><var>constant, constant</var></var> ...<br>.long <var>constant, constant</var> ...<br>.bit <var>constant, constant</var> ...<br>.float <var>constant, constant</var> ...<br>.half <var>constant, constant</var> ...<br>.double <var>constant, constant</var> ...</pre>
@@ -303,15 +303,14 @@
     <dl>
     </dl>
     <h2><a id=".global" name=".global"></a><tt>.global</tt> - export symbol</h2>
-    <pre>.global <var>label</var><br>.global <var>symbol, value</var></pre>
+    <pre>::<var>label</var><br>.global :<var>label</var><br>.global <var>symbol, value</var></pre>
     <p>Export a label or some other constant as global linker symbol in ELF
       format. <tt>.global</tt> has no effect on other output formats.<br>
       It is an error to assign different values to the same global symbol.</p>
     <dl>
       <dt><tt><var>label</var></tt></dt>
       <dd>Name of a label to export. This will create a global symbol which
-        address points to the code at <tt><var>label</var></tt> after linkage.<br>
-        This is the short form of <tt>.global <var>label</var>, :<var>label</var></tt>.</dd>
+        address points to the code at <tt><var>label</var></tt> after linkage.<br><tt>.global :</tt><var><tt>label</tt> </var>is the short form of <tt>.global <var>label</var>, :<var>label</var></tt>, and <tt>::<var>label</var></tt> is the short form of <tt>.global :</tt><var><tt>label</tt></var> including the label definition.</dd>
       <dt><tt><var>symbol</var></tt></dt>
       <dd>Name of the global symbol to define. The symbol receives the following
         value.</dd>
@@ -330,9 +329,9 @@
     <pre>extern char code_start[];<br>extern char code_size[];<br>#define code_length ((size_t)&amp;code_size)<br><br>memcpy(qpu_memory_buffer, code_start, code_length);</pre>
     <p>Note that this is just an example. The start, the size and the end of the
       generated code block are automatically exported as symbols as mentioned <a
-        href="index.html#vc4asm">here</a>.</p>
+href="index.html#vc4asm">here</a>.</p>
     <h2><a id=".code" name=".code"></a><a id=".text" name=".text"></a><a id=".rodata"
-        name=".rodata"></a><tt>.code</tt>, <tt>.rodata</tt> - segment
+name=".rodata"></a><tt>.code</tt>, <tt>.rodata</tt> - segment
       definitions</h2>
     <pre>.code<br>.text<br><br>.rodata</pre>
     <p>Declares the following instructions or <a href="#.byte">data directives</a>
@@ -345,5 +344,4 @@
       will be marked as code and everything emitted by a data directive like <tt>.int</tt>
       will be treated as data. Normally this should hit the nail on the head and
       you need not to worry about this.</p>
-  </body>
-</html>
+</body></html>

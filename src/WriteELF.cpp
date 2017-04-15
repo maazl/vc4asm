@@ -7,8 +7,8 @@
 
 #ifdef __linux__
 #include "WriteELF.h"
-#include "expr.h"
 #include "DebugInfo.h"
+#include "utils.h"
 
 #include <string>
 #include <cstring>
@@ -102,9 +102,9 @@ const Elf32_Shdr WriteELF::SectSymST =
 const Elf32_Sym WriteELF::Sym0 = {0};
 
 
-WriteELF::WriteELF()
-:	Target(NULL)
-,	NoStandardSymbols(false)
+WriteELF::WriteELF(FILE* target, bool nostdsymbols)
+:	WriterBase(target)
+,	NoStandardSymbols(nostdsymbols)
 {	Symbols.emplace_back(Sym0);
 }
 
@@ -116,30 +116,18 @@ void WriteELF::Write(const vector<uint64_t>& instructions, const DebugInfo& info
 		sym.st_shndx = SHN_ABS;
 	}
 
-	size_t code_size = instructions.size() * sizeof (uint64_t);
+	const size_t code_size = instructions.size() * sizeof(uint64_t);
 
 	// Code fragment symbol, name = file name
 	if (!NoStandardSymbols)
-	{	auto cp = strrchr(filename, '/');
-		if (cp)
-			filename = cp+1;
-		cp = strrchr(filename, '.');
-		string name;
-		if (cp)
-			name.assign(filename, cp);
-		else
-			name = filename;
-		// Replace non-word chars
-		for (auto& c : name)
-		{	if (!isalnum(c))
-				c = '_';
-		}
+	{	string name = stripextension(strippath(filename));
+		replacenonalphanum(name);
 		AddGlobalSymbol(name).st_size = code_size;
 		// End Symbol
 		name.append("_end");
 		AddGlobalSymbol(name).st_value = code_size;
 		// Size symbol
-		name.erase(name.size() - 4, 4);
+		name.erase(name.size() - 4);
 		name.append("_size");
 		auto& sym = AddGlobalSymbol(name);
 		sym.st_shndx = SHN_ABS;
@@ -174,11 +162,11 @@ void WriteELF::Write(const vector<uint64_t>& instructions, const DebugInfo& info
 	// write section names
 	WriteRaw(SNST);
 	// write code
-	fwrite(&instructions.front(), sizeof(uint64_t), instructions.size(), Target);
+	checkedwrite(Target, &instructions.front(), code_size);
 	// write symbol table
-	fwrite(&Symbols.front(), sizeof(Elf32_Sym), Symbols.size(), Target);
+	checkedwrite(Target, &Symbols.front(), sizeof(Elf32_Sym) * Symbols.size());
 	// write symbol names
-	fwrite(SymbolNames.c_str(), 1, SymbolNames.size() + 1, Target);
+	checkedwrite(Target, SymbolNames.c_str(), SymbolNames.size() + 1);
 }
 
 Elf32_Sym& WriteELF::AddSymbol(const string& name)

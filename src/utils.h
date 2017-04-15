@@ -58,12 +58,61 @@ string stringf(const char* format, ...) PRINTFATTR(1);
 /// @return \c rel if \c rel is an absolute path a concatenation of \c context and \c rel otherwise.
 string relpath(const string& context, const string& rel);
 
+/// Strips any path component.
+/// @param filepath File name with or without path.
+/// @return Pointer into \a filepath behind any path component.
+const char* strippath(const char* filepath);
+
+/// Remove the file extension from file name.
+/// @param filename File name.
+/// @return File name without extension.
+string stripextension(const char* filename);
+
 /// Path to current executable, including trailing slash.
 extern string exepath;
 
 /// Examine path of the current executable.
 /// @param argv0 argv[0] from main.
 void setexepath(const char* argv0);
+
+/// RAII version of FILE*
+class FILEguard
+{	FILE* File;
+ public:
+	FILEguard(FILE* file) : File(file) {}
+	FILEguard(const FILEguard&) = delete;
+	FILEguard(FILEguard&& r) : File(r.File) { r.File = NULL; }
+	~FILEguard() { if (File) fclose(File); }
+	FILEguard& operator=(const FILEguard&) = delete;
+	operator FILE*() { return File; }
+};
+
+/// Checked file open. Like fopen but throws on error.
+/// @param file Name of the file
+/// @param mode Open mode
+/// @return File pointer, never NULL.
+/// @exception string Failed to open: error message
+FILE* checkedopen(const char* file, const char* mode);
+
+/// Write to file and throw an exception on error.
+/// @param fh Target file handle.
+/// @param data Start of then buffer to write.
+/// @param size Number of bytes to write.
+/// @exception string Failed to write: error message
+void checkedwrite(FILE* fh, const void* data, size_t size);
+
+/// Write to file and throw an exception on error.
+/// @param fh Target file handle.
+/// @param fmt Format string.
+/// @param ... Arguments.
+/// @exception string Failed to write: error message
+void checkedfprintf(FILE* fh, const char* fmt, ...) PRINTFATTR(2);
+
+/// Read entire file content into memory.
+/// @param file Name of the file.
+/// @return Content of the file.
+/// @exception string Failed to read: error message
+string readcomplete(const char* file);
 
 /// Read a line of an input stream into a string.
 /// @param fh Source file handle.
@@ -73,6 +122,12 @@ void setexepath(const char* argv0);
 /// In case of EOF an empty string is returned.
 /// @exception string Failed to read: error message
 string fgetstring(FILE* fh, size_t maxlen);
+
+
+/// Replace any non alphanumeric characters.
+/// @param value String to convert. The operation is done in place.
+/// @param repl Replacement character, '_' by default.
+void replacenonalphanum(string& value, char repl = '_');
 
 
 /// Find the first occurrence of key in an ordered, constant array of C strings.

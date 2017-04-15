@@ -1,10 +1,14 @@
-all : asm parser validator
+vc4asmbinpath = ../bin
+
+all : asm cout parser validator
 
 asm : test_256 test_512 test_1k test_2k test_4k test_8k test_16k test_32k test_64k test_128k test_256k test_512k test_1024k test_2048k test_trans test_256_new
 
-parser : parser.rot.hex parser.pup.hex
+cout : testc_rpi_shader testh_rpi_shader
 
-validator : validator.VPM.hex
+parser : testp.rot.hex testp.pup.hex
+
+validator : testv.VPM.hex
 
 clean :
 	rm gpu_fft_*.hex *.strip
@@ -17,24 +21,36 @@ clean :
 test_% : gpu_fft_%.hex shader_%.strip
 	diff $^ >$@
 
-gpu_fft_%.hex : gpu_fft_%.qasm gpu_fft.qinc gpu_fft_ex.qinc ../bin/vc4asm
-	../bin/vc4asm -V -c $@ ../share/vc4.qinc $<
+%.strip.c : %.c
+	perl -pe 's"//  *(.*?)(?:\s*#.*|$$)"// \1"' $< >$@
 
-%.dis : %.hex ../bin/vc4dis
-	../bin/vc4dis -v -x $< >$@
+testc_% : %.strip.c %.ref.c
+	diff $^ >$@
+
+testh_% : %.h %.ref.h
+	diff $^ >$@
+
+%.c : %.qasm $(vc4asmbinpath)/vc4asm
+	$(vc4asmbinpath)/vc4asm -V -v -c $@ -h $(subst .c,.h,$@) -i vc4.qinc $<
+
+gpu_fft_%.hex : gpu_fft_%.qasm gpu_fft.qinc gpu_fft_ex.qinc $(vc4asmbinpath)/vc4asm
+	$(vc4asmbinpath)/vc4asm -V -C $@ -i vc4.qinc $<
+
+%.dis : %.hex $(vc4asmbinpath)/vc4dis
+	$(vc4asmbinpath)/vc4dis -v -x $< >$@
 
 test.strip : test.hex
 
 test : test.hex test.strip
 	diff $^
 
-test.hex : test.qasm ../bin/vc4asm
-	../bin/vc4asm -V -c $@ ../share/vc4.qinc $<
+test.hex : test.qasm $(vc4asmbinpath)/vc4asm
+	$(vc4asmbinpath)/vc4asm -V -c $@ -i vc4.qinc $<
 
-parser.%.hex : parser.%.qasm ../bin/vc4asm
-	-../bin/vc4asm -V -Q -i -c $@ ../share/vc4.qinc $< >parser.out 2>&1
+testp.%.hex : parser.%.qasm $(vc4asmbinpath)/vc4asm
+	-$(vc4asmbinpath)/vc4asm -V -Q -c $@ -i vc4.qinc $< >parser.out 2>&1
 	./checkOutput.pl $< <parser.out
 
-validator.%.hex : validator.%.qasm ../bin/vc4asm
-	-../bin/vc4asm -V -c $@ ../share/vc4.qinc $< >parser.out 2>&1
+testv.%.hex : validator.%.qasm $(vc4asmbinpath)/vc4asm
+	-$(vc4asmbinpath)/vc4asm -V -c $@ -i vc4.qinc $< >parser.out 2>&1
 	./checkOutput.pl $< <parser.out

@@ -1,49 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta content="text/html; charset=windows-1252" http-equiv="content-type">
-    <title>vc4asm - change log</title>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type">
+    <title>VC4ASM Changelog</title>
     <meta content="Marcel M&uuml;ller" name="author">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
   </head>
   <body>
     <h1>VC4ASM - History of changes</h1>
     <p><a href="index.html">&uarr; Top</a></p>
+    <h2>V 0.3</h2>
+    <h3>Breaking changes</h3>
+    <ul>
+      <li><em>The <tt>-c</tt> command line option now generates entirely
+          different C output</em> intended to be used with a header file.</li>
+      <li>The option to generate C hex output with a trailing '<tt>,</tt>' at
+        the last line (formerly <tt>-c</tt>) is gone.</li>
+      <li>The <tt>-i</tt> option of V0.2.3 now only applies to the file
+        immediately after the <tt>-i</tt> option rather than the entire command
+        line.</li>
+      <li>The <tt>-E</tt> option has gone. Use <tt>-s -e</tt> instead.</li>
+      <li>The <tt>vc4.qinc</tt> file now resides in the directory <tt>share/include/</tt>
+        rather than just <tt>share/</tt>. No big deal if you used the <tt>-i</tt>
+        option. Otherwise you need to adjust your command line, preferably by
+        using <a href="index.html#-i"><tt>-i</tt></a>.</li>
+    </ul>
+    <h3>Features</h3>
+    <ul>
+      <li>Switched build environment to <a href="https://cmake.org/">CMake</a>.</li>
+      <li>Added <em>full C compatible output</em> using <a href="index.html#-c">-c</a>
+        including header file with global symbols (rather than only hex
+        fragments).</li>
+    </ul>
     <h2>V 0.2.3</h2>
+    <h3>Features</h3>
     <ul>
       <li>Support of <tt>::label</tt> syntax to define global (exported)
         symbols.</li>
+      <li>Added building as library (shared and static) [doe300].</li>
+      <li>CLI option <tt>-i</tt> to assemble files from include path. (Allows
+        to refer to <tt>vc4.qinc</tt> without path.)</li>
       <li>Added <tt>amov</tt>/<tt>mmov</tt> to explicitly place move
         instruction to one of the ALUs (if vc4asm can't guess correctly).</li>
+    </ul>
+    <h3>Fixes</h3>
+    <ul>
       <li>Make parser smarter with respect to operators that are not separated
         by spaces.</li>
-      <li>Added building as library (shared and static). [doe300]</li>
-      <li>CLI option to search include path.</li>
-      <li>Added <tt>amov</tt>/<tt>mmov</tt> to explicitly place move
-        instruction to one of the ALUs.</li>
       <li>Do not unnecessarily swap ALUs when loading <tt>mov</tt> constants
         with small immediate values.</li>
-      <li>vc4.qinc: compatibility to Broadcom VPM macros.</li>
-      <li>Fixed disassembly of label redefinitions at forward references.</li>
+      <li><tt>vc4.qinc</tt>: compatibility to Broadcom VPM macros.</li>
     </ul>
     <h2>V 0.2.2</h2>
     <ul>
-      <li>Complete redesign of pack/unpack handling. Support packed register
+    </ul>
+    <h3>Features</h3>
+    <ul>
+      <li>Complete redesign of pack/unpack handling. Support for packed register
         expressions, including in macros.</li>
-      <li>Fixed instruction swap of <tt>sub</tt> &amp; <tt>xor</tt> resulting
-        in bad code.</li>
       <li>Support for instructions that are tied to an ALU, e.g. <tt>mv8adds</tt>.</li>
       <li>Support <tt>nop</tt> instruction with target register (to use easter
         egg).</li>
       <li>Validator: warn about concurrent VPM access.</li>
+      <li>Added binary rotate operators to expression syntax.</li>
+    </ul>
+    <h3>Fixes</h3>
+    <ul>
+      <li>Fixed instruction swap of <tt>sub</tt> &amp; <tt>xor</tt> resulting
+        in bad code.</li>
       <li>Reworked <tt>Inf</tt>/<tt>NaN</tt> handling; fixes <tt>mov ...,
           0x7f800000</tt></li>
-      <li>Added binary rotate operators to expression syntax.</li>
-      <li>Fixed parsing of floating point constants without a decimal dot, e.g.
-        <tt>1E6</tt>.</li>
+      <li><tt></tt>Fixed parsing of floating point constants without a decimal
+        dot, e.g. <tt>1E6</tt>.</li>
       <li>Disabled ELF support on OS X.</li>
     </ul>
     <h2>V 0.2.1</h2>
+    <h3>Features</h3>
     <ul>
       <li>Support to swap regfile A and regfile B read access if the I/O
         register is invariant of that.</li>
@@ -53,6 +85,9 @@
       <li>Added support for code and data segments. (Validator does no longer
         complain about data.)</li>
       <li>Added support for half precision floating point constants.</li>
+    </ul>
+    <h3>Fixes</h3>
+    <ul>
       <li>Fixed use of regfile A pack modes with MUL ALU.</li>
       <li>Fixed disassemble signed values at <tt>ldipes</tt>.</li>
       <li>Fixed <tt>.align</tt> with more than 8 bytes, support offset based <tt>.align</tt>.</li>

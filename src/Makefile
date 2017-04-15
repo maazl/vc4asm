@@ -1,7 +1,7 @@
 FLAGS    = -Wall -std=c++11 -g#-O3
 CPPFLAGS = -c -fPIC
 LDFLAGS  =
-LIBS     = -lm -lstdc++
+LIBS     = -lstdc++ -lm
 CC  = g++
 LD  = gcc
 AR	= ar
@@ -15,9 +15,9 @@ O   = .o
 	$(CC) $(FLAGS) $(CPPFLAGS) -S -o $@ $<
 
 BASEOBJECTS = ../obj/utils$(O) ../obj/Message$(O) ../obj/expr$(O) ../obj/Inst$(O) ../obj/Eval$(O) ../obj/Validator$(O)
-ASMOBJECTS  = $(BASEOBJECTS) ../obj/AssembleInst$(O) ../obj/Parser$(O) ../obj/vc4asm$(O) ../obj/WriteELF$(O)
+ASMOBJECTS  = $(BASEOBJECTS) ../obj/AssembleInst$(O) ../obj/Parser$(O) ../obj/vc4asm$(O) ../obj/WriterBase$(O) ../obj/WriteELF$(O) ../obj/WriteC$(O)
 DISOBJECTS  = $(BASEOBJECTS) ../obj/Disassembler$(O) ../obj/vc4dis$(O)
-LIBOBJECTS = $(BASEOBJECTS) ../obj/AssembleInst$(O) ../obj/Parser$(O) ../obj/WriteELF$(O) ../obj/Disassembler$(O)
+LIBOBJECTS = $(BASEOBJECTS) ../obj/AssembleInst$(O) ../obj/Parser$(O) ../obj/WriterBase$(O) ../obj/WriteELF$(O) ../obj/WriteC$(O) ../obj/Disassembler$(O)
 
 all: ../bin/vc4asm$(EXE) ../bin/vc4dis$(EXE) ../lib/libvc4asm.a ../lib/libvc4asm.so
 
@@ -55,9 +55,11 @@ clean:
 ../obj/AssembleInst$(O) : AssembleInst.cpp AssembleInst.h Inst.h expr.h Message.h utils.h AssembleInst.tables.cpp
 ../obj/Parser$(O) : Parser.cpp Parser.h AssembleInst.h DebugInfo.h Eval.h Inst.h expr.h Message.h utils.h Parser.tables.cpp
 ../obj/Validator$(O) : Validator.cpp Validator.h DebugInfo.h utils.h Inst.h expr.h
-../obj/WriteELF$(O) : WriteELF.cpp WriteELF.h DebugInfo.h expr.h
+../obj/WriterBase$(O) : WriterBase.cpp WriterBase.h utils.h
+../obj/WriteELF$(O) : WriteELF.cpp WriteELF.h WriterBase.h DebugInfo.h expr.h utils.h
+../obj/WriteC$(O) : WriteC.cpp WriteC.h WriterBase.h DebugInfo.h expr.h utils.h
 ../obj/Disassembler$(O) : Disassembler.cpp Disassembler.h Inst.h utils.h Disassembler.tables.cpp
-../obj/vc4asm$(O) : vc4asm.cpp Parser.h AssembleInst.h Eval.h Inst.h expr.h Message.h utils.h Validator.h
+../obj/vc4asm$(O) : vc4asm.cpp Parser.h AssembleInst.h Eval.h Inst.h expr.h Message.h utils.h Validator.h WriteELF.h WriteC.h WriterBase.h
 ../obj/vc4dis$(O) : vc4dis.cpp Disassembler.h Inst.h expr.h Validator.h utils.h
 
 Inst.h : expr.h

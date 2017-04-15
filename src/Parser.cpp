@@ -1930,20 +1930,14 @@ void Parser::ParseFile()
 void Parser::ParseFile(const string& file)
 {	if (Pass2)
 		throw string("Cannot add another file after pass 2 has been entered.");
-	struct stat buffer;
-	string target = file;
-	if ( !(stat(file.c_str(), &buffer) == 0 && S_ISREG(buffer.st_mode))
-		&& !(SearchIncludePaths && (target = FindIncludePath(file)).length() != 0) )
-		throw stringf("\"%s\" not found or no regular file.", file.c_str());
 
-	SourceFiles.emplace_back(target);
+	SourceFiles.emplace_back(file);
 	FilesCount = SourceFiles.size();
 	saveContext ctx(*this, new fileContext(CTX_FILE, FilesCount-1, 0));
 	try
 	{	ParseFile();
 	} catch (const string& msg)
 	{	// recover from errors
-		Success = false;
 		CaughtMsg(msg.c_str());
 	}
 }

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta content="text/html; charset=windows-1252" http-equiv="content-type">
-    <title>Macro Assembler for Broadcom VideoCore IV</title>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type">
+    <title>VC4ASM Macro Assembler for VideoCore IV</title>
     <meta content="Marcel M&uuml;ller" name="author">
     <meta content="Raspberry Pi BCM2835 BCM2836 QPU macro assembler" name="keywords">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
@@ -28,33 +28,43 @@
     <h2>Download</h2>
     <p>Download <a href="../vc4asm.tar.bz2">Source code, Raspberry Pi 1 binary,
         examples and this documentation</a> (750k)</p>
-    <p>The current <b>version</b> is <b>0.2.3</b>. See <a href="changelog.html">change
+    <p>The current <b>version</b> is <b>0.3</b>. See <a href="changelog.html">change
         log</a> for further details.</p>
     <p>The source code is also available at <a href="https://github.com/maazl/vc4asm/">github.com/maazl/vc4asm</a>.</p>
-    <dl>
-    </dl>
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
-    <p>The heart of the software. It assembles QPU code to binary or C
-      constants.</p>
-    <pre>vc4asm [-o &lt;bin-output&gt;] [-C &lt;C-output&gt;] [-e &lt;ELF-output&gt;] [-I &lt;include-path&gt; [-I &lt;include-path2&gt; ...]] &lt;qasm-file&gt; [&lt;qasm-file2&gt; ...]</pre>
+    <p>The heart of the software. It assembles QPU code to binary, ELF or C
+      source.</p>
+    <pre>vc4asm [&lt;options&gt; ...] &lt;qasm-file&gt; [&lt;qasm-file2&gt; ...]</pre>
     <h3>Options</h3>
     <dl>
       <dt><tt>-o &lt;bin-output&gt; </tt></dt>
       <dd>File name for binary output. If omitted no binary output is generated.<br>
         Note that <tt>vc4asm</tt> always writes <em>little endian</em>
         binaries.</dd>
-      <dt><tt>-c &lt;C-output&gt;</tt></dt>
+      <dt><tt>-C &lt;C-fragment-output&gt;</tt></dt>
       <dd>File name for C/C++ output. The result does not include surrounding
         braces. So write it to a separate file and include it from C as follows:<br>
         <tt>static const uint32_t qpu_code[] = {<br>
           #include&lt;C-output&gt;<br>
           };</tt></dd>
-      <dt><tt>-C</tt><tt> &lt;C-output&gt;</tt></dt>
-      <dd>Same as <tt>-c</tt>, but suppress trailing '<tt>,</tt>'.</dd>
+      <dt><tt><a id="-c" name="-c"></a>-c</tt><tt> &lt;C-output&gt;</tt></dt>
+      <dd>Write full C output file. Requires header file also (option <tt>-h</tt>).</dd>
+      <dt><tt>-h &lt;C-header&gt;</tt></dt>
+      <dd>Write C header file, containing global symbols.<br>
+        This file is compatible with the <tt>-c</tt> and the <tt>-e</tt>
+        output</dd>
+      <dt><tt>-H &lt;C-header&gt;</tt></dt>
+      <dd>Write C header file without inline symbol values. This variant causes
+        all symbols to be resolved by the linker. So no recompile is required
+        when the GPU code changes unless new symbols are used in the referring C
+        code.<br>
+        This file is compatible with the <tt>-e</tt> output only.</dd>
+      <dt><tt>-v</tt></dt>
+      <dd>Decorate C output with comments containing code offsets, labels and
+        source code lines.</dd>
       <dt><tt>-e &lt;ELF-output&gt;</tt></dt>
       <dd>Write the assembled binary directly to an ARM compatible object file
-        in ELF format that can be passed to <tt>ld</tt> or <tt>gcc</tt>
-        respectively.<br>
+        in ELF format that can be passed to <tt>ld</tt> or <tt>gcc</tt>.<br>
         The ELF object will contain all symbols that have been exported by <a href="directives.html#.global"><tt>.global</tt></a>
         and the following predefined symbols:<br>
         - <tt>&lt;filename-wo-extension&gt;</tt> points to the starting address
@@ -64,9 +74,9 @@
         - <tt>&lt;filename-wo-extension&gt;_size</tt> receives the size of the
         generated binary code in bytes.<br>
         Special characters in the file name are replaced by an underscore.</dd>
-      <dt><tt>-E </tt><tt>&lt;ELF-output&gt;</tt></dt>
-      <dd>Like <tt>-e</tt> but do not automatically create the predefined
-        symbols derived from the file name.<br>
+      <dt><tt>-s</tt><tt></tt></dt>
+      <dd>Do not automatically create the predefined symbols derived from the
+        file name for <tt>-e</tt> and <tt>-C</tt> output.<br>
         You need to use <a href="directives.html#.global"><tt>.global</tt></a>
         to be able to access the code by a linker symbol.</dd>
       <dt><tt>-I &lt;include-path&gt;</tt></dt>
@@ -74,9 +84,9 @@
           href="directives.html#.include"><tt>.include &lt;...&gt;</tt></a>.
         Note that this is a <i>prefix</i> rather than a path, i.e. if it is a
         folder it should contain a <i>trailing slash</i>.</dd>
-      <dt><tt>-i</tt></dt>
-      <dd>Search include path for command line arguments (files) as well.<br>
-        Useful to include <a href="vc4.qinc.html"><tt>vc4.qinc</tt></a> without
+      <dt><tt><a id="-i" name="-i"></a>-i</tt><tt> &lt;qinc-file&gt;</tt></dt>
+      <dd>Load a file using the include search path. See option <tt>-I</tt>,
+        useful to include <a href="vc4.qinc.html"><tt>vc4.qinc</tt></a> without
         an absolute path: <tt>-i vc4.qinc</tt></dd>
       <dt><tt>-V</tt></dt>
       <dd>Check for Videocore IV constraints, e.g. reading a register file
@@ -88,8 +98,8 @@
       in order of appearance. You may use this feature to include platform
       specific definitions without the need to include them explicitly from
       every file. E.g.:<br>
-      <tt>vc4asm -o code.bin BCM2835.qinc gpu_fft_1k.qasm</tt></p>
-    <h3>Assembler reference</h3>
+      <tt>vc4asm -o code.bin -i vc4.qinc gpu_fft_1k.qasm</tt></p>
+    <h3>Assembler language reference</h3>
     <ol>
       <li><a href="expressions.html">Expressions and operators</a></li>
       <li><a href="directives.html">Assembler directives</a></li>
