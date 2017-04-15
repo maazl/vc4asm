@@ -2,7 +2,9 @@
 # ALU operations
 #
 .set RES_COUNT, 45
+.global RES_COUNT, RES_COUNT
 
+::smi_start
 shl r0, elem_num, 3;
 mov ra0, unif # vector count
 add ra1, r0, unif; # base address
@@ -92,6 +94,7 @@ mov -, vw_wait
 # pack modes
 #
 .set RES_COUNT2, 24
+.global RES_COUNT2, RES_COUNT2
 
 shl r0, elem_num, 2;
 mov ra0, unif # vector count

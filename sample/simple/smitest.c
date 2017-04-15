@@ -3,18 +3,13 @@
 #include <stddef.h>
 
 #include "mailbox.h"
+#include "shader.h"
 
 #define VEC_COUNT 3*16
-#define RES_COUNT 45
-#define RES_COUNT2 24
 #define GPU_MEM_FLG 0xC // cached=0xC; direct=0x4
 
-static const unsigned code[] =
-{
-	#include "smitest.hex"
-};
 
-static const unsigned input[VEC_COUNT*2] =
+static const int input[VEC_COUNT*2] =
 {	0,0, 1,1, 2,2, 3,3, 4,4, 5,5, 6,6, 7,7, 8,8, 9,9, 10,10, 11,11, 12,12, 13,13, 14,14, 15,15,
 	-16,-16, -15,-15, -14,-14, -13,-13, -12,-12, -11,-11, -10,-10, -9,-9,
 	-8,-8, -7,-7, -6,-6, -5,-5, -4,-4, -3,-3, -2,-2, -1,-1,
@@ -45,7 +40,7 @@ static const char pack[RES_COUNT2][8] =
 
 struct GPU
 {
-	unsigned code[sizeof code / sizeof *code];
+	unsigned code[sizeof(shader) / sizeof(uint32_t)];
 	unsigned input[VEC_COUNT*2];
 	unsigned output[VEC_COUNT*RES_COUNT];
 	unsigned input2[(sizeof input2/sizeof *input2 + 0xf) & ~0xf];
@@ -123,7 +118,7 @@ int main()
 	if (ret < 0)
 		return ret;
 
-	memcpy((void*)gpu->code, code, sizeof gpu->code);
+	memcpy((void*)gpu->code, shader, sizeof gpu->code);
 
 	gpu->unif[0] = VEC_COUNT/16;
 	gpu->unif[1] = gpu->mail[1] + offsetof(struct GPU, input);
@@ -141,8 +136,8 @@ int main()
 
 	for (i = 0; i < VEC_COUNT; ++i)
 	{
-		unsigned A = gpu->input[2*i];
-		unsigned B = gpu->input[2*i+1];
+		int A = gpu->input[2*i];
+		int B = gpu->input[2*i+1];
 		printf("\n A\t%i\t0x%08x\t%g\n B\t%i\t0x%08x\t%g\n", A, A, *(float*)&A, B, B, *(float*)&B);
 		volatile unsigned* rp = &gpu->output[i*RES_COUNT];
 		for (j = 0; j < RES_COUNT; ++j)
