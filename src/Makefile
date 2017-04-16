@@ -3,7 +3,7 @@ CPPFLAGS = -c -fPIC
 LDFLAGS  =
 LIBS     = -lstdc++ -lm
 CC  = g++
-LD  = gcc
+LD  = g++
 AR	= ar
 EXE =
 O   = .o
@@ -31,7 +31,7 @@ clean:
 	$(LD) $(FLAGS) $(LDFLAGS) -o $@ $(DISOBJECTS) $(LIBS)
 	
 ../lib/libvc4asm.a : $(LIBOBJECTS) | ../lib
-	$(AR) rcs -o $@ $(LIBOBJECTS)
+	$(AR) rcs $@ $(LIBOBJECTS)
 	
 ../lib/libvc4asm.so : $(LIBOBJECTS) | ../lib
 	$(LD) -shared -o $@ $(LIBOBJECTS)
