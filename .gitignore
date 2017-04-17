@@ -36,6 +36,13 @@
 .svn
 CVS
 
+# cmake files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+build-*
+
 # misc files
 diff
 log

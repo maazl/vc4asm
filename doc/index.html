@@ -158,18 +158,48 @@
     </ul>
     <h2><a id="build" name="build"></a>Build instructions</h2>
     <p>The source code has hopefully no major platform dependencies, i.e. you
-      don't need to build it on the Raspberry. But it requires a <a href="https://en.wikipedia.org/wiki/C++11">C++11</a>
-      compliant compiler to build. Current Raspbian ships with gcc 4.9 which
-      works fine. Raspbian Wheezy seems not to be sufficient. While I succeeded
-      with gcc 4.7.3 on another platform, gcc 4.7.2 of Wheezy fails to compile
-      the disassembler. But you can install gcc 4.8 in Raspbian Wheezy. This
-      will work.</p>
+      don't need to build it on the Raspberry. But it requires a <b><a href="https://en.wikipedia.org/wiki/C++11">C++11</a>
+        compliant compiler</b> to build. Current Raspbian ships with gcc 4.9
+      which works fine. Raspbian Wheezy seems not to be sufficient. While I
+      succeeded with gcc 4.7.3 on another platform, gcc 4.7.2 of Wheezy fails to
+      compile the disassembler. But you can install gcc 4.8 in Raspbian Wheezy.
+      This will work.</p>
+    <p>Furthermore <b><a href="https://cmake.org/">CMake</a> is required</b>.
+      Most Linux distributions should provide this as package.</p>
+    <h3>Build vc4asm</h3>
     <ul>
       <li>Download and extract the source.</li>
-      <li>Go to folder <tt>src</tt>.</li>
-      <li>If not Linux have a look at the first few lines of <tt>Makefile</tt>.</li>
-      <li>Execute <tt>make</tt>.</li>
-      <li>Now <tt>vc4asm</tt> and <tt>vc4dis</tt> executables should build.</li>
+      <li>Go to folder where you extracted the files.</li>
+      <li>Execute one of scripts <tt>makeDebug.cmd</tt> or <tt>makeRelease.cmd</tt>
+        and do not bother about the error message <i>"CMake has been ran to
+          create an out of source build =&gt; abort. This is NOT an error!"</i>.
+        However, other error messages should cause your attention.</li>
+      <li>Now <tt>vc4asm</tt> and <tt>vc4dis</tt> executables as well as <tt>libvc4asm</tt>
+        should build in a folder matching your platform, e.g. <tt>build-Linux-x86_64-Debug</tt>.
+        You can run the executables from this folder ...</li>
+      <li>... or go to the folder and enter <tt>make install</tt> to install
+        the binaries on your system.</li>
+    </ul>
+    <h3>Build the samples</h3>
+    <ul>
+      <li>Ensure that you have run <tt>makeRelease.cmd</tt> as mentioned above.</li>
+      <li>Go to one of the sample folders.</li>
+      <li>Enter <tt>cmake .</tt></li>
+      <li>Enter <tt>make</tt></li>
+      <li>Run the executables with sudo prefix, e.g. <tt>sudo hello_fft</tt>
+        ...<br>
+        <tt>sudo</tt> is required because there is currently no secure device
+        driver to access the Raspberry Pi GPU.</li>
+    </ul>
+    <p>Note that the samples will not build and run on anything else but one of
+      the Raspberry Pi models.</p>
+    <h3>Running the test cases</h3>
+    <p>This has not yet been ported to CMake.</p>
+    <ul>
+      <li>Go to the subfolder <tt>test</tt>.</li>
+      <li>Adjust the first line of <tt>Makefile</tt> to match the folder of the
+        executables to test.</li>
+      <li>Enter <tt>make -B</tt></li>
     </ul>
     <h2><a id="sample" name="sample"></a>Sample programs</h2>
     <p>All sample programs require <em>root access</em> to run. This is because

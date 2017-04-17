@@ -1,4 +1,4 @@
-vc4asmbinpath = ../bin
+vc4asmbinpath = ../build-Linux-armv6l-Debug
 
 all : asm cout parser validator
 
@@ -31,7 +31,7 @@ testh_% : %.h %.ref.h
 	diff $^ >$@
 
 %.c : %.qasm $(vc4asmbinpath)/vc4asm
-	$(vc4asmbinpath)/vc4asm -V -v -c $@ -h $(subst .c,.h,$@) -i vc4.qinc $<
+	$(vc4asmbinpath)/vc4asm -v -c $@ -h $(subst .c,.h,$@) -i vc4.qinc $<
 
 gpu_fft_%.hex : gpu_fft_%.qasm gpu_fft.qinc gpu_fft_ex.qinc $(vc4asmbinpath)/vc4asm
 	$(vc4asmbinpath)/vc4asm -V -C $@ -i vc4.qinc $<

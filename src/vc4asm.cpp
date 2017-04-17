@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 	setexepath(argv[0]);
 
 	// add default include path with low precedence
-	parser.IncludePaths.emplace_back(exepath + "../share/include/");
+	parser.IncludePaths.emplace_back(exepath + "../share/vc4inc/");
 
 	try
 	{	int c;

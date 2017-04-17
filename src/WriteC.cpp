@@ -99,7 +99,7 @@ void WriteC::Write(const vector<uint64_t>& instructions, const DebugInfo& info, 
 	string symbolname = stripextension(strippath(filename));
 	replacenonalphanum(symbolname);
 
-	WriteWithTemplate((exepath + "../share/template/" + TemplateFile).c_str(), [=] (const string& placeholder) -> bool
+	WriteWithTemplate((exepath + "../share/vc4tmpl/" + TemplateFile).c_str(), [=] (const string& placeholder) -> bool
 		{	if (placeholder == "FILENAME")
 			{	WriteString(filename);
 			} else if (placeholder == "HEADERNAME")
