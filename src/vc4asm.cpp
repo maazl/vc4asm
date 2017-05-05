@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		if (!writeBIN && !writeC && !writeX && !writeH && !writeH2 && !writePRE && !writeELF && parser.OperationMode != Parser::PASS1ONLY)
+		if (!writeBIN && !writeC && !writeX && !writeH && !writeH2 && !writePRE && !writeELF && parser.OperationMode == Parser::NORMAL)
 		{	fputs("vc4asm V0.3\n"
 				"Usage: vc4asm [options...] <qasm-file(s)>\n"
 				" -o<file> Binary output file.\n"
