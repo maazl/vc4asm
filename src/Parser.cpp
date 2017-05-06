@@ -1960,6 +1960,7 @@ void Parser::ResetPass()
 	Segments.resize(1);
 	Segments[0].Start = 0;
 	Segments[0].Flags = SF_None;
+	Flags = IF_NONE;
 }
 
 void Parser::EnsurePass2()
