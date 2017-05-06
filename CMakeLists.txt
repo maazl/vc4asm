@@ -17,12 +17,20 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
 	# Run CMake with out of source flag
 	execute_process(
 		COMMAND ${CMAKE_COMMAND} -H. -B${OUT_OF_SOURCE_DIR}
-		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		RESULT_VARIABLE rc)
+	if (rc)
+		message(FATAL_ERROR "cmake failed to configure out of source build.")
+	endif()
 
 	if (MAKE_IMMEDIATELY)
 		execute_process(
-			COMMAND make
-			WORKING_DIRECTORY ${OUT_OF_SOURCE_DIR})
+			COMMAND make ${MAKE_IMMEDIATELY}
+			WORKING_DIRECTORY ${OUT_OF_SOURCE_DIR}
+			RESULT_VARIABLE rc)
+		if (rc)
+			message(FATAL_ERROR "Target ${MAKE_IMMEDIATELY} failed.")
+		endif()
 	endif()
 
 	# Cause fatal error to stop the script from further execution
@@ -47,3 +55,5 @@ install(PROGRAMS $<TARGET_FILE:vc4asm> $<TARGET_FILE:vc4dis> DESTINATION bin)
 install(PROGRAMS $<TARGET_FILE:libvc4asm-static> $<TARGET_FILE:libvc4asm-shared> DESTINATION lib)
 install(DIRECTORY share/vc4inc share/vc4tmpl DESTINATION share)
 
+enable_testing()
+add_subdirectory(test EXCLUDE_FROM_ALL)

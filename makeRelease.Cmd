@@ -1,1 +1,1 @@
-cmake -DMAKE_IMMEDIATELY=1 .
+cmake -DMAKE_IMMEDIATELY=all .

@@ -170,7 +170,7 @@
     <ul>
       <li>Download and extract the source.</li>
       <li>Go to folder where you extracted the files.</li>
-      <li>Execute one of scripts <tt>makeDebug.cmd</tt> or <tt>makeRelease.cmd</tt>
+      <li>Execute one of scripts <b><tt>makeDebug.Cmd</tt> or <tt>makeRelease.Cmd</tt></b>
         and do not bother about the error message <i>"CMake has been ran to
           create an out of source build =&gt; abort. This is NOT an error!"</i>.
         However, other error messages should cause your attention.</li>
@@ -182,25 +182,40 @@
     </ul>
     <h3>Build the samples</h3>
     <ul>
-      <li>Ensure that you have run <tt>makeRelease.cmd</tt> as mentioned above.</li>
+      <li>Ensure that you have run <tt>makeRelease.Cmd</tt> to build <tt>vc4asm</tt>
+        as mentioned above.</li>
       <li>Go to one of the sample folders.</li>
       <li>Enter <tt>cmake .</tt></li>
       <li>Enter <tt>make</tt></li>
-      <li>Run the executables with sudo prefix, e.g. <tt>sudo hello_fft</tt>
-        ...<br>
+      <li>Run the executables with <tt>sudo</tt> prefix, e.g. <tt>sudo
+          hello_fft</tt> ...<br>
         <tt>sudo</tt> is required because there is currently no secure device
         driver to access the Raspberry Pi GPU.</li>
     </ul>
-    <p>Note that the samples will not build and run on anything else but one of
-      the Raspberry Pi models.</p>
+    <p>Note that the samples will neither build nor run on anything else but one
+      of the Raspberry Pi models.</p>
     <h3>Running the test cases</h3>
-    <p>This has not yet been ported to CMake.</p>
     <ul>
-      <li>Go to the subfolder <tt>test</tt>.</li>
-      <li>Adjust the first line of <tt>Makefile</tt> to match the folder of the
-        executables to test.</li>
-      <li>Enter <tt>make -B</tt></li>
+      <li>Ensure that you have <b><a href="http://www.perl.org/">Perl</a></b>
+        installed. (There should be no mentionable version dependencies.)</li>
+      <li>Go to folder where you extracted the files.</li>
     </ul>
+    <h4>Method 1: using make rules</h4>
+    <ul>
+      <li>Execute <b><tt>makeTest.Cmd</tt></b>. You may also use the targets <tt>test_qasm</tt>,
+        <tt>test_cout</tt>, <tt>test_parser</tt> or <tt>test_validator</tt> to
+        run only a subset of the test cases.</li>
+    </ul>
+    <p>The <tt>test_...</tt> targets <em>run all test cases that have not yet
+        run</em> or that need to be rerun after changes to the code or to the
+      test case itself. It stops at the first failed test. If you need an
+      overview of all failed tests use method 2 below.</p>
+    <h4>Method 2: using cmake test cases</h4>
+    <ul>
+      <li>Execute <b><tt>runTest.Cmd</tt></b>. You may also use <tt>ctest</tt>.</li>
+    </ul>
+    <p>The Cmake test cases invoke the test targets from method 1. This is
+      significantly slower, especially on a Raspberry Pi.</p>
     <h2><a id="sample" name="sample"></a>Sample programs</h2>
     <p>All sample programs require <em>root access</em> to run. This is because
       of the need to call <tt>mmap</tt>. See <a href="http://www.maazl.de/project/vcio2/doc/index.html">vcio2

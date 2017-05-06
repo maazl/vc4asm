@@ -1,56 +1,73 @@
 vc4asmbinpath = ../build-Linux-armv6l-Debug
 
-all : asm cout parser validator
-
-asm : test_256 test_512 test_1k test_2k test_4k test_8k test_16k test_32k test_64k test_128k test_256k test_512k test_1024k test_2048k test_trans test_256_new
-
-cout : testc_rpi_shader testh_rpi_shader
-
-parser : testp.rot.hex testp.pup.hex
-
-validator : testv.VPM.hex
+all : asm cout parser validator disasm
 
 clean :
 	rm gpu_fft_*.hex *.strip
 
+tmp :
+	-mkdir $@
+
 .SECONDARY :
 
-%.strip : %.hex
+# assembler tests with hex out
+asm : tmp testa_256 testa_512 testa_1k testa_2k testa_4k testa_8k testa_16k testa_32k testa_64k testa_128k testa_256k testa_512k testa_1024k testa_2048k testa_trans testa_256_new
+
+tmp/%.strip : tmp/%.hex
 	sed 's/\s*\/\/.*//' $< >$@
 
-test_% : gpu_fft_%.hex shader_%.strip
+testa_% : tmp/gpu_fft_%.hex tmp/shader_%.strip
 	diff $^ >$@
 
-%.strip.c : %.c
+tmp/%.strip.c : tmp/%.c
 	perl -pe 's"//  *(.*?)(?:\s*#.*|$$)"// \1"' $< >$@
 
-testc_% : %.strip.c %.ref.c
-	diff $^ >$@
-
-testh_% : %.h %.ref.h
-	diff $^ >$@
-
-%.c : %.qasm $(vc4asmbinpath)/vc4asm
-	$(vc4asmbinpath)/vc4asm -v -c $@ -h $(subst .c,.h,$@) -i vc4.qinc $<
-
-gpu_fft_%.hex : gpu_fft_%.qasm gpu_fft.qinc gpu_fft_ex.qinc $(vc4asmbinpath)/vc4asm
+tmp/gpu_fft_%.hex : gpu_fft_%.qasm gpu_fft.qinc gpu_fft_ex.qinc $(vc4asmbinpath)/vc4asm
 	$(vc4asmbinpath)/vc4asm -V -C $@ -i vc4.qinc $<
 
-%.dis : %.hex $(vc4asmbinpath)/vc4dis
+# assembler tests with C out
+cout : tmp testc_rpi_shader testh_rpi_shader
+
+testc_% : tmp/%.strip.c tmp/%.ref.c
+	diff $^ >$@
+
+testh_% : tmp/%.h tmp/%.ref.h
+	diff $^ >$@
+
+tmp/%.c : %.qasm $(vc4asmbinpath)/vc4asm
+	$(vc4asmbinpath)/vc4asm -v -c $@ -h $(subst .c,.h,$@) -i vc4.qinc $<
+
+# disassembler tests
+disasm : tmp testd_256 testd_512 testd_1k testd_2k testd_4k testd_8k testd_16k testd_32k testd_64k testd_128k testd_256k testd_512k testd_1024k testd_2048k testd_trans testd_256_new
+
+tmp/%.dis : tmp/%.hex $(vc4asmbinpath)/vc4dis
 	$(vc4asmbinpath)/vc4dis -v -x $< >$@
 
-test.strip : test.hex
+tmp/gpu_fft_%.hex2 : tmp/gpu_fft_%.dis $(vc4asmbinpath)/vc4asm
+	$(vc4asmbinpath)/vc4asm -C $@ $<
 
-test : test.hex test.strip
-	diff $^
+testd_% : tmp/gpu_fft_%.hex2 tmp/gpu_fft_%.strip
+	diff $^ >$@
 
-test.hex : test.qasm $(vc4asmbinpath)/vc4asm
-	$(vc4asmbinpath)/vc4asm -V -c $@ -i vc4.qinc $<
+# parser tests
+parser : tmp testp.rot.hex testp.pup.hex
 
 testp.%.hex : parser.%.qasm $(vc4asmbinpath)/vc4asm
-	-$(vc4asmbinpath)/vc4asm -V -Q -c $@ -i vc4.qinc $< >parser.out 2>&1
-	./checkOutput.pl $< <parser.out
+	-$(vc4asmbinpath)/vc4asm -V -Q -c $@ -i vc4.qinc $< >tmp/parser.out 2>&1
+	./checkOutput.pl $< <tmp/parser.out
+
+# validator tests
+validator : testv.VPM.hex
 
 testv.%.hex : validator.%.qasm $(vc4asmbinpath)/vc4asm
-	-$(vc4asmbinpath)/vc4asm -V -c $@ -i vc4.qinc $< >parser.out 2>&1
-	./checkOutput.pl $< <parser.out
+	-$(vc4asmbinpath)/vc4asm -V -c $@ -i vc4.qinc $< >tmp/parser.out 2>&1
+	./checkOutput.pl $< <tmp/parser.out
+
+# miscellaneous
+tmp/test.strip : test.hex
+
+test : tmp/test.hex tmp/test.strip
+	diff $^
+
+tmp/test.hex : test.qasm $(vc4asmbinpath)/vc4asm
+	$(vc4asmbinpath)/vc4asm -V -c $@ -i vc4.qinc $<
