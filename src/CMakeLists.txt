@@ -2,6 +2,12 @@
 # so let's use plan B:
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
+# Fix for 64 bit shared library on Linux.
+IF(UNIX AND NOT WIN32 AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+	ADD_DEFINITIONS(-fPIC)
+ENDIF()
+
+
 # Work around for the insufficiency of cmake to handle common dependencies of targets w/o building them repeatedly.
 # cmake will build each source file as often as it is referenced. To get reasonable build times on Raspberry Pi no file must be referenced more than once.
 add_library(objvc4base OBJECT
