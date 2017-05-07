@@ -336,7 +336,7 @@ const Parser::opEntry<8> Parser::opcodeMap[] =
 ,	{ "asr",    &Parser::assembleADD, ::Inst::A_ASR }
 ,	{ "av8adds",&Parser::assembleADD, ::Inst::A_V8ADDS|0x80 }
 ,	{ "av8subs",&Parser::assembleADD, ::Inst::A_V8SUBS|0x80 }
-,	{ "bpkt",   &Parser::assembleSIG, ::Inst::S_BREAK }
+,	{ "bkpt",   &Parser::assembleSIG, ::Inst::S_BREAK }
 ,	{ "bra",    &Parser::assembleBRANCH, false }
 ,	{ "break",  &Parser::assembleSIG, ::Inst::S_BREAK }
 ,	{ "brr",    &Parser::assembleBRANCH, true }
