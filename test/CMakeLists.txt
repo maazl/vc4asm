@@ -9,9 +9,6 @@ foreach(filename ${files})
 	# Assembler tests with simple output
 	string(REGEX REPLACE ".*gpu_fft_(.*)\\.qasm$" "\\1" name ${filename})
 	if(NOT ${name} STREQUAL ${filename})
-		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/shader_${name}.strip
-			COMMAND sed s/\\s*\\/\\/.*// ${CMAKE_CURRENT_SOURCE_DIR}/shader_${name}.hex > ${CMAKE_CURRENT_BINARY_DIR}/shader_${name}.strip
-			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/shader_${name}.hex VERBATIM )
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.passed ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.diff ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.hex
 			COMMAND $<TARGET_FILE:vc4asm> -V -C ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.hex -i vc4.qinc ${filename}
 			COMMAND diff ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.hex ${CMAKE_CURRENT_BINARY_DIR}/shader_${name}.strip > ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.diff
@@ -21,6 +18,24 @@ foreach(filename ${files})
 		list(APPEND test_qasm test_qasm_${name} )
 		add_test(NAME qasm_${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 			COMMAND ${CMAKE_COMMAND} --build . --target test_qasm_${name} --config $<CONFIGURATION> )
+	endif()
+
+	# disassembler
+	string(REGEX REPLACE ".*(shader_.*)\\.hex$" "\\1" name ${filename})
+	if(NOT ${name} STREQUAL ${filename})
+		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}.strip
+			COMMAND sed s/\\s*\\/\\/.*// ${CMAKE_CURRENT_SOURCE_DIR}/${name}.hex > ${CMAKE_CURRENT_BINARY_DIR}/${name}.strip
+			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${name}.hex VERBATIM )
+		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}.passed ${CMAKE_CURRENT_BINARY_DIR}/${name}.dis ${CMAKE_CURRENT_BINARY_DIR}/${name}.diff ${CMAKE_CURRENT_BINARY_DIR}/${name}.hex2
+			COMMAND $<TARGET_FILE:vc4dis> -v -x ${filename} -o ${CMAKE_CURRENT_BINARY_DIR}/${name}.dis
+			COMMAND $<TARGET_FILE:vc4asm> -C ${CMAKE_CURRENT_BINARY_DIR}/${name}.hex2 ${CMAKE_CURRENT_BINARY_DIR}/${name}.dis
+			COMMAND diff ${CMAKE_CURRENT_BINARY_DIR}/${name}.hex2 ${CMAKE_CURRENT_BINARY_DIR}/${name}.strip > ${CMAKE_CURRENT_BINARY_DIR}/${name}.diff
+			COMMAND touch ${CMAKE_CURRENT_BINARY_DIR}/${name}.passed # Work around for cmake bug #15474
+			DEPENDS vc4dis vc4asm ${CMAKE_CURRENT_BINARY_DIR}/${name}.strip VERBATIM )
+		add_custom_target( test_dis_${name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}.passed )
+		list(APPEND test_dis test_dis_${name} )
+		add_test(NAME dis_${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+			COMMAND ${CMAKE_COMMAND} --build . --target test_dis_${name} --config $<CONFIGURATION> )
 	endif()
 
 	#Test of C output with header
@@ -70,11 +85,12 @@ endforeach()
 
 # Test groups
 add_custom_target( test_qasm DEPENDS ${test_qasm} )
+add_custom_target( test_dis DEPENDS ${test_dis} )
 add_custom_target( test_cout DEPENDS ${test_cout} )
 add_custom_target( test_parser DEPENDS ${test_parser} )
 add_custom_target( test_validator DEPENDS ${test_validator} )
 # Invoking cmake --build for every test case as work around to build non executable prereqisites
 # is extraordinary slow on a Raspberry Pi.
 # So let's skip Cmakes test environment and add a test target manually.
-add_custom_target( test_all ALL DEPENDS test_qasm test_cout test_parser test_validator )
+add_custom_target( test_all ALL DEPENDS test_qasm test_dis test_cout test_parser test_validator )
 
