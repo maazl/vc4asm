@@ -1,4 +1,5 @@
 #include "Disassembler.h"
+#include "WriteQasm.h"
 #include "Validator.h"
 
 #include <cinttypes>
@@ -67,7 +68,7 @@ static void file_load_x32(const char *filename, vector<uint64_t>& memory)
 		return;
 	}
 	uint32_t value1, value2;
-	while (((void)fscanf(f, "%*[ \t]"), fscanf(f, "//%*[^\n]"), fscanf(f, "%" SCNx32 ",", &value1)) == 1)
+	while (((void)fscanf(f, "%*[ \t]"), (void)fscanf(f, "//%*[^\n]"), fscanf(f, "%" SCNx32 ",", &value1)) == 1)
 	{	if (fscanf(f, "%" SCNx32 ",", &value2) != 1)
 		{	if (feof(f))
 			{	fprintf(stderr, "File %s must contain an even number of 32 bit words.\n", filename);
@@ -107,26 +108,13 @@ static void file_load_x64(const char *filename, vector<uint64_t>& memory)
 	fclose(f);
 }
 
-int main(int argc, char * argv[]) {
-	if (argc < 2) {
-		fputs("vc4dis V0.2.3\n"
-			"Usage: vc4dis [-x[32|64]] [-M] [-F] [-v] [-b <addr>] [-o <out_file>] [-V] <code_file(s)>\n"
-			" -x    Hexadecimal input, comma separated (rather than binary).\n"
-			" -x64  64 bit formatted hexadecimal input.\n"
-			" -M    Do not print simple ALU instructions and load immediate as mov.\n"
-			" -F    Print floating point constants as hexadecimal.\n"
-			" -v    Binary code and offset as comment behind each line.\n"
-			" -v2   Write internal instruction field as comment behind every line also.\n"
-			" -b<addr> base address (only for output).\n"
-			" -o<file> Write output to this file rather than stdout.\n"
-			" -V    Run instruction verifier and print warnings about suspicious code.\n"
-			, stderr);
-		return 1;
-	}
-
-	Disassembler dis;
-	dis.Out = stdout;
+int main(int argc, char * argv[])
+{	// parse options
 	bool check = false;
+	Disassembler dis;
+	const char* writeD = NULL;
+	WriteQasm::comments opt = WriteQasm::C_NONE;
+	unsigned base = 0;
 
 	int c;
 	while ((c = getopt(argc, argv, "x::MFv::b:o:V")) != -1)
@@ -136,56 +124,71 @@ int main(int argc, char * argv[]) {
 				hexinput = 32;
 			break;
 		 case 'M':
-			dis.UseMOV = false; break;
+			dis.Options &= ~Disassembler::O_UseMOV; break;
 		 case 'F':
-			dis.UseFloat = false; break;
+			dis.Options &= ~Disassembler::O_UseFloat; break;
 		 case 'v':
-			if (optarg && atoi(optarg) >= 2)
-				dis.PrintFields = true;
-			dis.PrintComment = true;
-			break;
+			opt = optarg && atoi(optarg) >= 2 ? WriteQasm::C_Fields|WriteQasm::C_Hex : WriteQasm::C_Hex; break;
 		 case 'b':
-			dis.BaseAddr = atol(optarg); break;
+			base = atol(optarg); break;
 		 case 'o':
-			dis.Out = fopen(optarg, "w");
-			if (!dis.Out)
-			{	fprintf(stderr, "Failed to write %s: %s\n", optarg, strerror(errno));
-				return 1;
-			}
-			break;
+			writeD = optarg; break;
 		 case 'V':
 			check = true; break;
 		}
 	}
 	argv += optind;
 
-	for (; *argv; ++argv)
+	if (!*argv) {
+		fputs("vc4dis V0.2.3\n"
+			"Usage: vc4dis [-x[32|64]] [-M] [-F] [-v] [-b <addr>] [-o <out_file>] [-V] <code_file(s)>\n"
+			" -x    Hexadecimal input, comma separated (rather than binary).\n"
+			" -x64  64 bit formatted hexadecimal input.\n"
+			" -M    Do not print simple ALU instructions and load immediate as mov.\n"
+			" -F    Print floating point constants as hexadecimal.\n"
+			" -v    Binary code and offset as comment behind each line.\n"
+			" -v2   Write internal instruction field as comment behind every line also.\n"
+			" -b<addr> base address (only for comments and labels).\n"
+			" -o<file> Write output to this file rather than stdout.\n"
+			" -V    Run instruction verifier and print warnings about suspicious code.\n"
+			, stderr);
+		return 1;
+	}
+
+	// read file(s)
+	vector<uint64_t> instructions;
+	do
 	{	fprintf(stderr, "Disassembling %s...\n", *argv);
 		switch (hexinput)
 		{default:
 			fprintf(stderr, "Invalid argument %i to option -x.", hexinput);
 			return 2;
 		 case 32:
-			file_load_x32(*argv, dis.Instructions);
+			file_load_x32(*argv, instructions);
 			break;
 		 case 64:
-			file_load_x64(*argv, dis.Instructions);
+			file_load_x64(*argv, instructions);
 			break;
 		 case 0:
-			file_load_bin(*argv, dis.Instructions);
+			file_load_bin(*argv, instructions);
 			break;
 		}
-		if (dis.Instructions.size() == 0)
+		if (instructions.size() == 0)
 		{	fprintf(stderr, "Couldn't read any data from file %s, aborting.\n", *argv);
 			continue;
 		}
-		dis.ScanLabels();
-		dis.Disassemble();
+	} while (*++argv);
 
-		if (check)
-		{	Validator v;
-			v.Instructions = &dis.Instructions;
-			v.Validate();
-		}
+	// disassemble
+	{	FILEguard outf(writeD ? checkedopen(writeD, "w") : NULL);
+		WriteQasm(outf ? (FILE*)outf : stdout, dis, opt)
+			.Write(instructions, base);
+	}
+
+	// run validator
+	if (check)
+	{	Validator v;
+		v.Instructions = &instructions;
+		v.Validate();
 	}
 }

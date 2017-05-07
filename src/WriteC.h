@@ -29,8 +29,8 @@ class WriteX : public WriterBase
 	,	O_WriteTrailingComma   = 0x08 ///< Write a trailing comma to the
 	};
 	CLASSFLAGSENUM(options, unsigned char);
- private:
 	const options Options;
+ private:
 	typedef pair<int,string> labelref;
 	vector<labelref> Labels;
 	/// Cache with files read.

@@ -32,8 +32,8 @@ void Disassembler::appendf(const char* fmt, ...)
 
 void Disassembler::appendImmd(qpuValue value)
 {	// Check whether likely a float, just a guess
-	if (UseFloat && abs(((value.iValue >> 23) & 0xff) ^ 0x80) <= 20)
-		CodeAt += snprintf(CodeAt, Code + sizeof Code - CodeAt, "%.6e", value.fValue);
+	if ((Options & O_UseFloat) && abs(((value.iValue >> 23) & 0xff) ^ 0x80) <= 20)
+		CodeAt += snprintf(CodeAt, Code + sizeof Code - CodeAt, "%.7e", value.fValue);
 	else if (abs(value.iValue) < 256)
 		appendf("%i", value.iValue);
 	else
@@ -114,7 +114,7 @@ void Disassembler::DoADD()
 	bool isImmd = Instruct.Sig == Inst::S_SMI && Instruct.MuxAA == Inst::X_RB
 		&& (isUnary || Instruct.MuxAB == Inst::X_RB);
 
-	if ( UseMOV
+	if ( (Options & O_UseMOV)
 		&& ( (Instruct.MuxAA == Instruct.MuxAB && (0x807c2000 & (1<<opa))) // Both inputs equal and instruction that returns identity or 0
 			|| isImmd ))
 		opa = 32;
@@ -134,7 +134,7 @@ void Disassembler::DoADD()
 	// Target
 	append(cWreg[Instruct.WS][Instruct.WAddrA]);
 	bool unpack = false;
-	if (UseMOV && isImmd && (0x0909 & (1<<Instruct.Pack)))
+	if ((Options & O_UseMOV) && isImmd && (0x0909 & (1<<Instruct.Pack)))
 		unpack = true;
 	else
 		appendPack(false);
@@ -180,7 +180,7 @@ void Disassembler::DoMUL()
 	uint8_t opm = Instruct.OpM;
 	bool isSMI = Instruct.Sig == Inst::S_SMI && Instruct.MuxMA == Inst::X_RB;
 
-	if ( UseMOV && Instruct.MuxMA == Instruct.MuxMB // Both inputs equal and
+	if ( (Options & O_UseMOV) && Instruct.MuxMA == Instruct.MuxMB // Both inputs equal and
 		&& ( (0xb0 & (1<<opm)) // instruction that returns identity or 0 or
 			|| isSMI )) // small immediate
 		opm = 8;
@@ -237,16 +237,6 @@ void Disassembler::DoRead(Inst::mux regfile)
 
 void Disassembler::DoALU()
 {
-	if (PrintFields)
-		sprintf(Comment, " sig%X ra%02d rb%02d pm%d upk%d pck%X"
-		                 " Aop%02d Acc%d Aw%02d Aa%d Ab%d"
-		                 " Mop%d Mcc%d Mw%02d Ma%d Mb%d"
-		                 " sf%d ws%d",
-			Instruct.Sig, Instruct.RAddrA, Instruct.RAddrB, Instruct.PM, Instruct.Unpack, Instruct.Pack,
-			Instruct.OpA, Instruct.CondA, Instruct.WAddrA, Instruct.MuxAA, Instruct.MuxAB,
-			Instruct.OpM, Instruct.CondM, Instruct.WAddrM, Instruct.MuxMA, Instruct.MuxMB,
-			Instruct.SF, Instruct.WS);
-
 	DoADD();
 
 	DoMUL();
@@ -263,14 +253,6 @@ void Disassembler::DoALU()
 
 void Disassembler::DoLDI()
 {
-	if (PrintFields)
-		sprintf(Comment, " md%d pm%d pck%X"
-		                 " Acc%d Aw%02d Mcc%d Mw%02d"
-		                 " sf%d ws%d",
-			Instruct.LdMode, Instruct.PM, Instruct.Pack,
-			Instruct.CondA, Instruct.WAddrA, Instruct.CondM, Instruct.WAddrM,
-			Instruct.SF, Instruct.WS);
-
 	append(cOpL[Instruct.LdMode]);
 	if (Instruct.LdMode >= Inst::L_SEMA)
 		append(Instruct.SA() ? "acq" : "rel");
@@ -305,12 +287,6 @@ void Disassembler::DoLDI()
 
 void Disassembler::DoBranch()
 {
-	if (PrintFields)
-		sprintf(Comment, " rel%d reg%d ra%02d pm%d upk%d Bcc%X"
-		                 " Aw%02d Mw%02d ws%d",
-			Instruct.Rel, Instruct.Reg, Instruct.RAddrA, Instruct.PM, Instruct.Unpack, Instruct.CondBr,
-			Instruct.WAddrA, Instruct.WAddrM, Instruct.WS);
-
 	appendf("%s%s ", Instruct.Rel ? "brr" : "bra", cBCC[Instruct.CondBr]);
 	if (Instruct.WAddrA != Inst::R_NOP)
 		appendf("%s, ", cWreg[Instruct.WS][Instruct.WAddrA]);
@@ -326,22 +302,53 @@ void Disassembler::DoBranch()
 		append("-, ");
 	// try label
 	if (Instruct.Immd.iValue)
-	{	uint32_t target = Instruct.Immd.uValue;
+	{	unsigned target = Instruct.Immd.uValue;
 		if (Instruct.Rel)
-			target += Addr + 4*sizeof(uint64_t);
-		auto l = Labels.find(target);
-		if (l != Labels.end())
-			return appendf(Instruct.Rel ? "r:%s" : ":%s", l->second.c_str());
-		return appendf(Instruct.Rel ? "%+d # %04x" : "%d # %04x", Instruct.Immd.iValue, target);
-	}
-	if (Instruct.Immd.iValue || !Instruct.Reg)
+			target += Addr + 3*sizeof(uint64_t);
+		string l = GetLabel(target);
+		if (l.length() != 0)
+		{	if(Instruct.Rel)
+				append("r");
+			append(l.c_str());
+		} else
+			appendf(Instruct.Rel ? "%+d # %04x" : "%d # %04x", Instruct.Immd.iValue, target);
+	} else if (Instruct.Immd.iValue || !Instruct.Reg)
 		appendf(Instruct.Rel ? "%+d" : "0x%x", Instruct.Immd.iValue);
 }
 
-void Disassembler::DoInstruction()
+string Disassembler::GetLabel(unsigned addr) const
+{
+	auto l = Labels.find(addr);
+	return l == Labels.end() ? string() : ':' + l->second;
+}
+
+void Disassembler::PushInstruction(uint64_t inst)
+{
+	Instruct.decode(inst);
+	Addr += sizeof(uint64_t);
+}
+
+void Disassembler::ScanLabels()
+{
+	if (Instruct.Sig != Inst::S_BRANCH) // only branch instructions
+		return;
+	// link address
+	unsigned target = Addr + 3*sizeof(uint64_t);
+	if (Instruct.WAddrA != Inst::R_NOP)
+		Labels.emplace(target, stringf("LL%zu_%s", Labels.size(), cWreg[Instruct.WS][Instruct.WAddrA]));
+	if (Instruct.WAddrM != Inst::R_NOP)
+		Labels.emplace(target, stringf("LL%zu_%s", Labels.size(), cWreg[!Instruct.WS][Instruct.WAddrM]));
+	if (!Instruct.Immd.iValue)
+		return;
+	if (Instruct.Rel)
+		Labels.emplace(target + Instruct.Immd.iValue, stringf("L%x_%x", target + Instruct.Immd.iValue, Addr - sizeof(uint64_t)));
+	else
+		Labels.emplace(Instruct.Immd.uValue, stringf("L%x_%x", Instruct.Immd.uValue, Addr - sizeof(uint64_t)));
+}
+
+string Disassembler::Disassemble()
 {
 	CodeAt = Code;
-	*Comment = 0;
 	switch (Instruct.Sig)
 	{case Inst::S_BRANCH:
 		DoBranch(); break;
@@ -350,46 +357,36 @@ void Disassembler::DoInstruction()
 	 default:
 		DoALU(); break;
 	}
+	*CodeAt = 0;
+	return Code;
 }
 
-void Disassembler::ScanLabels()
+string Disassembler::GetFields()
 {
-	Addr = BaseAddr + 3*sizeof(uint64_t);
-	for (uint64_t i : Instructions)
-	{	Addr += sizeof(uint64_t); // base now points to branch point.
-		Instruct.decode(i);
-		if (Instruct.Sig != Inst::S_BRANCH) // only branch instructions
-			continue;
-		// link address
-		if (Instruct.WAddrA != Inst::R_NOP)
-			Labels.emplace(Addr, stringf("LL%zu_%s", Labels.size(), cWreg[Instruct.WS][Instruct.WAddrA]));
-		if (Instruct.WAddrM != Inst::R_NOP)
-			Labels.emplace(Addr, stringf("LL%zu_%s", Labels.size(), cWreg[!Instruct.WS][Instruct.WAddrM]));
-		if (!Instruct.Immd.iValue)
-			continue;
-		if (Instruct.Rel)
-			Labels.emplace(Addr + Instruct.Immd.iValue, stringf("L%x_%x", Addr + Instruct.Immd.iValue, Addr - 4*(unsigned)sizeof(uint64_t)));
-		else
-			Labels.emplace(Instruct.Immd.uValue, stringf("L%x_%x", Instruct.Immd.uValue, Addr - 4*(unsigned)sizeof(uint64_t)));
-	}
-}
-
-void Disassembler::Disassemble()
-{
-	Addr = BaseAddr;
-	for (uint64_t i : Instructions)
-	{	Instruct.decode(i);
-		// Label?
-		auto l = Labels.find(Addr);
-		if (l != Labels.end())
-			fprintf(Out, ":%s\n", l->second.c_str());
-
-		DoInstruction();
-		*CodeAt = 0;
-		if (PrintComment)
-			fprintf(Out, "\t%-55s # %04x: %016" PRIx64 " %s\n", Code, Addr, i, Comment);
-		else
-			fprintf(Out, "\t%s\n", Code);
-		Addr += sizeof(uint64_t);
+	switch (Instruct.Sig)
+	{case Inst::S_BRANCH:
+		return stringf(
+			"rel%d reg%d ra%02d pm%d upk%d Bcc%X "
+			"Aw%02d Mw%02d ws%d",
+			Instruct.Rel, Instruct.Reg, Instruct.RAddrA, Instruct.PM, Instruct.Unpack, Instruct.CondBr,
+			Instruct.WAddrA, Instruct.WAddrM, Instruct.WS);
+	 case Inst::S_LDI:
+		return stringf(
+			"md%d pm%d pck%X "
+			"Acc%d Aw%02d Mcc%d Mw%02d "
+			"sf%d ws%d",
+			Instruct.LdMode, Instruct.PM, Instruct.Pack,
+			Instruct.CondA, Instruct.WAddrA, Instruct.CondM, Instruct.WAddrM,
+			Instruct.SF, Instruct.WS);
+	 default:
+		return stringf(
+			"sig%X ra%02d rb%02d pm%d upk%d pck%X "
+			"Aop%02d Acc%d Aw%02d Aa%d Ab%d "
+			"Mop%d Mcc%d Mw%02d Ma%d Mb%d "
+			"sf%d ws%d",
+			Instruct.Sig, Instruct.RAddrA, Instruct.RAddrB, Instruct.PM, Instruct.Unpack, Instruct.Pack,
+			Instruct.OpA, Instruct.CondA, Instruct.WAddrA, Instruct.MuxAA, Instruct.MuxAB,
+			Instruct.OpM, Instruct.CondM, Instruct.WAddrM, Instruct.MuxMA, Instruct.MuxMB,
+			Instruct.SF, Instruct.WS);
 	}
 }
