@@ -287,7 +287,11 @@ void Disassembler::DoLDI()
 
 void Disassembler::DoBranch()
 {
-	appendf("%s%s ", Instruct.Rel ? "brr" : "bra", cBCC[Instruct.CondBr]);
+	append(Instruct.Rel ? "brr" : "bra");
+	append(cBCC[Instruct.CondBr]);
+	if (Instruct.SF)
+		append(".setf");
+	append(" ");
 	if (Instruct.WAddrA != Inst::R_NOP)
 		appendf("%s, ", cWreg[Instruct.WS][Instruct.WAddrA]);
 	if (Instruct.WAddrM != Inst::R_NOP)
