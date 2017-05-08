@@ -880,7 +880,7 @@ void AssembleInst::applyLDIsrc(exprValue src, ldmode mode)
 }
 
 void AssembleInst::prepareREAD()
-{	InstCtx = IC_NONE;
+{	InstCtx = IC_SRCA;
 	if (Sig == S_LDI || Sig == S_BRANCH)
 		Fail("read cannot be combined with load immediate, semaphore or branch instruction.");
 	doInitOP();

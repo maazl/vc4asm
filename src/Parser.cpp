@@ -633,7 +633,7 @@ void Parser::doNOP()
 	if (strchr(";#", *At))
 		return;
 
-	InstCtx = IC_DST|IC_MUL;
+	InstCtx ^= IC_DST|IC_OP;
 	doALUTarget();
 
 	ToNextChar();
@@ -644,10 +644,10 @@ void Parser::doNOP()
 void Parser::assembleADD(int add_op)
 {
 	int args = applyADD((::Inst::opadd)add_op);
-	if (args == 0)
-		return doNOP();
 	ExprValue.Type = V_NONE;
 	doInstrExt();
+	if (args == 0)
+		return doNOP();
 
 	doALUTarget();
 
@@ -661,10 +661,11 @@ void Parser::assembleADD(int add_op)
 
 void Parser::assembleMUL(int mul_op)
 {
-	if (applyMUL((::Inst::opmul)mul_op) == 0)
-		return doNOP();
+	int args = applyMUL((::Inst::opmul)mul_op);
 	ExprValue.Type = V_NONE;
 	doInstrExt();
+	if (args == 0)
+		return doNOP();
 
 	doALUTarget();
 
