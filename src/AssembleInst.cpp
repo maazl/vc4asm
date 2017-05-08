@@ -72,15 +72,13 @@ void AssembleInst::setMux(mux val)
 }
 
 Inst::mux AssembleInst::muxReg(reg_t reg)
-{	if (reg.Type & R_SEMA)
+{
+	if (reg.Type & R_SEMA)
 		Fail("Cannot use semaphore source in ALU or read instruction.");
-	mux ret;
 	if (!(reg.Type & R_READ))
 	{	// direct read access for r0..r5.
 		if ((reg.Num ^ 32U) <= 5U)
-		{	ret = (mux)(reg.Num ^ 32);
-			goto OK;
-		}
+			return (mux)(reg.Num ^ 32);
 		Fail("The register is not readable.");
 	}
 	// try RA
@@ -92,8 +90,7 @@ Inst::mux AssembleInst::muxReg(reg_t reg)
 			if (!(reg.Type & R_B))
 				Flags |= IF_NORSWAP;
 			RAddrA = reg.Num;
-			ret = X_RA;
-			goto OK;
+			return X_RA;
 		}
 	}
 	// try RB
@@ -107,8 +104,7 @@ Inst::mux AssembleInst::muxReg(reg_t reg)
 			if (!(reg.Type & R_A))
 				Flags |= IF_NORSWAP;
 			RAddrB = reg.Num;
-			ret = X_RB;
-			goto OK;
+			return X_RB;
 		}
 	}
 	// try to swap RA and RB of existing instruction
@@ -128,10 +124,6 @@ Inst::mux AssembleInst::muxReg(reg_t reg)
 			goto RB;
 	}
 	Fail("Read access to register conflicts with another access to the same register file.");
-
- OK: // Assign result if one of IC_SRCAB is set
-	setMux(ret);
-	return ret;
 }
 
 const AssembleInst::smiEntry* AssembleInst::getSmallImmediateALU(uint32_t i)
@@ -685,12 +677,12 @@ void AssembleInst::applyTarget(reg_t reg)
 }
 
 void AssembleInst::applyALUSource(exprValue val)
-{	mux mux;
+{
 	switch (val.Type)
 	{default:
 		Fail("The second argument of a binary ALU instruction must be a register or a small immediate value.");
 	 case V_REG:
-		mux = muxReg(val.rValue);
+		setMux(muxReg(val.rValue));
 		applyPackUnpack(val.rValue.Pack);
 		applyRot(-val.rValue.Rotate);
 		break;
@@ -720,7 +712,7 @@ void AssembleInst::applyALUSource(exprValue val)
 		if (si == 0xff)
 			Fail("Value 0x%x does not fit into the small immediate field.", value.uValue);
 		doSMI(si);
-		setMux(mux = X_RB);
+		setMux(X_RB);
 	}
 }
 
@@ -772,7 +764,6 @@ void AssembleInst::prepareMOV(bool target2)
 bool AssembleInst::applyMOVsrc(exprValue src)
 {
 	qpuValue value;
-	mux mux;
 	switch (src.Type)
 	{default:
 		Fail("The last parameter of a mov, ldi or semaphore instruction must be a register or a immediate value. Found %s", type2string(src.Type));
@@ -783,14 +774,11 @@ bool AssembleInst::applyMOVsrc(exprValue src)
 		if (Sig == S_LDI)
 			Fail("mov instruction with register source cannot be combined with load immediate.");
 
-		mux = muxReg(src.rValue);
+		setMux(muxReg(src.rValue));
 		if (InstCtx & IC_MUL)
-		{	MuxMA = MuxMB = mux;
 			OpM = M_V8MIN;
-		} else
-		{	MuxAA = MuxAB = mux;
+		else
 			OpA = A_OR;
-		}
 		applyPackUnpack(src.rValue.Pack);
 		applyRot(-src.rValue.Rotate);
 		return true;
@@ -880,7 +868,7 @@ void AssembleInst::applyLDIsrc(exprValue src, ldmode mode)
 }
 
 void AssembleInst::prepareREAD()
-{	InstCtx = IC_SRCA;
+{	InstCtx = IC_SRC;
 	if (Sig == S_LDI || Sig == S_BRANCH)
 		Fail("read cannot be combined with load immediate, semaphore or branch instruction.");
 	doInitOP();
