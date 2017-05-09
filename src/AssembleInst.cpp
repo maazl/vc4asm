@@ -310,7 +310,7 @@ void AssembleInst::checkUnpack()
 		if (MuxAA != mux && MuxAB != mux)
 			return; // ADD ALU does not access unpack mux => no conflict
 		otherfloatin = isFloatInput(false);
-	} else
+	} else if (InstCtx & IC_ADD)
 	{	if (!isADD())
 			return; // MUL ADD ALU unused => no conflict
 		auto mux = currentMux();
@@ -383,7 +383,7 @@ void AssembleInst::doUnpack(unpack mode)
 		Fail("Only one .unpack per ALU instruction, please.");
 	// determine PM bit
 	pm = calcPM(mode);
-	if (InstCtx & IC_SRC)
+	if (InstCtx & (IC_ADD|IC_MUL))
 	{	int pm2 = isUnpackable(currentMux());
 		if (pm2 < 0)
 			Fail("Cannot unpack this source argument.");
