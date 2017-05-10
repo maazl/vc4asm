@@ -255,6 +255,7 @@ bool Inst::evalPack(qpuValue& r, qpuValue v, bool mul)
 
 void Inst::reset()
 {	Sig = S_NONE;
+	PM = false;
 	WS = false;
 	WAddrA = R_NOP;
 	WAddrM = R_NOP;
@@ -267,7 +268,6 @@ void Inst::reset()
 	MuxMB = X_R0;
 	OpM = M_NOP;
 	OpA = A_NOP;
-	PM = false;
 	Pack = P_32;
 	CondA = C_AL;
 	CondM = C_AL;
@@ -281,28 +281,28 @@ uint64_t Inst::encode() const
 				(	Sig    << 28
 				| (Unpack & 7) << 25
 				| PM     << 24
-				| (Pack & (15 >> PM)) << 20
+				| ((Pack & 15) ^ ((Pack << 1) & P_32S * PM)) << 20
 				| CondA  << 17
 				| CondM  << 14
 				| SF     << 13
 				| WS     << 12
 				| WAddrA << 6
 				| WAddrM << 0 ) << 32
-			| (uint32_t)
+			|	(uint32_t)
 				( OpM    << 29
 				| OpA    << 24
 				| RAddrA << 18
 				| RAddrB << 12
-				| MuxAA  <<  9
-				| MuxAB  <<  6
-				| MuxMA  <<  3
-				| MuxMB  <<  0 );
+				| MuxAA  << 9
+				| MuxAB  << 6
+				| MuxMA  << 3
+				| MuxMB  << 0 );
 	 case S_LDI: // ldi, sema
 		return (uint64_t)
 				( S_LDI  << 28
 				| LdMode << 25
 				| PM     << 24
-				| (Pack & (15 >> PM)) << 20
+				| ((Pack & 15) ^ ((Pack << 1) & P_32S * PM)) << 20
 				| CondA  << 17
 				| CondM  << 14
 				| SF     << 13
@@ -313,6 +313,8 @@ uint64_t Inst::encode() const
 	 case S_BRANCH: // Branch
 		return (uint64_t)
 				( S_BRANCH << 28
+				| (Unpack & 7) << 25
+				| PM     << 24
 				| CondBr << 20
 				| Rel    << 19
 				| Reg    << 18
@@ -362,8 +364,8 @@ void Inst::decode(uint64_t code)
 			if (Pack && !PM)
 				(uint8_t&)Pack |= isFloatResult(WS) ? P_FLT : P_INT;
 		}
-		if (PM && (Pack ^ 8) >= 0xb)
-			(uint8_t&)Pack |= P_32S|P_FLT;
+		if (PM && (Pack & P_8a))
+			(uint8_t&)Pack ^= P_32S|P_FLT;
 	}
 	if (Sig != S_LDI && Unpack && Unpack != U_8dr)
 		(uint8_t&)Unpack |= PM || isFloatRA() ? U_FLT : U_INT;

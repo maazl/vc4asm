@@ -209,6 +209,7 @@ struct Inst
 	};
 
 	sig        Sig;     ///< Signaling bits
+	bool       PM;      ///< pack/unpack mode
 	bool       SF;      ///< Set flags
 	bool       WS;      ///< Write swap
 	uint8_t    WAddrA;  ///< Write address ADD ALU
@@ -216,8 +217,7 @@ struct Inst
 	uint8_t    RAddrA;  ///< Read address for register file A, invalid for ldi and semaphore instructions
 	union
 	{	struct            // ALU
-		{	unpack Unpack;  ///< Unpack mode, only valid for ALU instructions
-			union
+		{	union
 			{	uint8_t RAddrB;///< Read address for register file B, only valid for ALU instruction without small immediate flag.
 				uint8_t SImmd;///< Small immediate value, only valid for Sig == S_SMI.
 			};
@@ -228,15 +228,12 @@ struct Inst
 			opmul  OpM;     ///< ADD ALU instruction
 			opadd  OpA;     ///< MUL ALU instruction
 		};
-		struct            // ldi, sema, branch
-		{	ldmode LdMode;  ///< load immediate mode
-			qpuValue Immd;  ///< immediate value
-		};
+		                  // ldi, sema, branch
+		qpuValue Immd;    ///< immediate value
 	};
 	union
 	{	struct            // !branch
-		{	bool   PM;      ///< MUL ALU pack/unpack
-			pack   Pack;    ///< Pack mode
+		{	pack   Pack;    ///< Pack mode
 			conda  CondA;   ///< Write condition for ADD ALU
 			conda  CondM;   ///< Write condition for MUL ALU
 		};
@@ -245,6 +242,12 @@ struct Inst
 			bool   Rel;     ///< PC relative branch
 			bool   Reg;     ///< Add register file A value to branch target
 		};
+	};
+	union
+	{	                  // !ldi/sema
+		unpack Unpack;    ///< Unpack mode for ALU or branch instructions
+		                  // ldi/sema
+		ldmode LdMode;    ///< load immediate mode for ldi or semaphore
 	};
 
 	/// Check whether a register read of register file A and B is interchangeable,
