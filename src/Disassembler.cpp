@@ -100,7 +100,10 @@ void Disassembler::appendMULSource(Inst::mux mux)
 	if (rot >= 8)
 		rot -= 16;
 	if (mux >= Inst::X_R4)
-		rot %= 4;
+	{	rot %= 4;
+		if (rot == 0)
+			return;
+	}
 	if (rot < 0)
 		appendf("<<%i", -rot);
 	else
