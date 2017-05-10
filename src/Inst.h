@@ -312,7 +312,7 @@ struct Inst
 	bool       isSFADD() const { return SF && OpA != A_NOP && CondA != C_NEVER; }
 	/// Flags set by MUL ALU
 	/// @pre Sig < S_LDI
-	bool       isSFMUL() const { return SF && !(OpA != A_NOP && CondA != C_NEVER); }
+	bool       isSFMUL() const { return SF && OpA == A_NOP && CondM != C_NEVER; }
 	/// Check whether an ADD operator is an unary operator.
 	/// @pre Sig < S_LDI
 	bool       isUnary() const { return (0x01800180 & (1<<OpA)) != 0; }
