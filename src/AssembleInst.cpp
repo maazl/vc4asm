@@ -383,7 +383,7 @@ void AssembleInst::doUnpack(unpack mode)
 		Fail("Only one .unpack per ALU instruction, please.");
 	// determine PM bit
 	pm = calcPM(mode);
-	if (InstCtx & (IC_ADD|IC_MUL))
+	if ((InstCtx & IC_SRC) && (InstCtx & IC_BOTH))
 	{	int pm2 = isUnpackable(currentMux());
 		if (pm2 < 0)
 			Fail("Cannot unpack this source argument.");
@@ -722,7 +722,7 @@ void AssembleInst::prepareMOV(bool target2)
 		Fail("Cannot combine mov, ldi or semaphore instruction with branch.");
 	bool isLDI = Sig == S_LDI;
 	if (target2)
-	{	if (InstCtx != (IC_ADD|IC_MUL))
+	{	if (InstCtx != IC_BOTH)
 			Fail("amov/mmov cannot write two target registers.");
 		if ( ((Flags & IF_HAVE_NOP) || WAddrA != R_NOP || (!isLDI && OpA != A_NOP))
 			|| (WAddrM != R_NOP || (!isLDI && OpM != M_NOP)) )
@@ -730,7 +730,7 @@ void AssembleInst::prepareMOV(bool target2)
 		Flags |= IF_NOASWAP;
 		InstCtx = IC_OP|IC_ADD;
 	} else
-	{	if (isLDI && InstCtx != (IC_ADD|IC_MUL))
+	{	if (isLDI && InstCtx != IC_BOTH)
 			Fail("Cannot combine amov, mmov with ldi or semaphore instruction.");
 		bool addused = (Flags & IF_HAVE_NOP) || WAddrA != R_NOP || (!isLDI && OpA != A_NOP);
 		bool mulused = WAddrM != R_NOP || (!isLDI && OpM != M_NOP);

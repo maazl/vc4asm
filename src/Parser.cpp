@@ -677,7 +677,7 @@ void Parser::assembleMUL(int mul_op)
 
 void Parser::assembleMOV(int mode)
 {
-	InstCtx = mode < 0 ? (instContext)~mode : IC_ADD|IC_MUL;
+	InstCtx = mode < 0 ? (instContext)~mode : IC_BOTH;
 	bool target2 = ArgumentCount(At, 3) == 3;
 	prepareMOV(target2);
 	ExprValue.Type = V_NONE;
@@ -690,10 +690,10 @@ void Parser::assembleMOV(int mode)
 
 	if (target2)
 	{	// second target
-		InstCtx ^= IC_ADD|IC_MUL; // switch ALU
+		InstCtx ^= IC_BOTH; // switch ALU
 		doALUTarget();
 		// From here we are double ALU
-		InstCtx |= IC_ADD|IC_MUL; // now we are at both ALUs
+		InstCtx |= IC_BOTH; // now we are at both ALUs
 
 		if (NextToken() != COMMA)
 			Fail("Expected comma and source argument, found '%s'.", Token.c_str());

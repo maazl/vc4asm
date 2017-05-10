@@ -210,7 +210,7 @@ class AssembleInst : private Inst
 	/// @param ctx ctx should contain one of IC_SRCAB and one of IC_BOTH.
 	/// @return input multiplexer value
 	mux              getMux(instContext ctx)
-	{	assert((ctx & IC_SRC) && (ctx & (IC_ADD|IC_MUL)));
+	{	assert((ctx & IC_SRC) && (ctx & IC_BOTH));
 		switch (ctx & (IC_MUL|IC_SRCB))
 		{case IC_NONE:
 			return MuxAA;

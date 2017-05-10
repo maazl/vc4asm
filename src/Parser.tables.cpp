@@ -369,7 +369,7 @@ const Parser::opEntry<8> Parser::opcodeMap[] =
 ,	{ "min",    &Parser::assembleADD, ::Inst::A_MIN }
 ,	{ "mmov",   &Parser::assembleMOV, ~(int)(IC_MUL) }
 ,	{ "mnop",   &Parser::assembleMUL, ::Inst::M_NOP|0x80 }
-,	{ "mov",    &Parser::assembleMOV, ~(int)(IC_ADD|IC_MUL) }
+,	{ "mov",    &Parser::assembleMOV, ~(int)(IC_BOTH) }
 ,	{ "mul24",  &Parser::assembleMUL, ::Inst::M_MUL24 }
 ,	{ "mv8adds",&Parser::assembleMUL, ::Inst::M_V8ADDS|0x80 }
 ,	{ "mv8subs",&Parser::assembleMUL, ::Inst::M_V8SUBS|0x80 }
