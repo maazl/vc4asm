@@ -29,6 +29,7 @@ foreach(filename ${files})
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}.passed ${CMAKE_CURRENT_BINARY_DIR}/${name}.dis ${CMAKE_CURRENT_BINARY_DIR}/${name}.diff ${CMAKE_CURRENT_BINARY_DIR}/${name}.hex2
 			COMMAND $<TARGET_FILE:vc4dis> -v -x ${filename} -o ${CMAKE_CURRENT_BINARY_DIR}/${name}.dis
 			COMMAND $<TARGET_FILE:vc4asm> -C ${CMAKE_CURRENT_BINARY_DIR}/${name}.hex2 ${CMAKE_CURRENT_BINARY_DIR}/${name}.dis
+			COMMAND grep -v "^\\s*\\.long" ${CMAKE_CURRENT_BINARY_DIR}/${name}.dis > /dev/null # result must be empty
 			COMMAND diff ${CMAKE_CURRENT_BINARY_DIR}/${name}.hex2 ${CMAKE_CURRENT_BINARY_DIR}/${name}.strip > ${CMAKE_CURRENT_BINARY_DIR}/${name}.diff
 			COMMAND touch ${CMAKE_CURRENT_BINARY_DIR}/${name}.passed # Work around for cmake bug #15474
 			DEPENDS vc4dis vc4asm ${CMAKE_CURRENT_BINARY_DIR}/${name}.strip VERBATIM )
