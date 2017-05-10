@@ -295,17 +295,24 @@ void Disassembler::DoBranch()
 	if (Instruct.SF)
 		append(".setf");
 	append(" ");
-	if (Instruct.WAddrA != Inst::R_NOP)
-		appendf("%s, ", cWreg[Instruct.WS][Instruct.WAddrA]);
-	if (Instruct.WAddrM != Inst::R_NOP)
-		appendf("%s, ", cWreg[!Instruct.WS][Instruct.WAddrM]);
-	if (Instruct.WAddrA == Inst::R_NOP && Instruct.WAddrM == Inst::R_NOP)
-		append("-, ");
+	// Destination registers
+	int have_dest = (Instruct.WAddrA != Inst::R_NOP) | ((Instruct.WAddrM != Inst::R_NOP) << 1);
+	switch (have_dest)
+	{case 0:
+		append("-, "); break;
+	 default:
+		append(cWreg[Instruct.WS][Instruct.WAddrA]), append(", ");
+		if (have_dest == 1)
+			break;
+	 case 2:
+		append(cWreg[!Instruct.WS][Instruct.WAddrM]), append(", ");
+	}
+	// Branch target
 	if (Instruct.Reg)
 	{	append(cRreg[0][Instruct.RAddrA]);
-		if (Instruct.Immd.iValue)
+		if (Instruct.Immd.iValue || have_dest == 3)
 			append(", ");
-	} else if (Instruct.WAddrA != Inst::R_NOP && Instruct.WAddrM != Inst::R_NOP)
+	} else if (have_dest == 3)
 		append("-, ");
 	// try label
 	if (Instruct.Immd.iValue)
@@ -319,7 +326,7 @@ void Disassembler::DoBranch()
 			append(l.c_str());
 		} else
 			appendf(Instruct.Rel ? "%+d # %04x" : "%d # %04x", Instruct.Immd.iValue, target);
-	} else if (Instruct.Immd.iValue || !Instruct.Reg)
+	} else if (!Instruct.Reg || have_dest == 3)
 		appendf(Instruct.Rel ? "%+d" : "0x%x", Instruct.Immd.iValue);
 }
 
