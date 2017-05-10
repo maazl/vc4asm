@@ -190,10 +190,23 @@ void AssembleInst::applyRot(int count)
 					&& MuxMA != X_RB && MuxMB != X_RB )
 				? 0x13 : 0x1f;
 			if ((SImmd ^ count) & mask)
+			{	// Try to change the small immediate value without a semantic change to the other ALU.
+				if (MuxAA == X_RB && MuxAB == X_RB && !SF && MuxMA != X_RB && MuxMB != X_RB)
+				{	auto val = SMIValue();
+					if (evalADD(val, val) && evalPack(val, val, false))
+					{	for (auto si = getSmallImmediateALU(val.uValue); si->Value == val.uValue; ++si)
+						{	if (si->OpCode.isMul() || ((si->SImmd ^ count) & mask))
+								continue;
+							// got it! replace operator and value and continue with required value
+							OpA = si->OpCode.asAdd();
+							SImmd = si->SImmd;
+							goto gotit;
+				}	}	}
 				Fail( SImmd < 48
 					? "Vector rotation is in conflict with small immediate value."
 					: "Cannot use different vector rotations within one instruction." );
-
+			}
+		 gotit:
 			if (!isaccu)
 				count = SImmd | 0x20;
 			else
