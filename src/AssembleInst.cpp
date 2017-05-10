@@ -1107,35 +1107,22 @@ void AssembleInst::optimize()
 			}
 		}
 	 default:
-		switch (OpA)
-		{default:
-			if (WAddrA != R_NOP || SF)
-				break;
-		 case A_NOP:
+		if (WAddrA == R_NOP && !SF)
 			CondA = C_NEVER;
-			//MuxAA = X_R0;
-			//MuxAB = X_R0;
-			break;
-		 case A_XOR:
+		switch (OpA)
+		{case A_XOR:
 		 case A_SUB:
 			if (WAddrM == R_NOP && MuxAA == MuxAB)
 				goto mkLDI0; // convert to LDI ..., 0
-			break;
+		 default:;
 		}
+		if (WAddrM == R_NOP && (!SF || OpA != A_NOP))
+			CondM = C_NEVER;
 		switch (OpM)
-		{default:
-			if (WAddrM != R_NOP || (SF && (OpA == A_NOP || CondA == C_NEVER)))
-				break;
-		 case M_NOP:
-			if (WAddrM == R_NOP)
-				CondM = C_NEVER;
-			//MuxMA = X_R0;
-			//MuxMB = X_R0;
-			break;
-		 case M_V8SUBS:
+		{case M_V8SUBS:
 			if (!SF && WAddrA == R_NOP && MuxMA == MuxMB)
 				goto mkLDI0; // convert to LDI ..., 0
-			break;
+		 default:;
 		}
 		break;
 	 mkLDI0:
