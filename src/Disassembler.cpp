@@ -57,7 +57,10 @@ void Disassembler::appendPE(bool sign)
 
 void Disassembler::appendPack(bool mul)
 {	if (Instruct.PM ? mul : Instruct.WS == mul)
-	{	append(cPack[Instruct.PM][Instruct.Pack & 15]);
+	{	const char* pack = cPack[Instruct.PM][Instruct.Pack & 15];
+		if (OnMessage && pack[1] == '?')
+			OnMessage("Invalid MUL ALU pack mode.");
+		append(pack);
 		append(cPUPX[Instruct.Pack / Inst::P_INT]);
 	}
 }
@@ -113,7 +116,13 @@ void Disassembler::appendMULSource(Inst::mux mux)
 void Disassembler::DoADD()
 {
 	uint8_t opa = Instruct.OpA;
+	if (OnMessage && cOpA[opa][0] == '?')
+		OnMessage("Invalid opcode for ADD ALU.");
 	bool isUnary = Instruct.isUnary();
+	if (OnMessage && isUnary && Instruct.MuxAB)
+		OnMessage("Second operand to unary ADD ALU opcode.");
+	if (Instruct.WAddrA == Inst::R_NOP && Instruct.CondA != Inst::C_NEVER && (!Instruct.SF || opa == Inst::A_NOP))
+		OnMessage("ADD ALU writes to nop register with condition != never.");
 	bool isImmd = Instruct.Sig == Inst::S_SMI && Instruct.MuxAA == Inst::X_RB
 		&& (isUnary || Instruct.MuxAB == Inst::X_RB);
 
@@ -127,8 +136,12 @@ void Disassembler::DoADD()
 	if (Instruct.isSFADD())
 		append(".setf");
 
-	if (opa == Inst::A_NOP && Instruct.WAddrA == Inst::R_NOP)
-		return;
+	if (opa == Inst::A_NOP)
+	{	if (OnMessage && (Instruct.MuxAA || Instruct.MuxAB))
+			OnMessage("Input operand to ADD ALU nop opcode.");
+		if (Instruct.WAddrA == Inst::R_NOP && Instruct.CondA == Inst::C_NEVER)
+			return;
+	}
 
 	append(cCC[Instruct.CondA]);
 	append(" ");
@@ -177,8 +190,15 @@ void Disassembler::DoADD()
 
 void Disassembler::DoMUL()
 {
-	if (!Instruct.isMUL())
-		return;
+	if (Instruct.WAddrM == Inst::R_NOP)
+	{	if (OnMessage && Instruct.CondM != Inst::C_NEVER && (!Instruct.SF || Instruct.OpA != Inst::A_NOP))
+			OnMessage("MUL ALU writes to nop register with condition != never.");
+		if (Instruct.OpM == Inst::M_NOP)
+		{nop:
+			if (OnMessage && (Instruct.MuxMA || Instruct.MuxMB))
+				OnMessage("Input operand to MUL ALU nop opcode.");
+			return;
+	}	}
 
 	uint8_t opm = Instruct.OpM;
 	bool isSMI = Instruct.Sig == Inst::S_SMI && Instruct.MuxMA == Inst::X_RB;
@@ -206,7 +226,7 @@ void Disassembler::DoMUL()
 
 	switch (opm)
 	{case Inst::M_NOP:
-		return;
+		goto nop;
 
 	 default:
 		appendMULSource(Instruct.MuxMA);
@@ -240,6 +260,9 @@ void Disassembler::DoRead(Inst::mux regfile)
 
 void Disassembler::DoALU()
 {
+	if (OnMessage && Instruct.Pack && Instruct.PM && ((Instruct.Pack - 3) & 15) > 9)
+		OnMessage("Invalid MUL ALU pack mode");
+
 	DoADD();
 
 	DoMUL();
@@ -256,6 +279,9 @@ void Disassembler::DoALU()
 
 void Disassembler::DoLDI()
 {
+	if (OnMessage && (Instruct.LdMode == 2 || Instruct.LdMode > Inst::L_SEMA))
+		OnMessage("Invalid load immediate mode.");
+
 	append(cOpL[Instruct.LdMode]);
 	if (Instruct.LdMode >= Inst::L_SEMA)
 		append(Instruct.SA() ? "acq" : "rel");
@@ -290,6 +316,12 @@ void Disassembler::DoLDI()
 
 void Disassembler::DoBranch()
 {
+	if (OnMessage)
+	{	if (Instruct.Unpack || Instruct.PM)
+			OnMessage("Branch does not support unpack modes.");
+		if (cBCC[Instruct.CondBr][1] == '?')
+			OnMessage("Invalid branch condition.");
+	}
 	append(Instruct.Rel ? "brr" : "bra");
 	append(cBCC[Instruct.CondBr]);
 	if (Instruct.SF)

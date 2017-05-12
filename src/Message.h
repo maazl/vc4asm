@@ -9,6 +9,7 @@
 #define MESSAGE_H_
 
 #include <string>
+#include <functional>
 using namespace std;
 
 
@@ -25,6 +26,8 @@ enum severity : unsigned char
 struct Message : string
 {	Message(const char* fmt, ...);
 };
+
+typedef function<void(const Message&)> MessageHandler;
 
 #endif
 

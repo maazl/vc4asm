@@ -10,6 +10,7 @@
 
 #include "Inst.h"
 #include "utils.h"
+#include "Message.h"
 
 #include <unordered_map>
 #include <cinttypes>
@@ -44,6 +45,8 @@ class Disassembler
 	unsigned          Addr = 0;
 	/// Set of branch targets in units of BaseAddr.
 	unordered_multimap<unsigned,string> Labels;
+	/// Handler for Disassembler messages. Normally if the current instruction cannot be decoded reliably.
+	MessageHandler    OnMessage;
  public: // public functions
 	/// Push instruction into the disassembler and decode it.
 	/// @post \ref Addr is incremented by the size of one instruction word.
@@ -76,11 +79,11 @@ class Disassembler
 	string GetFields();
  private: // Decode tables
 	/// Read register codes, \c cReg[B!A][regnum]
-	static const char cRreg[2][64][10];
+	static const char cRreg[2][64][9];
 	/// Write register codes, \c cReg[B!A][regnum]
 	static const char cWreg[2][64][14];
 	/// ADD ALU opcodes
-	static const char cOpA[33][9];
+	static const char cOpA[33][8];
 	/// MUL ALU opcodes
 	static const char cOpM[9][7];
 	/// LDI opcodes

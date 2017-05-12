@@ -18,6 +18,7 @@
 using namespace std;
 
 class Disassembler;
+class Message;
 class DebugInfo;
 
 /// Worker class for the disassembler.
@@ -33,14 +34,16 @@ class WriteQasm : public WriterBase
  private:
 	/// Disassembler to use.
 	Disassembler&     Disasm;
-  /// Options for output.
+  /// Generator options for comments.
 	const comments    Comment;
+	/// Flag whether the current instruction is likely not reasonable. Set by Disassembler message callback.
+	bool              SuspiciousInstruction;
  public:
 	/// Create QPU assembler writer.
 	/// @param target Target file.
 	/// @param disasm Configured disassembler.
 	/// @param opt Write comments. See \ref comments.
-	WriteQasm(FILE* target, Disassembler& disasm, comments opt = C_NONE) :	WriterBase(target), Disasm(disasm), Comment(opt) {}
+	WriteQasm(FILE* target, Disassembler& disasm, comments opt = C_NONE);
 	/// Disassemble instructions.
 	/// @param instructions Code words to disassemble.
 	/// @param base Base address of the instructions.

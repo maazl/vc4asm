@@ -9,6 +9,11 @@
 #include "Disassembler.h"
 
 
+WriteQasm::WriteQasm(FILE* target, Disassembler& disasm, comments opt)
+:	WriterBase(target), Disasm(disasm), Comment(opt)
+{	Disasm.OnMessage = [this](const Message& msg) { /*fputs(msg.c_str(), stderr); fputc('\n', stderr);*/ SuspiciousInstruction = true; };
+}
+
 void WriteQasm::Write(const vector<uint64_t>& instructions, unsigned base, const DebugInfo* info)
 {	// TODO: Labels from info
 
@@ -28,9 +33,13 @@ void WriteQasm::Write(const vector<uint64_t>& instructions, unsigned base, const
 			WriteChar('\n');
 		}
 		// Code & comments
+		SuspiciousInstruction = false;
 		Disasm.PushInstruction(inst);
 		line = Disasm.Disassemble();
-		if (Comment)
+		if (SuspiciousInstruction)
+		{	// Can't disassemble reasonably, write raw data field
+			checkedfprintf(Target, "\t.long 0x%016" PRIx64, inst);
+		} else if (Comment)
 		{	checkedfprintf(Target, "\t%-55s #", line.c_str());
 			if (Comment & C_Hex)
 				checkedfprintf(Target, " %04x: %016" PRIx64, Disasm.Addr - sizeof(uint64_t), inst);
