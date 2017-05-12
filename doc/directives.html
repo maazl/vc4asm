@@ -8,21 +8,21 @@
   </head>
   <body>
     <h1>VC4ASM - Assembler directives</h1>
-    <p><a href="index.html">&uarr; Top</a> <tt><a href="#.align">.align</a>
-      <a href="#.assert">.assert</a> <a href="#.back">.back</a> <a href="#.bit">.bit</a>
-      <a href="#.byte">.byte</a> <a href="#.clone">.clone</a> <a href="#.code">.code</a>
-      <a href="#.const">.const</a> <a href="#.double">.double</a> <a href="#.else">.else</a>
-      <a href="#.elseif">.elseif</a> <a href="#.back">.endb</a> <a href="#.func">.endf</a>
-      <a href="#.foreach">.endfor</a> <a href="#.endif">.endif</a> <a href="#.macro">.endm</a>
-      <a href="#.rep">.endr</a> <a href="#.equ">.equ</a> <a href="#.float">.float</a>
-      <a href="#.foreach">.foreach</a> <a href="#.func">.func</a> <a href="#.global">.global</a>
-      <a href="#.if">.if</a> <a href="#.ifset">.ifset</a> <a href="#.include">.include</a>
-      <a href="#.int">.int</a> <a href="#.const">.lconst</a> <a href="#.long">.long</a>
-      <a href="#.set">.lset</a> <a href="#.unset">.lunset</a> <a href="#.macro">.macro</a>
-      <a href="#.rep">.rep</a> <a href="#.rodata">.rodata</a> <a href="#.set">.set</a>
-      <a href="#.short">.short</a> <a href="#.text">.text</a> <a href="#.unset">.unset</a></tt></p>
+    <p><a href="index.html">&uarr; Top</a> <tt><a href="#.align">.align</a> <a
+          href="#.assert">.assert</a> <a href="#.back">.back</a> <a href="#.bit">.bit</a>
+        <a href="#.byte">.byte</a> <a href="#.clone">.clone</a> <a href="#.code">.code</a>
+        <a href="#.const">.const</a> <a href="#.double">.double</a> <a href="#.else">.else</a>
+        <a href="#.elseif">.elseif</a> <a href="#.back">.endb</a> <a href="#.func">.endf</a>
+        <a href="#.foreach">.endfor</a> <a href="#.endif">.endif</a> <a href="#.macro">.endm</a>
+        <a href="#.rep">.endr</a> <a href="#.equ">.equ</a> <a href="#.float">.float</a>
+        <a href="#.foreach">.foreach</a> <a href="#.func">.func</a> <a href="#.global">.global</a>
+        <a href="#.if">.if</a> <a href="#.ifset">.ifset</a> <a href="#.include">.include</a>
+        <a href="#.int">.int</a> <a href="#.const">.lconst</a> <a href="#.long">.long</a>
+        <a href="#.set">.lset</a> <a href="#.unset">.lunset</a> <a href="#.macro">.macro</a>
+        <a href="#.rep">.rep</a> <a href="#.rodata">.rodata</a> <a href="#.set">.set</a>
+        <a href="#.short">.short</a> <a href="#.text">.text</a> <a href="#.unset">.unset</a></tt></p>
     <h2><a id=".const" name=".const"></a><a id=".set" name=".set"></a><tt>.const
-      .set .lconst .lset</tt> - define a constant or single line function</h2>
+        .set .lconst .lset</tt> - define a constant or single line function</h2>
     <pre>.const <i>identifier</i>, <i>expression</i>
 .set <i>identifier</i>, <i>expression</i>
 .lconst <i>identifier</i>, <i>expression</i>
@@ -242,23 +242,14 @@
 name=".float"></a><a name=".bit"></a><a name=".double"></a><a name=".half"></a>.byte
         .short .int .long .bit .float .half .double</tt> - emit constants inside
       code blocks</h2>
-    <pre>.byte <var>constant, constant</var> ...<br>.short <var><var>constant, constant</var></var> ...<var></var><br>.int <var><var>constant, constant</var></var> ...<br>.long <var>constant, constant</var> ...<br>.bit <var>constant, constant</var> ...<br>.float <var>constant, constant</var> ...<br>.half <var>constant, constant</var> ...<br>.double <var>constant, constant</var> ...</pre>
+    <pre>.byte <var>constant, constant</var> ...   # 8 bit integers<br>.short <var><var>constant, constant</var></var> ...<var></var>  # 16 bit integers<br>.int <var><var>constant, constant</var></var> ...    # 32 bit integers<br>.long <var>constant, constant</var> ...   # 64 bit integers<br>.bit <var>constant, constant</var> ...    # 1 bit boolean<br>.float <var>constant, constant</var> ...  # 32 bit single precision float<br>.half <var>constant, constant</var> ...   # 16 bit half precision float<br>.double <var>constant, constant</var> ... # 64 bit double precision float (not directly supported by Videocore IV)</pre>
     <dl>
       <dt><tt><var>constant</var></tt></dt>
       <dd>Expression that evaluates to an integer or floating point constant.</dd>
     </dl>
     <p>The above directive directly place constants in the code. This might be
       used to load constants by using the return value of a branch instruction
-      as address. Or you may emit opcodes that are unsupported by vc4asm.</p>
-    <p><tt>.byte</tt> creates 8 bit constants (signed or unsigned), <tt>.short</tt>
-      creates 16 bit constants (signed or unsigned), <tt>.int</tt> creates 32
-      bit constants (signed, unsigned or float), <tt>.long</tt> creates 64 bit
-      integers, <tt>.bit</tt> single bits, <tt>.float</tt> forces 32 bit
-      floating point constants, <tt>.half</tt> creates a 16 bit half precision
-      floating point constants and <tt>.double</tt> 64 bit floating point
-      constants. Well, the latter makes only little sense since the GPU cannot
-      deal with double precision.</p>
-    <p>The result is <em>always</em> stored in <em>big endian</em> format.</p>
+      as address. Or you may emit opcodes that are unsupported by vc4asm.</p><p>The result is <em>always</em> stored in <em>big endian</em> format.</p>
     <p>You should ensure that the constants will not accidentally be executed
       unless they contain valid Videocore IV instructions.</p>
     <ul>

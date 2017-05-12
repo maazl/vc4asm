@@ -152,7 +152,7 @@ class AssembleInst : private Inst
 	/// @exception std::string Failed, error message.
 	bool             applyMOVsrc(exprValue src);
 	/// @brief Handle source of LDI instruction, including semaphore.
-	/// @param src Source expression. Mut be a constant or a semaphore register.
+	/// @param src Source expression. Must be a constant or a semaphore register.
 	/// @param mode desired load mode. L_NONE in doubt.
 	/// The mode is taken automatically in case of a register or per element source expression.
 	/// Bit 7 is the acquire flag in case of L_SEMA.

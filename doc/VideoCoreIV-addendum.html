@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta content="text/html; charset=iso-8859-15" http-equiv="content-type">
-    <title>Addendum to in the Broadcom VideoCore IV documentation</title>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type">
+    <title>Addendum to VideoCore IV documentation</title>
     <meta content="Marcel M&uuml;ller" name="author">
     <meta content="Raspberry Pi BCM2835 BCM2836 QPU" name="keywords">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
@@ -96,11 +96,10 @@
     <p>A write to the TMU retiring register (TMU0_S, TMU1_S) or VPM must not use
       conditional write access. Although the conditional write itself works the
       TMU/VPM fifo is triggered unconditional to process the request with
-      undefined data in case the condition is not true.<br>
-      You should also not write to the same register from both ALUs with inverse
+      undefined data in case the condition is not true.</p>
+    <p>You should also not write to the same register from both ALUs with inverse
       condition flags. E.g. <tt>mov.ifz vpm, 0; mov.ifnz vpm, 1</tt> will write
-      an undefined value from the MUL ALU.<br>
-      Probably any other peripheral register share the same problem.</p>
+      an undefined value from the MUL ALU. Probably any other peripheral register share the same problem.</p>
     <p>vc4asm warns about this kind of access in verify mode.</p>
     <h3>Distance of branch instructions</h3>
     <p>There must be at least two non branch instructions between every two
@@ -300,5 +299,4 @@
       element number, i.e. if you load the same value twice into another element
       this will cause a cache miss if a memory address with 4 k offset is in
       between.</p>
-  </body>
-</html>
+</body></html>

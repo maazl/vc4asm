@@ -90,10 +90,10 @@
       <dd>Pack or unpack mode.</dd>
     </dl>
     <h3>Pack/unpack modes</h3>
-    <p>Format: <tt>B</tt>[<tt>O</tt>][<tt>s</tt>][<tt>i</tt>|<tt>f</tt>]<br>
-      <tt>B</tt>: number of bits in the packed format<br>
-      <tt>O</tt>: offset in the packed data (<tt>a</tt> = least significant
-      packed word ...)<br>
+    <p>Format: <var><tt>B</tt></var>[<var><tt>O</tt></var>][<tt>s</tt>][<tt>i</tt>|<tt>f</tt>]<br>
+      <var><tt>B</tt></var>: number of bits in the packed format<br>
+      <var><tt>O</tt></var>: offset in the packed data if packed data is less than 32 bit. <tt>a</tt> = least significant
+      packed word, <tt>b</tt> = ...)<br>
       <tt>s</tt>: use saturation. This is ignored on unpack modes when assigned
       to a symbol.<br>
       <tt>i</tt>: use integer pack mode<br>
@@ -494,5 +494,6 @@
       pack/unpack modes that specify whether an integer or floating point
       operation should be used. vc4asm tries to guess this otherwise but you
       should avoid surprises.</p>
-  </body>
-</html>
+  
+
+</body></html>

@@ -466,9 +466,9 @@ href="extensions.html#setf">setf</a> ...<br>ldi.<a href="extensions.html#ifcc">i
         peripherals or a small immediate value. </dd>
     </dl>
     <p><tt>read</tt> is also no instruction of the QPU. It is just an extension
-      of vc4asm to create a register file A or B access without allocation of an
+      of vc4asm to create a register file A or B access <i>without</i> allocation of an
       ALU instruction. Semantically it is identical to <tt>mov -, <var>source</var></tt>,
-      but it will <i>not</i> crate any opcode to one of the ALUs. Instead only
+      but it will <i>not</i> create any opcode to one of the ALUs. Instead only
       the <tt>raddr_a</tt> or <tt>raddr_b</tt> field is assigned. You can
       combine up to two <tt>read</tt> with up to two ALU instructions into a
       single instruction word as long as they do not require the particular
@@ -509,7 +509,7 @@ href="extensions.html#setf">setf</a> ...<br>ldi.<a href="extensions.html#ifcc">i
       <dd>Target <a href="expressions.html#register">register</a>, usually <tt>-</tt>,
         since the output of a semaphore instruction is not generally useful. But
         if it happens to be useful you may assign the value like with an <tt><a
-            href="#ldi">ldi</a></tt> instruction.</dd>
+href="#ldi">ldi</a></tt> instruction.</dd>
       <dt><var><tt>number</tt></var></dt>
       <dd>Semaphore number to acquire or release. Only the low order 4 bits of
         the value are used to identify the semaphore number. Bit 4 is controlled
@@ -591,5 +591,6 @@ href="extensions.html#setf">setf</a> ...<br>ldi.<a href="extensions.html#ifcc">i
     The above signals can be combined with any normal ALU instructions in one
     line, i.e. no load immediate, no small immediate, no semaphore and no
     branch. See Broadcom reference guide for details.
-  </body>
-</html>
+  
+
+</body></html>

@@ -31,6 +31,22 @@
       <li>Added <em>full C compatible output</em> using <a href="index.html#-c">-c</a>
         including header file with global symbols (rather than only hex
         fragments).</li>
+      <li>Test cases for disassembler.</li>
+      <li>Try harder when combining small immediate values with vector rotation.</li>
+    </ul>
+    <h3>Fixes</h3>
+    <ul>
+      <li><tt>bkpt</tt> instruction fixed.</li>
+      <li>Do not override mux fields at <tt>read</tt>.</li>
+      <li>Accept instruction extensions at <tt>nop</tt> and <tt>read</tt>.</li>
+      <li>vc4dis: disassemble invalid instructions as raw data (<tt>.long</tt>).</li>
+      <li>vc4dis: fixed disassembly of regfile A source in case of modulo 4 MUL
+        ALU vector rotation.</li>
+      <li>vc4dis: generate <tt>.setf</tt> extension at branch also.</li>
+      <li>vc4dis: disassembly of branch instruction with two destination
+        registers and only a regfile A target.</li>
+    </ul>
+    <ul>
     </ul>
     <h2>V 0.2.3</h2>
     <h3>Features</h3>
