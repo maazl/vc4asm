@@ -1,3 +1,4 @@
+                                  mov.ifnn r2, r0<<1
 mov -, sacq(9)
 add r0, r4, ra1.unpack8b
 add.unpack8a r0, r4, ra1

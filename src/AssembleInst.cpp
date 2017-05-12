@@ -1064,7 +1064,8 @@ bool AssembleInst::tryALUSwap()
 	swap(MuxAB, MuxMB);
 	swap(CondA, CondM);
 	swap(WAddrA, WAddrM);
-	WS = !WS;
+	if ((InstCtx & IC_MUL) || WAddrA != R_NOP || !isWRegAB(WAddrM)) // nothing to swap?
+		WS = !WS;
 
 	InstCtx ^= IC_BOTH;
 	if (UsePack)
