@@ -11,13 +11,11 @@
 #include <cstdint>
 using namespace std;
 
-struct qpuValue
-{	union
-	{	uint32_t  uValue;   ///< Value as unsigned integer
-		int32_t   iValue;   ///< Value as signed integer
-		float     fValue;   ///< Value as 32 bit float
-		uint8_t   cValue[4];///< Value as 4 separate bytes @remarks The endianess does not count here.
-	};
+union qpuValue
+{	uint32_t   uValue;   ///< Value as unsigned integer
+	int32_t    iValue;   ///< Value as signed integer
+	float      fValue;   ///< Value as 32 bit float
+	uint8_t    cValue[4];///< Value as 4 separate bytes @remarks The endianess does not count here.
 };
 
 /// Worker class to assemble or disassemble QPU instruction words.
@@ -245,9 +243,9 @@ struct Inst
 	};
 	union
 	{	                  // !ldi/sema
-		unpack Unpack;    ///< Unpack mode for ALU or branch instructions
+		unpack   Unpack;  ///< Unpack mode for ALU or branch instructions
 		                  // ldi/sema
-		ldmode LdMode;    ///< load immediate mode for ldi or semaphore
+		ldmode   LdMode;  ///< load immediate mode for ldi or semaphore
 	};
 
 	/// Check whether a register read of register file A and B is interchangeable,
