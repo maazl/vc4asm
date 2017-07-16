@@ -19,10 +19,8 @@ using namespace std;
 
 #ifdef __GNUC__
 #define PRINTFATTR(i) __attribute__((format(printf, i, i+1)))
-#define NORETURNATTR __attribute__ ((__noreturn__))
 #else
 #define PRINTFATTR(i)
-#define NORETURNATTR
 #endif
 
 struct unspecified_type;

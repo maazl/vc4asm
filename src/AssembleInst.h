@@ -185,7 +185,7 @@ class AssembleInst : private Inst
  private:
 	/// Enrich the formatted message and throws the result as std::string.
 	/// @param fmt printf like format string.
-	virtual void     Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR = 0;
+	[[noreturn]] virtual void Fail(const char* fmt, ...) PRINTFATTR(2) = 0;
 	/// Enrich the formatted message and write the result to stderr.
 	/// @param level Severity level.
 	/// @param fmt printf like format string.

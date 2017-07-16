@@ -298,7 +298,7 @@ class Parser : private AssembleInst, public DebugInfo
 	string           enrichMsg(string msg);
 	/// Enrich the formatted message and throws the result as std::string.
 	/// @param fmt printf like format string.
-	virtual void     Fail(const char* fmt, ...) PRINTFATTR(2) NORETURNATTR;
+	[[noreturn]] virtual void Fail(const char* fmt, ...) PRINTFATTR(2);
 	/// Log thrown exception from Fail() as error message.
 	/// @param msg Already enriched message.
 	void             CaughtMsg(const char* msg);

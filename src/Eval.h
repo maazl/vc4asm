@@ -128,7 +128,7 @@ class Eval
 		/// Raise an error messages because the current operator is not applicable
 		/// to the expression types provided.
 		/// @exception Fail The function always throws.
-		void      TypesFail() NORETURNATTR;
+		[[noreturn]] void TypesFail();
 		/// Check whether all operands are of type integer (V_INT).
 		/// Raise an error otherwise.
 		/// @exception Fail At least one operand is not an integer.
