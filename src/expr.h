@@ -17,7 +17,7 @@
 
 using namespace std;
 
-static_assert(numeric_limits<float>::is_iec559 && numeric_limits<float>::digits == 24, "error cannot cross compile on platform that does not support 32 bit IEEE 754 float.");
+static_assert(numeric_limits<float>::is_iec559 && numeric_limits<float>::digits == 24, "error cannot compile on platform that does not support 32 bit IEEE 754 float.");
 
 /// Kind of register, bit vector
 enum regType : unsigned char
@@ -64,7 +64,7 @@ struct rPUp
 };
 /// Structure for register type expressions
 struct reg_t
-{	uint8_t     Num;   ///< register number
+{	uint8_t     Num;   ///< register number, [0..63] for regfile, [0..15] for semaphore type.
 	regType     Type;  ///< register type
 	int8_t      Rotate;///< QPU element rotation [0..15], 16: >> r5, -16: << r5
 	rPUp        Pack;  ///< Pack/unpack request, see Inst::P_*, bit 6:

@@ -9,12 +9,55 @@
 #include "utils.h"
 
 #include <cstdarg>
+#include <cstdio>
 
 
-Message::Message(const char* format, ...)
-{	va_list va;
-	va_start(va, format);
-	const auto&& msg = vstringf(format, va);
-	va_end(va);
-	static_cast<string&>(*this) = msg;
+static const char* Severities[] =
+{	""
+,	"Debug: "
+,	"Info: "
+,	"Warning: "
+,	"ERROR: "
+,	"FATAL: "
+};
+
+string msgID::toString() const
+{	return stringf(Minor() ? "%s%c%u.%u" : "%s%c%u", Severities[Severity()], Source(), Major(), Minor());
+}
+
+
+const msgTemplateBase* msgTemplateBase::FindTemplateByID(const msgTemplateBase* begin, const msgTemplateBase* end, unsigned idval)
+{	idval &= ~0xff;
+	while (begin != end)
+	{	const msgTemplateBase* m = begin + ((end - begin) >> 1);
+		unsigned mval = m->ID.Value & ~0xff;
+		if (mval > idval)
+			begin = m + 1;
+		else if (mval == idval)
+			return m;
+		else
+			end = m;
+	}
+	return NULL;
+}
+
+
+string Message::toString() const noexcept
+{	return ID.toString() + " " + Text;
+}
+
+void Message::print() const
+{	if (ID.Severity() == NONE)
+		return;
+	const string& text = toString();
+	fwrite(text.data(), 1, text.length(), stderr);
+	fputc('\n', stderr);
+}
+
+void Message::printHandler(const Message& msg)
+{	msg.print();
+}
+
+const char* Message::what() const noexcept
+{	return (Buffer = toString()).c_str();
 }

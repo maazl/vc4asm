@@ -16,6 +16,11 @@
 #include <assert.h>
 
 
+// Work around because gcc can't define a constexpr struct inside a class, part 1.
+#define MSG AssembleInstMSG
+#include "AssembleInst.MSG.h"
+#undef MSG
+
 /// Core class that does the assembly process.
 class AssembleInst : private Inst
 {public: // types...
@@ -45,6 +50,25 @@ class AssembleInst : private Inst
 	,	IF_NOASWAP       = 32   ///< Do not swap ADD and MUL ALU
 	};
 	CLASSFLAGSENUM(instFlags, unsigned char);
+
+ public: // messages
+	/// Assembler message.
+	/// The lifetime of this object and it's copies must not exceed the lifetime of the Validator instance that created the message.
+	struct Message : public ::Message
+	{	const AssembleInst& Parent; ///< Message source.
+		Message(const AssembleInst& parent, msgID id, string&& text)
+		: ::Message(id, move(text)), Parent(parent) {}
+	 protected:
+		Message(const AssembleInst& parent, ::Message&& msg) : ::Message(msg), Parent(parent) {}
+		Message(const AssembleInst& parent, const ::Message& msg) : ::Message(msg), Parent(parent) {}
+	};
+
+	/// Message handler. Prints to \c stderr by default.
+	function<void(Message&& msg)> OnMessage = Message::printHandler;
+
+	// Work around because gcc can't define a constexpr struct inside a class, part 2.
+	//#include "AssembleInst.MSG.h"
+	static constexpr const struct AssembleInstMSG MSG = AssembleInstMSG;
 
  private:
 	/// Reference to a ADD \e or MUL ALU operator.
@@ -91,7 +115,7 @@ class AssembleInst : private Inst
 
  public:
 	AssembleInst() {}
-	~AssembleInst() {}
+	virtual ~AssembleInst() {}
 
 	void             reset() { Inst::reset(); UseUnpack = UsePack = IC_NONE; }
 
@@ -131,10 +155,10 @@ class AssembleInst : private Inst
 	/// @exception std::string Failed, error message.
 	int              applyMUL(opmul op);
 	/// @brief Apply register as ALU target.
-	/// @param reg Register to write to.
+	/// @param val Register to write to.
 	/// @pre The target ALU is taken from InstCtx. The ALU selected by InstCtx must be available.
 	/// @exception Message Failed, error message.
-	void             applyTarget(reg_t reg);
+	void             applyTarget(exprValue val);
 	/// @brief Apply value as ALU source.
 	/// @param val value.
 	/// @pre Sig < S_LDI, the source multiplexer is taken from InstCtx.
@@ -166,8 +190,9 @@ class AssembleInst : private Inst
 	void             prepareBRANCH(bool relative);
 	/// Handle source argument of branch instruction.
 	/// @param val contains the source value to apply.
-	/// @return Branch instruction is likely to be a branch with link,
-	/// i.e. the instruction after the branch point (PC+3) is likely to be a branch target.
+	/// @param pc Current program counter for calculation of label targets.
+	/// @return Branch instruction is a conditional branch or likely to be a branch with link,
+	/// i.e. the instruction after the branch point \c (pc+3) is likely to be a branch target.
 	/// @exception Message Failed, error message.
 	bool             applyBranchSource(exprValue val, unsigned pc);
 
@@ -182,16 +207,26 @@ class AssembleInst : private Inst
 	using            Inst::encode;
 	using            Inst::decode;
 
- private:
-	/// Enrich the formatted message and throws the result as std::string.
-	/// @param fmt printf like format string.
-	[[noreturn]] virtual void Fail(const char* fmt, ...) PRINTFATTR(2) = 0;
-	/// Enrich the formatted message and write the result to stderr.
-	/// @param level Severity level.
-	/// @param fmt printf like format string.
-	virtual void     Msg(severity level, const char* fmt, ...) PRINTFATTR(3) = 0;
+ protected: // messages
+	/// Throw an exception message. You might override this function to throw something else.
+	/// But whatever you implement must not return.
+	[[noreturn]] virtual void ThrowMessage(Message&& msg) const;
+	/// @brief Throw an assembler error.
+	/// @param msg Message template
+	/// @remarks gcc will complain about the noreturn attribute. There is AFAIK no way to get rid of this warnings.
+	/// You can safely ignore them.
+	template <typename ...A>
+	[[noreturn]] void Fail(const msgTemplate<A...> msg, A... a) const
+	{	ThrowMessage(Message(*this, msg.ID, msg.format(a...))); }
+	/// @brief Create an assembler warning.
+	/// @param msg Message template
+	template <typename ...A>
+	void Msg(const msgTemplate<A...> msg, A... a) const
+	{	OnMessage(Message(*this, msg.ID, msg.format(a...))); }
 
+ private:
 	/// Fetch QPU value from vc4asm expression.
+	/// @param value Value to convert, must be of type V_INT, V_FLOAT or V_LDPE*.
 	/// @exception Message Failed, error message.
 	qpuValue         QPUValue(const exprValue& value);
 	/// @brief Find the first potential match for an ALU instruction that can assign an immediate value using small immediates.

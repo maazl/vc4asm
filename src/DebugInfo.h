@@ -17,7 +17,7 @@ struct DebugInfo
 	{	uint16_t       File; ///< Source file containing the line. This is only an index into SourceFiles.
 		uint16_t       Line; ///< Line number in the source file
 		location()     : File(0), Line(0) {}///< create uninitialized instance, assign File and Line by yourself
-		bool operator !() const { return !Line; }///< Is this instance not initialized, i.e. Line == 0
+		operator bool_only() const { return (bool_only)!!Line; }///< Is this instance initialized, i.e. Line != 0
 	};
 
 	/// Label instance
@@ -56,7 +56,7 @@ struct DebugInfo
 	struct segment
 	{	unsigned       Start; ///< Start index of the segment properties as index into Instructions.
 		uint8_t        Flags; ///< Segment flags
-		segment() {}
+		segment() {}          ///< Required by vector<>
 		segment(int start, uint8_t flags) : Start(start), Flags(flags) {}
 	};
 
@@ -75,6 +75,9 @@ struct DebugInfo
 	vector<location> LineNumbers;
 	/// Segment properties ordered by Start address.
 	vector<segment>  Segments;
+
+	/// Get name of file ID.
+	const char*      fName(uint16_t file) const { return SourceFiles[file].Name.c_str(); }
 };
 
 #endif

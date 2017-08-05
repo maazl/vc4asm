@@ -8,11 +8,13 @@
 #include "Eval.h"
 #include "Inst.h"
 #include "utils.h"
-
 #include <cmath>
 #include <cstdlib>
 #include <cstdarg>
 #include <climits>
+
+
+constexpr const struct EvalMSG Eval::MSG;
 
 
 Eval::operate::operate(vector<exprEntry>& stack)
@@ -23,9 +25,9 @@ Eval::operate::operate(vector<exprEntry>& stack)
 
 void Eval::operate::TypesFail()
 {	if (isUnary(lhs.Op))
-		throw Message("Cannot apply unary operator %s to operand of type %s.", op2string(lhs.Op), type2string(rhs.Type));
+		throw MSG.UNARY_OP_WRONG_TYPE.toMsg(op2string(lhs.Op), type2string(rhs.Type));
 	else
-		throw Message("Cannot apply operator %s to operands of type %s and %s.", op2string(lhs.Op), type2string(lhs.Type), type2string(rhs.Type));
+		throw MSG.BINARY_OP_WRONG_TYPES.toMsg(op2string(lhs.Op), type2string(lhs.Type), type2string(rhs.Type));
 }
 
 void Eval::operate::CheckInt()
@@ -137,11 +139,11 @@ bool Eval::operate::Apply(bool unary)
 
 	switch (lhs.Op)
 	{default:
-		throw Message("internal parser error");
+		throw MSG.INTERNAL_ERROR.toMsg();
 	 case BRO:
 		switch (rhs.Op)
 		{case EVAL:
-			throw Message("Incomplete expression: missing ')'.");
+			throw MSG.MISSING_CLOSING_BRACE.toMsg();
 		 case BRC:
 			lhs.Op = NOP; // closing brace cancels opening brace
 			lhs.iValue = rhs.iValue;
@@ -167,7 +169,7 @@ bool Eval::operate::Apply(bool unary)
 		 case V_LDPE:
 			sh = (rhs.iValue & 0x55555555U) << 1;
 			if (rhs.iValue & sh)
-				throw Message("Cannot negate per element value set containing a value of 3.");
+				throw MSG.CANNOT_NEGATE_PES3.toMsg();
 			lhs.iValue = rhs.iValue | sh;
 			lhs.Type = V_LDPES;
 			break;
@@ -175,7 +177,7 @@ bool Eval::operate::Apply(bool unary)
 			sh = (rhs.iValue & 0x55555555U) << 1;
 			lhs.iValue = rhs.iValue | sh;
 			if (lhs.iValue & sh)
-				throw Message("Cannot negate per element value set containing a value of -2.");
+				throw MSG.CANNOT_NEGATE_PESm2.toMsg();
 			break;
 		}
 		break;
@@ -299,10 +301,12 @@ bool Eval::operate::Apply(bool unary)
 		 case 1<<V_REG | 1<<V_INT:
 			if (rhs.Type == V_REG)
 				swap((exprValue&)lhs, (exprValue&)rhs);
-			if ( rhs.iValue < -64 || rhs.iValue > 64
-				|| (lhs.rValue.Num += (uint8_t)rhs.iValue) > 63
-				|| ((lhs.rValue.Type & R_SEMA) && lhs.rValue.Num > 15) )
-				throw Message("Register number out of range.");
+			rhs.iValue += lhs.rValue.Num;
+		 regaddcont:
+			if ( rhs.iValue < 0 || rhs.iValue > 63
+				|| ((lhs.rValue.Type & R_SEMA) && (uint8_t)rhs.iValue > 15) )
+				throw MSG.REGNO_OUT_OF_RANGE.toMsg(rhs.iValue);
+			lhs.rValue.Num = (uint8_t)rhs.iValue;
 			break;
 		} break;
 	 case SUB:
@@ -325,11 +329,8 @@ bool Eval::operate::Apply(bool unary)
 		 case 1<<V_REG | 1<<V_INT:
 			if (rhs.Type == V_REG)
 				TypesFail();
-			if ( rhs.iValue < -64 || rhs.iValue > 64
-				|| (lhs.rValue.Num -= (uint8_t)rhs.iValue) > 63
-				|| ((lhs.rValue.Type & R_SEMA) && lhs.rValue.Num > 15) )
-				throw Message("Register number out of range.");
-			break;
+			rhs.iValue = lhs.rValue.Num - rhs.iValue;
+			goto regaddcont;
 		} break;
 	 case ASL:
 	 case ROL32:
@@ -350,13 +351,13 @@ bool Eval::operate::Apply(bool unary)
 			break;
 		 case 1<<V_REG:
 			if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate || rhs.rValue.Pack)
-				throw Message("Vector rotation are only allowed by constant or by r5");
+				throw MSG.ROT_REGISTER_NOT_R5.toMsg();
 			lhs.rValue.Rotate = 16;
 			break;
 		 case 1<<V_REG | 1<<V_INT:
 			if (lhs.Type == V_REG)
 			{	if (lhs.rValue.Rotate & ~0xf)
-					throw Message("Cannot apply additional offset to r5 vector rotation");
+					throw MSG.ROT_REGISTER_AND_VALUE.toMsg();
 				lhs.rValue.Rotate = (lhs.rValue.Rotate + rhs.iValue) & 0xf;
 				break;
 			}
@@ -382,13 +383,13 @@ bool Eval::operate::Apply(bool unary)
 			break;
 		 case 1<<V_REG:
 			if (lhs.rValue.Rotate || rhs.rValue.Num != 32+5 || rhs.rValue.Type != R_AB || rhs.rValue.Rotate)
-				throw Message("Vector rotation are only allowed by constant or by r5");
+				throw MSG.ROT_REGISTER_NOT_R5.toMsg();
 			lhs.rValue.Rotate = -16;
 			break;
 		 case 1<<V_REG | 1<<V_INT:
 			if (lhs.Type == V_REG)
 			{	if (lhs.rValue.Rotate & ~0xf)
-					throw Message("Cannot apply additional offset to r5 vector rotation");
+					throw MSG.ROT_REGISTER_AND_VALUE.toMsg();
 				lhs.rValue.Rotate = (lhs.rValue.Rotate - rhs.iValue) & 0xf;
 				break;
 			}
@@ -486,7 +487,7 @@ bool Eval::partialEvaluate(bool unary)
 	{	if (Stack.size() <= 1)
 		{	if (Stack.back().Op == BRC) // closing brace w/o opening brace, might not belong to our expression
 			{	if (Stack.back().Type == V_NONE)
-					throw Message("Incomplete expression: expected value.");
+					throw MSG.MISSING_VALUE.toMsg();
 				return false;
 			}
 			return true;
@@ -503,7 +504,7 @@ bool Eval::PushOperator(mathOp op)
 	current.Op = op;
 	if (isUnary(op))
 	{	if (current.Type != V_NONE)
-			throw Message("Unexpected unary operator %s after numeric expression.", op2string(op));
+			throw MSG.UNARY_OP_AFTER_VALUE.toMsg(op2string(op));
 	 unary:
 		Stack.emplace_back();
 		return true;
@@ -511,7 +512,7 @@ bool Eval::PushOperator(mathOp op)
 	{	if (current.Type == V_NONE)
 			switch (op)
 			{default:
-				throw Message("Binary operator %s needs left hand side expression.", op2string(op));
+				throw MSG.BINARY_OP_WO_LHS_VALUE.toMsg(op2string(op));
 			 case ADD:
 				current.Op = NOP;
 				goto unary;
@@ -531,7 +532,7 @@ bool Eval::PushOperator(mathOp op)
 void Eval::PushValue(const exprValue& value)
 {	exprEntry& current = Stack.back();
 	if (current.Type != V_NONE)
-		throw Message("Missing operator before value '%s'.", value.toString().c_str());
+		throw MSG.MISSING_OP_BEFORE_VALUE.toMsg(value.toString().c_str());
 	(exprValue&)current = value; // assign slice
 	partialEvaluate(true);
 }
@@ -548,7 +549,7 @@ exprValue Eval::Evaluate()
 			current.rValue.Pack.reset();
 			return current;
 		}
-		throw Message("Incomplete expression: expected value.");
+		throw MSG.MISSING_VALUE.toMsg();
 	}
 	current.Op = EVAL;
 	partialEvaluate(false);

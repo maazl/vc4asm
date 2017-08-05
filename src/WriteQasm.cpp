@@ -11,7 +11,7 @@
 
 WriteQasm::WriteQasm(FILE* target, Disassembler& disasm, comments opt)
 :	WriterBase(target), Disasm(disasm), Comment(opt)
-{	Disasm.OnMessage = [this](const Message& msg) { /*fputs(msg.c_str(), stderr); fputc('\n', stderr);*/ SuspiciousInstruction = true; };
+{	Disasm.OnMessage = [this](const Message& msg) { /*fputs(msg.c_str(), stderr); fputc('\n', stderr);*/ if (msg.ID.Severity() >= WARN) SuspiciousInstruction = true; };
 }
 
 void WriteQasm::Write(const vector<uint64_t>& instructions, unsigned base, const DebugInfo* info)

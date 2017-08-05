@@ -27,27 +27,27 @@
 #endif
 
 
+constexpr const struct AssembleInstMSG AssembleInst::MSG;
+
+
+void AssembleInst::ThrowMessage(Message&& msg) const
+{	throw move(msg);
+}
+
+
 qpuValue AssembleInst::QPUValue(const exprValue& value)
 {	qpuValue ret;
-	switch (value.Type)
-	{default:
-		throw stringf("Value of type %s cannot be used for QPU evaluation. Only constants are allowed.", type2string(value.Type));
-
-	 case V_LDPES:
-	 case V_LDPE:
-	 case V_LDPEU:
-	 case V_INT:
-		if (value.iValue < -0x80000000LL || value.iValue > 0xffffffffU)
-			Fail("Integer constant 0x%" PRIx64 " out of range for use as QPU constant.", value.iValue);
-		ret.iValue = (int32_t)value.iValue;
-		break;
-
-	 case V_FLOAT:
-		if (fabs(value.fValue) > FLT_MAX && !std::isinf(value.fValue))
-		{	Msg(WARNING, "Floating point constant %f does not fit into 32 bit float.", value.fValue);
+	if (value.Type == V_FLOAT)
+	{	if (fabs(value.fValue) > FLT_MAX && !std::isinf(value.fValue))
+		{	Msg(MSG.FLOAT_OUT_OF_RANGE, value.fValue);
 			ret.fValue = value.fValue > 0 ? INFINITY : -INFINITY;
 		} else
 			ret.fValue = (float)value.fValue;
+	} else
+	{	assert(value.Type <= V_LDPEU && value.Type >= V_INT); // Type cannot be used for QPU evaluation.
+		if (value.iValue < -0x80000000LL || value.iValue > 0xffffffffU)
+			Fail(MSG.INT_OUT_OF_RANGE, value.iValue);
+		ret.iValue = (int32_t)value.iValue;
 	}
 	return ret;
 }
@@ -74,12 +74,12 @@ void AssembleInst::setMux(mux val)
 Inst::mux AssembleInst::muxReg(reg_t reg)
 {
 	if (reg.Type & R_SEMA)
-		Fail("Cannot use semaphore source in ALU or read instruction.");
+		Fail(MSG.NO_SEMA_SOURCE);
 	if (!(reg.Type & R_READ))
 	{	// direct read access for r0..r5.
 		if ((reg.Num ^ 32U) <= 5U)
 			return (mux)(reg.Num ^ 32);
-		Fail("The register is not readable.");
+		Fail(MSG.SRC_REGISTER_NO_READ);
 	}
 	// try RA
 	if (reg.Type & R_A)
@@ -96,7 +96,7 @@ Inst::mux AssembleInst::muxReg(reg_t reg)
 	// try RB
 	if (reg.Type & R_B)
 	{	if (Sig >= S_SMI)
-			Fail("Access to register file B conflicts with small immediate value.");
+			Fail(MSG.NO_REGB_VS_SMI);
 		if ( RAddrB == reg.Num
 			|| ( MuxAA != X_RB && MuxAB != X_RB
 				&& MuxMA != X_RB && MuxMB != X_RB ))
@@ -123,7 +123,7 @@ Inst::mux AssembleInst::muxReg(reg_t reg)
 			&& !(Flags & IF_NORSWAP) && tryRABSwap() )
 			goto RB;
 	}
-	Fail("Read access to register conflicts with another access to the same register file.");
+	Fail(MSG.NO_REG_VS_REG);
 }
 
 const AssembleInst::smiEntry* AssembleInst::getSmallImmediateALU(uint32_t i)
@@ -142,7 +142,7 @@ const AssembleInst::smiEntry* AssembleInst::getSmallImmediateALU(uint32_t i)
 void AssembleInst::doSMI(uint8_t si)
 {	switch (Sig)
 	{default:
-		Fail("Small immediate value or vector rotation cannot be used together with signals.");
+		Fail(MSG.NO_SMI_VS_SIGNAL);
 	 case S_SMI:
 		if (SImmd == si)
 			return; // value hit
@@ -152,12 +152,12 @@ void AssembleInst::doSMI(uint8_t si)
 			SImmd |= si;
 			return;
 		}
-		Fail("Only one distinct small immediate value supported per instruction. Requested value: %u, current Value: %u.", si, SImmd);
+		Fail(MSG.NO_SMI_VS_SMI, si, SImmd);
 	 case S_NONE:
 		if (RAddrB != R_NOP)
-			Fail("Small immediate cannot be used together with register file B read access.");
+			Fail(MSG.NO_SMI_VS_REGB);
 	}
-	Sig  = S_SMI;
+	Sig = S_SMI;
 	SImmd = si;
 }
 
@@ -165,23 +165,23 @@ void AssembleInst::applyRot(int count)
 {
 	if (count)
 	{	if (UseRot & (IC_OP | (InstCtx & IC_SRC)))
-			Fail("Only one vector rotation per instruction, please.");
+			Fail(MSG.NO_2ND_ROT);
 
 		if ((InstCtx & IC_BOTH) != IC_MUL && !tryALUSwap())
-			Fail("Vector rotation is only available to the MUL ALU.");
+			Fail(MSG.ROT_REQIURES_MUL_ALU);
 		if (count == 16)
-			Fail("Cannot rotate ALU target right by r5.");
+			Fail(MSG.NO_ROTR_BY_R5);
 
 		Flags |= IF_NOASWAP;
 		bool isB = (InstCtx & IC_SRCB) != 0;
 		auto mux = isB ? MuxMB : MuxMA;
 		if (mux == X_R5)
-			Msg(WARNING, "r5 does not support vector rotations.");
+			Msg(MSG.NO_ROT_OF_R5);
 
 		count = 48 + (count & 0xf);
 		auto isaccu = isAccu(mux);
 		if (!isaccu && count > 48+3 && count < 64-3)
-			Msg(WARNING, "%s does not support full MUL ALU vector rotation.", toString(mux));
+			Msg(MSG.NO_FULL_ROT, toString(mux));
 
 		if (Sig == S_SMI)
 		{	int mask = !isaccu
@@ -202,9 +202,7 @@ void AssembleInst::applyRot(int count)
 							SImmd = si->SImmd;
 							goto gotit;
 				}	}	}
-				Fail( SImmd < 48
-					? "Vector rotation is in conflict with small immediate value."
-					: "Cannot use different vector rotations within one instruction." );
+				Fail(SImmd < 48 ? MSG.NO_ROT_VS_SMI : MSG.NO_ROT_VS_ROT);
 			}
 		 gotit:
 			if (!isaccu)
@@ -216,14 +214,14 @@ void AssembleInst::applyRot(int count)
 		if ( (InstCtx & IC_SRC) == IC_SRCB
 			&& (Sig != S_SMI || SImmd < 48)
 			&& (isAccu(MuxMA) || (count & 0x3) || !count) )
-			Msg(WARNING, "The Vector rotation of the second MUL ALU source argument silently applies also to the first source.");
+			Msg(MSG.ROT_SRC2_APPLIES_TO_SRC1);
 
 		UseRot |= InstCtx;
 		doSMI(count);
 
 	} else if ( (InstCtx & IC_SRCB) && (UseRot & IC_SRCA)
 			&& (isAccu(MuxMB) || (SImmd & 0x3) || SImmd == 48) )
-		Msg(WARNING, "The vector rotation of the first MUL ALU source argument silently applies also to the second argument.");
+		Msg(MSG.ROT_SRC1_APPLIES_TO_SRC2);
 }
 
 void AssembleInst::applyPackUnpack(rPUp mode)
@@ -231,14 +229,14 @@ void AssembleInst::applyPackUnpack(rPUp mode)
 	switch (mode.requestType())
 	{case rPUp::UNPACK:
 		if (InstCtx & IC_DST)
-			Fail("Unpack cannot be used in target context.");
+			Fail(MSG.NO_UNPACK_TARGET);
 	 unpack:
 		doUnpack(mode.asUnPack());
 		break;
 
 	 case rPUp::PACK:
 		if (InstCtx & IC_SRC)
-			Fail("Register pack cannot be used in source context.");
+			Fail(MSG.NO_PACK_SOURCE);
 	 pack:
 		doPack(mode.asPack());
 		break;
@@ -301,7 +299,7 @@ void AssembleInst::checkUnpack()
 		break;
 	 case U_INT:
 		if (floatin)
-			Fail("The requested unpack mode is only supported by instructions that take integer input.");
+			Fail(MSG.NO_UNPACK_TO_FLOAT);
 		break;
 	 case U_FLT:
 		if (!floatin)
@@ -311,7 +309,7 @@ void AssembleInst::checkUnpack()
 				&& OpA == A_OR )
 				OpA = A_FMIN;
 			else
-				Fail("The requested unpack mode is only supported by instructions that take floating point input.");
+				Fail(MSG.NO_UNPACK_TO_INT);
 		}
 	}
 	// Stage 2: check the other ALU
@@ -333,9 +331,9 @@ void AssembleInst::checkUnpack()
 	}
 	if (otherfloatin == !floatin)
 	{	if (floatin)
-			Fail("Using unpack with floating point input changes the behavior of the unpack operation of the other ALU.");
+			Fail(MSG.FLOAT_UNPACK_AFFECTS_OTHER_ALU);
 		else
-			Fail("Unpack of the other ALU with a floating point instruction prevents access to the integer unpack modes.");
+			Fail(MSG.FLOAT_UNPACK_PREVENTS_INT_UNPACK);
 	}
 }
 
@@ -343,9 +341,9 @@ void AssembleInst::applyPM(bool pm)
 {	if (PM == pm)
 		return; // match
 	if (Pack)
-		Fail("Required unpack mode conflicts with pack mode of this instruction.");
+		Fail(MSG.NO_UNPACK_VS_PACK);
 	if (Unpack && (UseUnpack & ~InstCtx & (IC_SRC|IC_BOTH)))
-		Fail("Required unpack mode conflicts previous unpack mode.");
+		Fail(MSG.NO_UNPACK_VS_UNPACK);
 	PM = pm;
 }
 
@@ -360,7 +358,7 @@ void AssembleInst::doUnpack(unpack mode)
 			int pm2 = calcPM(Unpack);
 			if (pm >= 0 && pm2 < 0)
 			{	if ((InstCtx & IC_SRC) == IC_SRCB && isUnpackable(InstCtx & IC_MUL ? MuxMA : MuxAA) == !pm)
-					Fail("Ambiguous (un)pack mode. Unpack could apply to both source arguments.");
+					Fail(MSG.AMBIGUOUS_UNPACK);
 				applyPM((bool)pm);
 				checkUnpack();
 				UseUnpack |= InstCtx;
@@ -376,52 +374,52 @@ void AssembleInst::doUnpack(unpack mode)
 				if ( (InstCtx & IC_SRCB) // last source arg
 					&& isUnpackable(MuxMA) != PM && isUnpackable(MuxMB) != PM )
 				 nounpack:
-					Msg(WARNING, "The unpack option does not apply to any source argument.");
+					Msg(MSG.UNUSED_UNPACK);
 			 default:;
 			}
 		} else
 		{	// no unpack at current context...
 			// ensure that no unpack silently applies.
 			if ((UseUnpack & (~InstCtx & IC_BOTH)) && PM == isUnpackable(currentMux()))
-				Fail("The unpack option from the other ALU silently applies.");
+				Fail(MSG.UNPACK_APPLIES_FORM_OTHER_ALU);
 			if ((InstCtx & IC_SRCB) && (UseUnpack & IC_SRCA) && PM == isUnpackable(currentMux()))
-				Msg(WARNING, "The unpack option silently applies to 2nd source argument.");
+				Msg(MSG.UNPACK_APPLIES_TO_SRC2);
 		}
 		return;
 	}
 
 	if (!isALU())
-		Fail("Cannot apply .unpack to branch and load immediate instructions.");
+		Fail(MSG.NO_UNPACK_VS_BRANCH_LDI);
 	if (UseUnpack & (InstCtx|IC_OP) & (IC_OP|IC_SRC))
-		Fail("Only one .unpack per ALU instruction, please.");
+		Fail(MSG.NO_2ND_UNPACK);
 	// determine PM bit
 	pm = calcPM(mode);
 	if ((InstCtx & IC_SRC) && (InstCtx & IC_BOTH))
 	{	int pm2 = isUnpackable(currentMux());
 		if (pm2 < 0)
-			Fail("Cannot unpack this source argument.");
+			Fail(MSG.NO_UNPACK_SRC);
 		if ((!pm2) == pm)
-			Fail("The requested unpack mode is not supported by this source argument.");
+			Fail(MSG.NO_UNPACK_MODE_SRC);
 		pm = pm2;
 	}
 	// apply unpack mode to *this
 	if (pm >= 0)
 		applyPM((bool)pm);
 	else if (!Pack && !Unpack)
-		Msg(INFO, "Indeterminate unpack mode.");
+		Msg(MSG.INDETERMINATE_UNPACK);
 
 	if (Unpack != U_32 && ((Unpack ^ mode) & 7))
-		Fail("Cannot use different unpack modes within one instruction.");
+		Fail(MSG.NO_UNPACK_VS_UNPACK);
 	Unpack = mode;
 	checkUnpack();
 	UseUnpack |= InstCtx;
 	// Check whether unpack applies unexpectedly to another argument.
 	if ((InstCtx & IC_SRCB) && !(UseUnpack & (IC_OP|IC_SRCA)) && PM == isUnpackable(getMux(InstCtx ^ IC_SRC)))
-		Msg(WARNING, "The unpack option silently applies to 1st source argument.");
+		Msg(MSG.UNPACK_APPLIES_TO_SRC1);
 	if ( (InstCtx | (IC_OP|IC_SRCA)) && ( InstCtx & IC_MUL
 			? !(UseUnpack & IC_ADD) && isADD() && (isUnpackable(MuxAA) == PM || (!isUnary() && isUnpackable(MuxAB) == PM))
 			: !(UseUnpack & IC_MUL) && isMUL() && (isUnpackable(MuxMB) == PM || isUnpackable(MuxMA) == PM) ))
-		Fail("Using unpack changes the semantic of the other ALU.");
+		Fail(MSG.UNPACK_APPLIES_TO_OTHER_ALU);
 }
 
 void AssembleInst::doPack(pack mode)
@@ -432,9 +430,9 @@ void AssembleInst::doPack(pack mode)
 		mode = Pack;
 	} else
 	{	if (Sig == S_BRANCH)
-			Fail("Cannot apply .pack to branch instruction.");
+			Fail(MSG.NO_PACK_BRANCH_LDI);
 		if (Pack)
-			Fail("Only one .pack per instruction, please.");
+			Fail(MSG.NO_2ND_PACK);
 	}
 	// handle pack mode
 	{	int pm = calcPM(mode);
@@ -452,39 +450,39 @@ void AssembleInst::doPack(pack mode)
 				if (!pm && Unpack)
 					goto applyPack;
 				if (pm && !tryALUSwap())
-					Fail("Target of ADD ALU must be of regfile A to use pack.");
+					Fail(MSG.ADD_ALU_PACK_NEEDS_REGA);
 			}
 			break; // apply PM
 
 		 case true: // MUL ALU
 			if (!(InstCtx & IC_MUL) && !tryALUSwap())
-				Fail("The requested pack mode is only supported by the MUL ALU.");
+				Fail(MSG.PACK_MODE_REQUIRES_MUL_ALU);
 		 case false:; // reg A
 		}
 		// apply PM
 		if (pm != PM)
 		{	if (Unpack)
-				Fail("Required pack mode conflicts with unpack mode of this instruction.");
+				Fail(MSG.NO_PACK_VS_UNPACK);
 			PM = pm;
 		}
 	}
  applyPack:
 	if ((InstCtx & IC_DST) && !PM)
 	{	if (InstCtx & IC_MUL ? (!WS || WAddrM >= 32) : (WS || WAddrA >= 32))
-			Fail("This pack mode requires regfile A target.");
+			Fail(MSG.PACK_MODE_REQUIRES_REGA);
 		// check for int/float
 		if ( (mode & (P_INT|P_FLT))
 			&& (unsigned)(mode & (P_16a|P_16b|P_8a)) - P_16a <= P_16b - P_16a ) // 16 bit pack mode
 		{	bool isfloat = isFloatResult(InstCtx & IC_MUL);
 			if (!(mode & P_FLT) == isfloat)
 			{	if (isfloat)
-					Fail("This pack mode requires the result of an integer instruction.");
+					Fail(MSG.PACK_MODE_REQUIRES_INT);
 				/* TODO: in case of mov instruction and ADD ALU change opcode to fmin.
 				else if ( (InstCtx & IC_SRC) == IC_SRC // hack for mov instruction
 					&& ((InstCtx & IC_ADD) || (tryALUSwap() && OpA == A_OR)) )
 					OpA = A_FMIN;*/
 				else
-					Fail("This pack mode requires the result of a floating point instruction.");
+					Fail(MSG.PACK_MODE_REQUIRES_FLOAT);
 			}
 		}
 	}
@@ -500,10 +498,10 @@ bool AssembleInst::trySmallImmd(uint32_t value)
 	} else
 	{	switch (Sig)
 		{default:
-			Fail("Immediate values cannot be used together with signals.");
+			Fail(MSG.NO_IMMD_VS_SIGNAL);
 		 case S_NONE:
 			if (RAddrB != R_NOP)
-				Fail("Immediate value collides with read from register file B.");
+				Fail(MSG.NO_IMMD_VS_REGB);
 		 case S_SMI:;
 		}
 
@@ -568,10 +566,10 @@ bool AssembleInst::trySmallImmd(uint32_t value)
 void AssembleInst::applyIf(conda cond)
 {
 	if (Sig == S_BRANCH)
-		Fail("Cannot apply conditional store (.ifxx) to branch instruction.");
+		Fail(MSG.NO_IFCC_VS_BRANCH);
 	auto& target = InstCtx & IC_MUL ? CondM : CondA;
 	if (target != C_AL)
-		Fail("Store condition (.if) already specified.");
+		Fail(MSG.NO_2ND_IFCC);
 	target = cond;
 }
 
@@ -580,9 +578,9 @@ void AssembleInst::applySetF()
 	if ( Sig < S_LDI && (InstCtx & IC_MUL)
 		&& (WAddrA != R_NOP || OpA != A_NOP)
 		&& !tryALUSwap() )
-		Fail("Cannot apply .setf because the flags of the ADD ALU will be used.");
+		Fail(MSG.NO_MUL_SETF_VS_ADD);
 	if (SF)
-		Fail("Don't use .setf twice.");
+		Fail(MSG.NO_2ND_SETF);
 	SF = true;
 	Flags |= IF_NOASWAP;
 }
@@ -590,19 +588,19 @@ void AssembleInst::applySetF()
 void AssembleInst::applyCond(condb cond)
 {
 	if (Sig != S_BRANCH)
-		Fail("Branch condition codes can only be applied to branch instructions.");
+		Fail(MSG.BCC_REQUIRES_BRANCH);
 	if (CondBr != B_AL)
-		Fail("Only one branch condition per instruction, please.");
+		Fail(MSG.NO_2ND_BCC);
 	CondBr = cond;
 }
 
 int AssembleInst::applyADD(opadd add_op)
 {	if (!isALU())
-		Fail("Cannot use ADD ALU in load immediate or branch instruction.");
+		Fail(MSG.NO_ADD_VS_BRANCH_LDI);
 	if (isADD())
 	{	if (isMUL())
 		{fail:
-			Fail("The ADD ALU has already been used in this instruction.");
+			Fail(MSG.ADD_ALU_IN_USE);
 		}
 		switch (add_op)
 		{case A_NOP:
@@ -626,11 +624,11 @@ int AssembleInst::applyADD(opadd add_op)
 
 int AssembleInst::applyMUL(opmul mul_op)
 {	if (!isALU())
-		Fail("Cannot use MUL ALU in load immediate or branch instruction.");
+		Fail(MSG.NO_MUL_VS_BRANCH_LDI);
 	if (isMUL())
 	{	if (isADD())
 		{fail:
-			Fail("The MUL ALU has already been used by the current instruction.");
+			Fail(MSG.MUL_ALU_IN_USE);
 		}
 		switch (mul_op)
 		{case M_NOP:
@@ -652,26 +650,31 @@ int AssembleInst::applyMUL(opmul mul_op)
 	return 2 * (mul_op != M_NOP);
 }
 
-void AssembleInst::applyTarget(reg_t reg)
+void AssembleInst::applyTarget(exprValue val)
 {
+	if (val.Type != V_REG)
+		Fail(MSG.TARGET_NEEDS_REG, val.toString().c_str());
+	if (!(val.rValue.Type & R_WRITE))
+		Fail(MSG.TARGET_REGISTER_NO_WRITE);
+
 	bool mul = (InstCtx & IC_MUL) != 0;
-	if ((reg.Type & R_AB) != R_AB)
+	if ((val.rValue.Type & R_AB) != R_AB)
 	{	bool wsfreeze = !isWRegAB(mul ? WAddrA : WAddrM); // Can't swap the other target register.
-		if ((reg.Type & R_A) && (!wsfreeze || WS == mul))
+		if ((val.rValue.Type & R_A) && (!wsfreeze || WS == mul))
 			WS = mul;
-		else if ((reg.Type & R_B) && (!wsfreeze || WS != mul))
+		else if ((val.rValue.Type & R_B) && (!wsfreeze || WS != mul))
 			WS = !mul;
 		else
-			Fail("ADD ALU and MUL ALU cannot write to the same register file.");
+			Fail(MSG.NO_SAME_REGFILE_WRITE);
 	}
-	(mul ? WAddrM : WAddrA) = reg.Num;
+	(mul ? WAddrM : WAddrA) = val.rValue.Num;
 	// Check pack mode from /this/ opcode if any
 	if ( Sig != S_BRANCH && Pack != P_32
 		&& PM == mul && !(!mul && WS) ) // Pack matches my ALU and not RA pack of MUL ALU.
 	{	if (!mul)
 		{	if (!WS && WAddrA < 32)
 				goto packOK;
-			Fail("ADD ALU can only pack with regfile A target.");
+			Fail(MSG.ADD_ALU_PACK_NEEDS_REGA);
 		}
 		// MUL ALU => prefer Regfile A pack
 		if (WS && WAddrA < 32 && !Unpack) // Regfile A write and pack mode not frozen.
@@ -679,21 +682,19 @@ void AssembleInst::applyTarget(reg_t reg)
 			goto packOK;
 		}
 		if (Pack < P_8abcdS)
-			Fail("MUL ALU only supports saturated pack modes with 8 bit.");
-		// MUL ALU encodes saturated pack modes like unsaturated
-		(uint8_t&)Pack &= 7;
+			Fail(MSG.MUL_ALU_PACK_REQUIRES_8BIT_SAT);
 	}
  packOK:
 
-	applyRot(reg.Rotate);
-	applyPackUnpack(reg.Pack);
+	applyRot(val.rValue.Rotate);
+	applyPackUnpack(val.rValue.Pack);
 }
 
 void AssembleInst::applyALUSource(exprValue val)
 {
 	switch (val.Type)
 	{default:
-		Fail("The second argument of a binary ALU instruction must be a register or a small immediate value.");
+		Fail(MSG.ALU_SRC_NEEDS_REG_OR_SMI, type2string(val.Type));
 	 case V_REG:
 		setMux(muxReg(val.rValue));
 		applyPackUnpack(val.rValue.Pack);
@@ -723,7 +724,7 @@ void AssembleInst::applyALUSource(exprValue val)
 		}
 		uint8_t si = AsSMIValue(value);
 		if (si == 0xff)
-			Fail("Value 0x%x does not fit into the small immediate field.", value.uValue);
+			Fail(MSG.NO_SMI_VALUE, value.uValue);
 		doSMI(si);
 		setMux(X_RB);
 	}
@@ -732,19 +733,19 @@ void AssembleInst::applyALUSource(exprValue val)
 void AssembleInst::prepareMOV(bool target2)
 {
 	if (Sig == S_BRANCH)
-		Fail("Cannot combine mov, ldi or semaphore instruction with branch.");
+		Fail(MSG.NO_LDI_VS_BRANCH);
 	bool isLDI = Sig == S_LDI;
 	if (target2)
 	{	if (InstCtx != IC_BOTH)
-			Fail("amov/mmov cannot write two target registers.");
+			Fail(MSG.AMOV_MMOV_NO_2ND_TARGET);
 		if ( ((Flags & IF_HAVE_NOP) || WAddrA != R_NOP || (!isLDI && OpA != A_NOP))
 			|| (WAddrM != R_NOP || (!isLDI && OpM != M_NOP)) )
-			Fail("Instruction with two targets can only be used if both ALUs are available.");
+			Fail(MSG.TWO_TARGETS_REQUIRE_BOTH_ALU);
 		Flags |= IF_NOASWAP;
 		InstCtx = IC_OP|IC_ADD;
 	} else
 	{	if (isLDI && InstCtx != IC_BOTH)
-			Fail("Cannot combine amov, mmov with ldi or semaphore instruction.");
+			Fail(MSG.NO_AMOV_MMOV_VS_LDI);
 		bool addused = (Flags & IF_HAVE_NOP) || WAddrA != R_NOP || (!isLDI && OpA != A_NOP);
 		bool mulused = WAddrM != R_NOP || (!isLDI && OpM != M_NOP);
 		switch (InstCtx)
@@ -754,17 +755,17 @@ void AssembleInst::prepareMOV(bool target2)
 			else if (!mulused)
 				goto mul;
 			else
-				Fail("Both ALUs are already used by the current instruction.");
+				Fail(MSG.BOTH_ALU_IN_USE);
 		 case IC_ADD:
 			if (addused && (mulused || !tryALUSwap()))
-				Fail("The ADD ALU has already been used in this instruction.");
+				Fail(MSG.ADD_ALU_IN_USE);
 			Flags |= IF_NOASWAP;
 		 add:
 			InstCtx = IC_ADD|IC_OP;
 			break;
 		 case IC_MUL:
 			if (mulused && (addused || !tryALUSwap()))
-				Fail("The MUL ALU has already been used in this instruction.");
+				Fail(MSG.MUL_ALU_IN_USE);
 			Flags |= IF_NOASWAP;
 		 mul:
 			InstCtx = IC_MUL|IC_OP;
@@ -779,13 +780,13 @@ bool AssembleInst::applyMOVsrc(exprValue src)
 	qpuValue value;
 	switch (src.Type)
 	{default:
-		Fail("The last parameter of a mov, ldi or semaphore instruction must be a register or a immediate value. Found %s", type2string(src.Type));
+		Fail(MSG.MOV_SRC_NEEDS_REG_OR_IMMD, type2string(src.Type));
 
 	 case V_REG:
 		if (src.rValue.Type & R_SEMA)
 			return false; // requires LDI
 		if (Sig == S_LDI)
-			Fail("mov instruction with register source cannot be combined with load immediate.");
+			Fail(MSG.NO_MOV_REG_VS_LDI);
 
 		setMux(muxReg(src.rValue));
 		if (InstCtx & IC_MUL)
@@ -814,35 +815,35 @@ void AssembleInst::applyLDIsrc(exprValue src, ldmode mode)
 {
 	qpuValue value;
 	switch (src.Type)
-	{default:
-		Fail("The last parameter of a ldi or semaphore instruction must be an immediate value. Found %s", type2string(src.Type));
-
-	 case V_REG:
-		if (src.rValue.Pack)
-			Fail("Unpack not allowed for ldi or semaphore instruction.");
-		if (!(src.rValue.Type & R_SEMA))
-			Fail("Register source not allowed for ldi or semaphore instruction.");
-		// semaphore access by LDI like instruction
-		if (!(mode & L_SEMA))
-			(uint8_t&)mode |= L_SEMA;
-		else if (!(mode & 0x80) ^ !(src.rValue.Type & R_SACQ))
-			Fail("Mixing semaphore acquire and release.");
-		value.uValue = src.rValue.Num | (src.rValue.Type & R_SACQ);
-		break;
+	{case V_REG:
+		if ((src.rValue.Type & R_SEMA))
+		{	if (src.rValue.Pack)
+				Fail(MSG.NO_UNPACK_VS_BRANCH_LDI);
+			// semaphore access by LDI like instruction
+			if (!(mode & L_SEMA))
+				(uint8_t&)mode |= L_SEMA;
+			else if (!(mode & 0x80) ^ !(src.rValue.Type & R_SACQ))
+				Fail(MSG.NO_SACQ_VS_SREL);
+			value.uValue = src.rValue.Num | (src.rValue.Type & R_SACQ);
+			break;
+		}
+	 default:
+		Fail(MSG.MOV_SRC_NEEDS_REG_OR_IMMD, type2string(src.Type));
 
 	 case V_LDPES:
 		if (mode != L_LDI && mode != L_PES)
-			Fail("Load immediate mode conflicts with per QPU element constant.");
+		 ldpe_fail:
+			Fail(MSG.NO_LDI_VS_LDPE);
 		mode = L_PES;
 		goto ldpe_cont;
 	 case V_LDPEU:
 		if (mode != L_LDI && mode != L_PEU)
-			Fail("Load immediate mode conflicts with per QPU element constant.");
+			goto ldpe_fail;
 		mode = L_PEU;
 		goto ldpe_cont;
 	 case V_LDPE:
 		if (mode & L_SEMA)
-			Fail("Load immediate mode conflicts with per QPU element constant.");
+			goto ldpe_fail;
 		if (mode != L_PEU)
 			mode = L_PES;
 	 ldpe_cont:
@@ -851,28 +852,28 @@ void AssembleInst::applyLDIsrc(exprValue src, ldmode mode)
 
 	 case V_FLOAT:
 		if (mode & L_PEU)
-			Fail("Cannot load float value per element.");
+			Fail(MSG.NO_LDPE_FLOAT);
 	 case V_INT:
 		value = QPUValue(src);
 		if (mode & 0x80) // Acquire flag
 			value.uValue |= 0x10;
 		else if ((mode & L_SEMA) && (value.uValue & 0x10))
-			Fail("Semaphore release instruction cannot deal with constants that have bit 4 set.");
+			Fail(MSG.NO_SREL_VS_IMMD_BIT4);
 	}
 	(uint8_t&)mode &= 7;
 
 	switch (Sig)
 	{default:
-		Fail("Load immediate or semaphore cannot be combined with signals.");
+		Fail(MSG.NO_LDI_VS_SIG);
 	 case S_SMI:
-		Fail("This pair of immediate values cannot be handled in one instruction word.");
+		Fail(MSG.NO_LDI_VS_SIG);
 	 case S_LDI:
 		if (Immd.uValue != value.uValue || LdMode != mode)
-			Fail("Tried to load two different immediate values in one instruction. (0x%x vs. 0x%x)", Immd.uValue, value.uValue);
+			Fail(MSG.NO_IMMD_VS_IMMD, Immd.uValue, value.uValue);
 		break;
 	 case S_NONE:
 		if (OpA != A_NOP || OpM != M_NOP)
-			Fail("Cannot combine load immediate with value %s with ALU instructions.", src.toString().c_str());
+			Fail(MSG.NO_LDI_VS_ALU);
 	}
 	// LDI or semaphore
 	Sig = S_LDI;
@@ -883,7 +884,7 @@ void AssembleInst::applyLDIsrc(exprValue src, ldmode mode)
 void AssembleInst::prepareREAD()
 {	InstCtx = IC_SRC;
 	if (Sig == S_LDI || Sig == S_BRANCH)
-		Fail("read cannot be combined with load immediate, semaphore or branch instruction.");
+		Fail(MSG.NO_READ_VS_BRANCH_LDI);
 	doInitOP();
 }
 
@@ -891,12 +892,12 @@ void AssembleInst::applyREADsrc(exprValue src)
 {
 	switch (src.Type)
 	{default:
-		Fail("read instruction requires register file or small immediate source, found '%s'.", src.toString().c_str());
+		Fail(MSG.READ_SRC_REQUIRES_REGFILE_OR_SMI, src.toString().c_str());
 	 case V_REG:
 		if (src.rValue.Rotate)
-			Fail("Vector rotations cannot be used at read.");
+			Fail(MSG.NO_ROT_VS_READ);
 		if (muxReg(src.rValue) <= X_R5)
-			Fail("Accumulators cannot be used at read.");
+			Fail(MSG.NO_ACCU_VS_READ);
 		applyPackUnpack(src.rValue.Pack);
 		break;
 	 case V_INT:
@@ -904,7 +905,7 @@ void AssembleInst::applyREADsrc(exprValue src)
 		qpuValue value = QPUValue(src);
 		uint8_t si = AsSMIValue(value);
 		if (si == 0xff)
-			Fail("Value 0x%" PRIx32 " does not fit into the small immediate field.", value.uValue);
+			Fail(MSG.NO_SMI_VALUE, value.uValue);
 		doSMI(si);
 	}
 }
@@ -914,7 +915,7 @@ void AssembleInst::prepareBRANCH(bool relative)
 
 	if ( OpA != A_NOP || OpM != M_NOP || Sig != S_NONE
 		|| RAddrA != R_NOP || RAddrB != R_NOP )
-		Fail("A branch instruction must be the only one in a line.");
+		Fail(MSG.NO_BRANCH_VS_ANY);
 
 	Sig = S_BRANCH;
 	CondBr = B_AL;
@@ -930,56 +931,56 @@ bool AssembleInst::applyBranchSource(exprValue val, unsigned pc)
 {
 	switch (val.Type)
 	{default:
-		Fail("Data type is not allowed as branch target.");
+		Fail(MSG.BAD_BRANCH_SRC, type2string(val.Type));
 	 case V_LABEL:
 		if (Rel)
 			val.iValue -= (pc + 4) * sizeof(uint64_t);
 		else
-			Msg(WARNING, "Using value of label as target of a absolute branch instruction creates non-relocatable code.");
+			Msg(MSG.BRA_TO_LABEL);
 		val.Type = V_INT;
 	 case V_INT:
 		if (Immd.uValue)
-			Fail("Cannot specify two immediate values as branch target.");
+			Fail(MSG.NO_BRANCH_2ND_IMMD);
 		if (!val.iValue)
 			break;
 		Immd = QPUValue(val);
 		if (Immd.uValue & 3)
-			Msg(WARNING, "A branch target without 32 bit alignment probably does not hit the nail on the head.");
+			Msg(MSG.BRANCH_TARGET_NOT_ALIGNED);
 		break;
 	 case V_REG:
 		if (val.rValue.Num == R_NOP && !val.rValue.Rotate && (val.rValue.Type & R_AB))
 			break;
 		if (!(val.rValue.Type & R_A) || val.rValue.Num >= 32)
-			Fail("Branch target must be from register file A and no hardware register.");
+			Fail(MSG.BRANCH_SRC_REQIRES_REGA);
 		if (val.rValue.Rotate)
-			Fail("Cannot use vector rotation with branch instruction.");
+			Fail(MSG.NO_ROT_VS_BRANCH);
 		if (val.rValue.Pack)
-			Fail("Cannot use unpack with branch instruction.");
+			Fail(MSG.NO_UNPACK_VS_BRANCH_LDI);
 		if (Reg)
-			Fail("Cannot specify two registers as branch target.");
+			Fail(MSG.NO_BRANCH_2ND_REGA);
 		if ((val.rValue.Num & 1) != SF)
 		{	if (SF)
-				Fail("Branch instruction with .setf cannot use even register numbers.");
+				Fail(MSG.NO_BRANCH_SETF_VS_EVEN_REG);
 			else
-				Msg(WARNING, "Using an odd register number as branch target implies .setf. Use explicit .setf to avoid this warning.");
+				Msg(MSG.BRANCH_ODD_REG_IMPLIES_SETF);
 		}
 		Reg = true;
 		RAddrA = val.rValue.Num;
 		break;
 	}
 
-	return (WAddrA != R_NOP || WAddrM != R_NOP) && (Immd.uValue || Reg);
+	return CondBr != B_AL || ((WAddrA != R_NOP || WAddrM != R_NOP) && (Immd.uValue || Reg));
 }
 
 void AssembleInst::applySignal(sig signal)
 {
 	switch (Sig)
 	{default:
-		Fail("You must not use more than one signaling flag per line.");
+		Fail(MSG.NO_2ND_SIGNAL);
 	 case S_BRANCH:
 	 case S_LDI:
 	 case S_SMI:
-		Fail("Signaling bits cannot be combined with branch instruction or immediate values.");
+		Fail(MSG.NO_SIGNAL_VS_BRANCH_IMMD);
 	 case S_NONE:
 		Sig = signal;
 	}

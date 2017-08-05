@@ -243,7 +243,7 @@ bool Inst::evalPack(qpuValue& r, qpuValue v, bool mul)
 				return true;
 
 			 case P_32S:
-				throw string("The 32 bit pack mode with saturation is not yet implemented."); // TODO
+				throw runtime_error("The 32 bit pack mode with saturation is not yet implemented."); // TODO
 
 			 case P_32:;
 			}

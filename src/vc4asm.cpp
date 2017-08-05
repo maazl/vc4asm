@@ -10,6 +10,9 @@
 using namespace std;
 
 
+#include "vc4asm.MSG.h"
+
+
 #if (defined(__BIG_ENDIAN__) && __BIG_ENDIAN__) || (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN)
 /// Byte swap
 static inline uint64_t swap_uint64(uint64_t x)
@@ -72,7 +75,7 @@ int main(int argc, char **argv)
 			 case 'i':
 				{	string file = parser.FindIncludePath(optarg);
 					if (file.length() == 0)
-						throw stringf("\"%s\" not found in include path.\n", optarg);
+						throw MSG.INCLUDE_NOT_FOUND.toMsg(optarg);
 					parser.ParseFile(file);
 					break;
 				}
@@ -115,7 +118,7 @@ int main(int argc, char **argv)
 			return !parser.Success;
 		 case Parser::NORMAL:
 			if (!parser.Success)
-				throw string("Aborted because of earlier errors.");
+				throw MSG.ABORT_BECAUSE_OF_ERROR.toMsg();
 		 default:;
 		}
 		// Pass 2
@@ -129,7 +132,7 @@ int main(int argc, char **argv)
 		}
 
 		if (!parser.Success && parser.OperationMode != Parser::IGNOREERRORS)
-			throw string("Aborted because of earlier errors.");
+			throw MSG.ABORT_BECAUSE_OF_ERROR.toMsg();
 
 		// Write results
 		if (writeH)
@@ -158,10 +161,9 @@ int main(int argc, char **argv)
 			FILEguard of(checkedopen(writeBIN, "wb"));
 			fwrite(&*parser.Instructions.begin(), sizeof(uint64_t), parser.Instructions.size(), of);
 		}
-	} catch (const string& msg)
-	{	fputs(msg.c_str(), stderr);
-		fputc('\n', stderr);
-		return 1;
+	} catch (const Message& msg)
+	{	msg.print();
+		return msg.ID.Value;
 	}
 
 	return !parser.Success;

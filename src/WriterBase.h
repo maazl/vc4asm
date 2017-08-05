@@ -17,9 +17,19 @@
 using namespace std;
 
 
+// Work around because gcc can't define a constexpr struct inside a class, part 1.
+#define MSG WriterMSG
+#include "Writer.MSG.h"
+#undef MSG
+
 /// Common services for writer classes.
 class WriterBase
-{protected:
+{public:
+	// Work around because gcc can't define a constexpr struct inside a class, part 2.
+	//#include "Writer.MSG.h"
+	static constexpr const struct WriterMSG MSG = WriterMSG;
+
+ protected:
 	FILE* Target;
 	WriterBase(FILE* target) : Target(target) {}
 	void WriteChar(char c)              { checkedwrite(Target, &c, 1); }

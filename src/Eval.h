@@ -13,6 +13,11 @@
 #include <vector>
 
 
+// Work around because gcc can't define a constexpr struct inside a class, part 1.
+#define MSG EvalMSG
+#include "Eval.MSG.h"
+#undef MSG
+
 /// @brief Worker class for expression parser stack
 /// @details
 /// - Instantiate this class.
@@ -23,7 +28,7 @@
 /// @par If something went wrong Fail with an error message is thrown.
 /// It derives from std::string which carries the message.
 class Eval
-{public:
+{public: // types
 	/// @brief Operators
 	/// @details The high nibble is the precedence. >= d is for unary operators.
 	enum mathOp : unsigned char
@@ -89,6 +94,11 @@ class Eval
 	,	BRC  = 0x00 ///< \c ) : closing brace
 	,	EVAL = 0x01 ///< done : evaluate all
 	};
+ public: // messages
+	// Work around because gcc can't define a constexpr struct inside a class, part 2.
+	//#include "Eval.MSG.h"
+	static constexpr const struct EvalMSG MSG = EvalMSG;
+
  private:
 	/// Check whether \a op is an unary operator.
 	static bool isUnary(mathOp op) { return op >= 0xd0; }

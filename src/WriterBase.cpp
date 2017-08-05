@@ -12,6 +12,9 @@
 #include <cstdarg>
 
 
+constexpr const struct WriterMSG WriterBase::MSG;
+
+
 void WriterBase::WriteWithTemplate(const char* templname, function<bool(const string&)> atplaceholder)
 {	// read template
 	string tpl = readcomplete(templname);
@@ -29,10 +32,10 @@ void WriterBase::WriteWithTemplate(const char* templname, function<bool(const st
 		start = p + 3;
 		p = tpl.find("___", start);
 		if (p == string::npos)
-			throw stringf("\"%s\" contains unterminated placeholder at byte %zu: ___%.15s...", templname, start, tpl.c_str() + start);
+			throw MSG.UNTERMINATED_PLACEHOLDER.toMsg(templname, start, tpl.c_str() + start);
 		string placeholder(tpl, start, p - start);
 		if (!atplaceholder(placeholder))
-			throw stringf("\"%s\" contains unknown placeholder at byte %zu: ___%.15s", templname, start, placeholder.c_str());
+			throw MSG.UNKNOWN_PLACEHOLDER.toMsg(templname, start, placeholder.c_str());
 		// skip placeholder
 		start = p + 3;
 	}

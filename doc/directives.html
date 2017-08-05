@@ -57,8 +57,7 @@
       definitions are evaluated at the time and from the context of invocation.</p>
     <p>The assignment of <tt>.const</tt> and <tt>.lconst</tt> is final, i.e. a
       second assignment to the same identifier is an error. But final
-      assignments neither prevent from shadowing in nested contexts nor from <tt>.unset</tt>.<br>
-      <tt>.equ</tt> may be used as synonym for <tt>.set</tt>.</p>
+      assignments neither prevent from shadowing in nested contexts nor from <tt>.unset</tt>.</p>
     <p>Further aliases for <tt>.set</tt> are: <tt>.define</tt>, <tt>.equ</tt>.</p>
     <h3> Example</h3>
     <pre>.const ra_link_0, ra0<br><br>.set vpm_setup(num, stride, dma) (num &amp; 0xf) &lt;&lt; 20 | (stride &amp; 0x3f) &lt;&lt; 12 | (dma &amp; 0xfff)
@@ -286,9 +285,9 @@ name=".float"></a><a name=".bit"></a><a name=".double"></a><a name=".half"></a>.
           - label % byte</var>s == 0.</dd>
       <dd>Note that the label <em>must neither be a forward reference nor
           should</em> the integer constant <em>depend on a forward reference</em>,
-        because .align cannot do its job in this case.</dd>
+        because <tt>.align</tt> cannot do its job in this case.</dd>
     </dl>
-    <p><tt>.align</tt> simply inserts zeros rather than <tt>nop</tt>
+    <p><tt>.align</tt> simply uses zeros for padding than <tt>nop</tt>
       instructions. So <em>do not use it inside executable code</em>. It is
       intended for data or sub function alignment only.</p>
     <dl>

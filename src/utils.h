@@ -89,28 +89,29 @@ class FILEguard
 /// @param file Name of the file
 /// @param mode Open mode
 /// @return File pointer, never NULL.
-/// @exception string Failed to open: error message
+/// @exception Message Failed to open: error message
 FILE* checkedopen(const char* file, const char* mode);
 
 /// Write to file and throw an exception on error.
 /// @param fh Target file handle.
 /// @param data Start of then buffer to write.
 /// @param size Number of bytes to write.
-/// @exception string Failed to write: error message
+/// @exception Message Failed to write: error message
 void checkedwrite(FILE* fh, const void* data, size_t size);
 
 /// Write to file and throw an exception on error.
 /// @param fh Target file handle.
 /// @param fmt Format string.
 /// @param ... Arguments.
-/// @exception string Failed to write: error message
+/// @exception Message Failed to write: error message
 void checkedfprintf(FILE* fh, const char* fmt, ...) PRINTFATTR(2);
 
 /// Read entire file content into memory.
 /// @param file Name of the file.
+/// @param maxsize Maximum size of the file. If this size is exceeded a \c Message exception is thrown.
 /// @return Content of the file.
-/// @exception string Failed to read: error message
-string readcomplete(const char* file);
+/// @exception Message Failed to read: error message
+string readcomplete(const char* file, size_t maxsize = 1 << 16);
 
 /// Read a line of an input stream into a string.
 /// @param fh Source file handle.
@@ -118,7 +119,7 @@ string readcomplete(const char* file);
 /// @return Line from the file including the terminating new line character
 /// if the line length did not exceed \a maxlen.
 /// In case of EOF an empty string is returned.
-/// @exception string Failed to read: error message
+/// @exception Message Failed to read: error message
 string fgetstring(FILE* fh, size_t maxlen);
 
 
@@ -169,5 +170,9 @@ class vector_safe : public vector<T>
 		return vector<T>::operator[](n);
 	}
 };
+
+
+#include "Message.h"
+#include "utils.MSG.h"
 
 #endif // UTILS_H_

@@ -231,7 +231,7 @@ struct Inst
 	};
 	union
 	{	struct            // !branch
-		{	pack   Pack;    ///< Pack mode
+		{	pack   Pack;    ///< Pack mode, note that the MUL ALU pack modes are represented ^ 8 to be consistent with the saturated modes of regfile A.
 			conda  CondA;   ///< Write condition for ADD ALU
 			conda  CondM;   ///< Write condition for MUL ALU
 		};

@@ -11,11 +11,17 @@
 #include "Inst.h"
 #include "utils.h"
 #include "Message.h"
-
 #include <unordered_map>
 #include <cinttypes>
+#include <functional>
+
 
 using namespace std;
+
+// Work around because gcc can't define a constexpr struct inside a class, part 1.
+#define MSG DisassemblerMSG
+#include "Disassembler.MSG.h"
+#undef MSG
 
 /// Worker class for the disassembler.
 /// @details This is a two pass process.
@@ -38,6 +44,13 @@ class Disassembler
 	,	O_UseFloat     = 0x02 ///< Try to identify floating point constants. Default \c true. @details This is just a guess basically the exponent is checked to be approximately in the range E-6 to E+6.
 	};
 	CLASSFLAGSENUM(options, unsigned char);
+ public: // messages
+	/// Message handler (optional)
+	/// @pre Addr contains the address of the instruction where the message belongs to.
+	function<void(const Message& msg)> OnMessage;
+	// Work around because gcc can't define a constexpr struct inside a class, part 2.
+	//#include "Disassembler.MSG.h"
+	static constexpr const struct DisassemblerMSG MSG = DisassemblerMSG;
  public: // public fields
 	/// Disassembler options
 	options           Options = O_UseMOV|O_UseFloat;
@@ -45,8 +58,6 @@ class Disassembler
 	unsigned          Addr = 0;
 	/// Set of branch targets in units of BaseAddr.
 	unordered_multimap<unsigned,string> Labels;
-	/// Handler for Disassembler messages. Normally if the current instruction cannot be decoded reliably.
-	MessageHandler    OnMessage;
  public: // public functions
 	/// Push instruction into the disassembler and decode it.
 	/// @post \ref Addr is incremented by the size of one instruction word.
@@ -77,7 +88,7 @@ class Disassembler
 	/// @return String with all relevant instruction word field values.
 	/// The exact format depends on the instruction type, i.e. branch, ldi or ALU.
 	string GetFields();
- private: // Decode tables
+ protected: // Decode tables
 	/// Read register codes, \c cReg[B!A][regnum]
 	static const char cRreg[2][64][9];
 	/// Write register codes, \c cReg[B!A][regnum]
@@ -102,14 +113,20 @@ class Disassembler
 	static const char cBCC[16][7];
 	/// Signaling opcodes
 	static const char cOpS[14][10];
- private: // Working set
+ protected: // working set
 	/// Current instruction to decode.
 	Inst        Instruct;
+ private: // internal working set
 	/// Fixed buffer as target for one decoded instruction.
 	char        Code[100];
 	/// Pointer to first unused byte in \ref Code.
 	char*       CodeAt;
- private:
+ protected:
+	template <typename ...A>
+	void Msg(const msgTemplate<A...>& msg, A... a)
+	{	if (OnMessage)
+			OnMessage(Message(msg.ID, msg.format(a...)));
+	}
 	/// Append string to \ref Code.
 	void append(const char* str);
 	/// Formatted append to \ref Code.

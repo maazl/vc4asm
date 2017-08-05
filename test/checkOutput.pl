@@ -4,7 +4,7 @@ use strict;
 die "usage: vc4asm -V sourcfile.qasm | checkOutput.pl sourcefile.qasm\n" unless @ARGV;
 
 my %expect; # expected warnings and errors: $expect{$file}{$line} = Warning|Error|Ok
-my ($file, $line, $type, $msg);
+my ($file, $line, $type, $id, $msg);
 
 my $fail;
 sub fail($)
@@ -18,9 +18,9 @@ sub checkMsg()
 {	my $expect = \$expect{$file}{$line};
 	#print "$file ($line): $type - $$expect\n";
 	if (defined $$expect)
-	{	fail "unexpected message of type $type, expected $$expect\n$msg" if $$expect !~ s/$type//;
-	} elsif ($type eq 'E')
-	{	fail "unexpected error\n$msg";
+	{	fail "unexpected message of type $type, expected $$expect\n$msg" if $$expect !~ s/$type// && $type !~ /^I/;
+	} else
+	{	fail "unexpected error\n$msg" if $type =~ /^[EF]/;
 	}
 }
 
@@ -31,7 +31,7 @@ foreach (@ARGV)
 	$line = 0;
 	while (<F>)
 	{	++$line;
-		/#(\w+)/ or next;
+		/#([\w\.:]+)/ or next;
 		$expect{$file}{$line} = $1;
 		#print "$file ($line): $1\n";
 	}
@@ -41,12 +41,11 @@ foreach (@ARGV)
 # compare against vc4asm output
 while (<STDIN>)
 {	$msg .= $_;
-	/^(?:(Warning:|Error:)|\s*generated at) (?:([^:]+) \((\d+)(?:,\d+)?\)(?::|$))?/i or next;
-	$file = $2; $line = $3;
-	if ($1)
-	{	$type = substr $1, 0, 1;
-		$msg = $_;
-	}
+	($file, $line, $type, $id) =
+		/^([^:]+) \((\d+)(?:,\d+)?\): ([IWEF])\w+: (\w\d+(?:\.\d+)?)/ or next;
+	#$file =~ s/.*[\/\\]//;
+	$type = "$type:$id";
+	$msg = $_;
 	checkMsg if $file;
 }
 

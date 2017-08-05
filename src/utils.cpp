@@ -97,16 +97,16 @@ void setexepath(const char* argv0)
 FILE* checkedopen(const char* file, const char* mode)
 {	FILE* ret = fopen(file, mode);
 	if (ret == NULL)
-		throw stringf("Failed to open \"%s\" for %s: %s", file, strchr(mode, 'w') ? "writing" : "reading", strerror(errno));
+		throw utilsMSG.FILE_OPEN_FAILED.toMsg(file, strchr(mode, 'w') ? "writing" : "reading", strerror(errno));
 	return ret;
 }
 
 void checkedwrite(FILE* fh, const void* data, size_t size)
 {	switch (fwrite(data, size, 1, fh))
 	{default:
-		throw stringf("Failed to write to file: %s", strerror(errno));
+		throw utilsMSG.FILE_WRITE_FAILED.toMsg(strerror(errno));
 	 case 0:
-		throw string("Failed to write to file: Disk full");
+		throw utilsMSG.FILE_WRITE_DISK_FULL.toMsg();
 	 case 1:;
 	}
 }
@@ -117,24 +117,24 @@ void checkedfprintf(FILE* fh, const char* fmt, ...)
 	int ret = vfprintf(fh, fmt, va);
 	va_end(va);
 	if (ret < 0)
-		throw stringf("Failed to write to file: %s", strerror(errno));
+		throw utilsMSG.FILE_WRITE_FAILED.toMsg(strerror(errno));
 }
 
-string readcomplete(const char* file)
+string readcomplete(const char* file, size_t maxsize)
 {	FILEguard fh(checkedopen(file, "r"));
 	if (fseek(fh, 0, SEEK_END))
-		throw stringf("Failed to seek to end of \"%s\": %s", file, strerror(errno));
+		throw utilsMSG.FILE_SEEK_SET_FAILED2.toMsg(0, file, strerror(errno));
 	long size = ftell(fh);
 	if (size == -1)
-		throw stringf("Failed to get size of file \"%s\": %s", file, strerror(errno));
-	if (size > 1<<16)
-		throw stringf("File \"%s\" is no reasonable template.", file);
+		throw utilsMSG.FILE_TELL_END_FAILED2.toMsg(file, strerror(errno));
+	if (size > maxsize)
+		throw utilsMSG.FILE_TOO_LARGE.toMsg(file, size, maxsize);
 	if (fseek(fh, 0, SEEK_SET))
-		throw stringf("Failed to seek to start of \"%s\": %s", file, strerror(errno));
+		throw utilsMSG.FILE_SEEK_SET_FAILED2.toMsg(0, file, strerror(errno));
 	string ret;
 	ret.resize(size);
 	if (fread(&ret.front(), size, 1, fh) != 1)
-		throw stringf("Failed to read file content of \"%s\": %s", file, strerror(errno));
+		throw utilsMSG.FILE_READ_FAILED2.toMsg(file, strerror(errno));
 	return ret;
 }
 
@@ -143,7 +143,7 @@ string fgetstring(FILE* fh, size_t maxlen)
 	if (!fgets(buf, maxlen, fh))
 	{	if (feof(fh))
 			return string();
-		throw stringf("Failed to read line from file: %s", strerror(errno));
+		throw utilsMSG.FILE_READ_LINE_FAILED.toMsg(strerror(errno));
 	}
 	string ret(buf);
 	if (ret.length() && ret[ret.length()-1] != '\n' && !feof(fh))

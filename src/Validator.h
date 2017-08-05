@@ -14,9 +14,17 @@
 #include <memory>
 #include <cstdint>
 #include <climits>
+#include <functional>
+
+#include "Message.h"
 using namespace std;
 
 struct DebugInfo;
+
+// Work around because gcc can't define a constexpr struct inside a class, part 1.
+#define MSG ValidatorMSG
+#include "Validator.MSG.h"
+#undef MSG
 
 /// Helper class to validate VideoCore IV instruction constraints.
 class Validator
@@ -27,13 +35,33 @@ class Validator
 	/// Code block to check. Need to be set before Validate().
 	const vector<uint64_t>* Instructions = nullptr;
 	/// Optional debug info for more expressive messages.
-	const DebugInfo* Info = nullptr;
+	const DebugInfo*   Info = nullptr;
 
 	/// Check register writes before vector rotations
 	/// - 0 : no check
 	/// - 1 : relaxed check, warn only combos that are likely to fail.
 	/// - 2 : strict check, warn all cases.
 	int CheckVectorRotationLevel = 1;
+
+	/// Validation message.
+	/// The lifetime of this object and it's copies must not exceed the lifetime of the Validator instance that created the message.
+	struct Message : public ::Message
+	{	const Validator& Parent; ///< Message source.
+		int              Loc;    ///< Location of the instruction where the message belongs to in units of 64 bit starting at BaseAddr.
+		int              RefLoc; ///< Location of the second instruction that belongs to this message. If not relevant then \c = \c Loc.
+		Message(const Validator& parent, int refloc, msgID id, string&& text)
+		: ::Message(id, move(text)), Parent(parent), Loc(Parent.At), RefLoc(refloc) {}
+		/// Convert message to human readable format.
+		virtual string toString() const noexcept;
+	};
+
+	/// Message handler. Prints to \c stderr by default.
+	function<void(const Message& msg)> OnMessage = Message::printHandler;
+
+	// Work around because gcc can't define a constexpr struct inside a class, part 2.
+	//#include "Validator.MSG.h"
+	static constexpr const struct ValidatorMSG MSG = ValidatorMSG;
+
  private:
 	/// Maximum number of instructions where constraints apply.
 	/// @remarks This is related to the pipeline length in QPU elements.
@@ -102,19 +130,22 @@ class Validator
 	Inst RefInst;     ///< Reference instruction, decoded by Decode.
 	int  RefDec;      ///< Decoded reference instruction.
  private:
+	bool CheckMsg(int& refloc) const;
+	/// @brief Create a validation warning.
+	/// @param refloc The Validation error at the current instruction (\ref At) is caused by the instruction at location \p refloc.
+	/// The location is automatically relocated if it is from before a branch.
+	/// @param msg Message template
+	/// @remarks The reference locations before the branch have always instruction numbers less than start
+	/// because the constructor relocated the accordingly. This function does the opposite transform to get meaningful messages.
+	template <typename ...A>
+	void Msg(int refloc, const msgTemplate<A...> msg, A... a) const
+	{	if (CheckMsg(refloc)) OnMessage(Message(*this, refloc, msg.ID, msg.format(a...))); }
 	/// @brief Turn reference location into an absolute value.
 	/// @details This is the opposite done in the \see state constructor.
 	/// The value changes only when it is before \see Start.
 	/// @param refloc location to relocate.
 	/// @return Absolute index into instructions array.
 	int  MakeAbsRef(int refloc) { if (refloc < Start) refloc += From - Start; return refloc; }
-	/// @brief print a validation warning.
-	/// @param refloc The Validation error at the current instruction (\ref At) is caused by the instruction at location \p refloc.
-	/// The location is automatically relocated if it is from before a branch.
-	/// @param fmt Message format string
-	/// @remarks The reference locations before the branch have always instruction numbers less than start
-	/// because the constructor relocated the accordingly. This function does the opposite transform to get meaningful messages.
-	void Message(int refloc, const char* fmt, ...) PRINTFATTR(3);
 	/// @brief Get effective condition of all read access to input mux \a m
 	/// in the current instruction.
 	/// @param inst Instruction to check.

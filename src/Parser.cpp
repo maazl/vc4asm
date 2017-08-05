@@ -9,7 +9,6 @@
 
 #include "Parser.h"
 
-#include <cstdio>
 #include <cstdlib>
 #include <cinttypes>
 #include <cassert>
@@ -26,6 +25,44 @@
 #define UINT64_MAX (~(uint64_t)0)
 #endif
 
+
+constexpr const struct ParserMSG Parser::MSG;
+
+void Parser::Message::SetContext()
+{	for (const unique_ptr<fileContext>& ctx : Parent().Context)
+		Context.emplace_back(*ctx);
+}
+
+string Parser::Message::toString() const noexcept
+{	string msg;
+	// Show context
+	contextType type = CTX_CURRENT;
+	for (auto ctx = Context.rbegin(); ctx != Context.rend(); ++ctx)
+	{	auto fname = Parent().fName(ctx->File);
+		switch (type)
+		{case CTX_CURRENT:
+			msg = ( ctx->Line
+					? stringf("%s (%u,%zi): ", fname, ctx->Line, Parent().At - Parent().Line.c_str() - Parent().Token.size() + 1)
+					: stringf("%s: ", fname) )
+				+ AssembleInst::Message::toString();
+			break;
+		 case CTX_INCLUDE:
+			msg += stringf("\n  Included from %s (%u)", fname, ctx->Line);
+			break;
+		 case CTX_MACRO:
+			msg += stringf("\n  At invocation of macro from %s (%u)", fname, ctx->Line);
+			break;
+		 case CTX_FUNCTION:
+			msg += stringf("\n  At function invocation from %s (%u)", fname, ctx->Line);
+			break;
+		 default:;
+		}
+		type = ctx->Type;
+	}
+	return msg;
+}
+
+
 Parser::saveContext::saveContext(Parser& parent, fileContext* ctx)
 :	Parent(parent)
 ,	Context(ctx)
@@ -35,7 +72,7 @@ Parser::saveContext::saveContext(Parser& parent, fileContext* ctx)
 Parser::saveContext::~saveContext()
 {	auto& ctx = *Parent.Context.back();
 	if (Context != &ctx)
-		throw stringf("Unterminated context block in the current file at line %u.", ctx.Line);
+		Parent.Fail(MSG.UNTERMINATED_BLOCK, (unsigned)ctx.Line);
 	Parent.Context.pop_back();
 }
 
@@ -51,77 +88,37 @@ Parser::saveLineContext::~saveLineContext()
 }
 
 
-string Parser::enrichMsg(string msg)
-{	// Show context
-	contextType type = CTX_CURRENT;
-	for (auto i = Context.rbegin(); i != Context.rend(); ++i)
-	{	const fileContext& ctx = **i;
-		if (ctx.Line)
-		{	auto fname = fName(ctx.File);
-			switch (type)
-			{case CTX_CURRENT:
-				msg = stringf("%s (%u,%zi): ", fname, ctx.Line, At - Line.c_str() - Token.size() + 1) + msg;
-				break;
-			 case CTX_INCLUDE:
-				msg += stringf("\n  Included from %s (%u)", fname, ctx.Line);
-				break;
-			 case CTX_MACRO:
-				msg += stringf("\n  At invocation of macro from %s (%u)", fname, ctx.Line);
-				break;
-			 case CTX_FUNCTION:
-				msg += stringf("\n  At function invocation from %s (%u)", fname, ctx.Line);
-				break;
-			 default:;
-			}
-		}
-		type = ctx.Type;
-	}
-	return msg;
+void Parser::ThrowMessage(AssembleInst::Message&& msg) const
+{	throw Message(move(msg));
 }
 
-void Parser::Fail(const char* fmt, ...)
-{	va_list va;
-	va_start(va, fmt);
-	const string& msg = vstringf(fmt, va);
-	va_end(va);
-	throw enrichMsg(msg);
-}
-
-static const char msgpfx[][10]
-{	"ERROR: "
-,	"Warning: "
-,	"Info: "
-};
-
-void Parser::CaughtMsg(const char* msg)
-{	Success = false;
-	if (OperationMode == IGNOREERRORS && !Pass2)
+void Parser::EnrichMessage(AssembleInst::Message&& msg)
+{	Message msg2(move(msg));
+	if (msg2.ID.Severity() < msg2.Parent().Verbose)
 		return;
-	fputs(msgpfx[ERROR], stderr);
-	fputs(msg, stderr);
-	fputc('\n', stderr);
-}
-
-void Parser::Msg(severity level, const char* fmt, ...)
-{	if (Verbose < level)
-		return;
-	switch (OperationMode)
+	switch (msg2.Parent().OperationMode)
 	{case NORMAL:
-		if (level == ERROR)
+		if (msg.ID.Severity() == ERROR)
 			break;
 	 case IGNOREERRORS:
-		if (!Pass2)
+		if (!msg2.Parent().Pass2)
 			return;
 	 default:;
 	}
-	Success &= level > ERROR;
-	va_list va;
-	va_start(va, fmt);
-	fputs(msgpfx[level], stderr);
-	fputs(enrichMsg(vstringf(fmt, va)).c_str(), stderr);
-	va_end(va);
-	fputc('\n', stderr);
+
+	msg2.Parent().OnMessage(msg2);
+
+	msg2.Parent().Success &= msg.ID.Severity() < ERROR;
 }
+
+void Parser::CaughtMsg(const Message& msg)
+{	Success = false;
+	if (OperationMode == IGNOREERRORS && !Pass2)
+		return;
+
+	OnMessage(msg);
+}
+
 
 void Parser::FlagsSize(size_t min)
 {	if (InstFlags.size() < min)
@@ -254,6 +251,17 @@ size_t Parser::parseInt(const char* src, int64_t& dst)
 	return cp - src;
 }
 
+void Parser::parseIdentifier(const char* directive)
+{	switch (NextToken())
+	{case WORD:
+		return;
+	 case NUM:
+		Fail(MSG.IDENTIFIER_NO_START_DIGIT);
+	 default:
+		Fail(MSG.DIRECTIVE_REQUIRES_IDENTIFIER, "unset", Token.c_str());
+	}
+}
+
 Parser::label& Parser::labelRef(string name, bool forward)
 {
 	const auto& l = LabelsByName.emplace(name, LabelCount);
@@ -263,7 +271,7 @@ Parser::label& Parser::labelRef(string name, bool forward)
 		if (!Pass2)
 			Labels.emplace_back(Token);
 		else if (Labels.size() <= LabelCount || Labels[LabelCount].Name != Token)
-			Fail("Inconsistent label definition during Pass 2.");
+			Fail(MSG.INCONSISTENT_LABEL_DEFINITIONS);
 		Labels[LabelCount].Reference = *Context.back();
 		++LabelCount;
 	}
@@ -280,33 +288,33 @@ void Parser::parseElemInt()
 	while (true)
 	{	ParseExpression();
 		if (ExprValue.Type != V_INT)
-			Fail("Only integers are allowed between [...].");
+			Fail(MSG.LDPE_REQUIRES_INT_VALUES);
 		if (ExprValue.iValue < -2 || ExprValue.iValue > 3)
-			Fail("Load per QPU element can only deal with integer constants in the range of [-2..3].");
+			Fail(MSG.LDPE_VALUE_OUT_OF_RANGE, ExprValue.iValue);
 		if (ExprValue.iValue < 0)
 		{	if (sign > 0)
-				Fail("All integers in load per QPU element must be either in the range [-2..1] or in the range [0..3].");
+				Fail(MSG.LDPE_SIGN_CONFLICT);
 			sign = -1;
 			ExprValue.iValue &= 3;
 		} else if (ExprValue.iValue > 1)
 		{	if (sign < 0)
-				Fail("All integers in load per QPU element must be either in the range [-2..1] or in the range [0..3].");
+				Fail(MSG.LDPE_SIGN_CONFLICT);
 			sign = 1;
 		}
 		value |= (ExprValue.iValue * 0x8001 & 0x10001) << pos;
 
 		switch (NextToken())
 		{case END:
-			Fail("Incomplete expression.");
+			Fail(MSG.SYNTAX_INCOMPLETE_EXPRESSION);
 		 default:
-			Fail("Unexpected '%s' in per QPU element constant.", Token.c_str());
+			Fail(MSG.LDPE_UNEXPECTED_TOKEN, Token.c_str());
 		 case COMMA:
 			if (++pos >= 16)
-				Fail("Too many initializers for per QPU element constant.");
+				Fail(MSG.LDPE_TOO_MANY_VALUES);
 			continue;
 		 case SQBRC2:
 			if (pos != 15)
-				Fail("Too few initializers for per QPU element constant.");
+				Fail(MSG.LDPE_TOO_FEW_VALUES);
 		}
 		break;
 	}
@@ -321,38 +329,38 @@ void Parser::parseRegister()
 	reg_t reg;
 	ParseExpression();
 	if (ExprValue.Type != V_INT)
-		Fail("Expecting integer constant, found %s.", type2string(ExprValue.Type));
+		Fail(MSG.RAW_REG_REQUIRES_INT_VALUES, type2string(ExprValue.Type));
 	reg.Num = (uint8_t)ExprValue.iValue;
 	if (NextToken() != COMMA)
-		Fail("Expected ',', found '%s'.", Token.c_str());
+		Fail(MSG.EXPECTED_COMMA_2, "regtype", Token.c_str());
 	ParseExpression();
 	if (ExprValue.Type != V_INT)
-		Fail("Expecting integer constant, found %s.", type2string(ExprValue.Type));
-	reg.Type = (regType)ExprValue.iValue;
+		Fail(MSG.RAW_REG_REQUIRES_INT_VALUES, type2string(ExprValue.Type));
+			reg.Type = (regType)ExprValue.iValue;
 	switch (NextToken())
 	{default:
-		Fail("Expected ',' or ']', found '%s'.", Token.c_str());
+	 fail:
+		Fail(MSG.EXPECTED_COMMA_OR_SQBRC, Token.c_str());
 	 case COMMA:
 		ParseExpression();
 		if (ExprValue.Type != V_INT)
-			Fail("Expecting integer constant, found %s.", type2string(ExprValue.Type));
+			Fail(MSG.RAW_REG_REQUIRES_INT_VALUES, type2string(ExprValue.Type));
 		reg.Rotate = (uint8_t)ExprValue.iValue;
 		switch (NextToken())
 		{default:
-			Fail("Expected ',' or ']', found '%s'.", Token.c_str());
+			goto fail;
 		 case COMMA:
 			ParseExpression();
 			if (ExprValue.Type != V_INT)
-				Fail("Expecting integer constant, found %s.", type2string(ExprValue.Type));
+				Fail(MSG.RAW_REG_REQUIRES_INT_VALUES, type2string(ExprValue.Type));
 			reg.Pack.Mode = (int8_t)ExprValue.iValue;
-			if (NextToken() != SQBRC2)
-				Fail("Expected ']', found '%s'.", Token.c_str());
-			break;
+			goto done;
 		 case SQBRC2:
 			reg.Pack.Mode = 0;
 		}
+	 done:
 		if (NextToken() != SQBRC2)
-			Fail("Expected ']', found '%s'.", Token.c_str());
+			Fail(MSG.EXPECTED_SQBRC, Token.c_str());
 		break;
 	 case SQBRC2:
 		reg.Rotate = 0;
@@ -417,23 +425,23 @@ void Parser::ParseExpression()
 			// Try label prefix
 			{	string identifier = Token;
 				if (NextToken() != COLON)
-					Fail("Invalid expression. The identifier %s is undefined.", identifier.c_str());
+					Fail(MSG.UNDEFINED_IDENTIFIER, identifier.c_str());
 				if (identifier != "r")
-					Fail("'%s:' is no valid label prefix.", identifier.c_str());
+					Fail(MSG.LABEL_INVALID_PREFIX, identifier.c_str());
 			}
 		 case COLON: // Label
 			{	// Is forward reference?
 				bool forward = false;
 				switch (NextToken())
 				{default:
-					Fail("Expected Label after ':'.");
+					Fail(MSG.LABEL_EXPECTED_NAME, Token.c_str());
 
 				 case BRACE1: // Internal label constant
 					if ( NextToken() != NUM
 						|| parseInt(Token.c_str(), ExprValue.iValue) != Token.length() )
-						Fail("Expecting integer constant, found %s.", Token.c_str());
+						Fail(MSG.LABEL_EXPECTED_INTERNAL_NUMBER, Token.c_str());
 					if (NextToken() != BRACE2)
-						Fail("Expected ')', found '%s'.", Token.c_str());
+						Fail(MSG.EXPECTED_BRC, Token.c_str());
 					ExprValue.Type = V_LABEL;
 					goto have_value;
 
@@ -458,7 +466,7 @@ void Parser::ParseExpression()
 		 case BRACE2:
 			{	const opInfo* op = binary_search(operatorMap, Token.c_str());
 				if (!op)
-					Fail("Invalid operator: %s", Token.c_str());
+					Fail(MSG.UNKNOWN_OPERATOR, Token.c_str());
 				if (!eval.PushOperator(op->Op))
 					goto discard;
 				ToNextChar();
@@ -479,14 +487,14 @@ void Parser::ParseExpression()
 			{	// float number
 				size_t len;
 				if (sscanf(Token.c_str(), "%lf%zn", &ExprValue.fValue, &len) != 1 || len != Token.size())
-					Fail("%s is no real number.", Token.c_str());
+					Fail(MSG.NO_FLOAT_VALUE, Token.c_str());
 				ExprValue.Type = V_FLOAT;
 			} else
 			{	// integer
 				//size_t len;  sscanf of gcc4.8.2/Linux x32 can't read "0x80000000".
 				//if (sscanf(Token.c_str(), "%i%n", &stack.front().iValue, &len) != 1 || len != Token.size())
 				if (parseInt(Token.c_str(), ExprValue.iValue) != Token.size())
-					Fail("%s is no integral number.", Token.c_str());
+					Fail(MSG.NO_INT_VALUE, Token.c_str());
 				ExprValue.Type = V_INT;
 			}
 			break;
@@ -498,8 +506,8 @@ void Parser::ParseExpression()
 
 		eval.PushValue(ExprValue);
 		goto next;
-	} catch (const Message& msg) // Messages from Eval are not yet enriched.
-	{	throw enrichMsg(msg);
+	} catch (const ::Message& msg) // Messages from Eval are not yet enriched.
+	{	throw Message(*this, msg);
 	}
 }
 
@@ -548,9 +556,11 @@ void Parser::addPUp(int mode)
 		return applyPackUnpack(pup);
 	// else apply to expression
 	if (ExprValue.Type != V_REG)
-		Fail("Pack/unpack options are only available for registers.");
+		Fail(MSG.PUP_REQUIRES_REGISTER, type2string(ExprValue.Type));
+	if (ExprValue.rValue.Type & R_SEMA)
+		Fail(MSG.NO_PPUP_VS_SEMA);
 	if (ExprValue.rValue.Pack)
-		Fail("Already applied pack/unpack to the current expression.");
+		Fail(MSG.NO_2ND_PUP);
 	ExprValue.rValue.Pack = pup;
 }
 
@@ -569,7 +579,7 @@ void Parser::addRot(int)
 	ParseExpression();
 	InstCtx = savectx;
 	if (NextToken() != COMMA)
-		Fail("Expected ',' after rotation count.");
+		Fail(MSG.EXPECTED_COMMA, Token.c_str());
 
 	int si;
 	switch (ExprValue.Type)
@@ -578,7 +588,7 @@ void Parser::addRot(int)
 		if ((ExprValue.rValue.Type & R_READ) && ExprValue.rValue.Num == 37 && !ExprValue.rValue.Rotate && !ExprValue.rValue.Pack) // r5
 			break;
 	 default:
-		Fail("QPU rotation needs an integer argument or r5 for the rotation count.");
+		Fail(MSG.ROT_REQUIRES_INT_OR_R5);
 	 case V_INT:
 		si = (int)ExprValue.iValue & 0xf;
 		if (si == 0)
@@ -593,15 +603,15 @@ void Parser::doInstrExt()
 	while (NextToken() == DOT)
 	{	switch (NextToken())
 		{default:
-			Fail("Expected instruction extension after dot.");
+			Fail(MSG.EXPECTED_INSTRUCTION_EXTENSION, Token.c_str());
 		 case WORD:
 		 case NUM:;
 		}
 		const opExtEntry* ep = binary_search(extMap, Token.c_str());
 		if (!ep)
-			Fail("Unknown instruction extension '%s'.", Token.c_str());
+			Fail(MSG.UNKNOWN_INSTRUCTION_EXTENSION, Token.c_str());
 		if ((ep->Where & InstCtx) == 0)
-			Fail("Invalid instruction extension '%s' within this context (%x).", Token.c_str(), InstCtx);
+			Fail(MSG.INSTRUCTION_EXTENSION_INVALID, Token.c_str(), (unsigned char)InstCtx);
 		(this->*(ep->Func))(ep->Arg);
 	}
 	At -= Token.size();
@@ -610,17 +620,13 @@ void Parser::doInstrExt()
 void Parser::doALUTarget()
 {	InstCtx = (InstCtx & ~IC_OP) | IC_DST;
 	ParseExpression();
-	if (ExprValue.Type != V_REG)
-		Fail("The target argument to a ALU or branch instruction must be a register or '-', found %s.", ExprValue.toString().c_str());
-	if (!(ExprValue.rValue.Type & R_WRITE))
-		Fail("The register is not writable.");
 
-	applyTarget(ExprValue.rValue);
+	applyTarget(ExprValue);
 }
 
 void Parser::doALUExpr()
 {	if (NextToken() != COMMA)
-		Fail("Expected ',' before next argument to ALU instruction, found '%s'.", Token.c_str());
+		Fail(MSG.EXPECTED_COMMA, Token.c_str());
 	ParseExpression();
 
 	applyALUSource(ExprValue);
@@ -638,7 +644,7 @@ void Parser::doNOP()
 
 	ToNextChar();
 	if (!strchr(";#", *At))
-		Fail("Expected end of instruction.");
+		Fail(MSG.EXPECTED_EOL);
 }
 
 void Parser::assembleADD(int add_op)
@@ -679,6 +685,7 @@ void Parser::assembleMOV(int mode)
 {
 	InstCtx = mode < 0 ? (instContext)~mode : IC_BOTH;
 	bool target2 = ArgumentCount(At, 3) == 3;
+
 	prepareMOV(target2);
 	ExprValue.Type = V_NONE;
 	doInstrExt();
@@ -686,7 +693,7 @@ void Parser::assembleMOV(int mode)
 	doALUTarget();
 
 	if (NextToken() != COMMA)
-		Fail("Expected comma after first argument to mov, ldi or semaphore instruction, found '%s'.", Token.c_str());
+		Fail(MSG.EXPECTED_COMMA_2, target2 ? "target2" : "source", Token.c_str());
 
 	if (target2)
 	{	// second target
@@ -696,14 +703,14 @@ void Parser::assembleMOV(int mode)
 		InstCtx |= IC_BOTH; // now we are at both ALUs
 
 		if (NextToken() != COMMA)
-			Fail("Expected comma and source argument, found '%s'.", Token.c_str());
+			Fail(MSG.EXPECTED_COMMA_2, "source", Token.c_str());
 	}
 
 	InstCtx ^= IC_DST|IC_SRC; // Swap to source context
 	ParseExpression();
 	ToNextChar();
 	if (!strchr(";#", *At))
-		Fail("Expected end of instruction.");
+		Fail(MSG.EXPECTED_EOL);
 
 	// Try ALU expression first
 	if (mode < 0)
@@ -775,21 +782,21 @@ void Parser::assembleBRANCH(int relative)
 
 	doALUTarget();
 	if (NextToken() != COMMA)
-		Fail("Expected ', <branch target>' after first argument to branch instruction, found %s.", Token.c_str());
+		Fail(MSG.EXPECTED_COMMA, Token.c_str());
 
 	switch (ArgumentCount(At, 3))
 	{default: // 2nd target
 		InstCtx = IC_MUL|IC_DST;
 		doALUTarget();
 		if (NextToken() != COMMA)
-			Fail("Expected ', <branch target>', found %s.", Token.c_str());
+			Fail(MSG.EXPECTED_COMMA, Token.c_str());
 		InstCtx = IC_BOTH|IC_DST;
 	 case 2:
 		InstCtx ^= IC_DST|IC_SRCA;
 		ParseExpression();
 		applyBranchSource(ExprValue, PC);
 		if (NextToken() != COMMA)
-			Fail("Expected ', <branch target>', found %s.", Token.c_str());
+			Fail(MSG.EXPECTED_COMMA, Token.c_str());
 		InstCtx ^= IC_SRC;
 		break;
 	 case 1:
@@ -804,7 +811,7 @@ void Parser::assembleBRANCH(int relative)
 		InstFlags[pos] |= IF_BRANCH_TARGET;
 	}
 	if (NextToken() != END)
-		Fail("Expected end of line after branch instruction.");
+		Fail(MSG.EXPECTED_EOL);
 }
 
 void Parser::assembleSIG(int bits)
@@ -818,7 +825,7 @@ void Parser::ParseInstruction()
 	{	Flags &= ~IF_CMB_ALLOWED;
 		const opEntry<8>* op = binary_search(opcodeMap, Token.c_str());
 		if (!op)
-			Fail("Invalid opcode or unknown macro: %s", Token.c_str());
+			Fail(MSG.UNDEFINED_OPCODE_OR_MACRO, Token.c_str());
 
 		if (Preprocessed)
 			fputs(Token.c_str(), Preprocessed);
@@ -826,15 +833,15 @@ void Parser::ParseInstruction()
 
 		switch (NextToken())
 		{default:
-			Fail("Expected end of line or ';' after instruction. Found '%s'.", Token.c_str());
+			Fail(MSG.EXPECTED_EOL_OR_SEMICOLON, Token.c_str());
 		 case END:
 			return;
 		 case SEMI:
-			Flags |= IF_CMB_ALLOWED;
 			switch (NextToken())
 			{default:
-				Fail("Expected additional instruction or end of line after ';'. Found '%s'.", Token.c_str());
+				Fail(MSG.EXPECTED_EOL_OR_INSTRUCTION, Token.c_str());
 			 case END:
+				Flags |= IF_CMB_ALLOWED;
 				return;
 			 case WORD:;
 			}
@@ -860,15 +867,14 @@ Parser::label& Parser::defineLabel()
 		if (!!lp->Definition)
 		{	// redefinition
 			if (!isdigit(lp->Name[0]))
-				Fail("Redefinition of non-local label %s, previously defined at %s (%u).",
-					Token.c_str(), fName(lp->Definition.File), lp->Definition.Line);
+				Fail(MSG.LABEL_REDEFINITION, Token.c_str(), fName(lp->Definition.File), lp->Definition.Line);
 			// redefinition allowed, but this is always a new label
 			lname.first->second = LabelCount;
 			goto new_label;
 		}
 	}
 	if (BitOffset & 7)
-		Fail("Cannot set a label at a bit boundary. At least byte alignment is required.");
+		Fail(MSG.NO_LABEL_AT_BIT_BOUNDARY);
 	lp->Value = PC * sizeof(uint64_t) + (BitOffset >> 3);
 	lp->Definition = *Context.back();
 
@@ -879,15 +885,25 @@ Parser::label& Parser::defineLabel()
 	return *lp;
 }
 
-void Parser::addGlobal(const string& name, exprValue value)
-{
-	auto p = GlobalsByName.emplace(name, value);
-	if (!p.second && Pass2)
+void Parser::addGlobal(const string& name)
+{	// Symbol values are not reliable until pass 2
+	if (!Pass2)
+		return;
+	switch (ExprValue.Type)
+	{default:
+		Fail(MSG.GLOBAL_REQUIRES_LABEL_OR_INT, type2string(ExprValue.Type));
+	 case V_INT:
+		if (ExprValue.iValue < -0x80000000LL || ExprValue.iValue > 0xffffffffLL)
+			Fail(MSG.GLOBAL_INT_OUT_OF_RANGE, ExprValue.iValue);
+	 case V_LABEL:;
+	}
+	auto p = GlobalsByName.emplace(name, ExprValue);
+	if (!p.second)
 	{	// Doubly defined
-		if (p.first->second == value)
-			Msg(INFO, "Label '%s' has already been marked as global.", name.c_str());
+		if (p.first->second == ExprValue)
+			Msg(MSG.LABEL_GLOBAL_TWICE, name.c_str());
 		else
-			Msg(ERROR, "Another label or value has already been assigned to the global symbol '%s'.", name.c_str());
+			Msg(MSG.GLOBAL_SYMBOL_REDEFINED, name.c_str());
 	}
 }
 
@@ -903,12 +919,14 @@ void Parser::parseLabel()
 				goto rep;
 			}
 		 default:
-			Fail("Expected label name after ':', found '%s'.", Token.c_str());
+			Fail(MSG.LABEL_EXPECTED_NAME, Token.c_str());
 		 case WORD:
 		 case NUM:
 			{	label& l = defineLabel();
 				if (global)
-					addGlobal(l.Name, exprValue(l.Value, V_LABEL));
+				{	ExprValue = exprValue(l.Value, V_LABEL);
+					addGlobal(l.Name);
+				}
 			}
 		 case END:;
 		}
@@ -917,37 +935,34 @@ void Parser::parseLabel()
 }
 
 void Parser::parseGLOBAL(int)
-{
-	if (NextToken() != WORD)
-		Fail("Expected global symbol name after .global. Found '%s'.", Token.c_str());
-	string name = Token;
-	//exprValue value;
+{	string name;
 	switch (NextToken())
 	{default:
-		Fail("Expected ',' or end of line after symbol name.");
-	 case COMMA: // name, value
-		ParseExpression();
-		if (NextToken() != END)
-			Fail("Expected end of line.");
-		switch (ExprValue.Type)
+		Fail(MSG.GLOBAL_EXPECTED_NAME, Token.c_str());
+	 case COLON: // :label
+	 ignore_double_colon:
+		switch (NextToken())
 		{default:
-			Fail("The value of a global symbol definition must be either a label or an integer constant. Found %s.", type2string(ExprValue.Type));
-		 case V_INT:
-			if (ExprValue.iValue < -0x80000000LL || ExprValue.iValue > 0xffffffffLL)
-				Fail("Cannot export 64 bit constant 0x%" PRIx64 "as symbol.", ExprValue.iValue);
-		 case V_LABEL:;
+			Fail(MSG.LABEL_EXPECTED_NAME, Token.c_str());
+		 case COLON:
+			goto ignore_double_colon;
+		 case WORD:
+			name = Token;
+			ExprValue = exprValue(labelRef(name).Value, V_LABEL);
+			if (NextToken() != END)
+				Fail(MSG.EXPECTED_EOL);
+			break;
 		}
 		break;
-	 case COLON:
-		if (NextToken() != WORD)
-			Fail("Label name expected. Found '%s'.", Token.c_str());
+	 case WORD: // name, value
 		name = Token;
+		if (NextToken() != COMMA)
+			Fail(MSG.EXPECTED_COMMA_2, "value", Token.c_str());
+		ParseExpression();
 		if (NextToken() != END)
-			Fail("Expected end of line.");
-	 case END: // only label name
-		ExprValue = exprValue(labelRef(name).Value, V_LABEL);
+			Fail(MSG.EXPECTED_EOL);
 	}
-	addGlobal(name, ExprValue);
+	addGlobal(name);
 }
 
 void Parser::parseDATA(int bits)
@@ -958,13 +973,13 @@ void Parser::parseDATA(int bits)
  next:
 	ParseExpression();
 	if (ExprValue.Type != V_INT && ExprValue.Type != V_FLOAT)
-		Fail("Immediate data instructions require integer or floating point constants. Found %s.", type2string(ExprValue.Type));
+		Fail(MSG.DATA_REQUIRES_INT_OR_FLOAT, type2string(ExprValue.Type));
 	if (bits < 0 && ExprValue.Type == V_INT)
 		ExprValue.fValue = ExprValue.iValue;
 	switch (bits)
 	{case -32: // float
 		if (fabs(ExprValue.fValue) > FLT_MAX && !std::isinf(ExprValue.fValue))
-			Msg(WARNING, "The value %g is outside the domain of single precision floating point.", ExprValue.fValue);
+			Msg(MSG.DATA_FLOAT32_OUT_OF_RANGE, ExprValue.fValue);
 		{	float f = (float)ExprValue.fValue;
 			ExprValue.iValue = *(uint32_t*)&f;
 		}
@@ -974,18 +989,18 @@ void Parser::parseDATA(int bits)
 		break;
 	 case -16: // half precision float
 		if (fabs(ExprValue.fValue) > 65504. && !std::isinf(ExprValue.fValue))
-			Msg(WARNING, "The value %g is outside the domain of half precision floating point.", ExprValue.fValue);
+			Msg(MSG.DATA_FLOAT16_OUT_OF_RANGE, ExprValue.fValue);
 		ExprValue.iValue = ::Inst::toFloat16(ExprValue.fValue);
 		goto flt;
 	 case 1: // bit
 		if (ExprValue.iValue & ~1)
-			Msg(WARNING, "Bit value out of range: 0x%" PRIx64, ExprValue.iValue);
+			Msg(MSG.DATA_BIT_OUT_OF_RANGE, ExprValue.iValue);
 		break;
 	 default: // 2 to 32 bit integer
 		{	int32_t lower = -1 << (bits - 1);
 			int64_t upper = (1ULL << bits) -1;
 			if (ExprValue.iValue > upper || ExprValue.iValue < lower)
-				Msg(WARNING, "%u bits integer value out of range [%" PRIi32 ", %" PRIi64 "]: 0x%" PRIx64, bits, lower, upper, ExprValue.iValue);
+				Msg(MSG.DATA_INT_OUT_OF_RANGE, bits, lower, upper, ExprValue.iValue);
 			ExprValue.iValue &= upper;
 			break;
 		}
@@ -999,7 +1014,7 @@ void Parser::parseDATA(int bits)
 	}
 	// Check alignment
 	else if (!alignment && (alignment = BitOffset & (bits-1)) != 0)
-		Msg(WARNING, "Unaligned immediate data directive. %i bits missing for correct alignment.", bits - alignment);
+		Msg(MSG.DATA_UNALIGNED, bits - alignment);
 	// store value
 	uint64_t& target = Instructions[PC];
 	target |= ExprValue.iValue << BitOffset;
@@ -1013,7 +1028,7 @@ void Parser::parseDATA(int bits)
 	}	}
 	switch (NextToken())
 	{default:
-		Fail("Syntax error. Expected ',' or end of line.");
+		Fail(MSG.EXPECTED_EOL_OR_COMMA, Token.c_str());
 	 case COMMA:
 		goto next;
 	 case END:;
@@ -1028,28 +1043,28 @@ void Parser::parseALIGN(int bytes)
 	if (bytes < 0)
 	{	ParseExpression();
 		if (ExprValue.Type != V_INT)
-			Fail("Expected integer constant after .align.");
+			Fail(MSG.ALIGN_REQUIRES_INT, type2string(ExprValue.Type));
 		if (ExprValue.iValue > 64 || ExprValue.iValue < 0)
-			Fail("Alignment value must be in the range [0, 64].");
+			Fail(MSG.ALIGN_OUT_OF_RANGE, ExprValue.iValue);
 		bytes = (int)ExprValue.iValue;
 		if (bytes & (bytes-1))
-			Fail("Alignment value must be a power of 2.");
+			Fail(MSG.ALIGN_NO_POWER_OF_2, bytes);
 	}
 	int offset = 0;
 	switch (NextToken())
 	{default:
-		Fail("Expected end of line or ,<offset>.");
+		Fail(MSG.ALIGN_EXPECTED_EOL_OR_COMMA, Token.c_str());
 	 case COMMA:
 		{	ParseExpression();
 			switch (ExprValue.Type)
 			{default:
-				Fail("Expected integer constant or label after .align.");
+				Fail(MSG.ALIGN_OFFSET_REQUIRES_INT_OR_LABEL, Token.c_str());
 			 case V_LABEL:
 			 case V_INT:
 				offset = -ExprValue.iValue & 63;
 			}
 			if (NextToken() != END)
-				Fail("Expected end of line after alignment directive.");
+				Fail(MSG.EXPECTED_EOL);
 		}
 	 case END:;
 	}
@@ -1092,7 +1107,7 @@ void Parser::beginLOCAL(int)
 		return;
 
 	if (NextToken() != END)
-		Fail("Expected end of line.");
+		Fail(MSG.EXPECTED_EOL);
 
 	Context.emplace_back(new fileContext(CTX_BLOCK, Context.back()->File, Context.back()->Line));
 }
@@ -1103,7 +1118,7 @@ void Parser::endLOCAL(int)
 		return;
 
 	if (Context.back()->Type != CTX_BLOCK)
-		Fail(".endloc without .local in the current file.");
+		Fail(MSG.END_DIRECTIVE_WO_START, "endloc", "local");
 	// keep line
 	unsigned line = Context.back()->Line;
 	Context.pop_back();
@@ -1119,24 +1134,28 @@ void Parser::beginREP(int mode)
 	AtMacro->Definition = *Context.back();
 
 	if (NextToken() != WORD)
-		Fail("Expected loop variable name after %s.", name);
+		Fail(MSG.EXPECTED_LOOP_VARIABLE_NAME, Token.c_str());
 
 	AtMacro->Args.push_back(Token);
 	if (NextToken() != COMMA)
-		Fail(mode ? "Expected ', <parameters>' at .foreach." : "Expected ', <count>' at .rep.");
+		Fail(MSG.EXPECTED_COMMA_2, mode ? "parameters" : "count", Token.c_str());
 
 	{nextpar:
 		ParseExpression();
-		if (!mode && (ExprValue.Type != V_INT || (uint64_t)ExprValue.iValue > 0x1000000))
-			Fail("Second argument to .rep must be a non-negative integral number. Found %s", ExprValue.toString().c_str());
+		if (!mode)
+		{	if (ExprValue.Type != V_INT)
+				Fail(MSG.REP_REQUIRES_INT, type2string(ExprValue.Type));
+			if ((uint64_t)ExprValue.iValue > 0x1000000)
+				Fail(MSG.REP_COUNT_OUT_OF_RANGE, ExprValue.iValue);
+		}
 		AtMacro->Args.push_back(ExprValue.toString());
 
 		switch (NextToken())
 		{default:
-			Fail("Expected ',' or end of line.");
+			Fail(MSG.EXPECTED_EOL_OR_COMMA, Token.c_str());
 		 case COMMA:
 			if (!mode)
-				Fail("Expected end of line.");
+				Fail(MSG.EXPECTED_EOL);
 			goto nextpar;
 		 case END:;
 		}
@@ -1150,14 +1169,14 @@ void Parser::endREP(int mode)
 	if (AtMacro != &iter->second)
 	{	if (doPreprocessor())
 			return;
-		Fail("%s without %s", Token.c_str(), name);
+		Fail(MSG.END_DIRECTIVE_WO_START, Token.c_str(), name + 1);
 	}
 	const macro m = *AtMacro;
 	AtMacro = NULL;
 	Macros.erase(iter);
 
 	if (NextToken() != END)
-		Fail("Expected end of line.");
+		Fail(MSG.EXPECTED_EOL);
 
 	if (m.Args.size() < 2)
 		return; // no loop count => 0
@@ -1197,20 +1216,18 @@ void Parser::beginBACK(int)
 		return;
 
 	if (Back)
-		Fail("Cannot nest .back directives.");
+		Fail(MSG.BACK_NO_NESTED);
 	ParseExpression();
 	if (ExprValue.Type != V_INT)
-		Fail("Expected integer constant after .back.");
-	if (ExprValue.iValue < 0)
-		Fail(".back expects positive integer argument.");
-	if (ExprValue.iValue > 10)
-		Fail("Cannot move instructions more than 10 slots back.");
+		Fail(MSG.BACK_REQUIRES_INT, type2string(ExprValue.Type));
+	if ((uint64_t)ExprValue.iValue > 10)
+		Fail(MSG.BACK_COUNT_OUT_OF_RANGE, ExprValue.iValue);
 	if ((unsigned)ExprValue.iValue > PC)
-		Fail("Cannot move instructions back before the start of the code.");
+		Fail(MSG.BACK_BEFORE_START_OF_CODE);
 	if (NextToken() != END)
-		Fail("Expected end of line, found '%s'.", Token.c_str());
+		Fail(MSG.EXPECTED_EOL);
 	Back = (unsigned)ExprValue.iValue;
-	size_t pos = PC -= Back;
+	unsigned pos = PC -= Back;
 	// Load last instruction before .back to provide combine support
 	if (pos)
 	{	decode(Instructions[pos-1]);
@@ -1219,7 +1236,7 @@ void Parser::beginBACK(int)
 	if (Pass2)
 		while (++pos < PC + Back)
 			if (InstFlags[pos] & IF_BRANCH_TARGET)
-				Msg(WARNING, ".back crosses branch target at address 0x%zx. Code might not work.", pos*8);
+				Msg(MSG.BACK_CROSSES_BRANCH_TARGET, pos*8);
 }
 
 void Parser::endBACK(int)
@@ -1230,7 +1247,7 @@ void Parser::endBACK(int)
 	/* avoids .back 0  if (!Back)
 		Fail(".endb without .back.");*/
 	if (NextToken() != END)
-		Fail("Expected end of line, found '%s'.", Token.c_str());
+		Fail(MSG.EXPECTED_EOL);
 	PC += Back;
 	Back = 0;
 	// Restore last instruction to provide combine support
@@ -1247,13 +1264,15 @@ void Parser::parseCLONE(int)
 
 	ParseExpression();
 	if (ExprValue.Type != V_LABEL)
-		Fail("The first argument to .clone must by a label. Found %s.", type2string(ExprValue.Type));
+		Fail(MSG.CLONE_REQUIRES_LABEL, type2string(ExprValue.Type));
 	unsigned param1 = (unsigned)ExprValue.iValue >> 3; // offset in instructions rather than bytes
 	if (NextToken() != COMMA)
-		Fail("Expected ', <count>' at .clone.");
+		Fail(MSG.EXPECTED_COMMA_2, "count", Token.c_str());
 	ParseExpression();
+	if (ExprValue.Type != V_INT)
+		Fail(MSG.CLONE_REQUIRES_INT, type2string(ExprValue.Type));
 	if (ExprValue.Type != V_INT || (uint64_t)ExprValue.iValue > 3)
-		Fail("Expected integer constant in the range [0,3].");
+		Fail(MSG.CLONE_COUNT_OT_OUF_RANGE, ExprValue.iValue);
 	// Fast exit without any further checks.
 	if (ExprValue.iValue == 0)
 		return;
@@ -1262,16 +1281,16 @@ void Parser::parseCLONE(int)
 	FlagsSize(PC + param2);
 	param2 += param1; // end offset rather than count
 	if (Pass2 && param2 >= Instructions.size())
-		Fail("Cannot clone behind the end of the code.");
+		Fail(MSG.CLONE_BEHIND_END_OF_CODE);
 
 	if (doALIGN(8, 0))
-		Msg(WARNING, "Used padding to enforce 64 bit alignment of GPU instruction.");
+		Msg(MSG.INSTRUCTION_REQUIRES_ALIGNMENT);
 
 	auto src = param1;
 	do
 	{	InstFlags[PC] |= InstFlags[src] & ~IF_BRANCH_TARGET;
 		if ((Instructions[src] & 0xF000000000000000ULL) == 0xF000000000000000ULL)
-			Msg(WARNING, "You should not clone branch instructions. (#%u)", src - param1);
+			Msg(MSG.CLONE_OF_BRANCH, src - param1);
 		StoreInstruction(Instructions[src]);
 		++PC;
 		++src;
@@ -1286,27 +1305,27 @@ void Parser::parseSET(int flags)
 	if (doPreprocessor())
 		return;
 
-	if (NextToken() != WORD)
-		Fail("Directive .set requires identifier.");
+	parseIdentifier(Token.c_str());
 	string name = Token;
+
 	switch (NextToken())
 	{default:
-		Fail("Directive .set requires ', <value>' or '(<arguments>) <value>'. Found %s.", Token.c_str());
+		Fail(MSG.SET_REQUIRES_VALUE_OR_ARG_LIST, Token.c_str());
 	 case BRACE1:
-		{	function func(*Context.back());
+		{	funcMacro func(*Context.back());
 		 next:
 			if (NextToken() != WORD)
-				Fail("Function argument name expected. Found '%s'.", Token.c_str());
+				Fail(MSG.EXPECTED_ARG_NAME, Token.c_str());
 			func.Args.push_back(Token);
 			switch (NextToken())
 			{default:
-				Fail("Expected ',' or ')' after function argument.");
+				Fail(MSG.EXPECTED_COMMA_OR_BRC, Token.c_str());
 			 case NUM:
-				Fail("Function arguments must not start with a digit.");
+				Fail(MSG.IDENTIFIER_NO_START_DIGIT);
 			 case COMMA:
 				goto next;
 			 case END:
-				Fail("Unexpected end of function argument definition");
+				Fail(MSG.UNEXPECTED_END_IN_ARG_LIST);
 			 case BRACE2:
 				break;
 			}
@@ -1318,8 +1337,7 @@ void Parser::parseSET(int flags)
 
 			const auto& ret = Functions.emplace(name, func);
 			if (!ret.second)
-			{	Msg(INFO, "Redefinition of function %s.\n"
-				      "Previous definition at %s (%u).",
+			{	Msg(MSG.SET_FUNCTION_REDEFINED,
 				  Token.c_str(), fName(ret.first->second.Definition.File), ret.first->second.Definition.Line);
 				ret.first->second = func;
 			}
@@ -1329,14 +1347,14 @@ void Parser::parseSET(int flags)
 		{	InstCtx = IC_XP;
 			ParseExpression();
 			if (NextToken() != END)
-				Fail("Syntax error: unexpected %s.", Token.c_str());
+				Fail(MSG.EXPECTED_EOL);
 
 			auto& consts = (flags & C_LOCAL ? Context.back() : Context.front())->Consts;
 			auto r = consts.emplace(name, constDef(ExprValue, *Context.back()));
 			if (!r.second)
 			{	if (flags & C_CONST)
 					// redefinition not allowed
-					Fail("Identifier %s has already been defined at %s (%u).",
+					Fail(MSG.SET_CONSTANT_REDEFINED,
 						name.c_str(), fName(r.first->second.Definition.File), r.first->second.Definition.Line);
 				r.first->second.Value = ExprValue;
 			}
@@ -1349,16 +1367,15 @@ void Parser::parseUNSET(int flags)
 	if (doPreprocessor())
 		return;
 
-	if (NextToken() != WORD)
-		Fail("Directive .unset requires identifier.");
+	parseIdentifier(Token.c_str());
 	string Name = Token;
 	if (NextToken() != END)
-		Fail("Syntax error: unexpected %s.", Token.c_str());
+		Fail(MSG.EXPECTED_EOL);
 
 	auto& consts = (flags & C_LOCAL ? Context.back() : Context.front())->Consts;
 	auto r = consts.find(Name);
 	if (r == consts.end())
-		return Msg(WARNING, "Cannot unset %s because it has not yet been definied in the required context.", Name.c_str());
+		return Msg(MSG.UNSET_UNDEFINED_IDENTIFIER, Name.c_str());
 	consts.erase(r);
 }
 
@@ -1366,9 +1383,9 @@ bool Parser::doCondition()
 {
 	ParseExpression();
 	if (ExprValue.Type != V_INT)
-		Fail("Conditional expression must be a integer constant, found '%s'.", ExprValue.toString().c_str());
+		Fail(MSG.CONDITION_REQUIRES_INT, type2string(ExprValue.Type));
 	if (NextToken() != END)
-		Fail("Expected end of line, found '%s'.", Token.c_str());
+		Fail(MSG.EXPECTED_EOL);
 	return ExprValue.iValue != 0;
 }
 
@@ -1385,8 +1402,7 @@ void Parser::parseIFSET(int)
 	if (doPreprocessor(PP_MACRO))
 		return;
 
-	if (NextToken() != WORD)
-		Fail("Expected identifier after .ifset, found '%s'.", Token.c_str());
+	parseIdentifier(Token.c_str());
 
 	int state = 4;
 	if (!isDisabled())
@@ -1401,7 +1417,7 @@ void Parser::parseIFSET(int)
 	}
 
 	if (NextToken() != END)
-		Fail("Expected end of line, found '%s'.", Token.c_str());
+		Fail(MSG.EXPECTED_EOL);
 
 	AtIf.emplace_back(*Context.back(), state);
 }
@@ -1412,7 +1428,7 @@ void Parser::parseELSEIF(int)
 		return;
 
 	if (!AtIf.size())
-		Fail(".elseif without .if");
+		Fail(MSG.END_DIRECTIVE_WO_START, Token.c_str(), ".if");
 
 	if (AtIf.back().State == IS_FALSE)
 		AtIf.back().State = doCondition();
@@ -1426,9 +1442,9 @@ void Parser::parseELSE(int)
 		return;
 
 	if (!AtIf.size())
-		Fail(".else without .if");
+		Fail(MSG.END_DIRECTIVE_WO_START, Token.c_str(), ".if");
 	if (NextToken() != END)
-		Msg(ERROR, "Expected end of line. .else has no arguments.");
+		Msg(MSG.EXPECTED_EOL);
 
 	// Hack for .else
 	// State transition from IS_FALSE to IF_TRUE and from IF_TRUE to IS_FALSE|IS_ELSE
@@ -1440,12 +1456,12 @@ void Parser::parseENDIF(int)
 	if (doPreprocessor(PP_MACRO))
 		return;
 
-	if (NextToken() != END)
-		Msg(ERROR, "Expected end of line. .endif has no arguments.");
 	if (!AtIf.size())
-		Fail(".endif without .if.");
+		Fail(MSG.END_DIRECTIVE_WO_START, Token.c_str(), ".if");
+	if (NextToken() != END)
+		Msg(MSG.EXPECTED_EOL);
 	if (AtIf.back().File != Context.back()->File)
-		Fail(".endif without .if in the same file.");
+		Fail(MSG.IF_DIRECTIVE_OTHER_FILE, fName(AtIf.back().File));
 
 	AtIf.pop_back();
 }
@@ -1456,7 +1472,44 @@ void Parser::parseASSERT(int)
 		return;
 
 	if (!doCondition())
-		Msg(ERROR, "Assertion failed.");
+		Msg(MSG.ASSERTION_FAILED);
+}
+
+vector<exprValue> Parser::parseArgumentList(const string& name, size_t count)
+{
+	auto oldctx = InstCtx;
+	InstCtx = IC_XP;
+
+	vector<exprValue> args;
+	args.reserve(count);
+	if (count == 0)
+	{	// no arguments
+		if (NextToken() != BRACE2)
+			Fail(MSG.FUNCTION_HAS_NO_ARGS, name.c_str());
+	} else
+	{next:
+		ParseExpression();
+		args.push_back(ExprValue);
+		switch (NextToken())
+		{case BRACE2:
+			// End of argument list. Are we complete?
+			if (args.size() != count)
+				Fail(MSG.FUNCTION_TOO_FEW_ARGS, name.c_str(), count, args.size());
+			break;
+		 case END:
+			Fail(MSG.UNMATCHED_OPENING_BRACE);
+		 default:
+			Fail(MSG.FUNCTION_EXPECTED_COMMA_OR_BRC, Token.c_str(), name.c_str());
+		 case COMMA:
+			// next argument
+			if (args.size() == count)
+				Fail(MSG.FUNCTION_TOO_MANY_ARGS, name.c_str(), count);
+			goto next;
+		}
+	}
+
+	InstCtx = oldctx; // restore context
+	return args;
 }
 
 void Parser::beginMACRO(int flags)
@@ -1465,16 +1518,13 @@ void Parser::beginMACRO(int flags)
 		return;
 
 	if (AtMacro)
-		Fail("Cannot nest macro definitions.\n"
-		     "  In definition of macro starting at %s (%u).",
-		     fName(AtMacro->Definition.File), AtMacro->Definition.Line);
-	if (NextToken() != WORD)
-		Fail("Expected macro name.");
+		Fail(MSG.MACRO_NO_NESTED_DEFINITION, fName(AtMacro->Definition.File), AtMacro->Definition.Line);
+	parseIdentifier("macro");
+
 	AtMacro = &(flags & M_FUNC ? MacroFuncs : Macros)[Token];
 	if (!!AtMacro->Definition)
-	{	Msg(INFO, "Redefinition of macro %s.\n"
-		          "  Previous definition at %s (%u).",
-		  Token.c_str(), fName(AtMacro->Definition.File), AtMacro->Definition.Line);
+	{	if (!Pass2)
+			Msg(MSG.MACRO_REDEFINED, Token.c_str(), fName(AtMacro->Definition.File), AtMacro->Definition.Line);
 		// redefine
 		AtMacro->Args.clear();
 		AtMacro->Content.clear();
@@ -1488,29 +1538,34 @@ void Parser::beginMACRO(int flags)
 		{case BRACE1:
 			if (!AtMacro->Args.size())
 			{	brace = 1;
-				goto comma;
+				goto arg;
 			}
 		 default:
-			Fail("Expected ',' before (next) macro argument.");
-		 case NUM:
-			Fail("Macro arguments must not be numbers.");
+			switch (brace)
+			{case 0:
+				Fail(MSG.EXPECTED_EOL_OR_BRO, Token.c_str());
+			 case 1:
+				Fail(MSG.MACRO_ARG_EXPECTED, Token.c_str());
+			 default:
+				Fail(MSG.EXPECTED_EOL);
+			}
 		 case COMMA:
 			if (brace == 2)
-				Fail("Expected end of line after closing brace.");
-		 comma:
+				Fail(MSG.EXPECTED_EOL);
+		 arg:
 			// Macro argument
 			if (NextToken() != WORD)
-				Fail("Macro argument name expected. Found '%s'.", Token.c_str());
+				Fail(MSG.EXPECTED_ARG_NAME, Token.c_str());
 			AtMacro->Args.push_back(Token);
 			break;
 		 case BRACE2:
 			if (brace != 1)
-				Fail("Unexpected closing brace.");
+				Fail(MSG.UNMATCHED_CLOSING_BRACE);
 			brace = 2;
 			break;
 		 case END:
 			if (brace == 1)
-				Fail("Closing brace is missing");
+				Fail(MSG.UNMATCHED_OPENING_BRACE);
 			return;
 		}
 }
@@ -1520,13 +1575,11 @@ void Parser::endMACRO(int flags)
 	if (doPreprocessor(PP_IF))
 		return;
 
-	if (!AtMacro)
-		Fail(".%s outside a macro definition.", Token.c_str());
-	if (AtMacro->Flags != flags)
-		Fail("Cannot close this macro with .%s. Expected .end%c.", Token.c_str(), flags & M_FUNC ? 'f' : 'm');
+	if (!AtMacro || AtMacro->Flags != flags)
+		Fail(MSG.END_DIRECTIVE_WO_START, Token.c_str(), flags & M_FUNC ? "func" : "macro");
 	AtMacro = NULL;
 	if (NextToken() != END)
-		Msg(ERROR, "Expected end of line.");
+		Msg(MSG.EXPECTED_EOL);
 }
 
 void Parser::doMACRO(macros_t::const_iterator m)
@@ -1542,19 +1595,19 @@ void Parser::doMACRO(macros_t::const_iterator m)
 			args.emplace_back(ExprValue);
 			switch (NextToken())
 			{default:
-				Fail("internal error");
+				Fail(MSG.INTERNAL_MACRO_ARG_EXPANSION, Token.c_str());
 			 case COMMA:
 				if (args.size() == argnames.size())
-					Fail("Too much arguments for macro %s.", m->first.c_str());
+					Fail(MSG.MACRO_TOO_MANY_ARGS, m->first.c_str(), argnames.size());
 				continue;
 			 case END:
 				if (args.size() != argnames.size())
-					Fail("Too few arguments for macro %s.", m->first.c_str());
+					Fail(MSG.MACRO_TOO_FEW_ARGS, m->first.c_str(), argnames.size(), args.size());
 			}
 			break;
 		}
 	} else if (NextToken() != END)
-		Fail("The macro %s does not take arguments.", m->first.c_str());
+		Fail(MSG.MACRO_HAS_NO_ARGS, m->first.c_str());
 
 	// Setup invocation context
 	saveContext ctx(*this, new fileContext(CTX_MACRO, m->second.Definition.File, m->second.Definition.Line));
@@ -1577,38 +1630,11 @@ void Parser::doMACRO(macros_t::const_iterator m)
 void Parser::doFUNCMACRO(macros_t::const_iterator m)
 {
 	if (NextToken() != BRACE1)
-		Fail("Expected '(' after function name.");
+		Fail(MSG.FUNCTION_REQUIRES_ARG_LIST);
 
-	auto oldctx = InstCtx;
-	InstCtx = IC_XP;
 	// Fetch macro arguments
 	const auto& argnames = m->second.Args;
-	vector<exprValue> args;
-	args.reserve(argnames.size());
-	if (argnames.size() == 0)
-	{	// no arguments
-		if (NextToken() != BRACE2)
-			Fail("Expected ')' because function %s has no arguments.", m->first.c_str());
-	} else
-	{next:
-		ParseExpression();
-		args.push_back(ExprValue);
-		switch (NextToken())
-		{case BRACE2:
-			// End of argument list. Are we complete?
-			if (args.size() != argnames.size())
-				Fail("Too few arguments for function %s. Expected %zu, found %zu.", m->first.c_str(), argnames.size(), args.size());
-			break;
-		 default:
-			Fail("Unexpected '%s' in argument list of function %s.", Token.c_str(), m->first.c_str());
-		 case COMMA:
-			// next argument
-			if (args.size() == argnames.size())
-				Fail("Too much arguments for function %s. Expected %zu.", m->first.c_str(), argnames.size());
-			goto next;
-		}
-	}
-	InstCtx = oldctx; // restore context
+	vector<exprValue> args = parseArgumentList(m->first, argnames.size());
 
 	// Setup invocation context
 	saveLineContext ctx(*this, new fileContext(CTX_MACRO, m->second.Definition.File, m->second.Definition.Line));
@@ -1626,74 +1652,49 @@ void Parser::doFUNCMACRO(macros_t::const_iterator m)
 	{	++Context.back()->Line;
 		Line = line;
 		At = Line.c_str();
-		switch (NextToken())
-		{case DOT:
-			// directives
-			ParseDirective();
-		 case END:
-			break;
-
-		 case COLON:
-		 label:
-			Msg(ERROR, "Label definition not allowed in functional macro %s.", m->first.c_str());
-			break;
-
-		 default:
-			if (doPreprocessor())
+		try
+		{	switch (NextToken())
+			{case DOT:
+				// directives
+				ParseDirective();
+			 case END:
 				break;
-			// read-ahead to see if the next token is a colon in which case
-			// this is a label.
-			if (*At == ':')
-				goto label;
-			if (ret.Type != V_NONE)
-			{	Msg(ERROR, "Only one expression allowed per functional macro.");
-				break;
+
+			 case COLON:
+			 label:
+				Fail(MSG.FUNCTION_NO_LABEL_DEFINITION, m->first.c_str());
+
+			 default:
+				if (doPreprocessor())
+					break;
+				// read-ahead to see if the next token is a colon in which case
+				// this is a label.
+				if (*At == ':')
+					goto label;
+				if (ret.Type != V_NONE)
+					Fail(MSG.FUNCTION_2ND_EXPRESSION, m->first.c_str());
+				At -= Token.size();
+				ParseExpression();
+				ret = ExprValue;
 			}
-			At -= Token.size();
-			ParseExpression();
-			ret = ExprValue;
+		} catch (const Message& msg)
+		{	// recover from errors
+			CaughtMsg(msg);
 		}
 	}
 	if (ret.Type == V_NONE)
-		Fail("Failed to return a value in functional macro %s.", m->first.c_str());
+		Fail(MSG.FUNCTION_MISSING_RETURN, m->first.c_str());
 	ExprValue = ret;
 }
 
 void Parser::doFUNC(funcs_t::const_iterator f)
 {
 	if (NextToken() != BRACE1)
-		Fail("Expected '(' after function name.");
+		Fail(MSG.FUNCTION_REQUIRES_ARG_LIST);
 
-	auto oldctx = InstCtx;
-	InstCtx = IC_XP;
 	// Fetch macro arguments
 	const auto& argnames = f->second.Args;
-	vector<exprValue> args;
-	args.reserve(argnames.size());
-	if (argnames.size() == 0)
-	{	// no arguments
-		if (NextToken() != BRACE2)
-			Fail("Expected ')' because function %s has no arguments.", f->first.c_str());
-	} else
-	{next:
-		ParseExpression();
-		args.push_back(ExprValue);
-		switch (NextToken())
-		{case BRACE2:
-			// End of argument list. Are we complete?
-			if (args.size() != argnames.size())
-				Fail("Too few arguments for function %s. Expected %zu, found %zu.", f->first.c_str(), argnames.size(), args.size());
-			break;
-		 default:
-			Fail("Unexpected '%s' in argument list of function %s.", Token.c_str(), f->first.c_str());
-		 case COMMA:
-			// next argument
-			if (args.size() == argnames.size())
-				Fail("Too much arguments for function %s. Expected %zu.", f->first.c_str(), argnames.size());
-			goto next;
-		}
-	}
-	InstCtx = oldctx;
+	vector<exprValue> args = parseArgumentList(f->first, argnames.size());
 
 	// Setup invocation context
 	saveLineContext ctx(*this, new fileContext(CTX_FUNCTION, f->second.Definition.File, f->second.Definition.Line));
@@ -1708,7 +1709,7 @@ void Parser::doFUNC(funcs_t::const_iterator f)
 
 	ParseExpression();
 	if (NextToken() != END)
-		Fail("Function %s evaluated to an incomplete expression.", f->first.c_str());
+		Fail(MSG.FUNCTION_INCLOMPLETE_EXPRESSION, f->first.c_str());
 }
 
 void Parser::doSEGMENT(int flags)
@@ -1717,7 +1718,7 @@ void Parser::doSEGMENT(int flags)
 		return;
 
 	if (NextToken() != END)
-		Msg(ERROR, "End of line expected.");
+		Msg(MSG.EXPECTED_EOL);
 
 	// Search segment entry at PC
 	auto ptr = upper_bound(Segments.begin()+1, Segments.end(), PC,
@@ -1745,22 +1746,18 @@ void Parser::doINCLUDE(int)
 		Line.erase(p + 1);
 	At += strspn(At, " \t\r\n");
 	if ((*At != '"' || Line[Line.length()-1] != '"') && (*At != '<' || Line[Line.length()-1] != '>'))
-		Fail("Syntax error. Expected \"file-name\" or <file-name> after .include, found '%s'.", At);
+		Fail(MSG.INCLUDE_REQUIRES_FILENAME, At);
 	Token.assign(At+1, Line.length() - (At - Line.c_str()) - 2);
 
 	// find file
 	string file;
 	if (*At != '<' || (file = FindIncludePath(Token)).length() == 0) // check include paths first
-	{	file = relpath(SourceFiles[Context.back()->File].Name, Token);
-		struct stat buffer;
-		if (stat(file.c_str(), &buffer) != 0)
-			Fail("Cannot locate included file '%s'.", Token.c_str());
-	}
+		file = relpath(SourceFiles[Context.back()->File].Name, Token);
 
 	if (Pass2)
 	{	const auto& p1file = SourceFiles[FilesCount];
 		if (p1file.Name != file)
-			Fail("Inconsistent include invocation during pass 2.");
+			Fail(MSG.INTERNAL_INCLUDE_INCONSISTENCY, p1file.Name.c_str());
 		++FilesCount;
 	} else
 	{	SourceFiles.emplace_back(file, *Context.back());
@@ -1773,11 +1770,11 @@ void Parser::doINCLUDE(int)
 void Parser::ParseDirective()
 {
 	if (NextToken() != WORD)
-		Fail("Expected assembler directive after '.'. Found '%s'.", Token.c_str());
+		Fail(MSG.EXPECTED_DIRECTIVE, Token.c_str());
 
 	const opEntry<8>* op = binary_search(directiveMap, Token.c_str());
 	if (!op)
-		Fail("Invalid assembler directive: %s", Token.c_str());
+		Fail(MSG.UNKNOWN_DIRECTIVE, Token.c_str());
 
 	(this->*op->Func)(op->Arg);
 }
@@ -1835,7 +1832,7 @@ void Parser::ParseLine()
 	 def:
 	 default:
 		if (!AtMacro || (AtMacro->Flags & M_FUNC) == 0)
-			Fail("Syntax error. Unexpected '%s'.", Token.c_str());
+			Fail(MSG.UNEXPECTED_TOKEN, Token.c_str());
 	 case WORD:
 		if (doPreprocessor())
 			return;
@@ -1857,7 +1854,7 @@ void Parser::ParseLine()
 		}
 
 		if (doALIGN(8, 0))
-			Msg(WARNING, "Used padding to enforce 64 bit alignment of GPU instruction.");
+			Msg(MSG.INSTRUCTION_REQUIRES_ALIGNMENT);
 
 		if (trycombine)
 		{	const char* atbak = At;
@@ -1868,17 +1865,18 @@ void Parser::ParseLine()
 				ParseInstruction();
 				// Do not combine TMU instructions
 				if (isTMUconflict())
-					throw string();
+					goto nope;
 				// Combine succeeded
 				Instructions[pos-1] = encode();
 				InstFlags[pos-1] = Flags;
 				return;
-			} catch (const string& msg)
+			} catch (const Message& msg)
 			{	// Combine failed => try new instruction.
-				At = atbak;
-				Success = succbak;
-				Token = tokenbak;
 			}
+		 nope:
+			At = atbak;
+			Success = succbak;
+			Token = tokenbak;
 		}
 		// new instruction
 		reset();
@@ -1905,20 +1903,18 @@ void Parser::ParseFile()
 {
 	FILE* f = fopen(fName(Context.back()->File), "r");
 	if (!f)
-		Fail("Failed to open file %s.", fName(Context.back()->File));
+		Fail(MSG.INPUT_FILE_NOT_FOUND, fName(Context.back()->File));
 	auto ifs = AtIf.size();
 	try
 	{	while ((Line = fgetstring(f, 1024)).length())
 		{	++Context.back()->Line;
 			try
 			{	ParseLine();
-			} catch (const string& msg)
+			} catch (const Message& msg)
 			{	// recover from errors
-				CaughtMsg(msg.c_str());
+				CaughtMsg(msg);
 			}
-
-			if (AtMacro && AtMacro->Definition.Line == 0)
-				Fail("!!!");
+			assert(!AtMacro || AtMacro->Definition.Line);
 		}
 		fclose(f);
 	} catch (...)
@@ -1926,20 +1922,20 @@ void Parser::ParseFile()
 		throw;
 	}
 	if (ifs < AtIf.size())
-		Fail("Unterminated .if at line %u.", AtIf[ifs].Line);
+		Msg(MSG.UNTERMINATED_IF_IN_FILE, AtIf[ifs].Line);
 }
 void Parser::ParseFile(const string& file)
 {	if (Pass2)
-		throw string("Cannot add another file after pass 2 has been entered.");
+		Fail(MSG.INTERNAL_NO_ADD_FILE_IN_PASS2);
 
 	SourceFiles.emplace_back(file);
 	FilesCount = SourceFiles.size();
 	saveContext ctx(*this, new fileContext(CTX_FILE, FilesCount-1, 0));
 	try
 	{	ParseFile();
-	} catch (const string& msg)
+	} catch (const Message& msg)
 	{	// recover from errors
-		CaughtMsg(msg.c_str());
+		CaughtMsg(msg);
 	}
 }
 
@@ -1976,11 +1972,9 @@ void Parser::EnsurePass2()
 	// Check all labels
 	for (auto& label : Labels)
 	{	if (!label.Definition)
-			Msg(ERROR, "Label '%s' is undefined. Referenced from %s (%u).\n",
-				label.Name.c_str(), fName(label.Reference.File), label.Reference.Line);
+			Msg(MSG.LABEL_UNDEFINED, label.Name.c_str(), fName(label.Reference.File), label.Reference.Line);
 		if (!label.Reference)
-			Msg(INFO, "Label '%s' defined at %s (%u) is not used.\n",
-				label.Name.c_str(), fName(label.Definition.File), label.Definition.Line);
+			Msg(MSG.LABEL_UNUSED, label.Name.c_str(), fName(label.Definition.File), label.Definition.Line);
 		// prepare for next pass
 		label.Definition.Line = 0;
 	}
@@ -1988,8 +1982,8 @@ void Parser::EnsurePass2()
 	//for (auto& file : SourceFiles)
 	while (FilesCount < SourceFiles.size())
 	{	const auto& file = SourceFiles[FilesCount];
-		if (!!file.Parent)
-			Fail("Inconsistent include files during pass 2.");
+		if (file.Parent)
+			Fail(MSG.INTERNAL_INCLUDE_INCONSISTENCY2);
 		saveContext ctx(*this, new fileContext(CTX_FILE, FilesCount, 0));
 		++FilesCount;
 		ParseFile();
@@ -2040,5 +2034,6 @@ void Parser::Reset()
 }
 
 Parser::Parser()
-{	Reset();
+{	AssembleInst::OnMessage = EnrichMessage;
+	Reset();
 }

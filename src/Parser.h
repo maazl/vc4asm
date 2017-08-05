@@ -21,11 +21,17 @@
 #include <memory>
 #include <stdarg.h>
 
+
 using namespace std;
 
 
+// Work around because gcc can't define a constexpr struct inside a class, part 1.
+#define MSG ParserMSG
+#include "Parser.MSG.h"
+#undef MSG
+
 /// Core class that does the assembly process.
-class Parser : private AssembleInst, public DebugInfo
+class Parser : protected AssembleInst, public DebugInfo
 {public:
 	/// Operation mode.
 	enum mode : unsigned char
@@ -33,6 +39,41 @@ class Parser : private AssembleInst, public DebugInfo
 	,	NORMAL       ///< Break after pass 1 in case of errors. @remarks Causes Warnings to be suppressed during pass 1.
 	,	IGNOREERRORS ///< Always enter pass 2, even in case of errors. @remarks Show no messages in pass 1.
 	};
+
+	/// Type of parser call stack entry.
+	enum contextType : unsigned char
+	{	CTX_ROOT     ///< Root node
+	,	CTX_FILE     ///< File supplied by command line
+	,	CTX_BLOCK    ///< .local block
+	,	CTX_INCLUDE  ///< .include directive
+	,	CTX_MACRO    ///< macro invocation
+	,	CTX_FUNCTION ///< function call
+	,	CTX_CURRENT  ///< no context, current line
+	};
+	/// Invocation context
+	struct context : location
+	{	contextType  Type; ///< Type of this context.
+	};
+
+ public: // messages
+	struct Message : AssembleInst::Message
+	{	vector<context> Context;
+		Parser& Parent() const noexcept { return (Parser&)AssembleInst::Message::Parent; }
+	 private:
+		void SetContext();
+	 public:
+		Message(AssembleInst::Message&& msg) : AssembleInst::Message(move(msg)) { SetContext(); }
+		Message(Parser& parent, const ::Message& msg) : AssembleInst::Message(parent, msg) { SetContext(); }
+		virtual string toString() const noexcept;
+	};
+
+	/// Message handler. Prints to \c stderr by default.
+	/// @remarks Redefinition with more specialized type.
+	function<void(const Message& msg)> OnMessage = Message::printHandler;
+
+	// Work around because gcc can't define a constexpr struct inside a class, part 2.
+	//#include "Parser.MSG.h"
+	static constexpr const struct ParserMSG MSG = ParserMSG;
 
  public: // Input
 	/// List of path prefixes to search for include files.
@@ -43,7 +84,7 @@ class Parser : private AssembleInst, public DebugInfo
 	/// This is for internal use only and does not guarantee a specific result.
 	FILE*          Preprocessed = NULL;
 	/// Display only messages with higher or same severity.
-	severity       Verbose = WARNING;
+	severity       Verbose = WARN;
 	/// See \see mode.
 	mode           OperationMode = NORMAL;
  public: // Result
@@ -83,16 +124,6 @@ class Parser : private AssembleInst, public DebugInfo
 		reg_t       Value;   ///< Register or register group, see \ref reg_t
 	}             regMap[];///< Register lookup table, ordered by Name.
 
-	/// Type of parser call stack entry.
-	enum contextType : unsigned char
-	{	CTX_ROOT             ///< Root node
-	,	CTX_FILE             ///< File supplied by command line
-	,	CTX_BLOCK            ///< .local block
-	,	CTX_INCLUDE          ///< .include directive
-	,	CTX_MACRO            ///< macro invocation
-	,	CTX_FUNCTION         ///< function call
-	,	CTX_CURRENT          ///< no context, current line
-	};
 	/// Type of preprocessor action, bit vector
 	enum preprocType : unsigned char
 	{	PP_MACRO = 1         ///< Macro expansion
@@ -104,7 +135,7 @@ class Parser : private AssembleInst, public DebugInfo
 	template <size_t L>
 	struct opEntry
 	{	char Name[L];        ///< OP code name
-		void (Parser::*Func)(int);///< Parser function to call, receives the agrument below.
+		void (Parser::*Func)(int);///< Parser function to call, receives the argument below. Precondition: Token contains the directive name.
 		int Arg;             ///< Arbitrary argument to the parser function.
 	};
 	///< OP code lookup table, ordered by Name.
@@ -142,19 +173,22 @@ class Parser : private AssembleInst, public DebugInfo
 	/// @brief Constant lookup table.
 	/// @details The key is the identifier name, the value, well, the value.
 	typedef unordered_map<string,constDef> consts_t;
+	/// Base of function and macro.
+	struct funcbase
+	{	vector<string> Args;      ///< Identifier names of the function arguments in order of appearance.
+		location       Definition;///< Where has this function been defined (for messages only)
+	};
 	/// @brief Function definition (.set)
 	/// @details A function is any single line expression that evaluates to an exprValue from a set of exprValue arguments.
-	struct function
-	{	vector<string> Args;      ///< Identifier names of the function arguments in order of appearance.
-		string         DefLine;   ///< Copy of the entire Line where the function has been defined.
+	struct funcMacro : funcbase
+	{	string         DefLine;   ///< Copy of the entire Line where the function has been defined.
 		unsigned       Start;     ///< Character in DefLine where the function body starts.
-		location       Definition;///< Where has this function been defined (for messages only)
 		/// Construct an empty function definition. The properties have to be assigned later.
-		function(const location& definition) : Start(0), Definition(definition) {}
+		funcMacro(const location& definition) : Start(0) { Definition = definition; }
 	};
 	/// @brief Function lookup table.
 	/// @details The key is the function name, the value is the function definition.
-	typedef unordered_map<string,function> funcs_t;
+	typedef unordered_map<string,funcMacro> funcs_t;
 	/// Macro flags, bit vector
 	enum macroFlags : unsigned char
 	{	M_NONE = 0     ///< normal macro, i.e. without a return value
@@ -166,10 +200,8 @@ class Parser : private AssembleInst, public DebugInfo
 	/// - functional macros, defined by .func.
 	/// The have no much common, but they happen to have the same data structures and to share some code,
 	/// so the use a common type.
-	struct macro
-	{	location       Definition;///< Where has the macro been defined.
-		macroFlags     Flags;     ///< Flags
-		vector<string> Args;      ///< List of identifier names of the macro arguments in order of appearance if any.
+	struct macro : funcbase
+	{	macroFlags     Flags;     ///< Flags
 		vector<string> Content;   ///< Macro body. Line by line the macro source code, unevaluated. To get the matching source file line add the location from Definition.
 	};
 	/// @brief Macro definition lookup table
@@ -196,11 +228,10 @@ class Parser : private AssembleInst, public DebugInfo
 	/// @details This context consists of a invocation location (inherited from \ref location)
 	/// and a set of local constant redefinitions.
 	/// There is currently no option to redefine macros locally.
-	struct fileContext : public location
-	{	const contextType Type;   ///< Type of this context.
-		consts_t       Consts;    ///< Constants (.set)
+	struct fileContext : public context
+	{	consts_t       Consts;    ///< Constants (.set)
 		/// Create a new invocation context.
-		fileContext(contextType type, uint16_t file, uint16_t line) : Type(type) { File = file; Line = line; }
+		fileContext(contextType type, uint16_t file, uint16_t line) { Type = type; File = file; Line = line; }
 	};
 	/// Call stack of file invocations. The innermost context is the last entry.
 	/// The containers owns the context instances exclusively.
@@ -262,7 +293,7 @@ class Parser : private AssembleInst, public DebugInfo
 	ifs_t            AtIf;
 	/// @brief Current call stack of .include and macro invocations.
 	/// @details The entries are of different types. See contextType.
-	/// The list will contain at least one element for the current file.
+	/// The list will contain at least two elements, one for the current root and one for the current file.
 	/// The deepest context is the last item in the list.
 	contexts_t       Context;
 	/// First unused entry in SourceFiles.
@@ -292,20 +323,13 @@ class Parser : private AssembleInst, public DebugInfo
 	vector_safe<instFlags,IF_NONE> InstFlags;
 
  private:
-	/// Get name of file ID.
-	const char*      fName(uint16_t file) { return SourceFiles[file].Name.c_str(); }
-	/// Enrich an assembler message with file and line context including the context stack.
-	string           enrichMsg(string msg);
-	/// Enrich the formatted message and throws the result as std::string.
-	/// @param fmt printf like format string.
-	[[noreturn]] virtual void Fail(const char* fmt, ...) PRINTFATTR(2);
+	/// Override exception generation to subclass exception class.
+	[[noreturn]] virtual void ThrowMessage(AssembleInst::Message&& msg) const;
+	/// Replacement for the hidden OnMessage function.
+	static void      EnrichMessage(AssembleInst::Message&& msg);
 	/// Log thrown exception from Fail() as error message.
 	/// @param msg Already enriched message.
-	void             CaughtMsg(const char* msg);
-	/// Enrich the formatted message and write the result to stderr.
-	/// @param level Severity level.
-	/// @param fmt printf like format string.
-	virtual void     Msg(severity level, const char* fmt, ...) PRINTFATTR(3);
+	void             CaughtMsg(const Message& msg);
 
 	/// Ensure minimum size of InstFlags array.
 	void             FlagsSize(size_t min);
@@ -322,6 +346,10 @@ class Parser : private AssembleInst, public DebugInfo
 	/// Work around for gcc on 32 bit Linux that can't read "0x80000000" with sscanf anymore.
 	/// @return Number of characters parsed.
 	static size_t    parseInt(const char* src, int64_t& dst);
+	/// Read the next token and ensure that it is an identifier.
+	/// @param Name of the related directive for error messages.
+	/// @post Token contains the identifier name.
+	void             parseIdentifier(const char* directive);
 	/// @brief Get referenced label.
 	/// @param name Label name.
 	/// @param forward The reference is a forward reference, e.g. r:.1f.
@@ -465,9 +493,9 @@ class Parser : private AssembleInst, public DebugInfo
 	label&           defineLabel();
 	/// Add a symbol to the global symbol table.
 	/// @param name Global symbol name.
-	/// @param value Global symbol value.
+	/// @pre ExprValue contains global symbol value.
 	/// @exception std::string Failed, error message.
-	void             addGlobal(const string& name, exprValue value);
+	void             addGlobal(const string& name);
 	/// @brief Handle label definition with trailing colon.
 	/// @details The function is intended to be invoked after NextToken returned a colon at the start of a line.
 	/// It parses the label name and leaves the rest of the line untouched for further parsing.
@@ -557,6 +585,12 @@ class Parser : private AssembleInst, public DebugInfo
 	/// @details throws an exception if the following condition is not met.
 	/// @exception std::string Failed, error message or condition not met.
 	void             parseASSERT(int);
+
+	/// Parse argument list of a macro or function.
+	/// @param name Name of the macro (for error messages).
+	/// @param count Expected number of arguments. Anything else is an error.
+	/// @return List of expression values for macro invocation.
+	vector<exprValue> parseArgumentList(const string& name, size_t count);
 	/// @brief Handle \c .macro or \c .func directive.
 	/// @details The function creates a macro in \ref Macros and stores a pointer to the newly created entry in AtMacro.
 	/// It also stores the identifiers of the macro arguments.

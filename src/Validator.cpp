@@ -12,6 +12,9 @@
 #include <cstdarg>
 
 
+constexpr const struct ValidatorMSG Validator::MSG;
+
+
 Validator::state::state(int start)
 : From(start)
 , Start(start)
@@ -31,26 +34,32 @@ Validator::state::state(const state& r, int at, int target)
 	} while (++dp < (int*)(this+1));
 }
 
+string Validator::Message::toString() const noexcept
+{	string ret;
+	if (Parent.Info)
+	{	const auto loc = Parent.Info->LineNumbers[Loc];
+		ret = stringf("%s (%u): ", Parent.Info->fName(loc.File), loc.Line);
+	}
+	ret += ::Message::toString();
+	ret += stringf("\n  instruction at 0x%x", Parent.BaseAddr + Loc * sizeof(uint64_t));
+	if (RefLoc != Loc)
+	{	ret += stringf("\n  referring to instruction at 0x%x", Parent.BaseAddr + RefLoc * sizeof(uint64_t));
+		if (Parent.Info)
+		{	const auto loc = Parent.Info->LineNumbers[RefLoc];
+			ret += stringf(", generated at %s (%u)", Parent.Info->fName(loc.File), loc.Line);
+		}
+	}
+	return ret;
+}
 
-void Validator::Message(int refloc, const char* fmt, ...)
+bool Validator::CheckMsg(int& refloc) const
 {	if (refloc < Start)
 		refloc += From - Start;
 	else if (Pass2 && refloc >= Start)
-		return; // Discard message because of second pass.
-	va_list va;
-	va_start(va, fmt);
-	fputs("Warning: ", stderr);
-	vfprintf(stderr, fmt, va);
-	va_end(va);
-	fprintf(stderr, "\n  instruction at 0x%x", BaseAddr + At * (unsigned)sizeof(uint64_t));
-	if (refloc >= 0 && refloc != At)
-		fprintf(stderr, " referring to instruction at 0x%x", BaseAddr + refloc * (unsigned)sizeof(uint64_t));
-	fputc('\n', stderr);
-	if (Info)
-	{	auto loc = Info->LineNumbers[At];
-		fprintf(stderr, "  generated at %s (%u)\n", Info->SourceFiles[loc.File].Name.c_str(), loc.Line);
-	}
+		return false; // Discard message because of second pass.
+	return true;
 }
+
 
 Inst::conda Validator::GetRdCond(Inst inst, Inst::mux m)
 {
@@ -108,7 +117,7 @@ void Validator::CheckRotSrc(const state& st, Inst::mux mux)
 	// detailed check on current instruction
 	if (CheckVectorRotationLevel > 1 || Instruct.isSFMUL())
 	{warn:
-		Message(At-1, "Should not write to the source r%u of the vector rotation in the previous instruction.", mux);
+		Msg(At-1, MSG.REG_WR_2_ROT_RD, mux);
 		return;
 	}
 	if (Instruct.CondM == Inst::C_NEVER)
@@ -181,7 +190,7 @@ void Validator::ProcessItem(state& st)
 					WorkItems.emplace_back(new state(At + 4));
 			}
 			if (At - st.LastBRANCH < 3)
-				Message(st.LastBRANCH, "Two branch instructions within less than 3 instructions.");
+				Msg(st.LastBRANCH, MSG.BRANCH_2_BRANCH);
 			else if (!Instruct.Reg)
 			{	target = Instruct.Rel
 					?	Instruct.Immd.iValue / sizeof(uint64_t) + At + 4
@@ -221,43 +230,43 @@ void Validator::ProcessItem(state& st)
 		// check for RA/RB back to back read/write
 		if ( regRA < 32 && st.LastWreg[0][regRA] == At-1
 			&& (Decode(At-1), IsCondOverlap(GetWrCond(RefInst, regRA, R_A), GetRdCond(Instruct, Inst::X_RA))) )
-			Message(At-1, "Cannot read register ra%d because it just has been written by the previous instruction.", regRA);
+			Msg(At-1, MSG.REGA_WR_2_REGA_RD, regRA);
 		if ( regRB < 32 && st.LastWreg[1][regRB] == At-1
 			&& (Decode(At-1), IsCondOverlap(GetWrCond(RefInst, regRB, R_B), GetRdCond(Instruct, Inst::X_RB))) )
-			Message(At-1, "Cannot read register rb%d because it just has been written by the previous instruction.", regRB);
+			Msg(At-1, MSG.REGB_WR_2_REGB_RD, regRB);
 		// Two writes to the same register
 		if ( regWA == regWB && regWA != Inst::R_NOP && Inst::isWRegAB(regWA)
 			&& ( Instruct.Sig == Inst::S_BRANCH
 				|| (Instruct.CondA != Inst::C_NEVER && Instruct.CondM != Inst::C_NEVER && Instruct.CondA != (Instruct.CondM ^ 1)) ))
-			Message(At, "Both ALUs write to the same register without inverse condition flags.");
+			Msg(At, MSG.BOTH_ALU_WRITE_SAME_REG);
 		if (At < 2 && Instruct.Sig == Inst::S_SBWAIT)
-			Message(At, "The first two fragment shader instructions must not wait for the scoreboard.");
+			Msg(At, MSG.SCOREBOARD_WR_AT_START);
 		// unif_addr
 		if (At - st.LastWreg[0][40] <= 2 && (regRA == 32 || regRB == 32))
-			Message(st.LastWreg[0][40], "Must not read uniforms two instructions after write to unif_addr.");
+			Msg(st.LastWreg[0][40], MSG.UNIF_ADDR_WR_2_UNIF_RD);
 		if (regWA == 36 || regWB == 36)
 		{	// TMU_NOSWAP
 			for (int i = 56; i <= 63; ++i)
 				if (st.LastWreg[0][i] >= 0)
-				{	Message(st.LastWreg[0][i], "Should not change tmu_noswap after the TMU has been used");
+				{	Msg(st.LastWreg[0][i], MSG.TMU_NOSWAP_WR_AFTER_TMU_RD);
 					break;
 				}
 		}
 		if (At - st.LastWreg[0][36] < 4 && (regWA >= 56 || regWB >= 56))
-			Message(st.LastWreg[0][36], "Write to TMU must be at least 3 instructions after write to tmu_noswap.");
+			Msg(st.LastWreg[0][36], MSG.TMU_NOSWAP_WR_2_TMU_RD);
 		// r4
 		int last = max(max(st.LastWreg[0][52], st.LastWreg[0][53]), max(st.LastWreg[0][54], st.LastWreg[0][55]));
 		if (At - last <= 2)
 		{	if (ldr4)
-				Message(last, "Cannot use signal which causes a write to r4 while an SFU instruction is in progress.");
+				Msg(last, MSG.SFU_OP_2_R4_WR_SIGNAL);
 			if ((regWA & -4) == 52 || (regWB & -4) == 52)
-				Message(last, "SFU is already in use.");
+				Msg(last, MSG.SFU_OP_2_SFU_OP);
 		}
 		// vector rotations
 		if (CheckVectorRotationLevel && rot >= 0)
 		{	// rot r5
 			if (rot == 0 && st.LastWreg[0][32+5] == At-1)
-				Message(At-1, "Vector rotation by r5 must not follow a write to r5.");
+				Msg(At-1, MSG.R5_WR_2_ROT_R5);
 			CheckRotSrc(st, Instruct.MuxMA);
 			if (Instruct.MuxMA != Instruct.MuxMB)
 				CheckRotSrc(st, Instruct.MuxMB);
@@ -267,11 +276,11 @@ void Validator::ProcessItem(state& st)
 				&& !Inst::isAccu(Instruct.MuxMA) && !Inst::isAccu(Instruct.MuxMB)
 				&& Instruct.MuxAA != Inst::X_RB && Instruct.MuxAB != Inst::X_RB
 				&& Instruct.MuxMA != Inst::X_RB && Instruct.MuxMB != Inst::X_RB )
-				Message(At, "Neither MUL ALU source argument can handle full vector rotation.");
+				Msg(At, MSG.FULL_ROT_REQUIRES_ACCU);
 		}
 		// TLB Z -> MS_FLAGS
 		if ((regRA == 42 || regRB == 42) && At - st.LastWreg[0][44] <= 2)
-			Message(st.LastWreg[0][44], "Cannot read multisample mask (ms_flags) in the two instructions after TLB Z write.");
+			Msg(st.LastWreg[0][44], MSG.TLB_Z_WR_2_MS_FLAGS_RD);
 		// Combined peripheral access
 		if (( ((0xfff09e0000000000ULL & (1ULL << regWA)) != 0) // TMU, TLB, SFU or Mutex write
 			+ ((0xfff09e0000000000ULL & (1ULL << regWB)) != 0 && !(regWA == regWB && Inst::isWRegAB(regWA)))
@@ -280,22 +289,22 @@ void Validator::ProcessItem(state& st)
 			+ ( (Instruct.Sig >= Inst::S_LOADCV && Instruct.Sig <= Inst::S_LOADAM) // TLB read
 				|| (Instruct.Sig == Inst::S_LDI && (Instruct.LdMode & Inst::L_SEMA)) ) // Semaphore access
 			+ (regWA == 45 || regWA == 46 || regWB == 45 || regWB == 46 || Instruct.Sig == Inst::S_LOADC || Instruct.Sig == Inst::S_LDCEND) ) > 1 ) // combined TLB color read/write
-			Message(At, "More than one access to TMU, TLB, SFU or mutex/semaphore within one instruction.");
+			Msg(At, MSG.MULTI_ACCESS_2_TMU_TLB_SFU_MTX);
 		// combined VPM access
 		if (regWA == 49 && regWB == 49)
-			Message(At, "Concurrent write to VPM read and write setup does not work.");
+			Msg(At, MSG.VPM_WR_SETUP_VS_VPM_RD_SETUP);
 		else if ((regWA == 49 || regWB == 49) && (regRA == 48 || regRB == 48))
-			Message(At, "Concurrent VPM read with VPM setup does not work.");
+			Msg(At, MSG.VPM_RD_VS_VPM_SETUP);
 		if ((regWA == 49 && regWB == 48) || (regWB == 49 && regWA == 48))
-			Message(At, "Concurrent VPM write with VPM setup does not work.");
+			Msg(At, MSG.VPM_WR_VS_VPM_SETUP);
 		// Some combinations that do not work
 		if (Instruct.Sig != Inst::S_BRANCH)
 		{	if ( !(Instruct.WAddrA == Instruct.WAddrM && (Instruct.CondA ^ Instruct.CondM) == 1) // No problem if both ALUs write conditionally to the same register with opposite conditions.
 				&& ( (Instruct.CondA != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrA))
 					|| (Instruct.CondM != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrM)) ))
-				Message(At, "Conditional write to peripheral register does not work.");
+				Msg(At, MSG.COND_WR_2_PERIPHERAL);
 			if (Instruct.PM && (Instruct.Pack & 0xc) == Inst::P_8a && Inst::isPeripheralWReg(Instruct.WAddrM))
-				Message(At, "Pack modes with partial writes do not work for peripheral registers.");
+				Msg(At, MSG.PARTIAL_WR_2_PERIPHERAL);
 		}
 		// Update last used fields
 		st.LastRreg[0][regRA] = At;
@@ -313,14 +322,14 @@ void Validator::ProcessItem(state& st)
 		if (st.LastTEND >= 0)
 		{	if ( (((1ULL<<regRA)|(1ULL<<regRB)) & 0x0007000900000000ULL)
 				|| (((1ULL<<regWA)|(1ULL<<regWB)) & 0x0007000000000000ULL) )
-				Message(st.LastTEND, "Must not access uniform, varying or vpm register at thread end.");
+				Msg(st.LastTEND, MSG.UNIF_VARY_VPM_AFTER_THREND);
 			if (regRA == 14 || regRB == 14 || regWA == 14 || regWB == 14)
-				Message(st.LastTEND, "Must not access register 14 of register file A or B at thread end.");
+				Msg(st.LastTEND, MSG.R14_AFTER_TRHEND);
 		}
 		if (tend && (regWA < 32 || regWB < 32))
-			Message(At, "The thread end instruction must not write to either register file.");
+			Msg(At, MSG.REG_WR_AT_THREND);
 		if (At - st.LastTEND == 2 && (regWA == 44 || regWB == 44))
-			Message(st.LastTEND, "The last program instruction must not write tlbz.");
+			Msg(st.LastTEND, MSG.TLBZ_WR_AT_END);
 
 		if (tend)
 			TerminateRq(3);
