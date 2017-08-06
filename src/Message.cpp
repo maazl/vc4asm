@@ -14,11 +14,11 @@
 
 static const char* Severities[] =
 {	""
-,	"Debug: "
-,	"Info: "
-,	"Warning: "
-,	"ERROR: "
-,	"FATAL: "
+,	"Debug "
+,	"Info "
+,	"Warning "
+,	"ERROR "
+,	"FATAL "
 };
 
 string msgID::toString() const
@@ -43,7 +43,7 @@ const msgTemplateBase* msgTemplateBase::FindTemplateByID(const msgTemplateBase* 
 
 
 string Message::toString() const noexcept
-{	return ID.toString() + " " + Text;
+{	return ID.toString() + ": " + Text;
 }
 
 void Message::print() const

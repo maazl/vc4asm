@@ -42,7 +42,7 @@ foreach (@ARGV)
 while (<STDIN>)
 {	$msg .= $_;
 	($file, $line, $type, $id) =
-		/^([^:]+) \((\d+)(?:,\d+)?\): ([IWEF])\w+: (\w\d+(?:\.\d+)?)/ or next;
+		/^([^:]+) \((\d+)(?:,\d+)?\): ([IWEF])\w+ (\w\d+(?:\.\d+)?)/ or next;
 	#$file =~ s/.*[\/\\]//;
 	$type = "$type:$id";
 	$msg = $_;
