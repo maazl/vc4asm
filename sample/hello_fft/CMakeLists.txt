@@ -53,31 +53,33 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/dis)
 foreach(ASM_FILE ${ASM_FILES})
 	get_filename_component(FILENAME ${ASM_FILE} NAME_WE)
 	string(SUBSTRING ${FILENAME} 8 -1 SHADER_SIZE)
-	set (HEX_FILE shader_${SHADER_SIZE}.hex)
+	set (HEX_FILE ${CMAKE_CURRENT_BINARY_DIR}/hex/shader_${SHADER_SIZE}.hex)
 	add_custom_command(OUTPUT ${HEX_FILE}
-		COMMAND ${VC4ASMBINPATH}/vc4asm -V -v -C hex/${HEX_FILE}
-			-i vc4.qinc
+		COMMAND	${VC4ASMBINPATH}/vc4asm
+		ARGS	-V -v -C ${HEX_FILE} -i vc4.qinc
 			${CMAKE_CURRENT_SOURCE_DIR}/${ASM_FILE}
-		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${ASM_FILE} ${VC4ASMBINPATH}/vc4asm)
-	set (DIS_FILE shader_${SHADER_SIZE}.dis)
+		DEPENDS	${ASM_FILE} ${VC4ASMBINPATH}/vc4asm)
+	list(APPEND HEX_FILES ${HEX_FILE})
+	set (DIS_FILE ${CMAKE_CURRENT_BINARY_DIR}/dis/shader_${SHADER_SIZE}.dis)
 	add_custom_command(OUTPUT ${DIS_FILE}
-		COMMAND ${VC4ASMBINPATH}/vc4dis -v -x -o dis/${DIS_FILE} hex/${HEX_FILE}
-		DEPENDS ${HEX_FILE} ${VC4ASMBINPATH}/vc4dis)
+		COMMAND	${VC4ASMBINPATH}/vc4dis
+		ARGS	-v -x -o ${DIS_FILE} ${HEX_FILE}
+		DEPENDS	${HEX_FILE} ${VC4ASMBINPATH}/vc4dis)
 	list(APPEND DIS_FILES ${DIS_FILE})
 endforeach()
 
 set_source_files_properties(${HEX_FILES} PROPERTIES GENERATED TRUE)
-add_custom_target( hello_fft_assembled_hexs DEPENDS ${HEX_FILES} )
+add_custom_target(hex DEPENDS ${HEX_FILES} )
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set_source_files_properties(${DIS_FILES} PROPERTIES GENERATED TRUE)
-add_custom_target( hello_fft_disassembled_hexs DEPENDS ${DIS_FILES} )
+add_custom_target(dis ALL DEPENDS ${DIS_FILES} )
 
 add_executable(hello_fft ${1D_SOURCE_FILES} $<TARGET_OBJECTS:fftCommonObjects>)
-add_dependencies(hello_fft hello_fft_assembled_hexs hello_fft_disassembled_hexs)
+add_dependencies(hello_fft hex)
 target_link_libraries(hello_fft ${CMAKE_DL_LIBS} m)
 
 add_executable(hello_fft_2d ${2D_SOURCE_FILES} $<TARGET_OBJECTS:fftCommonObjects>)
-add_dependencies(hello_fft_2d hello_fft_assembled_hexs hello_fft_disassembled_hexs)
+add_dependencies(hello_fft_2d hex)
 target_link_libraries(hello_fft_2d ${CMAKE_DL_LIBS} m)
 

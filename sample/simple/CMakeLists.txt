@@ -17,6 +17,8 @@ add_custom_command(OUTPUT shader.o shader.h COMMAND ${VC4ASMBINPATH}/vc4asm -V
 	-e shader.o -h shader.h ../../share/vc4inc/vc4.qinc smitest.qasm
 	DEPENDS ../../share/vc4inc/vc4.qinc smitest.qasm ${VC4ASMBINPATH}/vc4asm
 	MAIN_DEPENDENCY smitest.qasm)
+add_custom_target(shader DEPENDS shader.o shader.h)
 
+set_source_files_properties(shader.o PROPERTIES EXTERNAL_OBJECT true GENERATED true)
 add_executable(smitest ${SOURCE_FILES} shader.o)
 
