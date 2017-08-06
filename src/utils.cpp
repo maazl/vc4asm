@@ -120,6 +120,35 @@ void checkedfprintf(FILE* fh, const char* fmt, ...)
 		throw utilsMSG.FILE_WRITE_FAILED.toMsg(strerror(errno));
 }
 
+int checkedfgetc(FILE* fh)
+{	int ret = fgetc(fh);
+	if (ret == EOF && ferror(fh))
+		throw utilsMSG.FILE_READ_FAILED.toMsg(strerror(errno));
+	return ret;
+}
+
+int checkedfread(void* data, int size, int count, FILE* fh)
+{	int ret = fread(data, size, count, fh);
+	if (ret < count && ferror(fh))
+		throw utilsMSG.FILE_READ_FAILED.toMsg(strerror(errno));
+	return ret;
+}
+
+int checkedfscanf(FILE* fh, const char* fmt, ...)
+{	va_list va;
+	va_start(va, fmt);
+	int ret = vfscanf(fh, fmt, va);
+	va_end(va);
+	if (ret == EOF && ferror(fh))
+		throw utilsMSG.FILE_READ_FAILED.toMsg(strerror(errno));
+	return ret;
+}
+
+void checkedfseek(FILE* f, int offset, int whence)
+{	if (fseek(f, offset, whence))
+		throw (whence == SEEK_SET ? utilsMSG.FILE_SEEK_SET_FAILED : whence == SEEK_END ? utilsMSG.FILE_SEEK_END_FAILED : utilsMSG.FILE_SEEK_CUR_FAILED).toMsg(offset, strerror(errno));
+}
+
 string readcomplete(const char* file, size_t maxsize)
 {	FILEguard fh(checkedopen(file, "r"));
 	if (fseek(fh, 0, SEEK_END))

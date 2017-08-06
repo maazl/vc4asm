@@ -28,6 +28,9 @@ add_library(objvc4asm OBJECT
 add_library(objvc4dis OBJECT
 	Disassembler.cpp
 	WriteQasm.cpp
+	ReaderBase.cpp
+	ReadX.cpp
+	ReadBin.cpp
 )
 
 add_executable(vc4asm vc4asm.cpp $<TARGET_OBJECTS:objvc4base> $<TARGET_OBJECTS:objvc4asm>)

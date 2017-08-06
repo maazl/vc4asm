@@ -19,8 +19,10 @@ using namespace std;
 
 #ifdef __GNUC__
 #define PRINTFATTR(i) __attribute__((format(printf, i, i+1)))
+#define SCANFATTR(i) __attribute__((format(scanf, i, i+1)))
 #else
 #define PRINTFATTR(i)
+#define SCANFATTR(i)
 #endif
 
 struct unspecified_type;
@@ -105,6 +107,14 @@ void checkedwrite(FILE* fh, const void* data, size_t size);
 /// @param ... Arguments.
 /// @exception Message Failed to write: error message
 void checkedfprintf(FILE* fh, const char* fmt, ...) PRINTFATTR(2);
+
+int checkedfgetc(FILE* fh);
+
+int checkedfread(void* data, int size, int count, FILE* fh);
+
+int checkedfscanf(FILE* fh, const char* fmt, ...) SCANFATTR(2);
+
+void checkedfseek(FILE* fh, int offset, int whence);
 
 /// Read entire file content into memory.
 /// @param file Name of the file.
