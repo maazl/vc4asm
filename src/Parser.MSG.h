@@ -120,8 +120,8 @@ static const constexpr struct MSG
 	E(MACRO_ARG_EXPECTED              ,180, 0, "Expected macro argument identifier, found '%s'.", const char*);
 	E(MACRO_NO_NESTED_DEFINITION      ,181, 0, "Cannot nest macro definitions. In definition of macro starting at %s (%u).", const char*, uint16_t);
 	W(MACRO_REDEFINED                 ,182, 0, "Redefinition of macro '%s'. Previous definition at %s (%u).", const char*, const char*, uint16_t);
-	E(MACRO_TOO_MANY_ARGS             ,185, 1, "Too many arguments for macro '%s', expected %u.", const char*, unsigned);
-	E(MACRO_TOO_FEW_ARGS              ,185, 2, "Too few arguments for macro '%s', expected %u, found %u.", const char*, unsigned, unsigned);
+	E(MACRO_TOO_MANY_ARGS             ,185, 1, "Too many arguments for macro '%s', expected %u.", const char*, std::size_t);
+	E(MACRO_TOO_FEW_ARGS              ,185, 2, "Too few arguments for macro '%s', expected %u, found %u.", const char*, std::size_t, std::size_t);
 	E(MACRO_HAS_NO_ARGS               ,185, 3, "The macro '%s' does not take arguments.", const char*);
 	F(INTERNAL_MACRO_ARG_EXPANSION    ,189, 0, "Internal error during macro argument expansion, found '%s'.", const char*);
 	// .func
@@ -130,8 +130,8 @@ static const constexpr struct MSG
 	E(FUNCTION_NO_LABEL_DEFINITION    ,191, 0, "Label definition not allowed in functional macro '%s'.", const char*);
 	E(FUNCTION_REQUIRES_ARG_LIST      ,193, 0, "Expected '(' after function name.");
 	E(FUNCTION_EXPECTED_COMMA_OR_BRC  ,194, 0, "Unexpected '%s' in argument list of function '%s'.", const char*, const char*);
-	E(FUNCTION_TOO_MANY_ARGS          ,195, 1, "Too many arguments for function '%s', expected %u.", const char*, unsigned);
-	E(FUNCTION_TOO_FEW_ARGS           ,195, 2, "Too few arguments for function '%s', expected %u, found %u.", const char*, unsigned, unsigned);
+	E(FUNCTION_TOO_MANY_ARGS          ,195, 1, "Too many arguments for function '%s', expected %u.", const char*, std::size_t);
+	E(FUNCTION_TOO_FEW_ARGS           ,195, 2, "Too few arguments for function '%s', expected %u, found %u.", const char*, std::size_t, std::size_t);
 	E(FUNCTION_HAS_NO_ARGS            ,195, 3, "Expected ')' because function '%s' has no arguments.", const char*);
 	E(FUNCTION_INCLOMPLETE_EXPRESSION ,196, 1, "Function '%s' evaluated to an incomplete expression.", const char*);
 	// .include
