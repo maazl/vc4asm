@@ -40,6 +40,7 @@ class Eval
 	,	ABS  = 0xe4 ///< absolute value
 	,	CEIL = 0xe5 ///< round up to integer
 	,	FLOOR= 0xe6 ///< round down to integer
+	,	SQRT = 0xe7 ///< square root
 	,	EXP  = 0xe8 ///< exponential function
 	,	EXP2 = 0xe9 ///< binary exponential function
 	,	EXP10= 0xea ///< common exponential function

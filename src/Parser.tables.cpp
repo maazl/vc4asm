@@ -68,6 +68,7 @@ const Parser::opInfo Parser::operatorMap2[] =
 ,	{ "log2",  Eval::LOG2 }
 ,	{ "sin",   Eval::SIN }
 ,	{ "sinh",  Eval::SINH }
+,	{ "sqrt",  Eval::SQRT }
 ,	{ "tan",   Eval::TAN }
 ,	{ "tanh",  Eval::TANH }
 };

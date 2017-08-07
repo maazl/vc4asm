@@ -217,6 +217,8 @@ bool Eval::operate::Apply(bool unary)
 		lhs.iValue = (int64_t)floor(rhs.iValue);
 		lhs.Type = V_INT;
 		break;
+	 case SQRT:
+		ApplyUnaryMathOp(&sqrt); break;
 	 case EXP:
 		ApplyUnaryMathOp(&exp); break;
 	 case EXP2:
@@ -569,6 +571,7 @@ const char* Eval::op2string(mathOp op)
 	 case ABS:  return "abs";
 	 case CEIL: return "ceil";
 	 case FLOOR:return "floor";
+	 case SQRT: return "sqrt";
 	 case EXP:  return "exp";
 	 case EXP2: return "exp2";
 	 case EXP10:return "exp10";
