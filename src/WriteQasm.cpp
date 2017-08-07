@@ -42,7 +42,7 @@ void WriteQasm::Write(const vector<uint64_t>& instructions, unsigned base, const
 		} else if (Comment)
 		{	checkedfprintf(Target, "\t%-55s #", line.c_str());
 			if (Comment & C_Hex)
-				checkedfprintf(Target, " %04x: %016" PRIx64, Disasm.Addr - sizeof(uint64_t), inst);
+				checkedfprintf(Target, " %04x: %016" PRIx64, Disasm.Addr - (unsigned)sizeof(uint64_t), inst);
 			if (Comment & C_Fields)
 			{	WriteChar(' ');
 				WriteString(Disasm.GetFields());

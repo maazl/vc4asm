@@ -17,7 +17,7 @@ static const constexpr struct MSG
 	W(BINARY_FILE_ODD_SIZED           ,110, 1, "File size of source '%s' is not a multiple of 64 bit.", const char*);
 	// hex input
 	W(HEX_FILE_ODD_SIZED              ,120, 0, "File '%s' must contain an even number of 32 bit words.", const char*);
-	W(HEX_FILE_NOT_PARSABLE           ,121, 0, "File '%s' contains not parsable input '%s' at byte %li.", const char*, const char*, long);
+	E(HEX_FILE_NOT_PARSABLE           ,121, 0, "File '%s' contains not parsable input '%s' at byte %li.", const char*, const char*, long);
 
 	#undef F
 	#undef E

@@ -14,6 +14,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cinttypes>
+#include <stdexcept>
 
 
 static inline void adds(uint8_t& l, uint8_t r)

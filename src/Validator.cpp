@@ -41,9 +41,9 @@ string Validator::Message::toString() const noexcept
 		ret = stringf("%s (%u): ", Parent.Info->fName(loc.File), loc.Line);
 	}
 	ret += ::Message::toString();
-	ret += stringf("\n  instruction at 0x%x", Parent.BaseAddr + Loc * sizeof(uint64_t));
+	ret += stringf("\n  instruction at 0x%zx", Parent.BaseAddr + Loc * sizeof(uint64_t));
 	if (RefLoc != Loc)
-	{	ret += stringf("\n  referring to instruction at 0x%x", Parent.BaseAddr + RefLoc * sizeof(uint64_t));
+	{	ret += stringf("\n  referring to instruction at 0x%zx", Parent.BaseAddr + RefLoc * sizeof(uint64_t));
 		if (Parent.Info)
 		{	const auto loc = Parent.Info->LineNumbers[RefLoc];
 			ret += stringf(", generated at %s (%u)", Parent.Info->fName(loc.File), loc.Line);

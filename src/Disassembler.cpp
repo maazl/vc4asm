@@ -386,9 +386,9 @@ void Disassembler::ScanLabels()
 	if (!Instruct.Immd.iValue)
 		return;
 	if (Instruct.Rel)
-		Labels.emplace(target + Instruct.Immd.iValue, stringf("L%x_%x", target + Instruct.Immd.iValue, Addr - sizeof(uint64_t)));
+		Labels.emplace(target + Instruct.Immd.iValue, stringf("L%x_%x", target + Instruct.Immd.iValue, Addr - (unsigned)sizeof(uint64_t)));
 	else
-		Labels.emplace(Instruct.Immd.uValue, stringf("L%x_%x", Instruct.Immd.uValue, Addr - sizeof(uint64_t)));
+		Labels.emplace(Instruct.Immd.uValue, stringf("L%x_%x", Instruct.Immd.uValue, Addr - (unsigned)sizeof(uint64_t)));
 }
 
 string Disassembler::Disassemble()
