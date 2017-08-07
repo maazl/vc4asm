@@ -232,7 +232,7 @@ size_t Parser::parseInt(const char* src, int64_t& dst)
 				digit += 10;
 			else
 			{	if (dst == 0 && cp - src == 1)
-					switch (c)
+					switch (tolower(c))
 					{	case 'b': basis = 2; limit = UINT64_MAX/2; continue;
 						case 'o': basis = 8; limit = UINT64_MAX/8; continue;
 						case 'x': basis = 16; limit = UINT64_MAX/16; continue;
