@@ -415,6 +415,7 @@ const Parser::opExtEntry Parser::extMap[] =
 ,	{ "16bsi",          IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_16bSI }
 ,	{ "32",             IC_XP|IC_SRC|IC_DST, &Parser::addPUp,  ::Inst::P_32    } // NOP
 ,	{ "32clamp",        IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_32SI  |rPUp::PACK }
+,	{ "32i",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_32SI  |rPUp::PACK }
 ,	{ "32s",            IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_32SI  |rPUp::PACK }
 ,	{ "32si",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_32SI  |rPUp::PACK }
 ,	{ "8888",           IC_XP|IC_DST,        &Parser::addPUp,  ::Inst::P_8abcd |rPUp::PACK }

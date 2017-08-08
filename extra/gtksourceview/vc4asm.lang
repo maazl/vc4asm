@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+ Syntax highlight for GtkSourceView based editors like gedit or pluma.
+ Copy the file to /usr/share/gtksourceview-<version>/language-specs/
+ to get the highlighting.
+
+ Authors: Marcel Müller
+ Copyright (C) 2017 Marcel Müller <raspi at maazl dot de>
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Library General Public
+ License as published by the Free Software Foundation; either
+ version 2 of the License, or (at your option) any later version.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Library General Public License for more details.
+
+ You should have received a copy of the GNU Library General Public
+ License along with this library; if not, write to the
+ Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ Boston, MA 02111-1307, USA.
+
+-->
+<language id="vc4asm" _name="VideoCore IV Assembler" version="2.0" _section="Sources">
+  <metadata>
+    <property name="mimetypes">text/x-vc4asm</property>
+    <property name="globs">*.qasm;*.qinc</property>
+    <property name="line-comment-start">#</property>
+  </metadata>
+
+  <styles>
+    <style id="comment" _name="Comment" map-to="def:comment"/>
+    <style id="operator" _name="Operator" map-to="def:operator"/>
+    <style id="brace" _name="Braces" map-to="def:operator"/>
+    <style id="opcode" _name="Op code" map-to="def:keyword"/>
+    <style id="extension" _name="Op code extension" map-to="def:keyword"/>
+    <style id="register" _name="Register" map-to="def:identifier"/>
+    <style id="floating-point" _name="Floating point" map-to="def:floating-point"/>
+    <style id="string" _name="String" map-to="def:string"/>
+    <style id="directive" _name="Assembler directive" map-to="def:preprocessor"/>
+    <style id="base-n-integer" _name="Base-n integer" map-to="def:base-n-integer"/>
+    <style id="label" _name="Label" map-to="def:type"/>
+    <style id="function" _name="Function" map-to="def:function"/>
+    <style id="decimal" _name="Decimal" map-to="def:decimal"/>
+    <style id="constant" _name="Constant (predefined)" map-to="def:special-constant"/>
+  </styles>
+
+  <definitions>
+
+    <context id="line-comment" style-ref="comment" end-at-line-end="true" class="comment" class-disabled="no-spell-check">
+      <start>#</start>
+      <include>
+        <context ref="def:in-comment"/>
+      </include>
+    </context>
+    
+    <context id="operator" style-ref="operator">
+      <match>[-!~^/\=\+\*&amp;&lt;&gt;()\[\],;]+</match>
+    </context>
+
+    <context id="constant" style-ref="constant">
+      <keyword>M_E</keyword>
+      <keyword>M_LOG(2|10)E</keyword>
+      <keyword>M_LN(2|10)</keyword>
+      <keyword>M_2?PI</keyword>
+      <keyword>M_PI_[24]</keyword>
+      <keyword>M_[12]_PI</keyword>
+      <keyword>M_2_SQRTPI</keyword>
+      <keyword>M_SQRT(1_)?2</keyword>
+      <keyword>M_NAN</keyword>
+      <keyword>M_INF</keyword>
+    </context>
+
+    <context id="directive" style-ref="directive">
+      <prefix>\.</prefix>
+      <keyword>align</keyword>
+      <keyword>assert</keyword>
+      <keyword>back</keyword>
+      <keyword>bit</keyword>
+      <keyword>byte</keyword>
+      <keyword>clone</keyword>
+      <keyword>code</keyword>
+      <keyword>const</keyword>
+      <keyword>define</keyword>
+      <keyword>double</keyword>
+      <keyword>dword</keyword>
+      <keyword>elif</keyword>
+      <keyword>else(if)?</keyword>
+      <keyword>endb(ack)?</keyword>
+      <keyword>endfor</keyword>
+      <keyword>endf(unc)?</keyword>
+      <keyword>endif</keyword>
+      <keyword>endloc</keyword>
+      <keyword>endm</keyword>
+      <keyword>endr(ep)?</keyword>
+      <keyword>equ</keyword>
+      <keyword>float(16|32|64)?</keyword>
+      <keyword>foreach</keyword>
+      <keyword>func</keyword>
+      <keyword>global</keyword>
+      <keyword>half</keyword>
+      <keyword>if(set)?</keyword>
+      <keyword>include</keyword>
+      <keyword>int(16?|2|32|4|64|8)?</keyword>
+      <keyword>lconst</keyword>
+      <keyword>local</keyword>
+      <keyword>long</keyword>
+      <keyword>lset</keyword>
+      <keyword>lunset</keyword>
+      <keyword>macro</keyword>
+      <keyword>qword</keyword>
+      <keyword>rep</keyword>
+      <keyword>rodata</keyword>
+      <keyword>set</keyword>
+      <keyword>short</keyword>
+      <keyword>text</keyword>
+      <keyword>undef</keyword>
+      <keyword>unset</keyword>
+      <keyword>word</keyword>
+    </context>
+    <context id="opcode" style-ref="opcode">
+      <keyword>add</keyword>
+      <keyword>amov</keyword>
+      <keyword>and</keyword>
+      <keyword>anop</keyword>
+      <keyword>asr</keyword>
+      <keyword>av8adds</keyword>
+      <keyword>av8subs</keyword>
+      <keyword>bkpt</keyword>
+      <keyword>br[ar]</keyword>
+      <keyword>break</keyword>
+      <keyword>clz</keyword>
+      <keyword>fadd</keyword>
+      <keyword>fmax(abs)?</keyword>
+      <keyword>fmin(abs)?</keyword>
+      <keyword>fmul</keyword>
+      <keyword>fsub</keyword>
+      <keyword>ftoi</keyword>
+      <keyword>itof</keyword>
+      <keyword>ldaltlb</keyword>
+      <keyword>ldcend</keyword>
+      <keyword>ldcoend</keyword>
+      <keyword>ldc[ov]tlb</keyword>
+      <keyword>ldi(pe[su])?</keyword>
+      <keyword>ldtmu[01]</keyword>
+      <keyword>loadam</keyword>
+      <keyword>loadcv?</keyword>
+      <keyword>lswitch</keyword>
+      <keyword>lthrsw</keyword>
+      <keyword>max</keyword>
+      <keyword>min</keyword>
+      <keyword>mmov</keyword>
+      <keyword>mnop</keyword>
+      <keyword>mov</keyword>
+      <keyword>mul24</keyword>
+      <keyword>mv8adds</keyword>
+      <keyword>mv8subs</keyword>
+      <keyword>nop</keyword>
+      <keyword>not</keyword>
+      <keyword>or</keyword>
+      <keyword>read</keyword>
+      <keyword>ror</keyword>
+      <keyword>sacq</keyword>
+      <keyword>sbdone</keyword>
+      <keyword>sbwait</keyword>
+      <keyword>sh[lr]</keyword>
+      <keyword>srel</keyword>
+      <keyword>sub</keyword>
+      <keyword>tend</keyword>
+      <keyword>thrend</keyword>
+      <keyword>thrsw</keyword>
+      <keyword>tswitch</keyword>
+      <keyword>unlscb</keyword>
+      <keyword>v8adds</keyword>
+      <keyword>v8max</keyword>
+      <keyword>v8min</keyword>
+      <keyword>v8muld</keyword>
+      <keyword>v8subs</keyword>
+      <keyword>waitscb</keyword>
+      <keyword>xor</keyword>
+    </context>
+
+    <context id="extension" style-ref="extension">
+      <prefix>\.</prefix>
+      <keyword>16[ab](clamp|f|si?)?</keyword>
+      <keyword>32clamp</keyword>
+      <keyword>32s?i?</keyword>
+      <keyword>8888s?[if]?</keyword>
+      <keyword>8abcds?[if]?</keyword>
+      <keyword>8[abcd]s?[if]?</keyword>
+      <keyword>8d(dupe(clamp)?|r)</keyword>
+      <keyword>all(c[cs]?|n[cnz]?|z)</keyword>
+      <keyword>any(c[cs]?|n[cnz]?|z)</keyword>
+      <keyword>c[cs]?</keyword>
+      <keyword>if[cz][cs]?</keyword>
+      <keyword>ifn[cnsz]?</keyword>
+      <keyword>n[cnsz]?</keyword>
+      <keyword>never</keyword>
+      <keyword>pack16[ab](clamp|f|si?)?</keyword>
+      <keyword>pack32(clamp|s)?</keyword>
+      <keyword>pack8888s?[if]?</keyword>
+      <keyword>pack8abcds?[if]?</keyword>
+      <keyword>pack8[abcd](clamp|s?[if]?)</keyword>
+      <keyword>pack8ddupe(clamp?)</keyword>
+      <keyword>rot</keyword>
+      <keyword>setf</keyword>
+      <keyword>sf</keyword>
+      <keyword>unpack16[ab][if]?</keyword>
+      <keyword>unpack32</keyword>
+      <keyword>unpack8[abcd][if]?</keyword>
+      <keyword>unpack8d(dupe|r)</keyword>
+      <keyword>z[cs]?</keyword>
+    </context>
+
+    <context id="register" style-ref="register">
+      <keyword>elem_num</keyword>
+      <keyword>element_number</keyword>
+      <keyword>exp</keyword>
+      <keyword>host_int</keyword>
+      <keyword>interrupt</keyword>
+      <keyword>irq</keyword>
+      <keyword>log</keyword>
+      <keyword>ms_(flags|mask)</keyword>
+      <keyword>mutex(_acq(uire)?|_rel(ease)?)?</keyword>
+      <keyword>nop</keyword>
+      <keyword>qpu_num(ber)?</keyword>
+      <keyword>quad_[xy]</keyword>
+      <keyword>r5(quad|rep)</keyword>
+      <keyword>r[0-5]</keyword>
+      <keyword>r[ab]([0-5]?[0-9]6[0-3])</keyword>
+      <keyword>recip(sqrt)?</keyword>
+      <keyword>rev_flag</keyword>
+      <keyword>sfu_(exp|log|recip(sqrt)?)</keyword>
+      <keyword>s(acq|rel)([02-9]|1[0-5]?)</keyword>
+      <keyword>stencil</keyword>
+      <keyword>t[01][brst]</keyword>
+      <keyword>tlb_(alpha_mask|colour_(all|ms)|stencil|z)</keyword>
+      <keyword>tlbam</keyword>
+      <keyword>tlb[cmz]</keyword>
+      <keyword>tmu[01]_[brst]</keyword>
+      <keyword>tmu_noswap</keyword>
+      <keyword>tmurs</keyword>
+      <keyword>unif_addr(_rel)?</keyword>
+      <keyword>unif(orm_read)?</keyword>
+      <keyword>vary(ing_read)?</keyword>
+      <keyword>vpm_(ld|st)_(addr|busy|wait)</keyword>
+      <keyword>vpm(_read|_write)?</keyword>
+      <keyword>vpmvcd_(rd|wr)_setup</keyword>
+      <keyword>v[rw]_(addr|busy|setup|wait)</keyword>
+      <keyword>[xy]_(pixel_)?coord</keyword>
+    </context>
+
+    <context id="decimal" style-ref="decimal">
+      <match>\b([1-9][0-9]*|0)\b</match>
+    </context>
+
+    <context id="floating-point-number" style-ref="floating-point">
+      <match>\b([0-9]+[Ee][-]?[0-9]+|([0-9]*\.[0-9]+|[0-9]+\.)([Ee][-]?[0-9]+)?)\b</match>
+    </context>
+
+    <context id="octal-number" style-ref="base-n-integer">
+      <match>\b0[0-7]+\b</match>
+    </context>
+
+    <context id="hex-number" style-ref="base-n-integer">
+      <match>\b0[xX][0-9a-fA-F]+\b</match>
+    </context>
+
+    <context id="binary-number" style-ref="base-n-integer">
+      <match>\b0[bB][01]+\b</match>
+    </context>
+
+    <context id="label" style-ref="label">
+      <match>(\br)?\:\w*</match>
+    </context>
+
+    <context id="function" style-ref="function">
+      <keyword>abs</keyword>
+      <keyword>acosh?</keyword>
+      <keyword>asinh?</keyword>
+      <keyword>atanh?</keyword>
+      <keyword>ceil</keyword>
+      <keyword>cosh?</keyword>
+      <keyword>erfc?</keyword>
+      <keyword>exp(10|2)?</keyword>
+      <keyword>floor</keyword>
+      <keyword>log(10|2)?</keyword>
+      <keyword>sinh?</keyword>
+      <keyword>sqrt</keyword>
+      <keyword>tanh?</keyword>
+
+      <keyword>vd[rw]_setup_[01]</keyword>
+      <keyword>vdr_[hv]32</keyword>
+      <keyword>dma_[hv](32|16p|8p)</keyword>
+      <keyword>vpm_setup</keyword>
+      <keyword>[hv]32</keyword>
+      <keyword>[hv](16|8)[pl]</keyword>
+      <keyword>s(acq|rel)</keyword>
+      <keyword>isConstant</keyword>
+      <keyword>isLdPE[SU]?</keyword>
+      <keyword>isRegister</keyword>
+      <keyword>isRegfile[AB]</keyword>
+      <keyword>isAccu</keyword>
+      <keyword>is(Read|Writ)able</keyword>
+      <keyword>isRotate</keyword>
+      <keyword>isSemaphore</keyword>
+      <keyword>isLabel</keyword>
+      <keyword>isSmallImmd</keyword>
+      <keyword>min</keyword>
+      <keyword>max</keyword>
+      <keyword>ilog2</keyword>
+      <keyword>countBits</keyword>
+      <keyword>reverseBits(4|8|16|32|64)?</keyword>
+    </context>
+
+    <context id="vc4asm" class="no-spell-check">
+      <include>
+        <context ref="line-comment"/>
+        <context ref="operator"/>
+        <context ref="opcode"/>
+        <context ref="extension"/>
+        <context ref="register"/>
+        <context ref="constant"/>
+        <context ref="directive"/>
+        <context ref="decimal"/>
+        <context ref="floating-point-number"/>
+        <context ref="octal-number"/>
+        <context ref="hex-number"/>
+        <context ref="binary-number"/>
+        <context ref="label"/>
+        <context ref="register"/>
+        <context ref="function"/>
+      </include>
+    </context>
+  </definitions>
+</language>
