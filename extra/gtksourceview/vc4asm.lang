@@ -185,7 +185,7 @@
 
     <context id="extension" style-ref="extension">
       <prefix>\.</prefix>
-      <keyword>16[ab](clamp|f|si?)?</keyword>
+      <keyword>16[ab](clamp|f|s?i?)</keyword>
       <keyword>32clamp</keyword>
       <keyword>32s?i?</keyword>
       <keyword>8888s?[if]?</keyword>
@@ -199,7 +199,7 @@
       <keyword>ifn[cnsz]?</keyword>
       <keyword>n[cnsz]?</keyword>
       <keyword>never</keyword>
-      <keyword>pack16[ab](clamp|f|si?)?</keyword>
+      <keyword>pack16[ab](clamp|f|s?i?)</keyword>
       <keyword>pack32(clamp|s)?</keyword>
       <keyword>pack8888s?[if]?</keyword>
       <keyword>pack8abcds?[if]?</keyword>
@@ -230,7 +230,7 @@
       <keyword>quad_[xy]</keyword>
       <keyword>r5(quad|rep)</keyword>
       <keyword>r[0-5]</keyword>
-      <keyword>r[ab]([0-5]?[0-9]6[0-3])</keyword>
+      <keyword>r[ab]([0-5]?[0-9]|6[0-3])</keyword>
       <keyword>recip(sqrt)?</keyword>
       <keyword>rev_flag</keyword>
       <keyword>sfu_(exp|log|recip(sqrt)?)</keyword>
