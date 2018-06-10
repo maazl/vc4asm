@@ -45,10 +45,9 @@ static const constexpr struct MSG
 	E(NO_UNPACK_MODE_SRC              , 43,10, "The requested unpack mode is not supported by this source argument.");
 	E(NO_UNPACK_TO_FLOAT              , 43,11, "The requested unpack mode is only supported by instructions that take integer input.");
 	E(NO_UNPACK_TO_INT                , 43,12, "The requested unpack mode is only supported by instructions that take floating point input.");
-	E(FLOAT_UNPACK_AFFECTS_OTHER_ALU  , 44, 1, "Using unpack with floating point input changes the behavior of the unpack operation of the other ALU.");
-	E(FLOAT_UNPACK_PREVENTS_INT_UNPACK, 44, 2, "Unpack of the other ALU with a floating point instruction prevents access to the integer unpack modes.");
+	E(FLOAT_AFFECTS_OTHER_ALU_UNPACK  , 44, 1, "Using a floating point instruction changes the behavior of the unpack operation of the other ALU.");
 	E(UNPACK_APPLIES_FORM_OTHER_ALU   , 45, 1, "The unpack option from the other ALU silently applies.");
-	E(UNPACK_APPLIES_TO_OTHER_ALU     , 45, 2, "Using unpack changes the semantic of the other ALU.");
+	E(UNPACK_APPLIES_TO_OTHER_ALU     , 45, 2, "The unpack option silently applies to the other ALU instruction.");
 	W(UNPACK_APPLIES_TO_SRC1          , 46, 1, "The unpack option silently applies to 1st source argument.");
 	W(UNPACK_APPLIES_TO_SRC2          , 46, 2, "The unpack option silently applies to 2nd source argument.");
 	E(AMBIGUOUS_UNPACK                , 47, 1, "Ambiguous unpack mode. Unpack could apply to both source arguments with different semantics.");

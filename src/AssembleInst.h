@@ -48,6 +48,7 @@ class AssembleInst : private Inst
 	,	IF_DATA          = 8    ///< Result of .data directive, do not optimize
 	,	IF_NORSWAP       = 16   ///< Do not swap regfile A and regfile B peripheral register
 	,	IF_NOASWAP       = 32   ///< Do not swap ADD and MUL ALU
+	,	IF_PMFIXED       = 64   ///< PM bit should no longer be changed.
 	};
 	CLASSFLAGSENUM(instFlags, unsigned char);
 
@@ -138,8 +139,6 @@ class AssembleInst : private Inst
 	/// @exception Message Failed, error message.
 	void             applyPackUnpack(rPUp mode);
 
-	/// Handle nop instruction, ADD or MUL ALU.
-	void             applyNOP();
 	/// @brief Add ADD ALU op code to instruction word.
 	/// @details Some instructions are available by both ALUs. applyADD tries to call applyMUL
 	/// if such an instruction is encountered and the ADD ALU is already busy.
@@ -201,6 +200,11 @@ class AssembleInst : private Inst
 	/// Check whether the current instruction has concurrent access to TMU resources.
 	bool             isTMUconflict() const;
 
+	/// Executed at each end of an ALU instruction.
+	void             atEndOP();
+	/*/// Executed at the end of each QPU instruction.
+	void             atEndInst();*/
+
 	/// Some optimizations to save ALU power
 	void             optimize();
 
@@ -213,11 +217,9 @@ class AssembleInst : private Inst
 	[[noreturn]] virtual void ThrowMessage(Message&& msg) const;
 	/// @brief Throw an assembler error.
 	/// @param msg Message template
-	/// @remarks gcc will complain about the noreturn attribute. There is AFAIK no way to get rid of this warnings.
-	/// You can safely ignore them.
 	template <typename ...A>
 	[[noreturn]] void Fail(const msgTemplate<A...> msg, A... a) const
-	{	ThrowMessage(Message(*this, msg.ID, msg.format(a...))); }
+	{	ThrowMessage(Message(*this, msg.ID, msg.format(a...))); throw 0; /* unreachable code, but gcc will complain about the noreturn attribute otherwise. */ }
 	/// @brief Create an assembler warning.
 	/// @param msg Message template
 	template <typename ...A>
@@ -288,11 +290,14 @@ class AssembleInst : private Inst
 	/// @param mode Requested unpack mode.
 	/// @return PM bit or -1 in case of undetermined.
 	/// @remarks In fact the function will never return 1 because all r4 unpack modes are available by regfile A as well.
-	int              calcPM(unpack mode);
-	/// Checks whether the given input mux may be the source of an unpack instruction, i.e. r4 or regfile A.
-	/// @param input mux to check. If the mux points to regfile A The read address is also check not to address an IO register.
-	/// @return PM flag for the instruction, i.e. 1 for r4 and 0 for regfile A or -1 if not possible.
-	int              isUnpackable(mux mux) const { if (mux == X_R4) return true; if (mux == X_RA && RAddrA < 32) return false; return -1; }
+	static int       calcPM(unpack mode);
+	static int       joinPM(int pm1, int pm2) { return (pm1 ^ pm2) == 1 ? -1 : pm1 & pm2; }
+	/// Checks whether the given input mux may be the source of an unpack instruction, i.e. r4 or regfile A
+	/// and if the requested int/float context is valid in this case.
+	/// @param mux Input mux to check. If the mux points to regfile A The read address is also check not to address an IO register.
+	/// @param mode Check for valid unpack mode.
+	/// @return PM flag for the instruction, i.e. 1 for r4, 0 for regfile A, -1 if not possible or -5 in case of a int/float mismatch.
+	int              isUnpackable(mux mux, unpack mode) const;
 	/// Checks the unpack mode against the current instruction.
 	/// Checks for conflicting int/float mode and may adjust opcode in case of mov instruction.
 	/// @exception Message Failed, error message.
@@ -311,13 +316,14 @@ class AssembleInst : private Inst
 	void             doPack(pack mode);
 
 	/// Setup Parser for opcode arguments, handle instruction extensions.
-	void             doInitOP() { UseRot = IC_NONE; UseUnpack &= IC_BOTH; UsePack &= IC_BOTH; }
+	/// Called before any other function.
+	void             atInitOP() { UseRot = IC_NONE; UseUnpack &= IC_BOTH; UsePack &= IC_BOTH; }
+
 	/// Try to get immediate value at mov by a small immediate value and an available ALU.
 	/// @param value requested immediate value.
 	/// @return true: succeeded.
 	/// @exception Message Failed, error message.
 	bool             trySmallImmd(uint32_t value);
-
 	/// Try to swap read access to register file A and B
 	/// if the already existing read access is invariant of this change.
 	/// See also isRRegAB.

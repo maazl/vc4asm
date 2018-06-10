@@ -318,10 +318,12 @@ struct Inst
 	/// @param mul Check for MUL ALU result instead of ADD ALU result.
 	/// @pre Sig < S_LDI
 	bool       isFloatResult(bool mul) const { return mul ? OpM == M_FMUL : ((OpA - 1U) ^ 1U) <= 6U; }
-	/// Check whether floating point OP code.
-	/// @param mul Check for MUL ALU result instead of ADD ALU result.
+	/// Check whether ADD ALU uses OP code with floating point input.
 	/// @pre Sig < S_LDI
-	bool       isFloatInput(bool mul) const { return mul ? OpM == M_FMUL : OpA - 1U <= 6U; }
+	bool       isADDFloatInput() const { return OpA - 1U <= 6U; }
+	/// Check whether MUL ALU uses OP code with floating point input.
+	/// @pre Sig < S_LDI
+	bool       isMULFloatInput() const { return OpM == M_FMUL; }
 	/// Check whether register file A is consumed by any floating point OP code.
 	/// @pre Sig < S_LDI
 	bool       isFloatRA() const { return ((MuxAA == X_RA || MuxAB == X_RA) && OpA - 1U <= 6U) || ((MuxMA == X_RA || MuxMB == X_RA) && OpM == M_FMUL); }

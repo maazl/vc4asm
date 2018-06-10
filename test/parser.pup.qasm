@@ -17,7 +17,7 @@
     mov.unpack8a r0, ra0; mov r1, ra0   #E:A45.1 implicit unpack by other ALU
     mov.unpack8a r0, r4; mov r1, ra0    #O no implicit unpack by other ALU
     mov.unpack8a r0, r4; mov.unpack8a r1, ra0 #E:A70 ... but conflicting PM
-    mov.unpack16b r0, r4       		    #O
+    mov.unpack16b r0, r4                #O
     mov.unpack16bi r0, r4               #W:A48 r4 can't unpack int16 and there is no regfile A access
     add.unpack16bi r0, r4, ra1          #O but regfile A can
     add.unpack16bf r0, r4, ra1          #O and r4 can unpack float, but r.A can't in case of integer instruction

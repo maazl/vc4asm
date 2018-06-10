@@ -55,9 +55,10 @@ struct msgID
 	constexpr severity Severity() const noexcept { return (severity)Value; }
 	/// As human readable string
 	string toString() const;
-	// construction
+	/// construction from components
 	constexpr msgID(msgsrc source, severity severity, uint8_t major, uint8_t minor) noexcept
 	:	Value((source<<24)|(major<<16)|(minor<<8)|severity) {}
+	/// construction from integer - be careful
 	constexpr explicit msgID(int value) noexcept : Value(value) {}
 	// comparison
 	constexpr friend bool operator==(msgID l, msgID r) noexcept { return l.Value == r.Value; }

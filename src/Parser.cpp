@@ -830,23 +830,25 @@ void Parser::ParseInstruction()
 		if (Preprocessed)
 			fputs(Token.c_str(), Preprocessed);
 		(this->*op->Func)(op->Arg);
+		atEndOP();
 
 		switch (NextToken())
 		{default:
 			Fail(MSG.EXPECTED_EOL_OR_SEMICOLON, Token.c_str());
-		 case END:
-			return;
 		 case SEMI:
 			switch (NextToken())
-			{default:
+			{case WORD:
+				continue;
+			 default:
 				Fail(MSG.EXPECTED_EOL_OR_INSTRUCTION, Token.c_str());
 			 case END:
 				Flags |= IF_CMB_ALLOWED;
-				return;
-			 case WORD:;
 			}
+		 case END:;
 		}
+		break;
 	}
+	//atEndInst();
 }
 
 Parser::label& Parser::defineLabel()
@@ -1010,7 +1012,7 @@ void Parser::parseDATA(int bits)
 	if (!BitOffset)
 	{	Flags |= IF_BRANCH_TARGET|IF_DATA;
 		StoreInstruction(0);
-		Flags = IF_NONE;
+		Flags = InstFlags[PC];
 	}
 	// Check alignment
 	else if (!alignment && (alignment = BitOffset & (bits-1)) != 0)
@@ -1024,7 +1026,7 @@ void Parser::parseDATA(int bits)
 		if ((BitOffset -= 64) != 0)
 		{	Flags |= IF_BRANCH_TARGET|IF_DATA;
 			StoreInstruction((uint64_t)ExprValue.iValue >> (bits - BitOffset));
-			Flags = IF_NONE;
+			Flags = InstFlags[PC];
 	}	}
 	switch (NextToken())
 	{default:
@@ -1082,7 +1084,7 @@ bool Parser::doALIGN(int bytes, int offset)
 	{	BitOffset += 8*bytes - align;
 		if (BitOffset >= 64) // cannot overflow
 		{	++PC;
-			Flags = IF_NONE;
+			Flags = InstFlags[PC];
 			BitOffset = 0;
 		}
 	}
@@ -1097,7 +1099,7 @@ bool Parser::doALIGN(int bytes, int offset)
 	{	StoreInstruction(0x100009e7009e7000ULL); // nop
 		++PC;
 	} while ((PC+offset) & bytes);
-	Flags = IF_NONE;
+	Flags = InstFlags[PC];
 	return true;
 }
 
@@ -1880,11 +1882,11 @@ void Parser::ParseLine()
 		}
 		// new instruction
 		reset();
+		Flags = InstFlags[PC];
 
 		ParseInstruction();
 		StoreInstruction(encode());
 		++PC;
-		Flags = IF_NONE;
 		return;
 	}
 }

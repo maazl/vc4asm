@@ -225,22 +225,19 @@ void AssembleInst::applyRot(int count)
 }
 
 void AssembleInst::applyPackUnpack(rPUp mode)
-{
-	switch (mode.requestType())
+{	switch (mode.requestType())
 	{case rPUp::UNPACK:
 		if (InstCtx & IC_DST)
 			Fail(MSG.NO_UNPACK_TARGET);
 	 unpack:
 		doUnpack(mode.asUnPack());
 		break;
-
 	 case rPUp::PACK:
 		if (InstCtx & IC_SRC)
 			Fail(MSG.NO_PACK_SOURCE);
 	 pack:
 		doPack(mode.asPack());
 		break;
-
 	 default: // NONE
 		// auto detect pack vs. unpack
 		if (InstCtx & IC_SRC)
@@ -263,9 +260,9 @@ int AssembleInst::calcPM(pack mode)
 	if (raw == 0)
 		return -1;
 	if ((mode & P_INT) || raw == 8 || (raw & 7) < 3)
-		return 0; // regfile A pack only
+		return false; // regfile A pack only
 	if (mode & P_FLT)
-		return 1; // MUL ALU pack only
+		return true;  // MUL ALU pack only
 	return -1;
 }
 
@@ -279,110 +276,45 @@ int AssembleInst::calcPM(unpack mode)
 	if (raw == 0 || raw == 3)
 		return -1;
 	if (mode & U_INT)
-		return false;
-	// Additionally check whether current ALU supports float modes.
-	if ((mode & U_FLT) && !isFloatInput(InstCtx & IC_MUL))
-		return false;
+		return false; // regfile A only
 	return -1;
 }
 
-void AssembleInst::checkUnpack()
-{	if ( !(InstCtx & IC_SRC)     // only check in source context
-		|| !Unpack                 // no unpack, no problem
-		|| PM                      // no ambiguities with r4 unpack
-		|| (Unpack & 7) == U_8dr ) // no ambiguities with .8dr
-		return;
-	bool floatin = isFloatInput(InstCtx & IC_MUL);
-	switch (Unpack & (U_INT|U_FLT))
-	{case 0: // no explicit int/float mode, but lets nail the mode to avoid conflicts with the other ALU
-		Unpack = (unpack)(Unpack | (floatin ? U_FLT : U_INT));
-		break;
-	 case U_INT:
-		if (floatin)
-			Fail(MSG.NO_UNPACK_TO_FLOAT);
-		break;
-	 case U_FLT:
-		if (!floatin)
-		{	// if this is a mov instruction, executed by the ADD ALU then we could fulfill the request by changing the opcode
-			if ( (InstCtx & IC_SRC) == IC_SRC
-				&& ((InstCtx & IC_ADD) || tryALUSwap())
-				&& OpA == A_OR )
-				OpA = A_FMIN;
-			else
-				Fail(MSG.NO_UNPACK_TO_INT);
-		}
-	}
-	// Stage 2: check the other ALU
-	bool otherfloatin;
-	if (InstCtx & IC_MUL)
-	{	if (!isADD())
-			return; // ADD ALU unused => no conflict
-		auto mux = currentMux();
-		if (MuxAA != mux && MuxAB != mux)
-			return; // ADD ALU does not access unpack mux => no conflict
-		otherfloatin = isFloatInput(false);
-	} else if (InstCtx & IC_ADD)
-	{	if (!isADD())
-			return; // MUL ADD ALU unused => no conflict
-		auto mux = currentMux();
-		if (MuxMA != mux && MuxMB != mux)
-			return; // MUL ALU does not access unpack mux => no conflict
-		otherfloatin = isFloatInput(true);
-	}
-	if (otherfloatin == !floatin)
-	{	if (floatin)
-			Fail(MSG.FLOAT_UNPACK_AFFECTS_OTHER_ALU);
-		else
-			Fail(MSG.FLOAT_UNPACK_PREVENTS_INT_UNPACK);
-	}
+int AssembleInst::isUnpackable(mux mux, unpack mode) const
+{	assert(mode);
+	if (mux == X_R4)
+		return true;
+	if (mux == X_RA && RAddrA < 32)
+		return ( (mode & (U_INT|U_FLT)) && (mode & 7) != U_8dr // Check 4 int/float
+			&& (isADDFloatInput() | isMULFloatInput()) != !(mode & U_INT) ) ? -5 : false;
+	return -1;
 }
 
 void AssembleInst::applyPM(bool pm)
-{	if (PM == pm)
-		return; // match
-	if (Pack)
-		Fail(MSG.NO_UNPACK_VS_PACK);
-	if (Unpack && (UseUnpack & ~InstCtx & (IC_SRC|IC_BOTH)))
-		Fail(MSG.NO_UNPACK_VS_UNPACK);
-	PM = pm;
+{	if (!(Flags & IF_PMFIXED))
+	{	PM = pm;
+		Flags |= IF_PMFIXED;
+	} else if (PM != pm)
+	{	if (Pack)
+			Fail(MSG.NO_UNPACK_VS_PACK);
+		if (Unpack)
+			if (UseUnpack & ~InstCtx & (IC_SRC|IC_BOTH))
+				Fail(MSG.NO_UNPACK_VS_UNPACK);
+			else
+				Fail(MSG.NO_PACK_VS_UNPACK);
+	}
 }
 
 void AssembleInst::doUnpack(unpack mode)
 {	int pm;
 	if (!mode)
 	{	// no unpack request at source context...
-		if (UseUnpack & IC_OP)
-		{	// OP code level unpack at current instruction...
-			pm = isUnpackable(currentMux());
-			// opcode unpack applies? => adjust PM
-			int pm2 = calcPM(Unpack);
-			if (pm >= 0 && pm2 < 0)
-			{	if ((InstCtx & IC_SRC) == IC_SRCB && isUnpackable(InstCtx & IC_MUL ? MuxMA : MuxAA) == !pm)
-					Fail(MSG.AMBIGUOUS_UNPACK);
-				applyPM((bool)pm);
-				checkUnpack();
-				UseUnpack |= InstCtx;
-			}
-			// check 4 unused unpack extensions
-			switch (InstCtx & IC_BOTH)
-			{case IC_ADD:
-				if ( ((InstCtx & IC_SRCB) || isUnary()) // last source arg
-						&& isUnpackable(MuxAA) != PM && isUnpackable(MuxAB) != PM )
-					goto nounpack;
-				break;
-			 case IC_MUL:
-				if ( (InstCtx & IC_SRCB) // last source arg
-					&& isUnpackable(MuxMA) != PM && isUnpackable(MuxMB) != PM )
-				 nounpack:
-					Msg(MSG.UNUSED_UNPACK);
-			 default:;
-			}
-		} else
+		if (!(UseUnpack & IC_OP))
 		{	// no unpack at current context...
 			// ensure that no unpack silently applies.
-			if ((UseUnpack & (~InstCtx & IC_BOTH)) && PM == isUnpackable(currentMux()))
+			if ((UseUnpack & (~InstCtx & IC_BOTH)) && PM == isUnpackable(currentMux(), Unpack))
 				Fail(MSG.UNPACK_APPLIES_FORM_OTHER_ALU);
-			if ((InstCtx & IC_SRCB) && (UseUnpack & IC_SRCA) && PM == isUnpackable(currentMux()))
+			if ((InstCtx & IC_SRCB) && (UseUnpack & IC_SRCA) && PM == isUnpackable(currentMux(), Unpack))
 				Msg(MSG.UNPACK_APPLIES_TO_SRC2);
 		}
 		return;
@@ -395,10 +327,22 @@ void AssembleInst::doUnpack(unpack mode)
 	// determine PM bit
 	pm = calcPM(mode);
 	if ((InstCtx & IC_SRC) && (InstCtx & IC_BOTH))
-	{	int pm2 = isUnpackable(currentMux());
+	{	int pm2 = isUnpackable(currentMux(), mode);
 		if (pm2 < 0)
-			Fail(MSG.NO_UNPACK_SRC);
-		if ((!pm2) == pm)
+		{	if (pm2 == -1)
+				Fail(MSG.NO_UNPACK_SRC);
+			// only int/float mismatch
+			if (mode & U_INT)
+				Fail(MSG.NO_UNPACK_TO_INT);
+			// else mode & U_FLT
+			// if this is a mov instruction executed by the ADD ALU then we could fulfill the request by changing the opcode
+			if ( (InstCtx & IC_SRC) == IC_SRC
+				&& ((InstCtx & IC_ADD) || tryALUSwap())
+				&& OpA == A_OR )
+				OpA = A_FMIN;
+			else
+				Fail(MSG.NO_UNPACK_TO_FLOAT);
+		} else if ((!pm2) == pm)
 			Fail(MSG.NO_UNPACK_MODE_SRC);
 		pm = pm2;
 	}
@@ -411,15 +355,54 @@ void AssembleInst::doUnpack(unpack mode)
 	if (Unpack != U_32 && ((Unpack ^ mode) & 7))
 		Fail(MSG.NO_UNPACK_VS_UNPACK);
 	Unpack = mode;
-	checkUnpack();
 	UseUnpack |= InstCtx;
 	// Check whether unpack applies unexpectedly to another argument.
-	if ((InstCtx & IC_SRCB) && !(UseUnpack & (IC_OP|IC_SRCA)) && PM == isUnpackable(getMux(InstCtx ^ IC_SRC)))
+	if ((InstCtx & IC_SRCB) && !(UseUnpack & (IC_OP|IC_SRCA)) && PM == isUnpackable(getMux(InstCtx ^ IC_SRC), mode))
 		Msg(MSG.UNPACK_APPLIES_TO_SRC1);
-	if ( (InstCtx | (IC_OP|IC_SRCA)) && ( InstCtx & IC_MUL
-			? !(UseUnpack & IC_ADD) && isADD() && (isUnpackable(MuxAA) == PM || (!isUnary() && isUnpackable(MuxAB) == PM))
-			: !(UseUnpack & IC_MUL) && isMUL() && (isUnpackable(MuxMB) == PM || isUnpackable(MuxMA) == PM) ))
-		Fail(MSG.UNPACK_APPLIES_TO_OTHER_ALU);
+}
+
+void AssembleInst::checkUnpack()
+{
+	// Check for of op-code level unpack
+	if (UseUnpack & IC_OP)
+	{	int pm1, pm2 = calcPM(Unpack);
+		if (InstCtx & IC_MUL)
+		{	pm1 = joinPM(pm2, isUnpackable(MuxMA, Unpack));
+			pm2 = joinPM(pm2, isUnpackable(MuxMB, Unpack));
+		} else
+		{	pm1 = joinPM(pm2, isUnpackable(MuxAA, Unpack));
+			if (!isUnary())
+				pm2 = joinPM(pm2, isUnpackable(MuxAB, Unpack));
+		}
+		// pm1 := pack mode 1st src arg, pm2 := pack mode of 2nd src; <= 0 := no unpack
+		if (pm1 < 0 && pm2 < 0)
+			Msg(MSG.UNUSED_UNPACK);
+		else if ((pm1 ^ pm2) == 1)
+			Fail(MSG.AMBIGUOUS_UNPACK);
+		else
+			applyPM((pm1 & pm2) != 0);
+	}
+
+	// Check whether the other instruction is affected by Unpack.
+	switch (InstCtx & IC_BOTH)
+	{case IC_ADD:
+		if (!isMUL())
+			break; // MUL ALU unused => no conflict
+		if ( (UseUnpack & IC_BOTH) == IC_ADD
+			&& isMUL() && (isUnpackable(MuxMB, Unpack) == PM || isUnpackable(MuxMA, Unpack) == PM) )
+			Fail(MSG.UNPACK_APPLIES_TO_OTHER_ALU);
+		if ((UseUnpack & IC_MUL) && !PM && isADDFloatInput() && !isMULFloatInput() && (Unpack & 7) != U_8dr)
+			Fail(MSG.FLOAT_AFFECTS_OTHER_ALU_UNPACK);
+		break;
+	 case IC_MUL:
+		if (!isADD())
+			break; // ADD ALU unused => no conflict
+		if ( (UseUnpack & IC_BOTH) == IC_MUL
+			&& (isUnpackable(MuxAA, Unpack) == PM || (!isUnary() && isUnpackable(MuxAB, Unpack) == PM)) )
+			Fail(MSG.UNPACK_APPLIES_TO_OTHER_ALU);
+		if ((UseUnpack & IC_ADD) && !PM && !isADDFloatInput() && isMULFloatInput() && (Unpack & 7) != U_8dr)
+			Fail(MSG.FLOAT_AFFECTS_OTHER_ALU_UNPACK);
+	}
 }
 
 void AssembleInst::doPack(pack mode)
@@ -453,18 +436,12 @@ void AssembleInst::doPack(pack mode)
 					Fail(MSG.ADD_ALU_PACK_NEEDS_REGA);
 			}
 			break; // apply PM
-
 		 case true: // MUL ALU
 			if (!(InstCtx & IC_MUL) && !tryALUSwap())
 				Fail(MSG.PACK_MODE_REQUIRES_MUL_ALU);
 		 case false:; // reg A
 		}
-		// apply PM
-		if (pm != PM)
-		{	if (Unpack)
-				Fail(MSG.NO_PACK_VS_UNPACK);
-			PM = pm;
-		}
+		applyPM((bool)pm);
 	}
  applyPack:
 	if ((InstCtx & IC_DST) && !PM)
@@ -488,6 +465,16 @@ void AssembleInst::doPack(pack mode)
 	}
 	Pack = mode;
 }
+
+void AssembleInst::atEndOP()
+{	// Actions after each (ALU) instruction
+	if (isALU())
+		checkUnpack();
+}
+
+/*void AssembleInst::atEndInst()
+{	// Actions after each QPU instruction
+}*/
 
 bool AssembleInst::trySmallImmd(uint32_t value)
 {	const smiEntry* si;
@@ -545,11 +532,12 @@ bool AssembleInst::trySmallImmd(uint32_t value)
 		}
 
 		// Match!
-		Sig  = S_SMI;
+		Sig = S_SMI;
 		SImmd = si->SImmd;
 		if (!!si->Pack)
 		{	Pack = si->Pack;
-			PM  = (si->Pack & P_FLT) != 0;
+			PM = (si->Pack & P_FLT) != 0;
+			Flags |= IF_PMFIXED;
 		}
 	}
 	// match or mov ..., 0
@@ -617,7 +605,7 @@ int AssembleInst::applyADD(opadd add_op)
 	(uint8_t&)add_op &= 0x1f;
 	OpA = add_op;
 	InstCtx = IC_OP|IC_ADD;
-	doInitOP();
+	atInitOP();
 
 	return add_op == A_NOP ? 0 : 1 + !isUnary();
 }
@@ -645,7 +633,7 @@ int AssembleInst::applyMUL(opmul mul_op)
 	(uint8_t&)mul_op &= 7;
 	OpM = mul_op;
 	InstCtx = IC_OP|IC_MUL;
-	doInitOP();
+	atInitOP();
 
 	return 2 * (mul_op != M_NOP);
 }
@@ -677,7 +665,7 @@ void AssembleInst::applyTarget(exprValue val)
 			Fail(MSG.ADD_ALU_PACK_NEEDS_REGA);
 		}
 		// MUL ALU => prefer Regfile A pack
-		if (WS && WAddrA < 32 && !Unpack) // Regfile A write and pack mode not frozen.
+		if (WS && WAddrA < 32 && !(Flags & IF_PMFIXED)) // Regfile A write and pack mode not frozen.
 		{	PM = false;
 			goto packOK;
 		}
@@ -731,48 +719,45 @@ void AssembleInst::applyALUSource(exprValue val)
 }
 
 void AssembleInst::prepareMOV(bool target2)
-{
-	if (Sig == S_BRANCH)
+{	if (Sig == S_BRANCH)
 		Fail(MSG.NO_LDI_VS_BRANCH);
 	bool isLDI = Sig == S_LDI;
+	bool addused = (Flags & IF_HAVE_NOP) || WAddrA != R_NOP || (!isLDI && OpA != A_NOP);
+	bool mulused = WAddrM != R_NOP || (!isLDI && OpM != M_NOP);
 	if (target2)
 	{	if (InstCtx != IC_BOTH)
 			Fail(MSG.AMOV_MMOV_NO_2ND_TARGET);
-		if ( ((Flags & IF_HAVE_NOP) || WAddrA != R_NOP || (!isLDI && OpA != A_NOP))
-			|| (WAddrM != R_NOP || (!isLDI && OpM != M_NOP)) )
+		if (addused || mulused)
 			Fail(MSG.TWO_TARGETS_REQUIRE_BOTH_ALU);
-		Flags |= IF_NOASWAP;
-		InstCtx = IC_OP|IC_ADD;
-	} else
-	{	if (isLDI && InstCtx != IC_BOTH)
-			Fail(MSG.NO_AMOV_MMOV_VS_LDI);
-		bool addused = (Flags & IF_HAVE_NOP) || WAddrA != R_NOP || (!isLDI && OpA != A_NOP);
-		bool mulused = WAddrM != R_NOP || (!isLDI && OpM != M_NOP);
-		switch (InstCtx)
-		{default:
-			if (!addused)
-				goto add;
-			else if (!mulused)
-				goto mul;
-			else
-				Fail(MSG.BOTH_ALU_IN_USE);
-		 case IC_ADD:
-			if (addused && (mulused || !tryALUSwap()))
-				Fail(MSG.ADD_ALU_IN_USE);
-			Flags |= IF_NOASWAP;
-		 add:
-			InstCtx = IC_ADD|IC_OP;
-			break;
-		 case IC_MUL:
-			if (mulused && (addused || !tryALUSwap()))
-				Fail(MSG.MUL_ALU_IN_USE);
-			Flags |= IF_NOASWAP;
-		 mul:
-			InstCtx = IC_MUL|IC_OP;
-			break;
-		}
+		goto addns;
 	}
-	doInitOP();
+	if (isLDI && InstCtx != IC_BOTH)
+		Fail(MSG.NO_AMOV_MMOV_VS_LDI);
+	switch (InstCtx)
+	{default:
+		if (!addused)
+			goto add;
+		else if (!mulused)
+			goto mul;
+		else
+			Fail(MSG.BOTH_ALU_IN_USE);
+	 case IC_MUL:
+		if (mulused && (addused || !tryALUSwap()))
+			Fail(MSG.MUL_ALU_IN_USE);
+		Flags |= IF_NOASWAP;
+	 mul:
+		InstCtx = IC_MUL|IC_OP;
+		break;
+	 case IC_ADD:
+		if (addused && (mulused || !tryALUSwap()))
+			Fail(MSG.ADD_ALU_IN_USE);
+	 addns:
+		Flags |= IF_NOASWAP;
+	 add:
+		InstCtx = IC_ADD|IC_OP;
+		break;
+	}
+	atInitOP();
 }
 
 bool AssembleInst::applyMOVsrc(exprValue src)
@@ -882,15 +867,14 @@ void AssembleInst::applyLDIsrc(exprValue src, ldmode mode)
 }
 
 void AssembleInst::prepareREAD()
-{	InstCtx = IC_SRC;
-	if (Sig == S_LDI || Sig == S_BRANCH)
+{	if (Sig == S_LDI || Sig == S_BRANCH)
 		Fail(MSG.NO_READ_VS_BRANCH_LDI);
-	doInitOP();
+	InstCtx = IC_SRC;
+	atInitOP();
 }
 
 void AssembleInst::applyREADsrc(exprValue src)
-{
-	switch (src.Type)
+{	switch (src.Type)
 	{default:
 		Fail(MSG.READ_SRC_REQUIRES_REGFILE_OR_SMI, src.toString().c_str());
 	 case V_REG:
@@ -911,20 +895,17 @@ void AssembleInst::applyREADsrc(exprValue src)
 }
 
 void AssembleInst::prepareBRANCH(bool relative)
-{	InstCtx = IC_OP|IC_ADD;
-
-	if ( OpA != A_NOP || OpM != M_NOP || Sig != S_NONE
+{	if ( OpA != A_NOP || OpM != M_NOP || Sig != S_NONE
 		|| RAddrA != R_NOP || RAddrB != R_NOP )
 		Fail(MSG.NO_BRANCH_VS_ANY);
-
+	InstCtx = IC_OP|IC_ADD;
 	Sig = S_BRANCH;
 	CondBr = B_AL;
 	Rel = relative;
 	RAddrA = 0;
 	Reg = false;
 	Immd.uValue = 0;
-
-	doInitOP();
+	atInitOP();
 }
 
 bool AssembleInst::applyBranchSource(exprValue val, unsigned pc)

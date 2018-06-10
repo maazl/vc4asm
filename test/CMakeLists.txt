@@ -7,6 +7,18 @@ file(GLOB files "${CMAKE_CURRENT_SOURCE_DIR}/*")
 foreach(filename ${files})
 
 	# Assembler tests with simple output
+	string(REGEX REPLACE ".*asm\\.(.*)\\.qasm$" "\\1" name ${filename})
+	if(NOT ${name} STREQUAL ${filename})
+		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.passed ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.diff ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.hex
+			COMMAND $<TARGET_FILE:vc4asm> -V -C ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.hex -i vc4.qinc ${filename}
+			COMMAND diff ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.hex ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.strip > ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.diff
+			COMMAND touch ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.passed # Work around for cmake bug #15474
+			DEPENDS vc4asm ${filename} ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.strip VERBATIM )
+		add_custom_target( test_asm_${name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.passed )
+		list(APPEND test_qasm test_asm_${name} )
+		add_test(NAME asm_${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+			COMMAND ${CMAKE_COMMAND} --build . --target test_asm_${name} --config $<CONFIGURATION> )
+	endif()
 	string(REGEX REPLACE ".*gpu_fft_(.*)\\.qasm$" "\\1" name ${filename})
 	if(NOT ${name} STREQUAL ${filename})
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.passed ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.diff ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.hex
@@ -14,13 +26,30 @@ foreach(filename ${files})
 			COMMAND diff ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.hex ${CMAKE_CURRENT_BINARY_DIR}/shader_${name}.strip > ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.diff
 			COMMAND touch ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.passed # Work around for cmake bug #15474
 			DEPENDS vc4asm ${filename} ${CMAKE_CURRENT_BINARY_DIR}/shader_${name}.strip VERBATIM )
-		add_custom_target( test_qasm_${name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.passed )
-		list(APPEND test_qasm test_qasm_${name} )
-		add_test(NAME qasm_${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-			COMMAND ${CMAKE_COMMAND} --build . --target test_qasm_${name} --config $<CONFIGURATION> )
+		add_custom_target( test_asm_${name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gpu_fft_${name}.passed )
+		list(APPEND test_qasm test_asm_${name} )
+		add_test(NAME asm_${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+			COMMAND ${CMAKE_COMMAND} --build . --target test_asm_${name} --config $<CONFIGURATION> )
 	endif()
 
 	# disassembler
+	string(REGEX REPLACE ".*asm\\.(.*)\\.hex$" "\\1" name ${filename})
+	if(NOT ${name} STREQUAL ${filename})
+		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.strip
+			COMMAND sed s/\\s*\\/\\/.*// ${filename} > ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.strip
+			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/asm.${name}.hex VERBATIM )
+		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dis.${name}.passed ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.dis ${CMAKE_CURRENT_BINARY_DIR}/dis.${name}.diff ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.hex2
+			COMMAND $<TARGET_FILE:vc4dis> -v2 -x ${filename} -o ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.dis
+			COMMAND $<TARGET_FILE:vc4asm> -C ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.hex2 ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.dis
+			COMMAND grep -v "^\\s*\\.long" ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.dis > /dev/null # result must be empty
+			COMMAND diff ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.hex2 ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.strip > ${CMAKE_CURRENT_BINARY_DIR}/dis.${name}.diff
+			COMMAND touch ${CMAKE_CURRENT_BINARY_DIR}/dis.${name}.passed # Work around for cmake bug #15474
+			DEPENDS vc4dis vc4asm ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.strip VERBATIM )
+		add_custom_target( test_dis_${name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dis.${name}.passed )
+		list(APPEND test_dis test_dis_${name} )
+		add_test(NAME dis_${name} WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+			COMMAND ${CMAKE_COMMAND} --build . --target test_dis_${name} --config $<CONFIGURATION> )
+	endif()
 	string(REGEX REPLACE ".*(shader_.*)\\.hex$" "\\1" name ${filename})
 	if(NOT ${name} STREQUAL ${filename})
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}.strip
