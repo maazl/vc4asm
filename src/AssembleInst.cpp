@@ -1120,6 +1120,12 @@ void AssembleInst::optimize()
 		Immd = val;
 		PM = false;
 		Pack = P_32;
+		// always switch to ADD ALU write - avoids turn around stability problems with disassembler.
+		if (WAddrA == R_NOP)
+		{	WAddrA = WAddrM;
+			WAddrM = R_NOP;
+			WS = !WS & !isWRegAB(WAddrA);
+		}
 	 case S_LDI: // ldi, sema
 		if (WAddrA == R_NOP && !SF)
 			CondA = C_NEVER;
