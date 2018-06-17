@@ -181,7 +181,7 @@ bool Inst::evalPack(qpuValue& r, qpuValue v, bool mul)
 				if (v.fValue >= 1.0F)
 					v.iValue = 255;
 				else if (v.fValue > 0.F)
-					v.iValue = (int)(v.fValue * 255); // TODO: is the rounding correct?
+					v.iValue = (int)(v.fValue * 255 + .5);
 				else
 					v.iValue = 0;
 				v.iValue *= 0x1010101; // replicate bytes
