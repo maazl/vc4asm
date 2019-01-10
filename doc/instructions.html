@@ -47,7 +47,7 @@
       instruction joining over this point. Ordinary labels will do the same.</p>
     <ul>
     </ul>
-    <h2><a id="ALU" name="ADD"></a>ALU instruction</h2>
+    <h2><a name="ALU"></a>ALU instruction</h2>
     <pre><var>binaryopcode destination, source1, source2</var><br><var>unaryopcode destination, source1<br>opcode</var>.<a
 href="extensions.html#setf">setf</a> ...<br><var>opcode</var>.<a href="extensions.html#ifcc">if<var>cc</var></a> ...</pre>
     <dl>
@@ -56,10 +56,10 @@ href="extensions.html#setf">setf</a> ...<br><var>opcode</var>.<a href="extension
       <dt><var><tt>destination</tt></var></dt>
       <dd>Target <a href="expressions.html#register">register</a>.</dd>
       <dt><var><tt>source1, source2</tt></var></dt>
-      <dd>Source <a href="expressions.html#register">register</a> or <a href="expressions.html#SMI">small
+      <dd>Source <a href="expressions.html#register">register</a> or <a href="smallimmediate.html">small
           immediate value</a>.</dd>
     </dl>
-    <h3><a id="opcodes" name="opcodes"></a>Opcodes</h3>
+    <h3><a name="opcodes"></a>Opcodes</h3>
     <dl>
     </dl>
     <dl>
@@ -375,7 +375,7 @@ href="extensions.html#setf">setf</a> ...<br><var>opcode</var>.<a href="extension
     <pre>add.setf r3, ra0, unif<br>mul24 r0, r1, r2<var></var></pre>
     <dl>
     </dl>
-    <h2><a id="mov" name="mov"></a>Move instruction</h2>
+    <h2><a name="mov"></a>Move instruction</h2>
     <pre>mov <var>destination, source</var><br>mov <var>destination, register</var> &lt;&lt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; <var>rotate</var><br>mov <var>destination, register</var> &gt;&gt; r5<br>mov <var>destination1, destination2, source</var><br>mov.<a
 href="extensions.html#setf">setf</a> ...<br>mov.<a href="extensions.html#ifcc">if<var>cc</var></a> ...</pre>
     <dl>
@@ -426,7 +426,7 @@ href="extensions.html#setf">setf</a> ...<br>mov.<a href="extensions.html#ifcc">i
       value.</p>
     <h3>Examples</h3>
     <pre>mov ra29, 16<br>mov r3, rb4 &lt;&lt; 2;  mov r2, ra11 # Uses the MUL ALU for the first move (because of the vector rotation) and the ADD ALU for the second one.<br>mov r0, 0x8000000; mov tmurs, 1 # Uses small immediate value 1 with ror r0, 1, 1 to create the 0x80000000.</pre>
-    <h2><a id="ldi" name="ldi"></a>Load immediate</h2>
+    <h2><a name="ldi"></a>Load immediate</h2>
     <pre>ldi <var>destination, constant</var><br>ldi <var>destination1, destination2, constant</var><br>ldi.<a
 href="extensions.html#setf">setf</a> ...<br>ldi.<a href="extensions.html#ifcc">if<var>cc</var></a> ...
 <var></var></pre>
@@ -442,7 +442,7 @@ href="extensions.html#setf">setf</a> ...<br>ldi.<a href="extensions.html#ifcc">i
     ALU output.<br>
     <h3>Example</h3>
     <pre>ldi ra7, 0xffff0000</pre>
-    <h2><a id="nop" name="nop"></a>No operation</h2>
+    <h2><a name="nop"></a>No operation</h2>
     <pre>nop<br>anop<br>mnop<br>mnop <var>destination</var><var></var></pre>
     <dl>
       <dt><var><tt>destination</tt></var></dt>
@@ -458,7 +458,7 @@ href="extensions.html#setf">setf</a> ...<br>ldi.<a href="extensions.html#ifcc">i
     <p>vc4asm allows the <tt>nop</tt> instructions to have a target. This can
       be used to access <a href="VideoCoreIV-addendum.html#mnop">previous ALU
         results again</a>.</p>
-    <h2><a id="read" name="read"></a>Read pseudo instruction</h2>
+    <h2><a name="read"></a>Read pseudo instruction</h2>
     <pre><tt>read <var>source</var></tt></pre>
     <dl>
       <dt><var><tt>source</tt></var></dt>
@@ -502,7 +502,7 @@ href="extensions.html#setf">setf</a> ...<br>ldi.<a href="extensions.html#ifcc">i
           accumulator or even one of the ALUs of the previous instruction.</p>
       </dd>
     </dl>
-    <h2><a id="sema" name="sema"></a>Semaphore instruction</h2>
+    <h2><a name="sema"></a>Semaphore instruction</h2>
     <pre>sacq <var>destination, number</var><br>srel <var>destination, number</var><br>mov <var>destination</var>, sacq<var>number</var><br>mov <var>destination</var>, srel<var>number</var></pre>
     <dl>
       <dt><var><tt>destination</tt></var></dt>
@@ -522,7 +522,7 @@ href="#ldi">ldi</a></tt> instruction.</dd>
     <p><var></var>The two instructions above are equivalent. The following
       function below provides Broadcom compatible syntax.</p>
     <pre>.set sacq(i) sacq0 + i<br>mov -, sacq(7)</pre>
-    <h2><a id="bra" name="bra"></a>Branch instruction</h2>
+    <h2><a name="bra"></a>Branch instruction</h2>
     <pre>bra.<var>cond destination, </var><var>target</var><br>brr.<var>cond destination, target</var><br>bra.<var>cond destination, target1, target2</var><br>brr.<var>cond destination, target1, target2</var><br>bra.<var>cond destination1, destination2, target1, target2</var><br>brr.<var>cond destination1, destination2, target1, target2</var></pre>
     <dl>
       <dt><var><tt>.cond</tt></var></dt>
@@ -586,7 +586,7 @@ href="#ldi">ldi</a></tt> instruction.</dd>
     <p>Remember that branch instructions are executed 3 instructions delayed,
       i.e. three further instructions are always executed before any branch is
       taken.</p>
-    <h2><a id="sig" name="sig"></a>Signaling instruction</h2>
+    <h2><a name="sig"></a>Signaling instruction</h2>
     <pre>bkpt<br>thrsw<br>thrend<br>sbwait<br>sbdone<br>lthrsw<br>loadcv<br>loadc<br>ldcend<br>ldtmu0<br>ldtmu1<br>loadam</pre>
     The above signals can be combined with any normal ALU instructions in one
     line, i.e. no load immediate, no small immediate, no semaphore and no

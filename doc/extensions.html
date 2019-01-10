@@ -14,11 +14,11 @@
       <a href="instructions.html#sema">Semaphore</a>, <a href="instructions.html#bra">Branch</a>,
       <a href="instructions.html#sig">Signal</a>, <a href="#ifcc">Conditional
         assignment</a>, <a href="#pack">Pack/unpack</a></p>
-    <h2><a id="setf" name="setf"></a>Set flags</h2>
+    <h2><a name="setf"></a>Set flags</h2>
     <pre><var>opcode</var>.setf<var></var> ...<var></var><br><var>opcode</var>.sf ...<br><var>opcode destination</var>.setf, ...<br><var>opcode destination</var>.sf, ...</pre>
     <p>This flag causes an instruction to set the flags according to the
       destination value. See <a href="instructions.html#opcodes">opcode table</a>.</p>
-    <h2><a id="ifcc" name="ifcc"></a>Conditional assignment</h2>
+    <h2><a name="ifcc"></a>Conditional assignment</h2>
     <p>All ALU instructions and load immediate can use conditional assignment
       for the destination operand. The condition code can be applied to the
       opcode as well as to the destination operand.</p>
@@ -79,7 +79,7 @@
     </dl>
     <h3>Example</h3>
     <pre>mov.ifnz r0, ra7<br>mov r0.z, rb7</pre>
-    <h2><a id="pack" name="pack"></a><a id="unpack" name="unpack"></a>Pack and
+    <h2><a name="pack"></a><a name="unpack"></a>Pack and
       unpack</h2>
     <p>All <a href="instructions.html#ALU">ALU instructions</a> including <a href="instructions.html#mov"><tt>mov</tt></a>
       and <a href="instructions.html#ldi"><tt>ldi</tt></a> can be extended by
@@ -490,7 +490,7 @@
         </tr>
       </tbody>
     </table>
-    <p><a id="#noteP1">Note (1)</a> It is strongly recommended to use the
+    <p><a name="#noteP1">Note (1)</a> It is strongly recommended to use the
       pack/unpack modes that specify whether an integer or floating point
       operation should be used. vc4asm tries to guess this otherwise but you
       should avoid surprises.</p>
