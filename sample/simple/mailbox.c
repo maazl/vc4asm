@@ -1,5 +1,6 @@
 /*
 Copyright (c) 2012, Broadcom Europe Ltd.
+Copyright (c) 2019, Kenta Ishii.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -42,6 +43,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void *mapmem(unsigned base, unsigned size)
 {
    int mem_fd;
+   base &= 0x3FFFFFFF;
    unsigned offset = base % PAGE_SIZE;
    base = base - offset;
    /* open /dev/mem */
