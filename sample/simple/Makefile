@@ -17,6 +17,6 @@ smitest.dis : smitest.hex
 	../../bin/vc4dis -v2 -M -x $< -o $@
 
 clean :
-	rm smitest.hex *.o
+	rm smitest smitest.hex *.o
 
 shader : smitest.hex
