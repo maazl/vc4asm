@@ -543,10 +543,12 @@ bool AssembleInst::trySmallImmd(uint32_t value)
 	// match or mov ..., 0
 	if (si->OpCode.isMul())
 	{	MuxMA = MuxMB = X_RB;
-		OpM  = si->OpCode.asMul();
+		OpM   = si->OpCode.asMul();
 	} else
 	{	MuxAA = MuxAB = X_RB;
-		OpA  = si->OpCode.asAdd();
+		OpA   = si->OpCode.asAdd();
+		if (isUnary())
+			MuxAB = X_R0; // avoid disassembler warnings
 	}
 	return true;
 }

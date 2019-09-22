@@ -123,7 +123,7 @@ struct Inst
 	,	P_8bS     ///< write low byte to bits 8 to 15 with saturation
 	,	P_8cS     ///< write low byte to bits 16 to 23 with saturation
 	,	P_8dS     ///< write low byte to bits 24 to 31 with saturation
-	// further bits are only for informational purposes
+	// further bits are only for internal purposes
 	,	P_INT     ///< Flag to indicate that the pack operation should be made in integer mode, ignored by encode().
 	,	P_16aI    ///< write lower 16 bits only
 	,	P_16bI    ///< write lower 16 bits to the upper 16 bits
@@ -163,7 +163,7 @@ struct Inst
 	,	U_8b      ///< read bits 8 to 15 and optionally convert from [0..255] to [0..1.]
 	,	U_8c      ///< read bits 16 to 23 and optionally convert from [0..255] to [0..1.]
 	,	U_8d      ///< read bits 24 to 31 and optionally convert from [0..255] to [0..1.]
-	// further bits are only for informational purposes
+	// further bits are only for internal purposes
 	,	U_INT=0x10///< Flag to indicate that the unpack operation uses integers.
 	,	U_16aI    ///< read lower 16 bit
 	,	U_16bI    ///< read higher 16 bit
