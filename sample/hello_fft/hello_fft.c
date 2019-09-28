@@ -26,6 +26,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -45,9 +46,10 @@ static const char Usage[] =
 	"  freq   = frequency in units of FFT length,      default 1\n"
 	"  inc    = frequency increment in case jobs>1,    default 1\n"
 	"  -d     = dump result\n"
-	"  -p     = print performance counters\n";
+	"  -p     = print performance counters\n"
+	"  -t     = use alternate test pattern\n";
 
-static const char Options[] = "n:j:l:f:i:dp";
+static const char Options[] = "n:j:l:f:i:dpt";
 
 unsigned Microseconds(void)
 {
@@ -61,10 +63,15 @@ static double chop(double value)
 	return fabs(value) < 3E-5 ? 0 : value;
 }
 
+static double sqr(double d)
+{
+	return d*d;
+}
+
 int main(int argc, char *argv[])
 {
 	int i, j, k, ret, loops, fbias, finc, freq, log2_N, jobs,
-		debug, perf, N, dir, bad, mb = mbox_open();
+		debug, perf, test, N, dir, bad, mb = mbox_open();
 	unsigned t[3];
 	double tsq[4];
 
@@ -78,6 +85,7 @@ int main(int argc, char *argv[])
 	finc = 1;
 	debug = 0;
 	perf = 0;
+	test = 0;
 
 	if (argc < 2)
 	{usage:
@@ -117,6 +125,9 @@ int main(int argc, char *argv[])
 	 case 'p':
 		perf = 1;
 		goto next;
+	 case 't':
+		test = 1;
+ 		goto next;
 	 case -1: // end: old style syntax?
 		if (optind >= argc)
 			break;
@@ -136,7 +147,7 @@ int main(int argc, char *argv[])
 	}
 	if (jobs < 1 || loops < 1)
 	{
-		printf(Usage);
+		fprintf(stderr, Usage);
 		return -1;
 	}
 
@@ -180,13 +191,27 @@ int main(int argc, char *argv[])
 				memset(base, 0, N * sizeof(struct GPU_FFT_COMPLEX));
 				base[freq].re = 0.5;
 				base[N - freq & N - 1].re += 0.5;
+				if (test)
+				{	base[freq].re += base[freq].im = .5 * M_SQRT1_2;
+					base[N - freq & N - 1].re -= .5 * M_SQRT1_2;
+					base[N - freq & N - 1].im += .5 * M_SQRT1_2;
+				}
 			} else
 			{
+				double s, c;
 				freq = j * finc + fbias & (N - 1);
 				for (i = 0; i < N; i++)
-				{
-					base[i].re = cos((int64_t)freq * i % N / (double)N * M_2PI);
-					base[i].im = sin((int64_t)freq * i % N / (double)N * M_2PI);
+				{	sincos((freq * i & (N - 1)) * M_2PI / N, &s, &c);
+					base[i].re = c;
+					base[i].im = s;
+				}
+				if (test)
+				{	++freq;
+					for (i = 0; i < N; i++)
+					{	sincos((freq * i + (N>>3) & (N - 1)) * M_2PI / N, &s, &c);
+						base[i].re += c;
+						base[i].im += s;
+					}
 				}
 			}
 		}
@@ -225,20 +250,31 @@ int main(int argc, char *argv[])
 		bad = 0;
 		for (j = 0; j < jobs; j++)
 		{
+			struct GPU_FFT_COMPLEX *base2;
 			tsq[0] = tsq[1] = 0;
 			base = fft->out + j * fft->step; // output buffer
+			base2 = fft->in + j * fft->step; // output buffer
+			if (debug)
+				puts("i\tf\t    out.re\t    out.im\t   out'.re\t   out'.im\t      chi2\t     in.re\t     in.im");
 			if (dir == GPU_FFT_REV)
 			{
 				freq = j * finc + fbias & (N - 1);
-				//fprintf(stderr, "%i %i\n", fft->in - fft->out, fft->step);
+				tsq[0] += N/2 * (test + 1);
 				for (i = 0; i < N; i++)
 				{
-					double amp = cos((int64_t)freq * i % N / (double)N * M_2PI);
-					tsq[0] += pow(amp, 2);
-					tsq[1] += amp = pow(amp - base[i].re, 2) + pow(base[i].im, 2);
+					double s, c, r;
+					c = cos((freq * i & (N - 1)) * M_2PI / N);
+					if (!test)
+					{	r = sqr(c - base[i].re) + sqr(base[i].im);
+						s = 0;
+					} else
+					{	s = sin(((freq * i + (N>>3)) & (N - 1)) * M_2PI / N);
+						r = sqr(c - base[i].re) + sqr(s - base[i].im);
+					}
+					tsq[1] += r;
 					if (debug)
 						//fprintf(stderr, "%10g\t%10g\t%10g\t%10g\t%10g\t%10g\n", base[i].re, base[i].im, fft->out[i-fft->step].re, fft->out[i-fft->step].im, fft->out[i-2*fft->step].re, fft->out[i-2*fft->step].im);
-						printf("%10g\t%10g\t%10g\t%10g\t%10g\n", chop(base[i].re), chop(base[i].im), chop(fft->in[i].re), chop(fft->in[i].im), chop(amp));
+						printf("%d\t%d\t%10g\t%10g\t%10g\t%10g\t%10g\t%10g\t%10g\n", i, freq, chop(base[i].re), chop(base[i].im), chop(c), chop(s), chop(r), chop(base2[i].re), chop(base2[i].im));
 				}
 			} else
 			{
@@ -246,11 +282,15 @@ int main(int argc, char *argv[])
 				tsq[0] += 2 * N;
 				for (i = 0; i < N; i++)
 				{
-					double amp = (i == freq) * N;
-					amp = pow(amp - base[i].re, 2) + pow(base[i].im, 2);
-					tsq[1] += amp;
+					double re = 0, im = 0;
+					if (i == freq)
+						re = N;
+					else if (i == ((freq + 1) & (N - 1)))
+						im = re = M_SQRT1_2 * N;
+					double r = sqr(re - base[i].re) + sqr(im - base[i].im);
+					tsq[1] += r;
 					if (debug)
-						printf("%10g\t%10g\t%10g\t%10g\t%10g\n", chop(base[i].re), chop(base[i].im), chop(fft->in[i].re), chop(fft->in[i].im), chop(amp));
+						printf("%d\t%d\t%10g\t%10g\t%10g\t%10g\t%10g\t%10g\t%10g\n", i, freq, chop(base[i].re), chop(base[i].im), chop(re), chop(im), chop(r), chop(fft->in[i].re), chop(fft->in[i].im));
 						//fprintf(stderr, "%10g\t%10g\t%10g\t%10g\t%10g\t%10g\t%10g\n", base[i].re, base[i].im, fft->out[i-fft->step].re, fft->out[i-fft->step].im, fft->out[i-2*fft->step].re, fft->out[i-2*fft->step].im, amp);
 				}
 			}
@@ -261,14 +301,14 @@ int main(int argc, char *argv[])
 				++bad;
 		}
 
-		printf("rel_rms_err = %.5e, usecs = %f, k = %d\n", sqrt(tsq[3] / tsq[2]), (double)(t[1] - t[0]) / jobs, k);
+		fprintf(stderr, "rel_rms_err = %.5e, usecs = %f, k = %d\n", sqrt(tsq[3] / tsq[2]), (double)(t[1] - t[0]) / jobs, k);
 		if (bad)
-			printf("failed: %i = %f %%\n", bad, 100. * bad / jobs);
+			fprintf(stderr, "failed: %i = %f %%\n", bad, 100. * bad / jobs);
 	}
 
 	gpu_fft_release(fft); // Videocore memory lost if not freed !
 
 	if (loops > 1)
-		printf("average: usecs = %f\n", (double)t[2] / jobs / (loops - 1));
+		fprintf(stderr, "average: usecs = %f\n", (double)t[2] / jobs / (loops - 1));
 	return 0;
 }
