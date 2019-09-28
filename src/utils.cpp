@@ -71,18 +71,18 @@ string stripextension(const char* filename)
 string exepath;
 
 void setexepath(const char* argv0)
-{	{	char buf[PATH_MAX];
-		// try /proc/self/exe (Linux)
-		int rc = readlink("/proc/self/exe", buf, sizeof buf);
-		if (rc > 0)
-		{	buf[rc] = 0;
+{	char buf[PATH_MAX];
+	// try /proc/self/exe (Linux)
+	int rc = readlink("/proc/self/exe", buf, sizeof buf);
+	if (rc > 0)
+	{	buf[rc] = 0;
+		argv0 = buf;
+	} else
+	{	// try absolute or relative path.
+		char* path = realpath(argv0, buf);
+		if (path != NULL)
 			argv0 = buf;
-		} else
-		{	// try absolute or relative path.
-			char* path = realpath(argv0, buf);
-			if (path != NULL)
-				argv0 = buf;
-	}	}
+	}
 	// find last of [/\:]
 	int p = strlen(argv0);
 	while (p)
