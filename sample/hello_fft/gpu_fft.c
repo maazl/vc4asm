@@ -98,9 +98,11 @@ int gpu_fft_prepare(
         "buff_bytes = %x\n" \
         "data_bytes = %x\n" \
         "num_buff = %x\n" \
-        "size = %x\n", \
-        fft_bytes, code_bytes, twid_bytes, unif_bytes, mail_bytes, buff_bytes, data_bytes, num_buff, size);
+        "size = %x\n" \
+        "fft_bytes_4k = %x\n", \
+        fft_bytes, code_bytes, twid_bytes, unif_bytes, mail_bytes, buff_bytes, data_bytes, num_buff, size, fft_bytes_4k);
     ret = gpu_fft_alloc(mb, size, &ptr);
+    //fprintf(stderr, "vc = %x, arm = %x\n", ptr.vc, ptr.arm.vptr);
     if (ret) return ret;
 
     // Header
@@ -115,6 +117,8 @@ int gpu_fft_prepare(
     // except if we only have 1 buffer.
     info->out = ptr.arm.cptr;
     vc_buff = gpu_fft_ptr_inc(&ptr, buff_bytes);
+    if (log2_N <= 8)
+        vc_buff += 256 * sizeof(COMPLEX);
     info->step = fft_bytes / sizeof(COMPLEX);
     info->in = ptr.arm.cptr;
     if (num_buff > 1 || !(passes & 1))
