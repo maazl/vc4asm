@@ -8,6 +8,7 @@
 static const constexpr struct MSG
 {
 	#define W(name, major, minor, text, ...) const msgTemplate<__VA_ARGS__> name = msgTemplate<__VA_ARGS__>(msgID(MS_Disassembler, WARN, major, minor), text)
+	#define I(name, major, minor, text, ...) const msgTemplate<__VA_ARGS__> name = msgTemplate<__VA_ARGS__>(msgID(MS_Disassembler, INFO, major, minor), text)
 	// Entries must be ordered by major, minor.
 	W(INVALID_ADDOP        , 10, 0, "Invalid opcode %u for ADD ALU.", uint8_t);
 	W(INVALID_LDI_MODE     , 20, 0, "Invalid load immediate mode.");
@@ -16,10 +17,11 @@ static const constexpr struct MSG
 	W(INVALID_MUL_PACK     , 40, 0, "Invalid MUL ALU pack mode.");
 	W(SRC_ANOP             , 50, 1, "Input operand to ADD ALU nop opcode.");
 	W(SRC_MNOP             , 50, 2, "Input operand to MUL ALU nop opcode.");
-	W(SECOND_SRC_UNARY_OP  , 50, 3, "Second operand to unary ADD ALU opcode.");
+	W(SECOND_SRC_UNARY_OP  , 50, 3, "Second operand to unary ADD ALU opcode uses different MUX.");
 	W(WADDRANOP_NOT_CCNEVER, 60, 1, "ADD ALU writes to nop register with condition != never.");
 	W(WADDRMNOP_NOT_CCNEVER, 60, 2, "MUL ALU writes to nop register with condition != never.");
 	#undef W
+	#undef I
 
 	MAKE_MSGTEMPLATE_CONTAINER
 } MSG;

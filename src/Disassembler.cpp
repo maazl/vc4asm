@@ -119,7 +119,7 @@ void Disassembler::DoADD()
 	if (cOpA[opa][0] == '?')
 		Msg(MSG.INVALID_ADDOP, opa);
 	bool isUnary = Instruct.isUnary();
-	if (isUnary && Instruct.MuxAB)
+	if (isUnary && Instruct.MuxAB != Instruct.MuxAA)
 		Msg(MSG.SECOND_SRC_UNARY_OP);
 	if (Instruct.WAddrA == Inst::R_NOP && Instruct.CondA != Inst::C_NEVER && (!Instruct.SF || opa == Inst::A_NOP))
 		Msg(MSG.WADDRANOP_NOT_CCNEVER);

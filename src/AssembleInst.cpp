@@ -547,8 +547,6 @@ bool AssembleInst::trySmallImmd(uint32_t value)
 	} else
 	{	MuxAA = MuxAB = X_RB;
 		OpA   = si->OpCode.asAdd();
-		if (isUnary())
-			MuxAB = X_R0; // avoid disassembler warnings
 	}
 	return true;
 }
