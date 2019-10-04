@@ -4,7 +4,7 @@ use strict;
 my $ret = 0;
 sub do_test($$)
 { my ($cmd, $rms) = @_;
-  my @result = `./hello_fft.bin $cmd` or die "Failed to execute hello_fft: $?\n";
+  my @result = `./hello_fft $cmd 2>&1` or die "Failed to execute hello_fft: $?\n";
   print "$cmd ... ";
   my $count;
   my $rmsret;
@@ -15,7 +15,7 @@ sub do_test($$)
     $rmsret <= $rms or $ret |= 1, warn "FFT returned wrong RMS error $1, expected $rms\n";
     ++$count;
   }
-  $count or $ret |= 2, warn "No reasonable result retunred by execution of FFT.\n";
+  $count or $ret |= 2, warn "No reasonable result retunred by execution of FFT: @result\n";
   print "$rmsret - done\n";
 }
 

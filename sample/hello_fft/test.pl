@@ -4,8 +4,8 @@ use strict;
 my $ret = 0;
 sub do_test($$)
 { my ($cmd, $rms) = @_;
-  my @result = `./hello_fft.bin $cmd` or die "Failed to execute hello_fft: $?\n";
   print "$cmd ... ";
+  my @result = `./hello_fft $cmd 2>&1` or die "Failed to execute hello_fft: $?\n";
   my $count;
   my $rmsret;
   foreach (@result)

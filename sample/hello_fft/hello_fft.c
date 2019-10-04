@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
 					double re = 0, im = 0;
 					if (i == freq)
 						re = N;
-					else if (i == ((freq + 1) & (N - 1)))
+					else if (test && i == ((freq + 1) & (N - 1)))
 						im = re = M_SQRT1_2 * N;
 					double r = sqr(re - base[i].re) + sqr(im - base[i].im);
 					tsq[1] += r;
