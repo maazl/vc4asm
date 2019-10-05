@@ -1132,6 +1132,9 @@ void AssembleInst::optimize()
 		if (WAddrM == R_NOP)
 			CondM = C_NEVER;
 	 case S_BRANCH:
-		break;
+		return; // no further processing for non ALU instructions
 	}
+
+	if (isUnary())
+		MuxAB = MuxAA;
 }

@@ -39,7 +39,7 @@ foreach(filename ${files})
 			COMMAND sed s/\\s*\\/\\/.*// ${filename} > ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.strip
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/asm.${name}.hex VERBATIM )
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dis.${name}.passed ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.dis ${CMAKE_CURRENT_BINARY_DIR}/dis.${name}.diff ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.hex2
-			COMMAND $<TARGET_FILE:vc4dis> -v2 -x ${filename} -o ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.dis
+			COMMAND $<TARGET_FILE:vc4dis> -M -v2 -x ${filename} -o ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.dis
 			COMMAND $<TARGET_FILE:vc4asm> -C ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.hex2 ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.dis
 			COMMAND grep -v "^\\s*\\.long" ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.dis > /dev/null # result must be empty
 			COMMAND diff ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.hex2 ${CMAKE_CURRENT_BINARY_DIR}/asm.${name}.strip > ${CMAKE_CURRENT_BINARY_DIR}/dis.${name}.diff

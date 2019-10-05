@@ -1,49 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta content="text/html; charset=utf-8" http-equiv="content-type">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <title>VC4ASM Macro Assembler for VideoCore IV</title>
-    <meta content="Marcel M&uuml;ller" name="author">
+    <meta content="Marcel Müller" name="author">
     <meta content="Raspberry Pi BCM2835 BCM2836 QPU macro assembler" name="keywords">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
   </head>
   <body>
     <h1>VC4ASM - macro assembler for Broadcom VideoCore IV<br>
       aka Raspberry Pi GPU</h1>
-    <p class="abstract">The goal of the vc4asm project is a <b>full featured
-        macro assembler</b> and disassembler with <b>constraint checking</b>.<br>
-      The work is based on <a href="https://github.com/jetpacapp/qpu-asm">qpu-asm
-        from Pete Warden</a> which itself is based on <a href="https://github.com/elorimer/rpi-playground/tree/master/QPU/assembler">Eman's
-        work</a> and some ideas also taken from <a href="https://github.com/hermanhermitage/videocoreiv-qpu"><span
-          class="vcard-fullname" itemprop="name">Herman H Hermitage</span></a>.
+    <p class="abstract">The goal of the vc4asm project is a <b>full featured macro assembler</b> and disassembler with <b>constraint
+        checking</b>.<br>
+      The work is based on <a href="https://github.com/jetpacapp/qpu-asm">qpu-asm from Pete Warden</a> which itself is based on <a
+        href="https://github.com/elorimer/rpi-playground/tree/master/QPU/assembler">Eman's work</a> and some ideas also taken from <a
+        href="https://github.com/hermanhermitage/videocoreiv-qpu"><span class="vcard-fullname" itemprop="name">Herman H Hermitage</span></a>.
       But it goes further by far. First of all it supports macros and functions.<br>
-      Unfortunately this area is highly undocumented in the public domain. And
-      so the work uses only the code from <a href="https://github.com/raspberrypi/userland/tree/master/host_applications/linux/apps/hello_pi/hello_fft">hello_fft</a>
-      which is available as source and binary as Rosetta Stone. However, I try
-      to keep it downwardly compatible to the Broadcom tools.</p>
-    <p><a href="#vc4asm">&rarr; Assembler</a>, <a href="#vc4dis">&rarr;
-        Disassembler</a>, <a href="#bugs">&rarr; Known problems</a>, <a href="#build">&rarr;
-        Build instructions</a>, <a href="#sample">&rarr; Samples</a>, <a href="changelog.html">&rarr;
-        Change log</a>, <a href="#contact">&rarr; Contact</a></p>
+      Unfortunately this area is highly undocumented in the public domain. And so the work uses only the code from <a href="https://github.com/raspberrypi/userland/tree/master/host_applications/linux/apps/hello_pi/hello_fft">hello_fft</a>
+      which is available as source and binary as Rosetta Stone. However, I try to keep it downwardly compatible to the Broadcom
+      tools.</p>
+    <p><a href="#vc4asm">→ Assembler</a>, <a href="#vc4dis">→ Disassembler</a>, <a href="#bugs">→ Known problems</a>, <a href="#build">→
+        Build instructions</a>, <a href="#sample">→ Samples</a>, <a href="changelog.html">→ Change log</a>, <a href="#contact">→
+        Contact</a></p>
     <h2>Download</h2>
-    <p>Download <a href="../vc4asm.tar.bz2">Source code, Raspberry Pi 1 binary,
-        examples and this documentation</a> (750k)</p>
-    <p>The current <b>version</b> is <b>0.3</b>. See <a href="changelog.html">change
-        log</a> for further details.</p>
+    <p>Download <a href="../vc4asm.tar.bz2">Source code, Raspberry Pi 1 binary, examples and this documentation</a> (750k)</p>
+    <p>The current <b>version</b> is <b>0.3</b>. See <a href="changelog.html">change log</a> for further details.</p>
     <p>The source code is also available at <a href="https://github.com/maazl/vc4asm/">github.com/maazl/vc4asm</a>.</p>
     <h2><a id="vc4asm" name="vc4asm"></a>Assembler <tt>vc4asm</tt></h2>
-    <p>The heart of the software. It assembles QPU code to binary, ELF or C
-      source.</p>
+    <p>The heart of the software. It assembles QPU code to binary, ELF or C source.</p>
     <pre>vc4asm [&lt;options&gt; ...] &lt;qasm-file&gt; [&lt;qasm-file2&gt; ...]</pre>
     <h3>Options</h3>
     <dl>
       <dt><tt>-o &lt;bin-output&gt; </tt></dt>
       <dd>File name for binary output. If omitted no binary output is generated.<br>
-        Note that <tt>vc4asm</tt> always writes <em>little endian</em>
-        binaries.</dd>
+        Note that <tt>vc4asm</tt> always writes <em>little endian</em> binaries.</dd>
       <dt><tt>-C &lt;C-fragment-output&gt;</tt></dt>
-      <dd>File name for C/C++ output. The result does not include surrounding
-        braces. So write it to a separate file and include it from C as follows:<br>
+      <dd>File name for C/C++ output. The result does not include surrounding braces. So write it to a separate file and include it
+        from C as follows:<br>
         <tt>static const uint32_t qpu_code[] = {<br>
           #include&lt;C-output&gt;<br>
           };</tt></dd>
@@ -51,53 +44,38 @@
       <dd>Write full C output file. Requires header file also (option <tt>-h</tt>).</dd>
       <dt><tt>-h &lt;C-header&gt;</tt></dt>
       <dd>Write C header file, containing global symbols.<br>
-        This file is compatible with the <tt>-c</tt> and the <tt>-e</tt>
-        output</dd>
+        This file is compatible with the <tt>-c</tt> and the <tt>-e</tt> output</dd>
       <dt><tt>-H &lt;C-header&gt;</tt></dt>
-      <dd>Write C header file without inline symbol values. This variant causes
-        all symbols to be resolved by the linker. So no recompile is required
-        when the GPU code changes unless new symbols are used in the referring C
-        code.<br>
+      <dd>Write C header file without inline symbol values. This variant causes all symbols to be resolved by the linker. So no
+        recompile is required when the GPU code changes unless new symbols are used in the referring C code.<br>
         This file is compatible with the <tt>-e</tt> output only.</dd>
       <dt><tt>-v</tt></dt>
-      <dd>Decorate C output with comments containing code offsets, labels and
-        source code lines.</dd>
+      <dd>Decorate C output with comments containing code offsets, labels and source code lines.</dd>
       <dt><tt>-e &lt;ELF-output&gt;</tt></dt>
-      <dd>Write the assembled binary directly to an ARM compatible object file
-        in ELF format that can be passed to <tt>ld</tt> or <tt>gcc</tt>.<br>
+      <dd>Write the assembled binary directly to an ARM compatible object file in ELF format that can be passed to <tt>ld</tt> or <tt>gcc</tt>.<br>
         The ELF object will contain all symbols that have been exported by <a href="directives.html#.global"><tt>.global</tt></a>
         and the following predefined symbols:<br>
-        - <tt>&lt;filename-wo-extension&gt;</tt> points to the starting address
-        of the generated binary code.</dd>
-      <dd>- <tt>&lt;filename-wo-extension&gt;_end</tt> points behind the
-        generated binary code.<br>
-        - <tt>&lt;filename-wo-extension&gt;_size</tt> receives the size of the
-        generated binary code in bytes.<br>
+        - <tt>&lt;filename-wo-extension&gt;</tt> points to the starting address of the generated binary code.</dd>
+      <dd>- <tt>&lt;filename-wo-extension&gt;_end</tt> points behind the generated binary code.<br>
+        - <tt>&lt;filename-wo-extension&gt;_size</tt> receives the size of the generated binary code in bytes.<br>
         Special characters in the file name are replaced by an underscore.</dd>
       <dt><tt>-s</tt><tt></tt></dt>
-      <dd>Do not automatically create the predefined symbols derived from the
-        file name for <tt>-e</tt> and <tt>-C</tt> output.<br>
-        You need to use <a href="directives.html#.global"><tt>.global</tt></a>
-        to be able to access the code by a linker symbol.</dd>
+      <dd>Do not automatically create the predefined symbols derived from the file name for <tt>-e</tt> and <tt>-C</tt> output.<br>
+        You need to use <a href="directives.html#.global"><tt>.global</tt></a> to be able to access the code by a linker symbol.</dd>
       <dt><tt>-I &lt;include-path&gt;</tt></dt>
-      <dd>Add an include path to the search path list. This paths are used at <a
-          href="directives.html#.include"><tt>.include &lt;...&gt;</tt></a>.
-        Note that this is a <i>prefix</i> rather than a path, i.e. if it is a
-        folder it should contain a <i>trailing slash</i>.</dd>
+      <dd>Add an include path to the search path list. This paths are used at <a href="directives.html#.include"><tt>.include
+            &lt;...&gt;</tt></a>. Note that this is a <i>prefix</i> rather than a path, i.e. if it is a folder it should contain a
+        <i>trailing slash</i>.</dd>
       <dt><tt><a id="-i" name="-i"></a>-i</tt><tt> &lt;qinc-file&gt;</tt></dt>
-      <dd>Load a file using the include search path. See option <tt>-I</tt>,
-        useful to include <a href="vc4.qinc.html"><tt>vc4.qinc</tt></a> without
-        an absolute path: <tt>-i vc4.qinc</tt></dd>
+      <dd>Load a file using the include search path. See option <tt>-I</tt>, useful to include <a href="vc4.qinc.html"><tt>vc4.qinc</tt></a>
+        without an absolute path: <tt>-i vc4.qinc</tt></dd>
       <dt><tt>-V</tt></dt>
-      <dd>Check for Videocore IV constraints, e.g. reading a register file
-        address immediately after writing it.</dd>
+      <dd>Check for Videocore IV constraints, e.g. reading a register file address immediately after writing it.</dd>
     </dl>
     <h3>File arguments</h3>
-    <p>You can pass <i>multiple files</i> to <tt>vc4asm</tt> but this will not
-      create separate object modules. Instead the files are simply concatenated
-      in order of appearance. You may use this feature to include platform
-      specific definitions without the need to include them explicitly from
-      every file. E.g.:<br>
+    <p>You can pass <i>multiple files</i> to <tt>vc4asm</tt> but this will not create separate object modules. Instead the files
+      are simply concatenated in order of appearance. You may use this feature to include platform specific definitions without the
+      need to include them explicitly from every file. E.g.:<br>
       <tt>vc4asm -o code.bin -i vc4.qinc gpu_fft_1k.qasm</tt></p>
     <h3>Assembler language reference</h3>
     <ol>
@@ -106,11 +84,9 @@
       <li><a href="instructions.html">Instructions</a></li>
       <li><a href="vc4.qinc.html">Standard macros <tt>vc4.qinc</tt></a></li>
     </ol>
-    <p>See the <a href="https://docs.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf">Broadcom
-        VideoCore IV Reference Guide</a> for the semantics of the instructions
-      and registers.<br>
-      See also the <a href="VideoCoreIV-addendum.html">Addendum</a> for further
-      details and bugs in the reference guide.</p>
+    <p>See the <a href="https://docs.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf">Broadcom VideoCore IV Reference
+        Guide</a> for the semantics of the instructions and registers.<br>
+      See also the <a href="VideoCoreIV-addendum.html">Addendum</a> for further details and bugs in the reference guide.</p>
     <h2><a id="vc4dis" name="vc4dis"></a>Disassembler <tt>vc4dis</tt></h2>
     <pre>vc4dis [-o &lt;qasm-output&gt;] [-x[&lt;input-format&gt;]] [-M] [-F] [-v] [-b &lt;base-addr&gt;] &lt;input-file&gt; [&lt;input-file2&gt; ...]</pre>
     <h3>Options</h3>
@@ -118,132 +94,107 @@
       <dt><tt>-o &lt;qasm-output&gt; </tt></dt>
       <dd>Assembler output file, <tt>stdout</tt> by default.</dd>
       <dt><tt>-x&lt;input-format&gt;</tt></dt>
-      <dd><tt>32</tt> - 32 bit hexadecimal input, .e. 2 qwords per instruction,
-        default if <tt>&lt;input-format&gt;</tt> is missing.<br>
+      <dd><tt>32</tt> - 32 bit hexadecimal input, .e. 2 qwords per instruction, default if <tt>&lt;input-format&gt;</tt> is
+        missing.<br>
         <tt>64</tt> - 64 bit hexadecimal input.<br>
-        <tt>0&nbsp;</tt> - binary input, <em>little endian</em>, default
-        without <tt>-x</tt>.</dd>
+        <tt>0&nbsp;</tt> - binary input, <em>little endian</em>, default without <tt>-x</tt>.</dd>
       <dt><tt>-M</tt></dt>
-      <dd>Do not generate <tt>mov</tt> instructions. <tt>mov</tt> is no native
-        QPU instruction, it is emulated by trivial operators like <tt>or r1,
-          r0, r0</tt>. Without this option <tt>vc4dis</tt> generated <tt>mov</tt>
-        instead of the real instruction if such a situation is detected.</dd>
+      <dd>Do not generate <tt>mov</tt> instructions. <tt>mov</tt> is no native QPU instruction, it is emulated by trivial
+        operators like <tt>or r1, r0, r0</tt>. Without this option <tt>vc4dis</tt> generated <tt>mov</tt> instead of the real
+        instruction if such a situation is detected.<br>
+        Note the <tt>-M</tt> is required to make the disassembler result <em>turn around stable</em>, i.e. even if the code
+        contains some binary fragments <tt>vc4asm</tt> should return the same binary result from the disassembly.</dd>
       <dt><tt>-F</tt></dt>
-      <dd>Do not write floating point constants. Without this option <tt>vc4dis</tt>
-        writes immediate values that are likely to be a floating point number as
-        float. This may not always hit the nail on the head.</dd>
+      <dd>Do not write floating point constants. Without this option <tt>vc4dis</tt> writes immediate values that are likely to be
+        a floating point number as float. This may not always hit the nail on the head.</dd>
       <dt><tt>-v</tt></dt>
       <dd>Write binary code and offset as comment right to each instruction.</dd>
       <dt><tt>-v2</tt></dt>
-      <dd>As <tt>-v</tt> but also write QPU instruction set bit fields as
-        comment right to each instruction. This is mainly for debugging
-        purposes.</dd>
+      <dd>As <tt>-v</tt> but also write QPU instruction set bit fields as comment right to each instruction. This is mainly for
+        debugging purposes.</dd>
       <dt><tt>-V</tt></dt>
-      <dd>Check for Videocore IV constraints, e.g. reading a register file
-        address immediately after writing it.</dd>
+      <dd>Check for Videocore IV constraints, e.g. reading a register file address immediately after writing it.</dd>
       <dt><tt>-b &lt;base-addr&gt;</tt></dt>
-      <dd>Base address. This is the physical memory address of the first
-        instruction code passed to <tt>vc4dis</tt>. This is only significant
-        for absolute branch instructions.</dd>
+      <dd>Base address. This is the physical memory address of the first instruction code passed to <tt>vc4dis</tt>. This is only
+        significant for absolute branch instructions.</dd>
     </dl>
     <h3>File arguments</h3>
-    <p>If you pass multiple input files they are disassembled all together into
-      a single result as if they were concatenated.<br>
-      The format of the input is controlled by the <tt>-x</tt> option. All
-      input files must use the same format.</p>
+    <p>If you pass multiple input files they are disassembled all together into a single result as if they were concatenated.<br>
+      The format of the input is controlled by the <tt>-x</tt> option. All input files must use the same format.</p>
     <h2><a id="bugs" name="bugs"></a>Known problems</h2>
     <ul>
-      <li>There are insufficient test cases so far. So likely there are still
-        bugs in the assembler.</li>
+      <li>There are insufficient test cases so far. So likely there are still bugs in the assembler.</li>
     </ul>
     <h2><a id="build" name="build"></a>Build instructions</h2>
-    <p>The source code has hopefully no major platform dependencies, i.e. you
-      don't need to build it on the Raspberry. But it requires a <b><a href="https://en.wikipedia.org/wiki/C++11">C++11</a>
-        compliant compiler</b> to build. Current Raspbian ships with gcc 4.9
-      which works fine. Raspbian Wheezy seems not to be sufficient. While I
-      succeeded with gcc 4.7.3 on another platform, gcc 4.7.2 of Wheezy fails to
-      compile the disassembler. But you can install gcc 4.8 in Raspbian Wheezy.
-      This will work.</p>
-    <p>Furthermore <b><a href="https://cmake.org/">CMake</a> is required</b>.
-      Most Linux distributions should provide this as package.</p>
+    <p>The source code has hopefully no major platform dependencies, i.e. you don't need to build it on the Raspberry. But it
+      requires a <b><a href="https://en.wikipedia.org/wiki/C++11">C++11</a> compliant compiler</b> to build. Current Raspbian ships
+      with gcc 4.9 which works fine. Raspbian Wheezy seems not to be sufficient. While I succeeded with gcc 4.7.3 on another
+      platform, gcc 4.7.2 of Wheezy fails to compile the disassembler. But you can install gcc 4.8 in Raspbian Wheezy. This will
+      work.</p>
+    <p>Furthermore <b><a href="https://cmake.org/">CMake</a> is required</b>. Most Linux distributions should provide this as
+      package.</p>
     <h3>Build vc4asm</h3>
     <ul>
       <li>Download and extract the source.</li>
       <li>Go to folder where you extracted the files.</li>
-      <li>Execute one of scripts <b><tt>makeDebug.Cmd</tt> or <tt>makeRelease.Cmd</tt></b>
-        and do not bother about the error message <i>"CMake has been ran to
-          create an out of source build =&gt; abort. This is NOT an error!"</i>.
-        However, other error messages should cause your attention.</li>
-      <li>Now <tt>vc4asm</tt> and <tt>vc4dis</tt> executables as well as <tt>libvc4asm</tt>
-        should build in a folder matching your platform, e.g. <tt>build-Linux-x86_64-Debug</tt>.
-        You can run the executables from this folder ...</li>
-      <li>... or go to the folder and enter <tt>make install</tt> to install
-        the binaries on your system.</li>
+      <li>Execute one of scripts <b><tt>makeDebug.Cmd</tt> or <tt>makeRelease.Cmd</tt></b> and do not bother about the error
+        message <i>"CMake has been ran to create an out of source build =&gt; abort. This is NOT an error!"</i>. However, other
+        error messages should cause your attention.</li>
+      <li>Now <tt>vc4asm</tt> and <tt>vc4dis</tt> executables as well as <tt>libvc4asm</tt> should build in a folder matching
+        your platform, e.g. <tt>build-Linux-x86_64-Debug</tt>. You can run the executables from this folder ...</li>
+      <li>... or go to the folder and enter <tt>make install</tt> to install the binaries on your system.</li>
     </ul>
     <h3>Build the samples</h3>
     <ul>
-      <li>Ensure that you have run <tt>makeRelease.Cmd</tt> to build <tt>vc4asm</tt>
-        as mentioned above.</li>
+      <li>Ensure that you have run <tt>makeRelease.Cmd</tt> to build <tt>vc4asm</tt> as mentioned above.</li>
       <li>Go to one of the sample folders.</li>
       <li>Enter <tt>cmake .</tt></li>
       <li>Enter <tt>make</tt></li>
-      <li>Run the executables with <tt>sudo</tt> prefix, e.g. <tt>sudo
-          hello_fft</tt> ...<br>
-        <tt>sudo</tt> is required because there is currently no secure device
-        driver to access the Raspberry Pi GPU.</li>
+      <li>Run the executables with <tt>sudo</tt> prefix, e.g. <tt>sudo hello_fft</tt> ...<br>
+        <tt>sudo</tt> is required because there is currently no secure device driver to access the Raspberry Pi GPU.</li>
     </ul>
-    <p>Note that the samples will neither build nor run on anything else but one
-      of the Raspberry Pi models.</p>
+    <p>Note that the samples will neither build nor run on anything else but one of the Raspberry Pi models.</p>
     <h3>Running the test cases</h3>
     <ul>
-      <li>Ensure that you have <b><a href="http://www.perl.org/">Perl</a></b>
-        installed. (There should be no mentionable version dependencies.)</li>
+      <li>Ensure that you have <b><a href="http://www.perl.org/">Perl</a></b> installed. (There should be no mentionable version
+        dependencies.)</li>
       <li>Go to folder where you extracted the files.</li>
     </ul>
     <h4>Method 1: using make rules</h4>
     <ul>
-      <li>Execute <b><tt>makeTest.Cmd</tt></b>. You may also use the targets <tt>test_qasm</tt>,
-        <tt>test_cout</tt>, <tt>test_parser</tt> or <tt>test_validator</tt> to
-        run only a subset of the test cases.</li>
+      <li>Execute <b><tt>makeTest.Cmd</tt></b>. You may also use the targets <tt>test_qasm</tt>, <tt>test_cout</tt>, <tt>test_parser</tt>
+        or <tt>test_validator</tt> to run only a subset of the test cases.</li>
     </ul>
-    <p>The <tt>test_...</tt> targets <em>run all test cases that have not yet
-        run</em> or that need to be rerun after changes to the code or to the
-      test case itself. It stops at the first failed test. If you need an
-      overview of all failed tests use method 2 below.</p>
+    <p>The <tt>test_...</tt> targets <em>run all test cases that have not yet run</em> or that need to be rerun after changes to
+      the code or to the test case itself. It stops at the first failed test. If you need an overview of all failed tests use method
+      2 below.</p>
     <h4>Method 2: using cmake test cases</h4>
     <ul>
       <li>Execute <b><tt>runTest.Cmd</tt></b>. You may also use <tt>ctest</tt>.</li>
     </ul>
-    <p>The Cmake test cases invoke the test targets from method 1. This is
-      significantly slower, especially on a Raspberry Pi.</p>
+    <p>The Cmake test cases invoke the test targets from method 1. This is significantly slower, especially on a Raspberry Pi.</p>
     <h2><a id="sample" name="sample"></a>Sample programs</h2>
-    <p>All sample programs require <em>root access</em> to run. This is because
-      of the need to call <tt>mmap</tt>. See <a href="http://www.maazl.de/project/vcio2/doc/index.html">vcio2
+    <p>All sample programs require <em>root access</em> to run. This is because of the need to call <tt>mmap</tt>. See <a href="http://www.maazl.de/project/vcio2/doc/index.html">vcio2
         driver</a> for an alternative without root privileges.</p>
-    <p>Furthermore you need a recent Raspbian kernel (use <tt>rpi-update</tt>)
-      or create a local character device named <tt>/dev/vcio</tt> to access the
-      vcio driver of the Raspi kernel: <tt>sudo mknod /dev/vcio c 100 0</tt></p>
-    <p>All these restrictions apply to <tt>hello_fft</tt> from the Raspberry Pi
-      Foundation as well.</p>
+    <p>Furthermore you need a recent Raspbian kernel (use <tt>rpi-update</tt>) or create a local character device named <tt>/dev/vcio</tt>
+      to access the vcio driver of the Raspi kernel: <tt>sudo mknod /dev/vcio c 100 0</tt></p>
+    <p>All these restrictions apply to <tt>hello_fft</tt> from the Raspberry Pi Foundation as well.</p>
     <h3><tt>simple</tt></h3>
-    <p>This is a very simple program that demonstrates the use of all available
-      operators with small immediate values. It is not optimized in any way.</p>
+    <p>This is a very simple program that demonstrates the use of all available operators with small immediate values. It is not
+      optimized in any way.</p>
     <h3><tt>hello_fft</tt></h3>
-    <p>This is the well known hello_fft sample available. The main difference is
-      that it is faster compared to GPU_FFT 3.0 because the shader code has been
-      significantly optimized. The gain is about 40% of code size and roughly 9%
-      of the run time. The code will no longer build with another assembler
-      since it uses several special features for instruction packing and
-      scheduling.</p>
-    <table border="1" cellpadding="2" cellspacing="0">
+    <p>This is the well known hello_fft sample available. The main difference is that it is faster compared to GPU_FFT 3.0 because
+      the shader code has been significantly optimized. The gain is about 40% of code size and roughly 9% of the run time. The code
+      will no longer build with another assembler since it uses several special features for instruction packing and scheduling.</p>
+    <table cellspacing="0" cellpadding="2" border="1">
       <thead>
         <tr>
-          <th>batch&rarr;</th>
+          <th>batch→</th>
           <th style="text-align: center;" colspan="3" rowspan="1">1</th>
           <th style="text-align: center;" colspan="3" rowspan="1">10</th>
         </tr>
         <tr>
-          <th>&darr;points</th>
+          <th>↓points</th>
           <th>gpu_fft 3</th>
           <th>optimized</th>
           <th>gain</th>
@@ -255,69 +206,69 @@
       <tbody>
         <tr>
           <td class="th">2<sup>8</sup></td>
-          <td>25 &micro;s</td>
-          <td>20 &micro;s*</td>
+          <td>25 µs</td>
+          <td>20 µs*</td>
           <td>-20%</td>
-          <td>16.0 &micro;s</td>
-          <td>13.0 &micro;s</td>
+          <td>16.0 µs</td>
+          <td>13.0 µs</td>
           <td>-19%</td>
         </tr>
         <tr>
           <td class="th">2<sup>9</sup></td>
-          <td>39 &micro;s<br>
+          <td>39 µs<br>
           </td>
-          <td>32 &micro;s</td>
+          <td>32 µs</td>
           <td>-18%</td>
-          <td>28.0 &micro;s</td>
-          <td>22.9 &micro;s<br>
+          <td>28.0 µs</td>
+          <td>22.9 µs<br>
           </td>
           <td>-18%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>10</sup></td>
-          <td>57 &micro;s*<br>
+          <td>57 µs*<br>
           </td>
-          <td>49 &micro;s</td>
+          <td>49 µs</td>
           <td>-14%</td>
-          <td>48.0 &micro;s</td>
-          <td>39.9 &micro;s<br>
+          <td>48.0 µs</td>
+          <td>39.9 µs<br>
           </td>
           <td>-17%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>11</sup></td>
-          <td>102 &micro;s<br>
+          <td>102 µs<br>
           </td>
-          <td>92 &micro;s*</td>
+          <td>92 µs*</td>
           <td>-10%</td>
-          <td>100.6 &micro;s</td>
-          <td>82.7 &micro;s<br>
+          <td>100.6 µs</td>
+          <td>82.7 µs<br>
           </td>
           <td>-18%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>12</sup></td>
-          <td>230 &micro;s<br>
+          <td>230 µs<br>
           </td>
-          <td>241 &micro;s</td>
+          <td>241 µs</td>
           <td>+5%</td>
-          <td>250 &micro;s</td>
-          <td>245 &micro;s<br>
+          <td>250 µs</td>
+          <td>245 µs<br>
           </td>
           <td>-2%<br>
           </td>
         </tr>
         <tr>
           <td class="th">2<sup>13</sup></td>
-          <td>598 &micro;s<br>
+          <td>598 µs<br>
           </td>
-          <td>649 &micro;s</td>
+          <td>649 µs</td>
           <td>+9%</td>
-          <td>612 &micro;s</td>
-          <td>655 &micro;s<br>
+          <td>612 µs</td>
+          <td>655 µs<br>
           </td>
           <td>+7%<br>
           </td>
@@ -434,10 +385,8 @@
         </tr>
       </tbody>
     </table>
-    All timings are medians from repeated executions. The Raspi was slightly
-    overclocked. (*) Timing is unstable, reason unknown.<br>
-    It is not yet known, why especially the 2<sup>14</sup> FFT is significantly
-    <i>slower</i>. Maybe a bug.<br>
+    All timings are medians from repeated executions. The Raspi was slightly overclocked. (*) Timing is unstable, reason unknown.<br>
+    It is not yet known, why especially the 2<sup>14</sup> FFT is significantly <i>slower</i>. Maybe a bug.<br>
     <h2><a id="contact" name="contact"></a>Contact</h2>
     <p>Comments, ideas, bugs, improvements to <i>raspi at maazl dot de</i>.</p>
   </body>
