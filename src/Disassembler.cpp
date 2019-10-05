@@ -129,7 +129,7 @@ void Disassembler::DoADD()
 	if ( (Options & O_UseMOV)
 		&& ( (Instruct.MuxAA == Instruct.MuxAB && (0x807c2000 & (1<<opa))) // Both inputs equal and instruction that returns identity or 0
 			|| isImmd ))
-		opa = 32;
+		opa = 32; // mov
 
 	append(cOpA[opa]);
 
@@ -150,7 +150,7 @@ void Disassembler::DoADD()
 	// Target
 	append(cWreg[Instruct.WS][Instruct.WAddrA]);
 	bool unpack = false;
-	if ((Options & O_UseMOV) && isImmd && (0x0909 & (1<<Instruct.Pack)))
+	if (isImmd && opa == 32 && (0x0909 & (1 << (Instruct.Pack & 0xf))))
 		unpack = true;
 	else
 		appendPack(false);
@@ -159,7 +159,7 @@ void Disassembler::DoADD()
 	{case Inst::A_NOP:
 		return;
 
-	 case 32:
+	 case 32: // mov
 		switch (Instruct.OpA)
 		{case Inst::A_SUB:
 		 case Inst::A_XOR:
@@ -201,12 +201,12 @@ void Disassembler::DoMUL()
 	}	}
 
 	uint8_t opm = Instruct.OpM;
-	bool isSMI = Instruct.Sig == Inst::S_SMI && Instruct.MuxMA == Inst::X_RB;
+	bool isSMI = Instruct.Sig == Inst::S_SMI && Instruct.MuxMA == Inst::X_RB && Instruct.MuxMB == Inst::X_RB;
 
 	if ( (Options & O_UseMOV) && Instruct.MuxMA == Instruct.MuxMB // Both inputs equal and
 		&& ( (0xb0 & (1<<opm)) // instruction that returns identity or 0 or
 			|| isSMI )) // small immediate
-		opm = 8;
+		opm = 8; // mov
 
 	append(";  ");
 	append(cOpM[opm]);
@@ -219,7 +219,7 @@ void Disassembler::DoMUL()
 	append(" ");
 	append(cWreg[!Instruct.WS][Instruct.WAddrM]);
 	bool unpack = false;
-	if (opm == 8 && isSMI && (0x0009 & (1<<Instruct.Pack)))
+	if (isSMI && opm == 8 && (0x0009 & (1 << (Instruct.Pack & 0xf))))
 		unpack = true;
 	else
 		appendPack(true);
@@ -232,7 +232,7 @@ void Disassembler::DoMUL()
 		appendMULSource(Instruct.MuxMA);
 		break;
 
-	 case 8:
+	 case 8: // mov
 		if (Instruct.OpM == Inst::M_V8SUBS)
 			return append(", 0");
 		if (isSMI)
