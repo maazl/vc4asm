@@ -1,147 +1,265 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta content="text/html; charset=utf-8" http-equiv="content-type">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <title>Addendum to VideoCore IV documentation</title>
-    <meta content="Marcel M&uuml;ller" name="author">
+    <meta content="Marcel Müller" name="author">
     <meta content="Raspberry Pi BCM2835 BCM2836 QPU" name="keywords">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
   </head>
   <body>
-    <h1>Addendum to the <a href="https://docs.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf">Broadcom
-        VideoCore IV documentation</a></h1>
+    <h1>Addendum to the <a href="https://docs.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf">Broadcom VideoCore IV
+        documentation</a></h1>
     <h2>Documentation bugs</h2>
     <h3>Section 3: Writing to <tt>r5</tt></h3>
-    <p><tt>r5</tt> can be written <em>from the elements 0, 4, 8 and 12</em> for
-      each slice <em>or only from element 0</em>, depending on whether you
-      write to regfile A or regfile B. vc4asm supports the register names <tt>r5quad</tt>
-      and <tt>r5rep</tt> for this purpose. The documentation is wrong, nothing
-      is concatenated from low order bytes.</p>
+    <p><tt>r5</tt> can be written <em>from the elements 0, 4, 8 and 12</em> for each slice <em>or only from element 0</em>,
+      depending on whether you write to regfile A or regfile B. vc4asm supports the register names <tt>r5quad</tt> and <tt>r5rep</tt>
+      for this purpose. The documentation is wrong, nothing is concatenated from low order bytes.</p>
     <h3>Section 3: Table 1: ALU Instruction Fields - set flags</h3>
-    <p>The flags are <em>only updated when</em> the corresponding <em>condition
-        code evaluates true</em> and the target value is assigned. You may use
-      this feature to do boolean operations with the flags.</p>
-    <p>Furthermore the flags are <em>only updated from the MUL ALU when the ADD
-        ALU executes a <tt>nop</tt></em>. In contrast to the Broadcom
-      documetation the condition code <tt>.never</tt> has no effect on the
-      behavior.</p>
+    <p>The flags are <em>only updated when</em> the corresponding <em>condition code evaluates true</em> and the target value is
+      assigned. You may use this feature to do boolean operations with the flags.</p>
+    <p>Furthermore the flags are <em>only updated from the MUL ALU when the ADD ALU executes a <tt>nop</tt></em>. In contrast to
+      the Broadcom documetation the condition code <tt>.never</tt> has no effect on the behavior.</p>
     <h3>Section 3: Branch Instruction - implicit set flags</h3>
-    <p>Unlike the Broadcom documentation suggests the <em>branch instruction is
-        able to set the flags</em>. But the <tt>sf</tt> bit is at the same
-      location of the instruction word than the <tt>raddr_a</tt> field. So
-      every branch instruction with an <i>odd register source</i> will set the
-      flags. This is an unwanted side effect since the flags of a PC location
-      are normally useless.</p>
-    <p>vc4asm reports a warning when a branch instruction is used with an odd
-      source register. You can use explicit <tt>.setf</tt> to suppress the
-      warning.</p>
+    <p>Unlike the Broadcom documentation suggests the <em>branch instruction is able to set the flags</em>. But the <tt>sf</tt>
+      bit is at the same location of the instruction word than the <tt>raddr_a</tt> field. So every branch instruction with an <i>odd
+        register source</i> will set the flags. This is an unwanted side effect since the flags of a PC location are normally
+      useless.</p>
+    <p>vc4asm reports a warning when a branch instruction is used with an odd source register. You can use explicit <tt>.setf</tt>
+      to suppress the warning.</p>
     <pre>and.setf -,  elem_num, 1<br>bra      -,  ra1        # implies .setf =&gt; warning<br>mov.ifz  r0, 1<br>...</pre>
-    <p>Since a branch target will never be at the physical address 0 the <tt>mov.ifz</tt>
-      instruction in the above example will never assign a value.</p>
+    <p>Since a branch target will never be at the physical address 0 the <tt>mov.ifz</tt> instruction in the above example will
+      never assign a value.</p>
     <h3>Section 3: Branch Instruction - register source</h3>
-    <p>The <em>branch target</em> is taken from <em>SIMD element <b>15</b></em>
-      if <tt>reg</tt> is set (rather than element 0). This is wrong at several
-      places in the documentation.<br>
-      However, this can particularly useful to use a regfile A register as
-      branch target and for VPM/VCD setup and concurrently since the latter will
-      only use SIMD element 0.</p>
+    <p>The <em>branch target</em> is taken from <em>SIMD element <b>15</b></em> if <tt>reg</tt> is set (rather than element 0).
+      This is wrong at several places in the documentation.<br>
+      However, this can particularly useful to use a regfile A register as branch target and for VPM/VCD setup and concurrently
+      since the latter will only use SIMD element 0.</p>
     <h3>Section 3: Branch Instruction - target assignment</h3>
-    <p>The assignment of the target register(s) of a branch instruction depends
-      on the flags. The target register is only assigned if the branch is
-      actually taken. The same applies to the flags if <tt>sf</tt> is true. So
-      you may not abuse <tt>brr.never</tt> to load the relocated values of
-      labels into a register - what a pity!</p>
+    <p>The assignment of the target register(s) of a branch instruction depends on the flags. The target register is only assigned
+      if the branch is actually taken. The same applies to the flags if <tt>sf</tt> is true. So you may not abuse <tt>brr.never</tt>
+      to load the relocated values of labels into a register - what a pity!</p>
     <h3>Section 3: QPU Instruction Set - no inf, nan, denormal support</h3>
-    <p>The handling of <tt>Inf</tt> and <tt>NaN</tt> seems to be broken or
-      just <em>not implemented</em> in Videocore IV. I.e. <tt>0.0 + NaN = +Inf</tt>.
-      In fact it only seems to support something like <tt>NaN</tt> but it uses
-      the binary representation of <tt>&plusmn;Inf</tt>. So be careful when
-      interacting between the GPU and the ARM core with such numbers.</p>
-    <p>There is also no support for denormal numbers. They are just truncated to
-      0. Not that uncommon for GPUs.</p>
+    <p>The handling of <tt>Inf</tt> and <tt>NaN</tt> seems to be broken or just <em>not implemented</em> in Videocore IV. I.e. <tt>0.0
+        + NaN = +Inf</tt>. In fact it only seems to support something like <tt>NaN</tt> but it uses the binary representation of <tt>±Inf</tt>.
+      So be careful when interacting between the GPU and the ARM core with such numbers.</p>
+    <p>There is also no support for denormal numbers. They are just truncated to 0. Not that uncommon for GPUs.</p>
     <h3>Section 3: Register-Mapped Input/Output - Host Interrupt</h3>
-    <p>You need to write a <em>non-zero value</em> to the interrupt register
-      otherwise nothing happens. But conditional write access seems to work as
-      expected.</p>
+    <p>You need to write a <em>non-zero value</em> to the interrupt register otherwise nothing happens. But conditional write
+      access seems to work as expected.</p>
     <h3>Section 4: TMU FIFO</h3>
-    <p>When using direct memory access the TFREQ FIFO can hold up to 8 slots
-      supposedly. It turned out to be <em>unreliable to use more than 4</em> of
-      them. Sometimes the first QPU elements receive the result from 4 slots
-      ahead in case of TMU cache hits.</p>
+    <p>When using direct memory access the TFREQ FIFO can hold up to 8 slots supposedly. It turned out to be <em>unreliable to use
+        more than 4</em> of them. Sometimes the first QPU elements receive the result from 4 slots ahead in case of TMU cache hits.</p>
     <h3>Section 4: Writing <tt>tmu_noswap</tt></h3>
-    <p>When writing <tt>tmu_noswap</tt> only the value of <em>SIMD element 0</em>
-      counts. Furthermore any non-zero value will disable TMU swap not just 1.</p>
+    <p>When writing <tt>tmu_noswap</tt> only the value of <em>SIMD element 0</em> counts. Furthermore any non-zero value will
+      disable TMU swap not just 1.</p>
     <h3>Section 7: QPU Reading and Writing of VPM</h3>
-    <p>VPM reads seem to <em>block immediately if the FIFO is empty</em>. No
-      undefined data is returned when the reads are made too early.</p>
-    <p>Furthermore the <em>VPM read setups cannot be queued</em>. Only if the
-      result of the last VPM read setup is fully transferred to the VPM FIFO,
-      i.e. there is no more than one value outstanding, a new setup is accepted.<br>
-      Example: if you request 2 reads with the first write to <tt>vr_setup</tt>
-      and another two reads with the second write, then the second job is
-      ignored and you can read only two values without a deadlock. In contrast,
-      if you request 1 read by the first setup and 3 by the second one, then
-      everything is fine, since the single read of the first setup is
-      immediately transferred to the FIFO and the setup is discarded. No delay
-      slot instructions are required in the latter case.</p>
+    <p>VPM reads seem to <em>block immediately if the FIFO is empty</em>. No undefined data is returned when the reads are made too
+      early.</p>
+    <p>Furthermore the <em>VPM read setups cannot be queued</em>. Only if the result of the last VPM read setup is fully
+      transferred to the VPM FIFO, i.e. there is no more than one value outstanding, a new setup is accepted.<br>
+      Example: if you request 2 reads with the first write to <tt>vr_setup</tt> and another two reads with the second write, then
+      the second job is ignored and you can read only two values without a deadlock. In contrast, if you request 1 read by the first
+      setup and 3 by the second one, then everything is fine, since the single read of the first setup is immediately transferred to
+      the FIFO and the setup is discarded. No delay slot instructions are required in the latter case.</p>
     <h3>Table 35: VCD DMA Write (VDW) Stride Setup Format</h3>
-    <p>Unlike the documentation suggests the <tt>STRIDE</tt> field is <em>16
-        bits wide</em>. Probably just a typo.</p>
+    <p>Unlike the documentation suggests the <tt>STRIDE</tt> field is <em>16 bits wide</em>. Probably just a typo.</p>
+    <h3>Section 10, table 48: V3D Registers</h3>
+    <p>In the table several register addresses are missing. Unfortunately most of them are undocumented.</p>
+    <table cellspacing="0" cellpadding="3" border="1">
+      <thead>
+        <tr>
+          <th>Address Offset</th>
+          <th>Register Name</th>
+          <th>Description</th>
+          <th>Size</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>0x0000c</td>
+          <td>V3D_IDENT3</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x0041c</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_SQCSTAT</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e00</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBCFG</td>
+          <td>Interrupt configuration?</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e04</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBSCS</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e08</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBSCFG</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e0c</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBSSR</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e10</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBSDR0</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e14</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBSDR1</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e18</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBSDR2</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e0c</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBSDR3</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e20</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBQRUN</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e24</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBQHLT </td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e28</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBQSTP</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e2c</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBQITE</td>
+          <td>QPU Interrupt Enables</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e30</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBQITC</td>
+          <td>QPU Interrupt Control</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e34</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBQGHC</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e38</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBQGHG</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+        <tr>
+          <td>0x00e3c</td>
+          <td>
+            <meta http-equiv="content-type" content="text/html; charset=utf-8">
+            V3D_DBQGHH</td>
+          <td>undocumented</td>
+          <td>32</td>
+        </tr>
+      </tbody>
+    </table>
     <h3>Section 10: Performance counters</h3>
-    <p>The documentation of the <em>V3D_PCTRE</em> register is wrong. <em>You
-        need to set </em><em>bit 31</em> (allegedly reserved) to enable
-      performance counters at all.</p>
+    <p>The documentation of the <em>V3D_PCTRE</em> register is wrong. <em>You need to set </em><em>bit 31</em> (allegedly
+      reserved) to enable performance counters at all.</p>
     <h2>Instruction constraints</h2>
     <h3>No conditional write to peripheral registers</h3>
-    <p>A write to the TMU retiring register (TMU0_S, TMU1_S) or VPM must not use
-      conditional write access. Although the conditional write itself works the
-      TMU/VPM fifo is triggered unconditional to process the request with
-      undefined data in case the condition is not true.</p>
-    <p>You should also not write to the same register from both ALUs with inverse
-      condition flags. E.g. <tt>mov.ifz vpm, 0; mov.ifnz vpm, 1</tt> will write
-      an undefined value from the MUL ALU. Probably any other peripheral register share the same problem.</p>
+    <p>A write to the TMU retiring register (TMU0_S, TMU1_S) or VPM must not use conditional write access. Although the conditional
+      write itself works the TMU/VPM fifo is triggered unconditional to process the request with undefined data in case the
+      condition is not true.</p>
+    <p>You should also not write to the same register from both ALUs with inverse condition flags. E.g. <tt>mov.ifz vpm, 0;
+        mov.ifnz vpm, 1</tt> will write an undefined value from the MUL ALU. Probably any other peripheral register share the same
+      problem.</p>
     <p>vc4asm warns about this kind of access in verify mode.</p>
     <h3>Distance of branch instructions</h3>
-    <p>There must be at least two non branch instructions between every two
-      branch instructions. Otherwise no branch is taken or the thread will
-      crash. This also applies if the branch conditions are reverse and only one
-      of the branches can actually be taken.</p>
-    <p>However, you can enqueue the next branch just before the last one is
-      taken. Example:</p>
+    <p>There must be at least two non branch instructions between every two branch instructions. Otherwise no branch is taken or the
+      thread will crash. This also applies if the branch conditions are reverse and only one of the branches can actually be taken.</p>
+    <p>However, you can enqueue the next branch just before the last one is taken. Example:</p>
     <pre># r0 contains semaphore number [0..15]<br>mul24 ra31, r0, 3*8<br>nop<br>brr ra31, ra31, r:sacq<br>nop<br>nop<br>bra -, ra31<br>...<br><br>:sacq<br>.rep i, 16<br>nop<br>nop<br>sacq -, i<br>.endr</pre>
-    <p>The above code fragment dynamically acquires a semaphore depending on the
-      number in the r0 register. This is the shortest possible code fragment to
-      do this task.</p>
+    <p>The above code fragment dynamically acquires a semaphore depending on the number in the r0 register. This is the shortest
+      possible code fragment to do this task.</p>
     <h3>MUL ALU pack modes and I/O register targets</h3>
-    <p>The MUL ALU pack modes that write only a single byte are not available
-      for I/O register targets. The write only hardware registers cannot write
-      slices of a word.</p>
+    <p>The MUL ALU pack modes that write only a single byte are not available for I/O register targets. The write only hardware
+      registers cannot write slices of a word.</p>
     <h3>Concurrent access to VPM registers</h3>
-    <p>While VPM read and VPM write can coexist <em>no</em> other <em>concurrent
-        VPM access in one instruction</em> is reliable, especially including the
-      <tt>ldtmu</tt> signals.</p>
+    <p>While VPM read and VPM write can coexist <em>no</em> other <em>concurrent VPM access in one instruction</em> is reliable,
+      especially including the <tt>ldtmu</tt> signals.</p>
     <h2>Undocumented features</h2>
     <h3>Section 3: Horizontal vector rotation</h3>
-    <p>Both source operands must be from accumulator <tt>r0</tt>..<tt>r3</tt>
-      for full vector rotation. But if you choose not to do so the rotation will
-      only take place within the slices. I.e. [0,1,2,3, 4,5,6,7, 8,9,10,11,
-      12,13,14,15] rotates to [3,0,1,2, 7,4,5,6, 11,8,9,10, 15,12,13,14]. In
-      fact all source operands are taken from the current element and only the
-      write is rotated within the slice by the lower two bits. This can be
-      particularly useful in some cases.</p>
-    <p>Furthermore the restriction that the source register of the vector
-      rotation must not be written in the previous instruction applies <em>if
-        the values are transferred to a lower QPU quad</em> only. Rotations
-      within a slice and to higher quad are safe. You may ensure this by an
-      appropriate <code>.if<var>cc</var></code> extension, either at the
-      previous write or at the rotation instruction itself. Examples:</p>
+    <p>Both source operands must be from accumulator <tt>r0</tt>..<tt>r3</tt> for full vector rotation. But if you choose not to do
+      so the rotation will only take place within the slices. I.e. [0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15] rotates to [3,0,1,2,
+      7,4,5,6, 11,8,9,10, 15,12,13,14]. In fact all source operands are taken from the current element and only the write is rotated
+      within the slice by the lower two bits. This can be particularly useful in some cases.</p>
+    <p>Furthermore the restriction that the source register of the vector rotation must not be written in the previous instruction
+      applies <em>if the values are transferred to a lower QPU quad</em> only. Rotations within a slice and to higher quad are
+      safe. You may ensure this by an appropriate <code>.if<var>cc</var></code> extension, either at the previous write or at the
+      rotation instruction itself. Examples:</p>
     <pre>and.setf -, elem_num, 1<br>mov&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; r0, ra0<br>mov.ifz&nbsp; r1, r0&lt;&lt;1<br><br>shr.setf -, elem_num, 1<br>mov.ifc&nbsp; r0, ra0<br>mov&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; r1, r0&lt;&lt;1<br><br>and.setf -, elem_num, 12<br>mov      r0, ra0<br>mov.ifnz r1, r0&gt;&gt;3</pre>
     <h3>Section 3, Table 5: Small immediate values</h3>
-    <p>The small immediate codes for vector rotations can also be used as
-      additional constants. Well, all of them are redundant with [16..31] but
-      this allows you to combine vector rotations with immediate values. vc4asm
-      will take care of this.</p>
-    <table border="1" cellpadding="3" cellspacing="0">
+    <p>The small immediate codes for vector rotations can also be used as additional constants. Well, all of them are redundant with
+      [16..31] but this allows you to combine vector rotations with immediate values. vc4asm will take care of this.</p>
+    <table cellspacing="0" cellpadding="3" border="1">
       <thead>
         <tr>
           <th>value</th>
@@ -217,50 +335,38 @@
     </table>
     <pre>shl.setf -, elem_num, 30;  mov r0, r0&lt;&lt;2  # Set C flag to bit 2 of elem_num, set N flag to bit 1</pre>
     <h3>Secret access to previous input values through the NOP register</h3>
-    <p><em>Reading</em> one of the <em>NOP registers always returns the last
-        value</em> read from the particular register file by the <em>SIMD
-        elements 12 to 15</em>. So reading <tt>ra39</tt> returns the last 4
-      element values read from register file A repeated for each quad and
-      reading <tt>rb39</tt> returns the last 4 element values read from regfile
-      B. Small immediate values including vector rotations act as register file
-      B read as well. Even access to peripheral registers like <tt>unif</tt>
-      will stay there. Branch instructions or load immediate do not change the
-      values.</p>
-    <p>Of course, this is an undocumented side effect. But it seems not to be
-      just a dangling reference to some residual voltage at internal bus lines.
-      Even after several seconds the values are stable if the are not overridden
-      by other instructions meanwhile.<br>
-      See also Figure 2 (QPU Core Pipeline) of the documentation. The input
-      values from the register files simply stay at the ALU muxes.</p>
+    <p><em>Reading</em> one of the <em>NOP registers always returns the last value</em> read from the particular register file by
+      the <em>SIMD elements 12 to 15</em>. So reading <tt>ra39</tt> returns the last 4 element values read from register file A
+      repeated for each quad and reading <tt>rb39</tt> returns the last 4 element values read from regfile B. Small immediate
+      values including vector rotations act as register file B read as well. Even access to peripheral registers like <tt>unif</tt>
+      will stay there. Branch instructions or load immediate do not change the values.</p>
+    <p>Of course, this is an undocumented side effect. But it seems not to be just a dangling reference to some residual voltage at
+      internal bus lines. Even after several seconds the values are stable if the are not overridden by other instructions
+      meanwhile.<br>
+      See also Figure 2 (QPU Core Pipeline) of the documentation. The input values from the register files simply stay at the ALU
+      muxes.</p>
     <h4>Possible applications</h4>
-    <p>First of all, this is a kind of <em>vector rotation</em>, because you
-      can move values from elements 12 to 15 to lower element numbers this way -
-      even by the ADD ALU. Example:</p>
+    <p>First of all, this is a kind of <em>vector rotation</em>, because you can move values from elements 12 to 15 to lower
+      element numbers this way - even by the ADD ALU. Example:</p>
     <pre>read elem_num  # regfile A read<br>mov r0, ra39   # results in [12,13,14,15, 12,13,14,15, 12,13,14,15, 12,13,14,15]</pre>
-    <p>Secondly you might <em>access a value read by a previous instruction
-        again</em> without the need to store it in an accumulator. This is
-      always interesting when you cannot read the value from the same register
-      again because either it has been overridden meanwhile or it is a non
-      repeatable read from a peripheral register like <tt>unif</tt>. But keep
-      in mind that in the latter case it makes an important difference whether
-      regfile A or regfile B was used to read the uniform value. So do not use
-      the pseudo register <tt>unif</tt> in this case since vc4asm will chose
-      freely which register file to use. Example:</p>
+    <p>Secondly you might <em>access a value read by a previous instruction again</em> without the need to store it in an
+      accumulator. This is always interesting when you cannot read the value from the same register again because either it has been
+      overridden meanwhile or it is a non repeatable read from a peripheral register like <tt>unif</tt>. But keep in mind that in
+      the latter case it makes an important difference whether regfile A or regfile B was used to read the uniform value. So do not
+      use the pseudo register <tt>unif</tt> in this case since vc4asm will chose freely which register file to use. Example:</p>
     <pre>add ra0, ra32, 8  # read uniform<br>sub rb0, ra39, 8  # read the same uniform again</pre>
     <p>Combine immediate value with signal:</p>
     <pre>add ra0, ra0, 8<br>add ra1, ra1, rb39;  ldtmu0  # adds immediate value 8 to ra1 too</pre>
     <h3><a id="mnop" name="mnop"></a>Secret access to previous MUL ALU result</h3>
-    <p>Using the <em>MUL ALU opcode 0 in conjunction with <tt>waddr_mul</tt></em>
-      let you access the last result of the MUL ALU again. Because of the
-      virtual parallelism of the quads only the results from the last quads,
-      i.e. <em>only SIMD element 12..15</em> are available. But be careful, if
-      the value has not been assigned because of an <tt>.if</tt> condition the
+    <p>Using the <em>MUL ALU opcode 0 in conjunction with <tt>waddr_mul</tt></em> let you access the last result of the MUL ALU
+      again. Because of the virtual parallelism of the quads only the results from the last quads, i.e. <em>only SIMD element
+        12..15</em> are available. But be careful, if the value has not been assigned because of an <tt>.if</tt> condition the
       result is unreliable.</p>
-    <p>vc4asm supports the special instruction <tt>mnop</tt> to explicitly use
-      the <tt>nop</tt> instruction of the MUL ALU. Example:</p>
+    <p>vc4asm supports the special instruction <tt>mnop</tt> to explicitly use the <tt>nop</tt> instruction of the MUL ALU.
+      Example:</p>
     <pre>ldi.setf r0, [0,1,2,3, 1,2,3,0, 2,3,0,1, 3,0,1,2]<br>nop;  v8adds vpm, elem_num, r0  # results in [ 0, 2, 4, 6,  5, 7, 9, 7, 10,12,10,12, 15,13,15,17]<br>nop;  mnop r2                   # results in [15,13,15,17, 15,13,15,17, 15,13,15,17, 15,13,15,17]</pre>
     <h2><a id="cache" name="cache"></a>Cache details</h2>
-    <table border="1" cellspacing="0">
+    <table cellspacing="0" border="1">
       <thead>
         <tr>
           <th style="text-align: center;">Cache</th>
@@ -295,8 +401,7 @@
       </tbody>
     </table>
     <h3>TMU cache</h3>
-    <p><em>Sequence counts!</em> The items are loaded in order of the QPU
-      element number, i.e. if you load the same value twice into another element
-      this will cause a cache miss if a memory address with 4 k offset is in
-      between.</p>
-</body></html>
+    <p><em>Sequence counts!</em> The items are loaded in order of the QPU element number, i.e. if you load the same value twice into
+      another element this will cause a cache miss if a memory address with 4 k offset is in between.</p>
+  </body>
+</html>
