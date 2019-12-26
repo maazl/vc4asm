@@ -102,7 +102,7 @@ int gpu_fft_prepare(
         "fft_bytes_4k = %x\n", \
         fft_bytes, code_bytes, twid_bytes, unif_bytes, mail_bytes, buff_bytes, data_bytes, num_buff, size, fft_bytes_4k);
     ret = gpu_fft_alloc(mb, size, &ptr);
-    //fprintf(stderr, "vc = %x, arm = %x\n", ptr.vc, ptr.arm.vptr);
+    //fprintf(stderr, "rc = %i, vc = %x, arm = %x\n", ret, ptr.vc, ptr.arm.vptr);
     if (ret) return ret;
 
     // Header
@@ -179,7 +179,7 @@ int gpu_fft_prepare(
         info->base.vc_unifs[q] = gpu_fft_ptr_inc(&ptr, sizeof(int)*(4+2*jobs*passes));
     }
 
-    if ((jobs<<log2_N) <= GPU_FFT_BUSY_WAIT_LIMIT) {
+    if (info->base.peri && (jobs<<log2_N) <= GPU_FFT_BUSY_WAIT_LIMIT) {
         // Direct register poking with busy wait
         info->base.vc_msg = 0;
     }
@@ -192,25 +192,6 @@ int gpu_fft_prepare(
 
         info->base.vc_msg = ptr.vc;
     }
-
-
-	// setup performance counters
-	gpu_fft_pct_setup(&info->base, 0, 13);
-	gpu_fft_pct_setup(&info->base, 1, 14);
-	gpu_fft_pct_setup(&info->base, 2, 16);
-	gpu_fft_pct_setup(&info->base, 3, 17);
-	//gpu_fft_pct_setup(&info->base, 4, 18);
-	//gpu_fft_pct_setup(&info->base, 5, 19);
-	gpu_fft_pct_setup(&info->base, 6, 20);
-	gpu_fft_pct_setup(&info->base, 7, 21);
-	gpu_fft_pct_setup(&info->base, 8, 22);
-	gpu_fft_pct_setup(&info->base, 9, 23);
-	gpu_fft_pct_setup(&info->base, 10, 24);
-	gpu_fft_pct_setup(&info->base, 11, 25);
-	//gpu_fft_pct_setup(&info->base, 12, 26);
-	//gpu_fft_pct_setup(&info->base, 13, 27);
-	gpu_fft_pct_setup(&info->base, 14, 28);
-	gpu_fft_pct_setup(&info->base, 15, 29);
 
 	*fft = info;
 	return 0;

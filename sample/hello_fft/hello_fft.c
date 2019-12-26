@@ -153,6 +153,12 @@ int main(int argc, char *argv[])
 
 	N = 1 << log2_N; // FFT length
 	ret = gpu_fft_prepare(mb, log2_N, dir, jobs, &fft); // call once
+	if (ret) return ret;
+
+	// setup performance counters
+	if (perf)
+		gpu_fft_pct_setup(&fft->base,
+			1<<13 | 1<<14 | 1<<16 | 1<<17 | 1<<20 | 1<<21 | 1<<22 | 1<<23 | 1<<24 | 1<<25 | 1<<28 | 1<<29);
 
 	switch (ret)
 	{
@@ -224,11 +230,8 @@ int main(int argc, char *argv[])
 			t[2] += t[1] - t[0];
 
 		if (perf)
-		{	unsigned counters[16][2];
+		{	unsigned counters[16] = {0};
 			i = gpu_fft_pct_read(&fft->base, counters);
-			//printf("PCTE = %x\n", i);
-			//for (i = 0; i < 16; ++i)
-			//	printf("PCT %u = %u\n", counters[i][1], counters[i][0]);
 			printf(
 				"GPU load\t%5.2f %%\n"
 				"GPU exec instr\t%5.2f %%\n"
@@ -237,13 +240,13 @@ int main(int argc, char *argv[])
 				"Unif cache miss\t%5.2f %%\t%7u\n"
 				"TMU cache miss\t%5.2f %%\t%7u\n"
 				"L2C cache miss\t%5.2f %%\t%7u\n",
-				100.*counters[1][0]/(counters[0][0]+counters[1][0]),
-				100.*counters[2][0]/counters[1][0],
-				100.*counters[3][0]/counters[1][0],
-				100.*counters[7][0]/(counters[6][0]+counters[7][0]), counters[7][0],
-				100.*counters[9][0]/(counters[8][0]+counters[9][0]), counters[9][0],
-				100.*counters[11][0]/counters[10][0], counters[11][0],
-				100.*counters[15][0]/(counters[14][0]+counters[15][0]), counters[15][0] );
+				100.*counters[1]/(counters[0]+counters[1]),
+				100.*counters[2]/counters[1],
+				100.*counters[3]/counters[1],
+				100.*counters[5]/(counters[4]+counters[5]), counters[5],
+				100.*counters[7]/(counters[6]+counters[7]), counters[7],
+				100.*counters[9]/counters[8], counters[9],
+				100.*counters[11]/(counters[10]+counters[11]), counters[11] );
 		}
 
 		tsq[2] = tsq[3] = 0;
@@ -273,7 +276,6 @@ int main(int argc, char *argv[])
 					}
 					tsq[1] += r;
 					if (debug)
-						//fprintf(stderr, "%10g\t%10g\t%10g\t%10g\t%10g\t%10g\n", base[i].re, base[i].im, fft->out[i-fft->step].re, fft->out[i-fft->step].im, fft->out[i-2*fft->step].re, fft->out[i-2*fft->step].im);
 						printf("%d\t%d\t%10g\t%10g\t%10g\t%10g\t%10g\t%10g\t%10g\n", i, freq, chop(base[i].re), chop(base[i].im), chop(c), chop(s), chop(r), chop(base2[i].re), chop(base2[i].im));
 				}
 			} else
@@ -291,7 +293,6 @@ int main(int argc, char *argv[])
 					tsq[1] += r;
 					if (debug)
 						printf("%d\t%d\t%10g\t%10g\t%10g\t%10g\t%10g\t%10g\t%10g\n", i, freq, chop(base[i].re), chop(base[i].im), chop(re), chop(im), chop(r), chop(fft->in[i].re), chop(fft->in[i].im));
-						//fprintf(stderr, "%10g\t%10g\t%10g\t%10g\t%10g\t%10g\t%10g\n", base[i].re, base[i].im, fft->out[i-fft->step].re, fft->out[i-fft->step].im, fft->out[i-2*fft->step].re, fft->out[i-2*fft->step].im, amp);
 				}
 			}
 			//fprintf(stderr, "step_rms_err = %.5e, j = %d\n", sqrt(tsq[1] / tsq[0]), j);

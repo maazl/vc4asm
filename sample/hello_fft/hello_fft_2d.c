@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <time.h>
 
+#include "mailbox.h"
 #include "gpu_fft_trans.h"
 #include "hello_fft_2d_bitmap.h"
 

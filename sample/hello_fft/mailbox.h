@@ -1,5 +1,6 @@
 /*
 Copyright (c) 2012, Broadcom Europe Ltd.
+Copyright (c) 2019, Marcel Müller
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -23,25 +24,26 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+Replacement for mailbox.h of hello_fft.
+This version of the file switches to the vcio2 driver when available
+that does not require root access.
+Otherwise the old vcio driver is used. In this case you need to run as root.
+Remember to change the call to mapmem and pass the additional file_desc parameter.
 */
 
-#include <linux/ioctl.h>
-
-#define MAJOR_NUM 100
-#define IOCTL_MBOX_PROPERTY _IOWR(MAJOR_NUM, 0, char *)
-#define DEVICE_FILE_NAME "/dev/vcio"
+#include <stdint.h>
 
 int mbox_open();
 void mbox_close(int file_desc);
 
-unsigned get_version(int file_desc);
-unsigned mem_alloc(int file_desc, unsigned size, unsigned align, unsigned flags);
-unsigned mem_free(int file_desc, unsigned handle);
-unsigned mem_lock(int file_desc, unsigned handle);
-unsigned mem_unlock(int file_desc, unsigned handle);
-void *mapmem(unsigned base, unsigned size);
-void unmapmem(void *addr, unsigned size);
+uint32_t mem_alloc(int file_desc, uint32_t size, uint32_t align, uint32_t flags);
+uint32_t mem_free(int file_desc, uint32_t handle);
+uint32_t mem_lock(int file_desc, uint32_t handle);
+uint32_t mem_unlock(int file_desc, uint32_t handle);
+void *mapmem(int file_desc, uint32_t base, uint32_t size);
+void unmapmem(void *addr, uint32_t size);
 
-unsigned execute_code(int file_desc, unsigned code, unsigned r0, unsigned r1, unsigned r2, unsigned r3, unsigned r4, unsigned r5);
-unsigned execute_qpu(int file_desc, unsigned num_qpus, unsigned control, unsigned noflush, unsigned timeout);
-unsigned qpu_enable(int file_desc, unsigned enable);
+uint32_t execute_qpu(int file_desc, uint32_t num_qpus, uint32_t control, uint32_t noflush, uint32_t timeout);
+uint32_t qpu_enable(int file_desc, uint32_t enable);

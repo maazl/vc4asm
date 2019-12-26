@@ -1,5 +1,6 @@
 /*
 Copyright (c) 2012, Broadcom Europe Ltd.
+Copyright (c) 2019, Marcel Müller
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -23,6 +24,12 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+Replacement for mailbox.c of hello_fft.
+This version of the file switches to the vcio2 driver when available
+that does not require root access.
+Otherwise the old vcio driver is used. In this case you need to run as root.
 */
 
 #include <stdio.h>
@@ -31,227 +38,246 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
-#include <stdint.h>
+#include <errno.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+
+#include "vcio2.h"
 
 #include "mailbox.h"
 
 #define PAGE_SIZE (4*1024)
+#define IOCTL_MBOX_PROPERTY 0xc0046400
 
-void *mapmem(unsigned base, unsigned size)
+
+static char have_vcio2;
+
+
+void *mapmem(int file_desc, uint32_t base, uint32_t size)
 {
-   int mem_fd;
-   unsigned offset = base % PAGE_SIZE;
-   base = base - offset;
-   /* open /dev/mem */
-   if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0) {
-      printf("can't open /dev/mem\nThis program should be run as root. Try prefixing command with: sudo\n");
-      return NULL;
-   }
-   void *mem = mmap(
-      0,
-      size,
-      PROT_READ|PROT_WRITE,
-      MAP_SHARED/*|MAP_FIXED*/,
-      mem_fd,
-      base);
-#ifdef DEBUG
-   printf("base=0x%x, mem=%p\n", base, mem);
-#endif
-   if (mem == MAP_FAILED) {
-      printf("mmap error %d\n", (int)mem);
-      return NULL;
-   }
-   close(mem_fd);
-   return (char *)mem + offset;
+	void *mem;
+	uint32_t offset = base % PAGE_SIZE;
+	base = base - offset;
+
+	if (!have_vcio2)
+	{	file_desc = open("/dev/mem", O_RDWR|O_SYNC);
+		if (file_desc < 0)
+		{	printf("can't open /dev/mem\nThis program should be run as root unless /dev/vcio2 is available. Try prefixing command with: sudo\n");
+			return NULL;
+		}
+	}
+
+	mem = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, file_desc, base);
+	#ifdef DEBUG
+	printf("base=0x%x, mem=%p\n", base, mem);
+	#endif
+
+	if (!have_vcio2)
+		close(file_desc);
+
+	if (mem == MAP_FAILED) {
+		printf("mmap error: %s\n", strerror(errno));
+		return NULL;
+	}
+	return (char *)mem + offset;
 }
 
-void unmapmem(void *addr, unsigned size)
+void unmapmem(void *addr, uint32_t size)
 {
-   int s = munmap(addr, size);
-   if (s != 0) {
-      printf("munmap error %d\n", s);
-      exit (-1);
-   }
+	int s = munmap(addr, size);
+	if (s != 0)
+	{	printf("munmap error %d\n", s);
+		exit (-1);
+	}
 }
 
-/*
- * use ioctl to send mbox property message
- */
-
+// use ioctl to send mbox property message for old vcio driver
 static int mbox_property(int file_desc, void *buf)
 {
-   int ret_val = ioctl(file_desc, IOCTL_MBOX_PROPERTY, buf);
+	int ret_val = ioctl(file_desc, IOCTL_MBOX_PROPERTY, buf);
+	if (ret_val < 0)
+		printf("ioctl_set_msg failed:%d\n", ret_val);
 
-   if (ret_val < 0) {
-      printf("ioctl_set_msg failed:%d\n", ret_val);
-   }
-
-#ifdef DEBUG
-   unsigned *p = buf; int i; unsigned size = *(unsigned *)buf;
-   for (i=0; i<size/4; i++)
-      printf("%04x: 0x%08x\n", i*sizeof *p, p[i]);
-#endif
-   return ret_val;
+	#ifdef DEBUG
+	unsigned *p = buf; int i; unsigned size = *(unsigned *)buf;
+	for (i=0; i<size/4; i++)
+		printf("%04x: 0x%08x\n", i*sizeof *p, p[i]);
+	#endif
+	return ret_val;
 }
 
-unsigned mem_alloc(int file_desc, unsigned size, unsigned align, unsigned flags)
+uint32_t mem_alloc(int file_desc, uint32_t size, uint32_t align, uint32_t flags)
 {
-   int i=0;
-   unsigned p[32];
-   p[i++] = 0; // size
-   p[i++] = 0x00000000; // process request
+	if (have_vcio2)
+	{	vcio_mem_allocate buf;
+		int ret_val;
 
-   p[i++] = 0x3000c; // (the tag id)
-   p[i++] = 12; // (size of the buffer)
-   p[i++] = 12; // (size of the data)
-   p[i++] = size; // (num bytes? or pages?)
-   p[i++] = align; // (alignment)
-   p[i++] = flags; // (MEM_FLAG_L1_NONALLOCATING)
+		buf.in.size = size;
+		buf.in.alignment = align;
+		buf.in.flags = flags;
 
-   p[i++] = 0x00000000; // end tag
-   p[0] = i*sizeof *p; // actual size
-
-   mbox_property(file_desc, p);
-   return p[5];
+		ret_val = ioctl(file_desc, IOCTL_MEM_ALLOCATE, &buf);
+		if (ret_val)
+		{	printf("mem_alloc ioctl failed: %d\n", ret_val);
+			return 0;
+		}
+		return buf.out.handle;
+	} else
+	{	uint32_t p[9] =
+		{	9 * sizeof(uint32_t), // size
+			0x00000000,           // process request
+			0x3000c,              // (the tag id)
+			3 * sizeof(uint32_t), // (size of the buffer)
+			3 * sizeof(uint32_t), // (size of the data)
+			size,                 // (num bytes)
+			align,                // (alignment)
+			flags,                // (MEM_FLAG_L1_NONALLOCATING)
+			0                     // end tag
+		};
+		mbox_property(file_desc, p);
+		return p[5];
+	}
 }
 
-unsigned mem_free(int file_desc, unsigned handle)
+uint32_t mem_free(int file_desc, uint32_t handle)
 {
-   int i=0;
-   unsigned p[32];
-   p[i++] = 0; // size
-   p[i++] = 0x00000000; // process request
-
-   p[i++] = 0x3000f; // (the tag id)
-   p[i++] = 4; // (size of the buffer)
-   p[i++] = 4; // (size of the data)
-   p[i++] = handle;
-
-   p[i++] = 0x00000000; // end tag
-   p[0] = i*sizeof *p; // actual size
-
-   mbox_property(file_desc, p);
-   return p[5];
+	if (have_vcio2)
+	{	int ret_val = ioctl(file_desc, IOCTL_MEM_RELEASE, handle);
+		if (ret_val)
+			printf("mem_free ioctl failed: %d\n", ret_val);
+		return ret_val;
+	} else
+	{	uint32_t p[7] =
+		{	7 * sizeof(uint32_t), // size
+			0x00000000,           // process request
+			0x3000f,              // (the tag id)
+			1 * sizeof(uint32_t), // (size of the buffer)
+			1 * sizeof(uint32_t), // (size of the data)
+			handle,               // (handle)
+			0                     // end tag
+		};
+		mbox_property(file_desc, p);
+		return p[5];
+	}
 }
 
-unsigned mem_lock(int file_desc, unsigned handle)
+uint32_t mem_lock(int file_desc, uint32_t handle)
 {
-   int i=0;
-   unsigned p[32];
-   p[i++] = 0; // size
-   p[i++] = 0x00000000; // process request
-
-   p[i++] = 0x3000d; // (the tag id)
-   p[i++] = 4; // (size of the buffer)
-   p[i++] = 4; // (size of the data)
-   p[i++] = handle;
-
-   p[i++] = 0x00000000; // end tag
-   p[0] = i*sizeof *p; // actual size
-
-   mbox_property(file_desc, p);
-   return p[5];
+	if (have_vcio2)
+	{	int ret_val = ioctl(file_desc, IOCTL_MEM_LOCK, &handle);
+		if (ret_val)
+		{	printf("mem_lock ioctl failed: %d\n", ret_val);
+			return 0;
+		}
+		return handle;
+	} else
+	{	uint32_t p[7] =
+		{	7 * sizeof(uint32_t), // size
+			0x00000000,           // process request
+			0x3000d,              // (the tag id)
+			1 * sizeof(uint32_t), // (size of the buffer)
+			1 * sizeof(uint32_t), // (size of the data)
+			handle,               // (handle)
+			0                     // end tag
+		};
+		mbox_property(file_desc, p);
+		return p[5];
+	}
 }
 
-unsigned mem_unlock(int file_desc, unsigned handle)
+uint32_t mem_unlock(int file_desc, uint32_t handle)
 {
-   int i=0;
-   unsigned p[32];
-   p[i++] = 0; // size
-   p[i++] = 0x00000000; // process request
-
-   p[i++] = 0x3000e; // (the tag id)
-   p[i++] = 4; // (size of the buffer)
-   p[i++] = 4; // (size of the data)
-   p[i++] = handle;
-
-   p[i++] = 0x00000000; // end tag
-   p[0] = i*sizeof *p; // actual size
-
-   mbox_property(file_desc, p);
-   return p[5];
+	if (have_vcio2)
+	{	int ret_val = ioctl(file_desc, IOCTL_MEM_UNLOCK, handle);
+		if (ret_val)
+			printf("mem_unlock ioctl failed: %d\n", ret_val);
+		return ret_val;
+	} else
+	{	uint32_t p[7] =
+		{	7 * sizeof(uint32_t), // size
+			0x00000000,           // process request
+			0x3000e,              // (the tag id)
+			1 * sizeof(uint32_t), // (size of the buffer)
+			1 * sizeof(uint32_t), // (size of the data)
+			handle,               // (handle)
+			0                     // end tag
+		};
+		mbox_property(file_desc, p);
+		return p[5];
+	}
 }
 
-unsigned execute_code(int file_desc, unsigned code, unsigned r0, unsigned r1, unsigned r2, unsigned r3, unsigned r4, unsigned r5)
+uint32_t qpu_enable(int file_desc, uint32_t enable)
 {
-   int i=0;
-   unsigned p[32];
-   p[i++] = 0; // size
-   p[i++] = 0x00000000; // process request
-
-   p[i++] = 0x30010; // (the tag id)
-   p[i++] = 28; // (size of the buffer)
-   p[i++] = 28; // (size of the data)
-   p[i++] = code;
-   p[i++] = r0;
-   p[i++] = r1;
-   p[i++] = r2;
-   p[i++] = r3;
-   p[i++] = r4;
-   p[i++] = r5;
-
-   p[i++] = 0x00000000; // end tag
-   p[0] = i*sizeof *p; // actual size
-
-   mbox_property(file_desc, p);
-   return p[5];
+	if (have_vcio2)
+	{	int ret_val = ioctl(file_desc, IOCTL_ENABLE_QPU, enable);
+		if (ret_val)
+			printf("qpu_enable ioctl failed: %d, %s\n", ret_val, strerror(errno));
+		return ret_val;
+	} else
+	{	uint32_t p[7] =
+		{	7 * sizeof(uint32_t), // size
+			0x00000000,           // process request
+			0x30012,              // (the tag id)
+			1 * sizeof(uint32_t), // (size of the buffer)
+			1 * sizeof(uint32_t), // (size of the data)
+			enable,               // (enable QPU)
+			0                     // end tag
+		};
+		mbox_property(file_desc, p);
+		return p[5];
+	}
 }
 
-unsigned qpu_enable(int file_desc, unsigned enable)
+uint32_t execute_qpu(int file_desc, uint32_t num_qpus, uint32_t control, uint32_t noflush, uint32_t timeout)
 {
-   int i=0;
-   unsigned p[32];
+	if (have_vcio2)
+	{	vcio_exec_qpu buf;
+		int ret_val;
 
-   p[i++] = 0; // size
-   p[i++] = 0x00000000; // process request
+		buf.in.num_qpus = num_qpus;
+		buf.in.control = control;
+		buf.in.noflush = noflush;
+		buf.in.timeout = timeout;
 
-   p[i++] = 0x30012; // (the tag id)
-   p[i++] = 4; // (size of the buffer)
-   p[i++] = 4; // (size of the data)
-   p[i++] = enable;
-
-   p[i++] = 0x00000000; // end tag
-   p[0] = i*sizeof *p; // actual size
-
-   mbox_property(file_desc, p);
-   return p[5];
-}
-
-unsigned execute_qpu(int file_desc, unsigned num_qpus, unsigned control, unsigned noflush, unsigned timeout) {
-   int i=0;
-   unsigned p[32];
-
-   p[i++] = 0; // size
-   p[i++] = 0x00000000; // process request
-   p[i++] = 0x30011; // (the tag id)
-   p[i++] = 16; // (size of the buffer)
-   p[i++] = 16; // (size of the data)
-   p[i++] = num_qpus;
-   p[i++] = control;
-   p[i++] = noflush;
-   p[i++] = timeout; // ms
-
-   p[i++] = 0x00000000; // end tag
-   p[0] = i*sizeof *p; // actual size
-
-   mbox_property(file_desc, p);
-   return p[5];
+		ret_val = ioctl(file_desc, IOCTL_EXEC_QPU, &buf);
+		if (ret_val)
+			printf("execute_qpu failed: %d\n", ret_val);
+		return ret_val;
+	} else
+	{	uint32_t p[10] =
+		{	10 * sizeof(uint32_t),// size
+			0x00000000,           // process request
+			0x30011,              // (the tag id)
+			4 * sizeof(uint32_t), // (size of the buffer)
+			4 * sizeof(uint32_t), // (size of the data)
+			num_qpus,
+			control,
+			noflush,
+			timeout,              // ms
+			0                     // end tag
+		};
+		mbox_property(file_desc, p);
+		return p[5];
+	}
 }
 
 int mbox_open() {
-   int file_desc;
+	int file_desc;
 
-   // open a char device file used for communicating with kernel mbox driver
-   file_desc = open(DEVICE_FILE_NAME, 0);
-   if (file_desc < 0) {
-      printf("Can't open device file: %s\n", DEVICE_FILE_NAME);
-      printf("Try creating a device file with: sudo mknod %s c %d 0\n", DEVICE_FILE_NAME, MAJOR_NUM);
-   }
-   return file_desc;
+	have_vcio2 = 1;
+	// try vcio2 first
+	file_desc = open("/dev/vcio2", O_RDWR);
+	if (file_desc < 0)
+	{	// try vcio next
+		have_vcio2 = 0;
+		file_desc = open("/dev/vcio", O_RDWR);
+		if (file_desc < 0)
+			printf("Can't open device file: /dev/vcio2 nor /dev/vcio.\n");
+	}
+	return file_desc;
 }
 
-void mbox_close(int file_desc) {
-  close(file_desc);
+void mbox_close(int file_desc)
+{	close(file_desc);
 }

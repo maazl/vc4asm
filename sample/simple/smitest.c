@@ -70,7 +70,7 @@ int gpu_prepare(
 	}
 	vc = mem_lock(mb, handle);
 	//printf("vc=%x\n", vc);
-	ptr = mapmem(vc, sizeof(struct GPU));
+	ptr = mapmem(mb, vc, sizeof(struct GPU));
 	//printf("ptr=%p\n", ptr);
 	if (ptr == NULL)
 	{	mem_free(mb, handle);

@@ -30,17 +30,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "gpu_fft.h"
 #include "mailbox.h"
+#include "vcio2.h"
 
 #include <time.h>
 #include <stdio.h>
+#include <errno.h>
 
 #define BUS_TO_PHYS(x) ((x)&~0xC0000000)
 
 // V3D spec: http://www.broadcom.com/docs/support/videocore/VideoCoreIV-AG100-R.pdf
 #define V3D_L2CACTL (0xC00020>>2)
 #define V3D_SLCACTL (0xC00024>>2)
+#define V3D_SQRSV0  (0xC00410>>2)
+#define V3D_SQRSV1  (0xC00414>>2)
 #define V3D_SRQPC   (0xC00430>>2)
 #define V3D_SRQUA   (0xC00434>>2)
+#define V3D_SRQUL   (0xC00438>>2)
 #define V3D_SRQCS   (0xC0043c>>2)
 #define V3D_DBCFG   (0xC00e00>>2)
 #define V3D_DBQITE  (0xC00e2c>>2)
@@ -98,9 +103,8 @@ int gpu_fft_get_host_info(struct GPU_FFT_HOST *info)
 	return 0;
 }
 
-unsigned gpu_fft_base_exec_direct(struct GPU_FFT_BASE *base, int num_qpus)
+static unsigned gpu_fft_base_exec_direct(struct GPU_FFT_BASE *base, int num_qpus)
 {
-
 	unsigned q, t;
 	time_t limit = 0;
 
@@ -109,9 +113,10 @@ unsigned gpu_fft_base_exec_direct(struct GPU_FFT_BASE *base, int num_qpus)
 	base->peri[V3D_DBQITC] = -1; // Resets IRQ flags
 
 	base->peri[V3D_L2CACTL] = 1 << 2; // Clear L2 cache
-	base->peri[V3D_SLCACTL] = -1; // Clear other caches
+	base->peri[V3D_SLCACTL] = 0x0f0f0f0f; // Clear other caches
 
-	base->peri[V3D_SRQCS] = (1 << 7) | (1 << 8) | (1 << 16); // Reset error bit and counts
+	base->peri[V3D_SRQCS] = (1 << 0) | (1 << 7) | (1 << 8) | (1 << 16); // Reset error bit and counts
+
 
 	for (q = 0; q < num_qpus; q++)
 	{ // Launch shader(s)
@@ -123,49 +128,62 @@ unsigned gpu_fft_base_exec_direct(struct GPU_FFT_BASE *base, int num_qpus)
 	// Busy wait polling
 	num_qpus <<= 16;
 	for (;;)
-	{
+	{	unsigned r;
 		q = 1000;
 		do
-			if ((base->peri[V3D_SRQCS] & 0xff0000) == num_qpus) // All done?
+			if (((r = base->peri[V3D_SRQCS]) & 0xff0000) == num_qpus) // All done?
 				return 0;
 		while (--q);
 		if (!limit)
 			limit = clock() + CLOCKS_PER_SEC * GPU_FFT_TIMEOUT / 1000;
-		else if (clock() >= limit)
+		else if (clock() - limit >= 0)
+		{	printf("r = %x, %x\n", r, num_qpus);
 			// TODO: some cleanup required?
 			return -1;
+		}
 	}
 	return 0;
 }
 
-unsigned gpu_fft_pct_read(struct GPU_FFT_BASE *base, unsigned counters[16][2])
+void gpu_fft_pct_setup(struct GPU_FFT_BASE *base, unsigned counters)
 {
-	unsigned i;
-	//memcpy(counters, (unsigned*)(base->peri + V3D_PCTR(0)), 16 * 8);
-	for (i = 0; i < 16; ++i)
-	{
-		counters[i][0] = base->peri[V3D_PCTR(i)];
-		counters[i][1] = base->peri[V3D_PCTRS(i)];
+	if (!base->peri)
+	{	int rc = ioctl(base->mb, IOCTL_SET_V3D_PERF_COUNT, base->perf_count = counters);
+		if (rc)
+			fprintf(stderr, "IOCTL_SET_V3D_PERF_COUNT failed: %i, %i\n", rc, errno);
+	} else
+	{	unsigned index = 0;
+		unsigned counter;
+		for (counter = 0; counter < 30 && index < 16; ++counter, counters >>= 1)
+			if (counters & 1)
+				base->peri[V3D_PCTRS(index++)] = counter;
+		base->peri[V3D_PCTRE] = base->peri[V3D_PCTRC] = (1U<<index) - 1;
+		base->perf_count = index;
 	}
-	return base->peri[V3D_PCTRE];
 }
 
-void gpu_fft_pct_setup(struct GPU_FFT_BASE *base, unsigned char index, int counter)
+unsigned gpu_fft_pct_read(struct GPU_FFT_BASE *base, unsigned counters[16])
 {
-	if (counter < 0)
-	{
-		base->peri[V3D_PCTRE] &= ~(1 << index);
+	if (!base->peri)
+	{	int rc = ioctl(base->mb, IOCTL_READ_V3D_PERF_COUNT, counters);
+		if (rc)
+			fprintf(stderr, "IOCTL_READ_V3D_PERF_COUNT failed: %i, %i\n", rc, errno);
+		printf("RPCT: %i, %i\n", rc, errno);
+		return base->perf_count;
 	} else
-	{
-		base->peri[V3D_PCTRS(index)] = counter;
-		base->peri[V3D_PCTRE] |= base->peri[V3D_PCTRC] = 1 << index;
+	{	unsigned i = 0;
+		while (i < base->perf_count)
+			counters[i] = base->peri[V3D_PCTR(i++)];
+		return base->peri[V3D_PCTRE];
 	}
 }
 
 unsigned gpu_fft_base_exec(struct GPU_FFT_BASE *base, int num_qpus)
 {
-	unsigned rc;
-	base->peri[V3D_PCTRE] |= 0x80000000;
+	unsigned rc; int q;
+
+	if (base->peri)
+		base->peri[V3D_PCTRE] |= 0x80000000;
 	if (base->vc_msg)
 	{
 		// Use mailbox
@@ -176,16 +194,15 @@ unsigned gpu_fft_base_exec(struct GPU_FFT_BASE *base, int num_qpus)
 		// Direct register poking
 		rc = gpu_fft_base_exec_direct(base, num_qpus);
 	}
-	base->peri[V3D_PCTRE] &= ~0x80000000;
+	if (base->peri)
+		base->peri[V3D_PCTRE] &= ~0x80000000;
 	return rc;
 }
 
 int gpu_fft_alloc(int mb, unsigned size, struct GPU_FFT_PTR *ptr)
 {
-
 	struct GPU_FFT_HOST host;
 	struct GPU_FFT_BASE *base;
-	volatile unsigned *peri;
 	unsigned handle;
 
 	if (gpu_fft_get_host_info(&host))
@@ -202,19 +219,18 @@ int gpu_fft_alloc(int mb, unsigned size, struct GPU_FFT_PTR *ptr)
 		return -3;
 	}
 
-	peri = (volatile unsigned *)mapmem(host.peri_addr, host.peri_size);
-	if (!peri)
+	ptr->vc = mem_lock(mb, handle);
+	ptr->arm.vptr = mapmem(mb, BUS_TO_PHYS(ptr->vc + host.mem_map), size);
+	if (!ptr->arm.vptr)
 	{
 		mem_free(mb, handle);
 		qpu_enable(mb, 0);
 		return -4;
 	}
 
-	ptr->vc = mem_lock(mb, handle);
-	ptr->arm.vptr = mapmem(BUS_TO_PHYS(ptr->vc + host.mem_map), size);
-
 	base = (struct GPU_FFT_BASE *)ptr->arm.vptr;
-	base->peri = peri;
+	// The following line fails with vcio2 driver. But no problem, this is the indicator that we have vcio2.
+	base->peri = (volatile unsigned *)mapmem(mb, host.peri_addr, host.peri_size);;
 	base->peri_size = host.peri_size;
 	base->mb = mb;
 	base->handle = handle;
@@ -227,7 +243,8 @@ void gpu_fft_base_release(struct GPU_FFT_BASE *base)
 {
 	int mb = base->mb;
 	unsigned handle = base->handle, size = base->size;
-	unmapmem((void*)base->peri, base->peri_size);
+	if (base->peri)
+		unmapmem((void*)base->peri, base->peri_size);
 	unmapmem((void*)base, size);
 	mem_unlock(mb, handle);
 	mem_free(mb, handle);
@@ -236,7 +253,6 @@ void gpu_fft_base_release(struct GPU_FFT_BASE *base)
 
 unsigned gpu_fft_ptr_inc(struct GPU_FFT_PTR *ptr, int bytes)
 {
-
 	unsigned vc = ptr->vc;
 	ptr->vc += bytes;
 	ptr->arm.bptr += bytes;

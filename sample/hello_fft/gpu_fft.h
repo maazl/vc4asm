@@ -56,6 +56,7 @@ struct GPU_FFT_BASE {
     int mb;
     unsigned handle, size, vc_msg, vc_code, vc_unifs[GPU_FFT_QPUS], peri_size;
     volatile unsigned *peri;
+    unsigned perf_count;
 };
 
 struct GPU_FFT {
@@ -103,11 +104,10 @@ unsigned gpu_fft_ptr_inc (
 
 void gpu_fft_pct_setup(
 	struct GPU_FFT_BASE *base,
-	unsigned char index,
-	int counter);
+	unsigned counters);
 
 unsigned gpu_fft_pct_read(
 	struct GPU_FFT_BASE *base,
-	unsigned counters[16][2]);
+	unsigned counters[16]);
 
 #endif // __GPU_FFT__
