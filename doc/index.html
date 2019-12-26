@@ -174,11 +174,23 @@
     </ul>
     <p>The Cmake test cases invoke the test targets from method 1. This is significantly slower, especially on a Raspberry Pi.</p>
     <h2><a id="sample" name="sample"></a>Sample programs</h2>
-    <p>All sample programs require <em>root access</em> to run. This is because of the need to call <tt>mmap</tt>. See <a href="http://www.maazl.de/project/vcio2/doc/index.html">vcio2
-        driver</a> for an alternative without root privileges.</p>
-    <p>Furthermore you need a recent Raspbian kernel (use <tt>rpi-update</tt>) or create a local character device named <tt>/dev/vcio</tt>
-      to access the vcio driver of the Raspi kernel: <tt>sudo mknod /dev/vcio c 100 0</tt></p>
-    <p>All these restrictions apply to <tt>hello_fft</tt> from the Raspberry Pi Foundation as well.</p>
+    <h3>Notes</h3>
+    <ol>
+      <li>
+        <p><strong>You cannot use the GPU if you have the vc4 display driver running.</strong> It simply does not support this.</p>
+      </li>
+      <li>
+        <p><em>It is recommended to install the <a href="http://www.maazl.de/project/vcio2/doc/index.html">vcio2 driver</a></em> to
+          run the sample programs. This will remove the need to run all samples with <em>root privileges</em>. This is because of
+          the need to call <tt>mmap</tt>. The sample programs will automatically detect the presence of the vcio2 driver and use it
+          when available.</p>
+      </li>
+      <li>
+        <p>There is one side effect of using vcio2: this driver does not support to access the V3D hardware directly for safety and
+          concurrency reasons. This prevents direct hardware access used by the <tt>hello_fft</tt> sample for small transforms. So
+          these transforms are significantly slower because of the turn around to the kernel and the firmware and the way back.</p>
+      </li>
+    </ol>
     <h3><tt>simple</tt></h3>
     <p>This is a very simple program that demonstrates the use of all available operators with small immediate values. It is not
       optimized in any way.</p>
