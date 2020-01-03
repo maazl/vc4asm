@@ -43,7 +43,6 @@ Otherwise the old vcio driver is used. In this case you need to run as root.
 #include <sys/ioctl.h>
 
 #include "vcio2.h"
-
 #include "mailbox.h"
 
 #define PAGE_SIZE (4*1024)
@@ -235,10 +234,10 @@ uint32_t execute_qpu(int file_desc, uint32_t num_qpus, uint32_t control, uint32_
 	{	vcio_exec_qpu buf;
 		int ret_val;
 
-		buf.in.num_qpus = num_qpus;
-		buf.in.control = control;
-		buf.in.noflush = noflush;
-		buf.in.timeout = timeout;
+		buf.num_qpus = num_qpus;
+		buf.control = control;
+		buf.noflush = noflush;
+		buf.timeout = timeout;
 
 		ret_val = ioctl(file_desc, IOCTL_EXEC_QPU, &buf);
 		if (ret_val)
