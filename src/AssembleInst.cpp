@@ -1080,13 +1080,17 @@ void AssembleInst::optimize()
 			{	// convert ADD ALU small immediate loads to LDI if MUL ALU is unused.
 				val = SMIValue();
 				if (evalADD(val, val) && evalPack(val, val, false))
-					goto mkLDI;
+					goto pack2LDI;
 			}
 			if (OpA == A_NOP && MuxMA == X_RB && MuxMB == X_RB && !SF)
 			{	// convert MUL ALU small immediate loads to LDI if ADD ALU is unused.
 				val = SMIValue();
 				if (evalMUL(val, val) && evalPack(val, val, true))
+				{pack2LDI:
+					PM = false;
+					Pack = P_32;
 					goto mkLDI;
+				}
 			}
 		}
 	 default:
@@ -1118,10 +1122,8 @@ void AssembleInst::optimize()
 		Sig = S_LDI;
 		LdMode = L_LDI;
 		Immd = val;
-		PM = false;
-		Pack = P_32;
-		// always switch to ADD ALU write - avoids turn around stability problems with disassembler.
-		if (WAddrA == R_NOP)
+		// always switch to ADD ALU write unless MUL ALU pack - avoids turn around stability problems with disassembler.
+		if (WAddrA == R_NOP && !PM)
 		{	WAddrA = WAddrM;
 			WAddrM = R_NOP;
 			WS = !WS & !isWRegAB(WAddrA);
