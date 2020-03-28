@@ -128,13 +128,13 @@ struct msgTemplate<> : msgTemplateBase
 /// and the templates must be ordered by msgID.
 #define MAKE_MSGTEMPLATE_CONTAINER \
 	/*** Return pointer to the first message template in this container. */\
-	constexpr const msgTemplateBase* begin() const noexcept           { return (const msgTemplateBase*)this; } \
+	const           msgTemplateBase* begin() const noexcept           { return (const msgTemplateBase*)this; } \
 	/*** Return number of message templates in this container. */\
 	constexpr       size_t size() const noexcept                      { return sizeof(*this) / sizeof(msgTemplateBase); } \
 	/*** Return pointer past the last message template in this container. */\
-	constexpr const msgTemplateBase* end() const noexcept             { return begin() + size(); } \
+	const           msgTemplateBase* end() const noexcept             { return begin() + size(); } \
 	/*** Access the i-th message template in this container. */\
-	constexpr const msgTemplateBase& operator[](unsigned index) const { return begin()[index]; } \
+	const           msgTemplateBase& operator[](unsigned index) const { return begin()[index]; } \
 	/*** Search for a message template with a given ID in this container. The severity is ignored. */\
 	const           msgTemplateBase* getByID(msgID id) const          { return msgTemplateBase::FindTemplateByID(begin(), end(), id.Value); }
 
