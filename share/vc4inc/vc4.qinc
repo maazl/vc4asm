@@ -36,6 +36,10 @@
   .assert !(stride & ~0xffff) # VPM supports 16 bit stride rather than 13 as documented
   0xc0000000 | stride
 .endf
+.func vdw_setup_1p(stride)
+  .assert !(stride & ~0xffff) # VPM supports 16 bit stride rather than 13 as documented
+  0xc0010000 | stride
+.endf
 .func dma_h32(y, x)
   .assert !(y & ~0x7f)
   .assert !(x & ~0xf)

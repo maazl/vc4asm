@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta content="text/html; charset=utf-8" http-equiv="content-type">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
     <title>VC4ASM vc4.qinc</title>
     <meta content="Marcel M&uuml;ller" name="author">
     <link rel="stylesheet" href="infstyle.css" type="text/css">
@@ -106,29 +106,66 @@
         Start a vertical 8 bit laned transfer at position <var><tt>x,y</tt></var><var></var>
         and byte <var><tt>b</tt></var> in VPM.</dd>
     </dl>
-    <h3>VCD DMA access</h3>
+    <h3>VCD DMA write access (VDW)</h3>
     <dl>
       <dt><b><tt>vdw_setup_0(<var>units,depth,dma</var>)</tt></b></dt>
       <dd>Setup VPM DMA write for <var><tt>units</tt></var> rows of length <var><tt>depth</tt></var>
         starting at <var><tt>dma</tt></var>.</dd>
       <dt><b><tt>vdw_setup_1(<var>stride</var>)</tt></b></dt>
       <dd>Setup VPM DMA write memory stride from the last item of a row to the
-        first item of the next row.</dd>
+        first item of the next row. This function activates block mode, i.e. one
+        row in memory is one row or column in VPM.</dd>
+      <dt><b><tt>vdw_setup_1p(<var>stride</var>)</tt></b></dt>
+      <dd>Setup VPM DMA write memory stride from the last item of a row to the
+        first item of the next row. This function activates packed mode.</dd>
+      <dt><b><tt>dma_h32(<var>y,x</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdw_setup_0</tt>.
+        Start a horizontal 32 bit transfer at position <var><tt>x,y</tt></var>
+        in VPM, i.e. elements in a row are horizontally aligned in VPM. The <var><tt>y</tt></var>
+        component is incremented after each row.</dd>
+      <dt><b><tt>dma_h16p(<var>y,x,h</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdw_setup_0</tt>.
+        Start a horizontal, packed 16 bit transfer at position <var><tt>x,y</tt></var>
+        half word <var><tt>h</tt></var> in VPM, i.e. elements in a row are
+        horizontally aligned in VPM.</dd>
+      <dt><b><tt>dma_h8p(<var>y,x,b</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdw_setup_0</tt>.
+        Start a horizontal, packed 8 bit transfer at position <var><tt>x,y</tt></var>
+        byte <var><tt>b</tt></var> in VPM, i.e. elements in a row are
+        horizontally aligned in VPM.</dd>
+      <dt><b><tt>dma_v32(<var>y,x</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdw_setup_0</tt>.
+        Start a vertical 32 bit transfer at position <var><tt>x,y</tt></var> in
+        VPM, i.e. elements in a row are vertically aligned in VPM. The <var><tt>x</tt></var>
+        component is incremented after each row.</dd>
+      <dt><b><tt>dma_v16p(<var>y,x,h</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdw_setup_0</tt>.
+        Start a vertical, packed 16 bit transfer at position <var><tt>x,y</tt></var>
+        half word <var><tt>h</tt></var> in VPM, i.e. elements in a row are
+        vertically aligned in VPM.</dd>
+      <dt><b><tt>dma_v8p(<var>y,x,b</var>)</tt></b></dt>
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdw_setup_0</tt>.
+        Start a vertical, packed 8 bit transfer at position <var><tt>x,y</tt></var>
+        byte <var><tt>b</tt></var> in VPM, i.e. elements in a row are
+        vertically aligned in VPM.</dd>
+    </dl>
+    <h3>VCD DMA read access (VDR)</h3>
+    <dl>
       <dt><b><tt>vdr_setup_0(<var>mpitch,rowlen,nrows,dma</var>)</tt></b></dt>
       <dd>Setup VPM DMA read for <var><tt>nrows</tt></var> rows of length <var><tt>rowlen</tt></var>
         starting at <var><tt>dma</tt></var>. <tt><var>mpitch</var></tt> is the
         distance of two rows in memory. It must either be a power of 2 or 0 to
         indicate that <tt>vdw_setup_1</tt> has to be used.</dd>
-      <dt><b><tt>vdw_setup_1(<var>stride</var>)</tt></b></dt>
+      <dt><b><tt>vdr_setup_1(<var>stride</var>)</tt></b></dt>
       <dd>Setup VPM DMA read memory stride from the last item of a row to the
         first item of the next row.</dd>
       <dt><b><tt>vdr_h32(<var>vpitch,y,x</var>)</tt></b></dt>
-      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdr_setup_0</tt>/<tt>vdw_setup_0</tt>.
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdr_setup_0</tt>.
         Start a horizontal 32 bit transfer at position <var><tt>x,y</tt></var>
         in VPM, i.e. elements in a row are horizontally aligned in VPM. The <var><tt>y</tt></var>
         component is incremented by<var><tt> vpitch</tt></var> after each row.</dd>
       <dt><b><tt>vdr_v32(<var>vpitch,y,x</var>)</tt></b></dt>
-      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdr_setup_0</tt>/<tt>vdw_setup_0</tt>.
+      <dd>Macro for <var><tt>dma</tt></var> component of <tt>vdr_setup_0</tt>.
         Start a vertical 32 bit transfer at position <var><tt>x,y</tt></var> in
         VPM, i.e. elements in a row are vertically aligned in VPM. The <var><tt>y</tt></var>
         component is incremented by<var><tt> vpitch</tt></var> after each row.</dd>
@@ -153,7 +190,7 @@
         -1, 1 &rarr; 0, 2 &rarr; 1, 3 &rarr; 1, 4 &rarr; 2 ...</dd>
     </dl>
     <h2><a id="numC" name="numC"></a>Numerical constants</h2>
-    <table border="1" cellpadding="2" cellspacing="0">
+    <table cellspacing="0" cellpadding="2" border="1">
       <thead>
         <tr>
           <th>Name</th>
