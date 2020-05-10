@@ -291,6 +291,8 @@ class Parser : protected AssembleInst, public DebugInfo
 	/// @brief Current context of incomplete (nested) .if/.endif blocks.
 	/// @details Empty if at the top level. The deepest level is the last entry in the list.
 	ifs_t            AtIf;
+	/// Number of currently entered .rep or .foreach contexts.
+	unsigned         LoopDepth = 0;
 	/// @brief Current call stack of .include and macro invocations.
 	/// @details The entries are of different types. See contextType.
 	/// The list will contain at least two elements, one for the current root and one for the current file.

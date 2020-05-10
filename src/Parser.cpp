@@ -1128,7 +1128,8 @@ void Parser::endLOCAL(int)
 }
 
 void Parser::beginREP(int mode)
-{	if (doPreprocessor())
+{	++LoopDepth;
+	if (doPreprocessor())
 		return;
 
 	auto name = mode ? ".foreach" : ".rep";
@@ -1165,10 +1166,9 @@ void Parser::beginREP(int mode)
 }
 
 void Parser::endREP(int mode)
-{
-	auto name = mode ? ".foreach" : ".rep";
+{	auto name = mode ? ".foreach" : ".rep";
 	auto iter = Macros.find(name);
-	if (AtMacro != &iter->second)
+	if (--LoopDepth || AtMacro != &iter->second)
 	{	if (doPreprocessor())
 			return;
 		Fail(MSG.END_DIRECTIVE_WO_START, Token.c_str(), name + 1);
