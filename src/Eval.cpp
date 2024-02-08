@@ -206,15 +206,15 @@ bool Eval::operate::Apply(bool unary)
 		lhs.Type = rhs.Type;
 		break;
 	 case CEIL:
-		if (types != V_FLOAT)
+		if (rhs.Type != V_FLOAT)
 			TypesFail();
-		lhs.iValue = (int64_t)ceil(rhs.iValue);
+		lhs.iValue = (int64_t)ceil(rhs.fValue);
 		lhs.Type = V_INT;
 		break;
 	 case FLOOR:
-		if (types != V_FLOAT)
+		if (rhs.Type != V_FLOAT)
 			TypesFail();
-		lhs.iValue = (int64_t)floor(rhs.iValue);
+		lhs.iValue = (int64_t)floor(rhs.fValue);
 		lhs.Type = V_INT;
 		break;
 	 case SQRT:
