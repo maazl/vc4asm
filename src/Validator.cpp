@@ -300,8 +300,8 @@ void Validator::ProcessItem(state& st)
 		// Some combinations that do not work
 		if (Instruct.Sig != Inst::S_BRANCH)
 		{	if ( !(Instruct.WAddrA == Instruct.WAddrM && (Instruct.CondA ^ Instruct.CondM) == 1) // No problem if both ALUs write conditionally to the same register with opposite conditions.
-				&& ( (Instruct.CondA != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrA))
-					|| (Instruct.CondM != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrM)) ))
+				&& ( (Instruct.CondA != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrA) && ! Inst::isIRQWReg(Instruct.WAddrA))
+					|| (Instruct.CondM != Inst::C_AL && Inst::isPeripheralWReg(Instruct.WAddrM) && !Inst::isIRQWReg(Instruct.WAddrA)) ))
 				Msg(At, MSG.COND_WR_2_PERIPHERAL);
 			if (Instruct.PM && (Instruct.Pack & 0xc) == Inst::P_8a && Inst::isPeripheralWReg(Instruct.WAddrM))
 				Msg(At, MSG.PARTIAL_WR_2_PERIPHERAL);

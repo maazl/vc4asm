@@ -196,7 +196,8 @@ struct Inst
 	/// @remarks There are many more named registers, but none of them have a special meaning in this context.
 	/// See Parser::regMap for a list of all registers.
 	enum reg : uint8_t
-	{	R_NOP = 39
+	{	R_IRQ = 38
+	,	R_NOP = 39
 	};
 	/// ldi variant
 	enum ldmode : uint8_t
@@ -256,6 +257,8 @@ struct Inst
 	static bool isWRegAB(uint8_t reg) { return ((1ULL<<reg) & 0xfff9f9df00000000ULL) != 0; }
 	/// Check whether a register write is a peripheral register.
 	static bool isPeripheralWReg(uint8_t reg) { return (reg^1) > 36 && reg != R_NOP; }
+	/// Check whether a register write is the IRQ register.
+	static bool isIRQWReg(uint8_t reg) { return reg == R_IRQ; }
 
 	/// Simulate a ADD ALU operation of the current instruction.
 	/// @param l Left operand and result
