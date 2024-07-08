@@ -39,6 +39,21 @@
     <p>The assignment of the target register(s) of a branch instruction depends on the flags. The target register is only assigned
       if the branch is actually taken. The same applies to the flags if <tt>sf</tt> is true. So you may not abuse <tt>brr.never</tt>
       to load the relocated values of labels into a register - what a pity!</p>
+    <h3>Section 3: Breakpoint Instruction</h3>
+    <p>The <tt>bkpt</tt> instruction is only mentioned once in the documentation, without further elaboration. It is intended to be
+      used with the <em>V3D halt/run/step registers</em> (see the addendum to section 10 below). This instruction puts the QPU in the
+      halt state in the same way as writing to the V3D halt register.
+      Unfortunately there doesn't seem to be a way to probe the QPU registers directly.</p>
+      <p>In case you want to debug using breakpoints and the maximum <tt>ioctl</tt> timeout of 1 second is too short, it is recommended
+      to use the V3D QPU scheduler registers to schedule threads directly with unlimited run time. Keep in mind that this somewhat breaks
+      interrupts, as although the V3D_DBQITC register works as intended, it is quickly reset by the Linux kernel, so polling this register
+      at a high rate is required for reliable use of the host interrupt peripheral. Luckily, interrupts are no longer needed without
+      use of the mailbox interface.</p>
+    <h3>Section 3: Breakpoint (and halting in general) after the Thread End Instruction</h3>
+    <p>Care must be taken not to halt the QPU after the <tt>thrend</tt> instruction if the final two instructions still do work, such
+      as raising an interrupt. The thread end instruction starts a cleanup process that <em>cannot be halted</em> and the thread will be
+      terminated even if there are instructions left unexecuted. Additionally, since <tt>bkpt</tt> puts the QPU as a whole into a halt
+      state, it will remain halted even at the start of an eventual new thread.</p>
     <h3>Section 3: QPU Instruction Set - no inf, nan, denormal support</h3>
     <p>The handling of <tt>Inf</tt> and <tt>NaN</tt> seems to be broken or just <em>not implemented</em> in Videocore IV. I.e. <tt>0.0
         + NaN = +Inf</tt>. In fact it only seems to support something like <tt>NaN</tt> but it uses the binary representation of <tt>±Inf</tt>.
@@ -183,6 +198,98 @@
           <td> V3D_DBQGHH</td>
           <td>undocumented</td>
           <td>32</td>
+        </tr>
+      </tbody>
+    </table>
+    <h3>Section 10: Register definitions</h3>
+    <p>The following tables contain the definitions for some of the undocumented registers.</p>
+    <table cellspacing="0" cellpadding="3" border="1">
+      <thead>
+        <tr>
+          <th colspan="5">V3D_DBQRUN - QPU Run Control</th>
+        </tr>
+        <tr>
+          <th width="50em">Bit(s)</th>
+          <th width="250em">Field name</th>
+          <th width="600em">Description</th>
+          <th width="50em">Type</th>
+          <th width="50em">Reset</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>31:16</td>
+          <td>-</td>
+          <td>Reserved</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>15:0</td>
+          <td>RUN_QPU0_to_RUN_QPU15</td>
+          <td>QPU Run bits; reads 1 if QPU is running, write 1 to resume QPU if halted</td>
+          <td>R/W</td>
+          <td>1</td>
+        </tr>
+      </tbody>
+    </table>
+    <table cellspacing="0" cellpadding="3" border="1">
+      <thead>
+        <tr>
+          <th colspan="5">V3D_DBQHLT - QPU Halt Control</th>
+        </tr>
+        <tr>
+          <th width="50em">Bit(s)</th>
+          <th width="250em">Field name</th>
+          <th width="600em">Description</th>
+          <th width="50em">Type</th>
+          <th width="50em">Reset</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>31:16</td>
+          <td>-</td>
+          <td>Reserved</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>15:0</td>
+          <td>HLT_QPU0_to_HLT_QPU15</td>
+          <td>QPU Halt bits; reads 1 if QPU is halted, write 1 to halt QPU if running</td>
+          <td>R/W</td>
+          <td>0</td>
+        </tr>
+      </tbody>
+    </table>
+    <table cellspacing="0" cellpadding="3" border="1">
+      <thead>
+        <tr>
+          <th colspan="5">V3D_DBQSTP - QPU Instruction Step Control</th>
+        </tr>
+        <tr>
+          <th width="50em">Bit(s)</th>
+          <th width="250em">Field name</th>
+          <th width="600em">Description</th>
+          <th width="50em">Type</th>
+          <th width="50em">Reset</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>31:16</td>
+          <td>-</td>
+          <td>Reserved</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>15:0</td>
+          <td>STP_QPU0_to_STP_QPU15</td>
+          <td>QPU Step bits; write 1 while halted to advance the QPU program state by one instruction</td>
+          <td>W</td>
+          <td>0</td>
         </tr>
       </tbody>
     </table>
