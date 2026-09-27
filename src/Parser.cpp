@@ -1128,18 +1128,21 @@ void Parser::endLOCAL(int)
 }
 
 void Parser::beginREP(int mode)
-{	++LoopDepth;
-	if (doPreprocessor())
+{	if (doPreprocessor(PP_MACRO))
+		return;
+	if (AtRep.empty() && doPreprocessor(PP_IF))
 		return;
 
-	auto name = mode ? ".foreach" : ".rep";
-	AtMacro = &Macros[name];
-	AtMacro->Definition = *Context.back();
+	if (!AtRep.empty())
+	{	AtRep.emplace_back(*Context.back(), mode, Line);
+		return;
+	}
 
+	repetitionContext rep(*Context.back(), mode, Line);
 	if (NextToken() != WORD)
 		Fail(MSG.EXPECTED_LOOP_VARIABLE_NAME, Token.c_str());
 
-	AtMacro->Args.push_back(Token);
+	rep.Args.push_back(Token);
 	if (NextToken() != COMMA)
 		Fail(MSG.EXPECTED_COMMA_2, mode ? "parameters" : "count", Token.c_str());
 
@@ -1151,7 +1154,7 @@ void Parser::beginREP(int mode)
 			if ((uint64_t)ExprValue.iValue > 0x1000000)
 				Fail(MSG.REP_COUNT_OUT_OF_RANGE, ExprValue.iValue);
 		}
-		AtMacro->Args.push_back(ExprValue.toString());
+		rep.Args.push_back(ExprValue.toString());
 
 		switch (NextToken())
 		{default:
@@ -1163,28 +1166,41 @@ void Parser::beginREP(int mode)
 		 case END:;
 		}
 	}
+	AtRep.emplace_back(std::move(rep));
 }
 
 void Parser::endREP(int mode)
-{	auto name = mode ? ".foreach" : ".rep";
-	auto iter = Macros.find(name);
-	if (--LoopDepth || AtMacro != &iter->second)
-	{	if (doPreprocessor())
+{
+	if (doPreprocessor(PP_MACRO))
+		return;
+
+	auto name = mode ? ".foreach" : ".rep";
+	if (AtRep.empty())
+	{	if (doPreprocessor(PP_IF))
 			return;
 		Fail(MSG.END_DIRECTIVE_WO_START, Token.c_str(), name + 1);
 	}
-	const macro m = *AtMacro;
-	AtMacro = NULL;
-	Macros.erase(iter);
+	if (AtRep.back().Mode != mode)
+		Fail(MSG.END_DIRECTIVE_WO_START, Token.c_str(), name + 1);
 
 	if (NextToken() != END)
 		Fail(MSG.EXPECTED_EOL);
+
+	repetitionContext m = std::move(AtRep.back());
+	AtRep.pop_back();
+	if (!AtRep.empty())
+	{	auto& content = AtRep.back().Content;
+		content.push_back(m.StartLine);
+		content.insert(content.end(), m.Content.begin(), m.Content.end());
+		content.push_back(Line);
+		return;
+	}
 
 	if (m.Args.size() < 2)
 		return; // no loop count => 0
 
 	// Setup invocation context
-	saveContext ctx(*this, new fileContext(CTX_MACRO, m.Definition.File, m.Definition.Line));
+	saveContext ctx(*this, new fileContext(CTX_MACRO, m.File, m.Line));
 
 	// loop
 	size_t count;
@@ -1393,7 +1409,7 @@ bool Parser::doCondition()
 
 void Parser::parseIF(int)
 {
-	if (doPreprocessor(PP_MACRO))
+	if (doPreprocessor(static_cast<preprocType>(PP_MACRO | PP_REP)))
 		return;
 
 	AtIf.emplace_back(*Context.back(), isDisabled() ? 4 : doCondition());
@@ -1401,7 +1417,7 @@ void Parser::parseIF(int)
 
 void Parser::parseIFSET(int)
 {
-	if (doPreprocessor(PP_MACRO))
+	if (doPreprocessor(static_cast<preprocType>(PP_MACRO | PP_REP)))
 		return;
 
 	parseIdentifier(Token.c_str());
@@ -1426,7 +1442,7 @@ void Parser::parseIFSET(int)
 
 void Parser::parseELSEIF(int)
 {
-	if (doPreprocessor(PP_MACRO))
+	if (doPreprocessor(static_cast<preprocType>(PP_MACRO | PP_REP)))
 		return;
 
 	if (!AtIf.size())
@@ -1440,7 +1456,7 @@ void Parser::parseELSEIF(int)
 
 void Parser::parseELSE(int)
 {
-	if (doPreprocessor(PP_MACRO))
+	if (doPreprocessor(static_cast<preprocType>(PP_MACRO | PP_REP)))
 		return;
 
 	if (!AtIf.size())
@@ -1455,7 +1471,7 @@ void Parser::parseELSE(int)
 
 void Parser::parseENDIF(int)
 {
-	if (doPreprocessor(PP_MACRO))
+	if (doPreprocessor(static_cast<preprocType>(PP_MACRO | PP_REP)))
 		return;
 
 	if (!AtIf.size())
@@ -1516,7 +1532,7 @@ vector<exprValue> Parser::parseArgumentList(const string& name, size_t count)
 
 void Parser::beginMACRO(int flags)
 {
-	if (doPreprocessor(PP_IF))
+	if (doPreprocessor(static_cast<preprocType>(PP_IF | PP_REP)))
 		return;
 
 	if (AtMacro)
@@ -1574,7 +1590,7 @@ void Parser::beginMACRO(int flags)
 
 void Parser::endMACRO(int flags)
 {
-	if (doPreprocessor(PP_IF))
+	if (doPreprocessor(static_cast<preprocType>(PP_IF | PP_REP)))
 		return;
 
 	if (!AtMacro || AtMacro->Flags != flags)
@@ -1787,6 +1803,10 @@ bool Parser::doPreprocessor(preprocType type)
 	{	AtMacro->Content.push_back(Line);
 		return true;
 	}
+	if (!AtRep.empty() && (type & PP_REP))
+	{	AtRep.back().Content.push_back(Line);
+		return true;
+	}
 	return (type & PP_IF) && isDisabled();
 }
 
@@ -1811,7 +1831,7 @@ void Parser::ParseLine()
 	 case END:
 		Line.clear();
 		At = Line.c_str();
-		doPreprocessor(PP_MACRO);
+		doPreprocessor();
 		return;
 
 	 case COLON:
@@ -1943,6 +1963,7 @@ void Parser::ParseFile(const string& file)
 
 void Parser::ResetPass()
 {	AtMacro = NULL;
+	AtRep.clear();
 	AtIf.clear();
 	Context.clear();
 	Context.emplace_back(new fileContext(CTX_ROOT, 0, 0));

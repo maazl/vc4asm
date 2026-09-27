@@ -128,7 +128,8 @@ class Parser : protected AssembleInst, public DebugInfo
 	enum preprocType : unsigned char
 	{	PP_MACRO = 1         ///< Macro expansion
 	,	PP_IF    = 2         ///< .if/.else check
-	,	PP_ALL   = 3         ///< all above actions
+	,	PP_REP   = 4         ///< repetition body capture
+	,	PP_ALL   = 7         ///< all above actions
 	};
 	/// Entry of the OP code lookup table, POD, compatible with binary_search().
 	/// @tparam L maximum length of Name.
@@ -204,6 +205,17 @@ class Parser : protected AssembleInst, public DebugInfo
 	{	macroFlags     Flags;     ///< Flags
 		vector<string> Content;   ///< Macro body. Line by line the macro source code, unevaluated. To get the matching source file line add the location from Definition.
 	};
+	/// Context of repitiion block
+	struct repetitionContext : public location
+	{	vector<string> Args;    ///< Loop variable followed by count or values.
+		vector<string> Content; ///< Unevaluated body lines.
+		string StartLine;       ///< Original start line, including any label, for nested repetitions.
+		int Mode;               ///< 0 for .rep, 1 for .foreach.
+		repetitionContext(const location& loc, int mode, const string& line)
+			: location(loc), StartLine(line), Mode(mode) {}
+	};
+	/// Stack of active repetition contexts.
+	typedef vector<repetitionContext> reps_t;
 	/// @brief Macro definition lookup table
 	/// @details The key is the macro name, the value is the macro definition.
 	typedef unordered_map<string,macro> macros_t;
@@ -291,8 +303,8 @@ class Parser : protected AssembleInst, public DebugInfo
 	/// @brief Current context of incomplete (nested) .if/.endif blocks.
 	/// @details Empty if at the top level. The deepest level is the last entry in the list.
 	ifs_t            AtIf;
-	/// Number of currently entered .rep or .foreach contexts.
-	unsigned         LoopDepth = 0;
+	/// Current stack of nested .rep and .foreach blocks.
+	reps_t           AtRep;
 	/// @brief Current call stack of .include and macro invocations.
 	/// @details The entries are of different types. See contextType.
 	/// The list will contain at least two elements, one for the current root and one for the current file.
